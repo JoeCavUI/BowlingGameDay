@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Guide</title>
-  <link rel="stylesheet" href="styles.css?v=72" />
+  <link rel="stylesheet" href="styles.css?v=73" />
   <style>
     .guide { max-width: 760px; margin: 0 auto; line-height: 1.55; font-size: 16px; }
     .guide h2 { margin: 0 0 6px; font-size: 21px; }
@@ -60,6 +60,7 @@
           <a href="#shot"><span>7</span>Logging each shot</a>
           <a href="#coach"><span>8</span>How Coach works</a>
           <a href="#elements"><span>🎳</span>The Five Elements</a>
+          <a href="#energy-mud"><span>🏈</span>Energy &amp; the Mud</a>
           <a href="#end"><span>9</span>Between games + saving</a>
           <a href="#scores"><span>10</span>Scores + history</a>
           <a href="#backup"><span>11</span>Backing up</a>
@@ -249,6 +250,18 @@
         <a class="top" href="#top">↑ Back to top</a>
       </section>
 
+      <section class="panel" id="energy-mud">
+        <h2>🌀 Energy and 🏈 the Mud</h2>
+        <p>Two simple questions sit on top of all the data:</p>
+        <div class="reads">
+          <div class="read"><div class="read-name">🌀 Does the ball get to the pins with energy left?</div><div>The ball leaves your hand with axis rotation and uses it up going down the lane (skid → hook → roll). <b>Ran out</b> (weak exit, 6-pin laying down, flat 10s): protect the energy. Stay in the oil a little longer, use a cleaner ball, or add a touch of speed. <b>Too much left</b> (driving through hard, 6 wrapping, ringing 10s): let it read a little sooner. Move toward the friction, use a smoother ball, or take a touch off.</div></div>
+          <div class="read"><div class="read-name">🏈 Is it changing direction in the mud?</div><div>Where the oil ends and breaks down, friction is uneven. A ball asked to turn there is like a receiver cutting on a muddy field: it slips one shot and grabs the next (over/under). Get it to turn in <b>clean friction</b> instead.</div></div>
+        </div>
+        <h3>Rule of 31: the exit point (not the breakpoint)</h3>
+        <p>Pattern length − 31 ≈ the board where the ball should <b>exit the end of the pattern</b>. On a 42 ft pattern that's about board 11. The <b>breakpoint</b> is further downlane and usually a few boards further outside, in the dry. If your breakpoint is <b>at or inside</b> the exit board, the ball is turning in the mud. Enter your <b>breakpoint</b> and pick your <b>oil pattern</b> on Game Day so Coach can check this.</p>
+        <a class="top" href="#top">↑ Back to top</a>
+      </section>
+
       <!-- 9 -->
       <section class="panel" id="end">
         <h2><span class="stepnum">9</span>Between games and saving the night</h2>
@@ -318,7 +331,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=72"></script>
+  <script src="app.js?v=73"></script>
   <script>
     BT.renderNav('guide');
     BT.$('#ver').textContent = 'Bowling Tool ' + BT.APP_VERSION;

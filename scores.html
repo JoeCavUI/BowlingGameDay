@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Scores</title>
-  <link rel="stylesheet" href="styles.css?v=72" />
+  <link rel="stylesheet" href="styles.css?v=73" />
 </head>
 <body data-page="scores">
   <div class="navlinks"></div>
@@ -68,8 +68,8 @@
     </div>
   </div>
 
-  <script src="app.js?v=72"></script>
-  <script src="coach.js?v=72"></script>
+  <script src="app.js?v=73"></script>
+  <script src="coach.js?v=73"></script>
   <script>
     BT.renderNav('scores');
 
@@ -351,7 +351,7 @@
           const row = (lbl, v, hint) => v == null ? '' : `<div class="small" style="margin-top:4px">${lbl}: <b>${v}%</b> <span style="opacity:.7">${hint}</span></div>`;
           let five = '';
           try {
-            const rep = (s.summary && s.summary.elements) || (window.BTCoach ? BTCoach.elementsReport([...(s.shots || [])].sort((a, b) => (a.at || 0) - (b.at || 0)), BT.lsGet(BT.KEYS.BOWLER, {}) || {}) : null);
+            const rep = (s.summary && s.summary.elements) || (window.BTCoach ? BTCoach.elementsReport([...(s.shots || [])].sort((a, b) => (a.at || 0) - (b.at || 0)), BT.lsGet(BT.KEYS.BOWLER, {}) || {}, (BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || []).find(p => p.name === s.pattern) || null) : null);
             if (rep) five = `<div class="panel" style="padding:12px;margin-top:10px"><b>The Five Elements tonight</b>
               ${rep.elements.map(e => `<div class="small" style="margin-top:6px;opacity:1">${e.icon} <b>${e.key}${e.score != null ? ': ' + e.score + '%' : ''}</b>. ${e.text}</div>`).join('')}
               ${rep.drill ? `<div class="small" style="margin-top:8px;color:var(--accent);opacity:1"><b>Work on ${rep.weakest}:</b> ${rep.drill}</div>` : ''}</div>`;

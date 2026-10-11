@@ -198,6 +198,12 @@
     };
   }
 
+  // Rule of 31: estimated board where the ball EXITS the pattern (length − 31). Not the breakpoint.
+  function exitBoardFor(pat) {
+    if (!pat || pat.length == null) return null;
+    return clamp(Math.round(pat.length - 31), 3, 20);
+  }
+
   // ---------- move menu ----------
   // situation: 'early' (hooking early / high), 'late' (holding / light), 'overunder', 'carryWeak', 'carryStrong'
   const BASE = {
@@ -206,6 +212,7 @@
     overunder:   { Equipment: 7, Aim: 6, Release: 5, Speed: 3, Loft: 2 },
     carryWeak:   { Equipment: 8, Speed: 6, Release: 4, Aim: 3, Loft: 2 },
     carryStrong: { Equipment: 7, Speed: 6, Aim: 4, Release: 4, Loft: 2 },
+    mud:         { Aim: 8, Equipment: 7, Release: 4, Speed: 3, Loft: 2 },
   };
 
   // Ball need relative to the current ball (motion space 0..1)
@@ -213,16 +220,20 @@
     early:       { hook: -0.07, length: 0.12, backend: 0.02, say: 'cleaner through the front, more length' },
     late:        { hook: 0.08, length: -0.10, backend: 0.04, say: 'earlier read and more hook' },
     overunder:   { hook: -0.02, length: 0.05, backend: -0.10, say: 'smoother, more predictable shape' },
-    carryWeak:   { hook: 0.03, length: -0.03, backend: 0.09, say: 'more continuation through the pins' },
-    carryStrong: { hook: -0.05, length: 0.04, backend: -0.06, say: 'a smoother, softer hit' },
+    carryWeak:   { hook: -0.02, length: 0.08, backend: 0.08, say: 'a cleaner trip through the front so it saves energy for the pins' },
+    carryStrong: { hook: 0.02, length: -0.06, backend: -0.08, say: 'an earlier, smoother read so it uses some energy before the pins' },
+    mud:         { hook: -0.02, length: 0.06, backend: -0.08, say: 'a smoother ball that won\'t try to plant and turn in the mud' },
   };
 
   function aimText(sit, prof, pat, step) {
     const small = pat && pat.flat;
     const f = step >= 2 ? (small ? 2 : 3) : (small ? 1 : 2);
     const e = step >= 2 ? 2 : 1;
-    if (sit === 'early' || sit === 'carryStrong') return `Move your feet ${f} board${f > 1 ? 's' : ''} ${prof.deeper} and your eyes ${e} ${prof.deeper} (into more oil).`;
-    if (sit === 'late' || sit === 'carryWeak') return `Move your feet ${f} board${f > 1 ? 's' : ''} ${prof.outside} and your eyes ${e} ${prof.outside} (toward the friction).`;
+    if (sit === 'carryWeak') return `Protect the energy: move your feet ${f} board${f > 1 ? 's' : ''} ${prof.deeper} and your eyes ${e} ${prof.deeper} so the ball stays in the oil longer and saves its rotation for the pins.`;
+    if (sit === 'carryStrong') return `Let it use some energy: move your feet ${f} board${f > 1 ? 's' : ''} ${prof.outside} and your eyes ${e} ${prof.outside} so the ball reads a little sooner and rolls into the pocket.`;
+    if (sit === 'mud') return `Get it out of the mud: move your feet ${f} board${f > 1 ? 's' : ''} ${prof.deeper} and keep your eyes, so the ball travels further out past the oil and turns in clean friction.`;
+    if (sit === 'early') return `Move your feet ${f} board${f > 1 ? 's' : ''} ${prof.deeper} and your eyes ${e} ${prof.deeper} (into more oil).`;
+    if (sit === 'late') return `Move your feet ${f} board${f > 1 ? 's' : ''} ${prof.outside} and your eyes ${e} ${prof.outside} (toward the friction).`;
     return `Make a small parallel move: feet and eyes 1–2 boards ${prof.deeper} to give yourself more room.`;
   }
 
@@ -248,9 +259,12 @@
     if (kind === 'Angle') return angleText(sit, prof, angleClass);
     if (kind === 'Aim') return aimText(sit, prof, pat, step);
     if (kind === 'Equipment') return ball ? `Switch to ${ball} for ${NEED[sit].say}.` : '';
+    if (sit === 'mud' && kind === 'Release') return 'Take a little side roll off for a smoother, more forward-roll shape that won\'t try to plant in the mud.';
     if (kind === 'Speed') {
-      if (sit === 'early' || sit === 'carryStrong') return 'Add a touch of speed (about ½ mph) so the ball gets down the lane before it reads.';
-      if (sit === 'late' || sit === 'carryWeak') return 'Take a touch of speed off (about ½ mph) so the ball reads sooner and finishes.';
+      if (sit === 'early') return 'Add a touch of speed (about ½ mph) so the ball gets down the lane before it reads.';
+      if (sit === 'carryWeak') return 'Add a touch of speed (about ½ mph) so the ball spends less time in friction and arrives with rotation left.';
+      if (sit === 'carryStrong') return 'Take a touch of speed off (about ½ mph) so the ball uses some of its rotation before the pins.';
+      if (sit === 'late') return 'Take a touch of speed off (about ½ mph) so the ball reads sooner and finishes.';
       return 'Keep your speed steady and repeatable while the lane settles.';
     }
     if (kind === 'Loft') {
@@ -279,7 +293,8 @@
       let score = base[kind] + rating * 1.5;
       // Bowler profile shaping
       if (prof.dom < -0.3) { // speed-dominant
-        if ((sit === 'late' || sit === 'carryWeak') && kind === 'Speed') score += 2;
+        if (sit === 'late' && kind === 'Speed') score += 2;
+        if (sit === 'carryWeak' && kind === 'Speed') score -= 1; // already fast; protect energy with line/equipment first
         if ((sit === 'late' || sit === 'carryWeak') && kind === 'Equipment') score += 1;
         if (sit === 'early' && kind === 'Speed') score -= 1;
       }
@@ -323,10 +338,12 @@
       if (solid && grit <= 3000) p += 0.10; if (pearl || polished) p -= 0.05;
     } else if (sit === 'overunder') { // need SMOOTH: symmetric, sanded, not shiny asym
       if (polished && pearl) p += 0.08; if (asym) p += 0.05; if (!asym && solid) p -= 0.04;
-    } else if (sit === 'carryWeak') { // need FINISH: asym / pearl / higher backend
-      if (asym || pearl) p -= 0.04;
-    } else if (sit === 'carryStrong') { // need SOFTER: away from shiny asym
-      if (polished && asym) p += 0.06; if (solid && !asym) p -= 0.03;
+    } else if (sit === 'carryWeak') { // save ENERGY: cleaner front (pearl/polish) with backend (asym)
+      if (pearl || polished) p -= 0.04; if (asym) p -= 0.02; if (solid && grit <= 2000) p += 0.06;
+    } else if (sit === 'carryStrong') { // use some energy early: sanded, smoother
+      if (polished && asym) p += 0.06; if (!polished && !asym) p -= 0.04;
+    } else if (sit === 'mud') {       // smooth, predictable: sanded symmetric, not shiny asym
+      if (polished && pearl) p += 0.08; if (asym) p += 0.04; if (!asym && !polished) p -= 0.05;
     }
     return p;
   }
@@ -425,6 +442,13 @@
       }
     }
 
+    // 🏈 Mud heads-up: turning at/inside the exit point even before over/under shows up
+    const exB = exitBoardFor(pat);
+    if (exB != null && res.situation !== 'mud' && res.tone !== 'good') {
+      const m = W.filter(c => c.bp != null && c.bp >= exB);
+      if (m.length >= 2 && m.length >= Math.ceil(W.length / 2)) res.notes.push(`🏈 Heads-up: your breakpoint (about board ${Math.round(avg(m.map(c => c.bp)))}) is at or inside where the ball exits the pattern (about board ${exB} on ${pat.length} ft). The ball is changing direction in the mud, so expect over/under. Let it travel further out before it turns.`);
+    }
+
     const last = C[C.length - 1];
     const pocketShots = C.filter(c => c.pocketHit);
     const exitSeen = pocketShots.filter(c => c.exitRaw !== "Didn't notice").length;
@@ -486,8 +510,9 @@
   }
 
   // End-of-night report: one line per element + one drill for the weakest.
-  function elementsReport(shots, bowler) {
+  function elementsReport(shots, bowler, pattern) {
     const prof = bowlerProfile(bowler);
+    const pat = patternProfile(pattern);
     const C = (shots || []).filter(s => s && s.type !== 'gameStart' && !s.isFill).map(s => classify(s, prof.lefty));
     if (C.length < 3) return null;
     const pct = (a, b) => b ? Math.round(a / b * 100) : null;
@@ -514,7 +539,14 @@
     const ph = C.filter(c => c.pocketHit && (c.finish || c.strike));
     const fin = ph.filter(c => c.strike || c.finish === 'good').length;
     const weak = ph.filter(c => c.finish === 'weak').length, strong = ph.filter(c => c.finish === 'strong').length;
-    out.push({ key: 'Rev rate & roll', icon: '🌀', score: pct(fin, ph.length), text: ph.length ? `Ball finished well on ${fin} of ${ph.length} pocket hits.${weak ? ` Rolled out / weak ${weak}×.` : ''}${strong ? ` Too strong ${strong}×.` : ''}` : 'Watch the exit and the 6-pin on pocket hits to grade roll.' });
+    out.push({ key: 'Rev rate & roll', icon: '🌀', score: pct(fin, ph.length), text: ph.length ? `Arrived with the right energy on ${fin} of ${ph.length} pocket hits.${weak ? ` Ran out of rotation (rolled out) ${weak}×.` : ''}${strong ? ` Still turning too hard ${strong}×.` : ''}` : 'Watch the exit and the 6-pin on pocket hits to grade roll and energy.' });
+    const exB = exitBoardFor(pat);
+    if (exB != null) {
+      const withBp = C.filter(c => c.bp != null);
+      const mud = withBp.filter(c => c.bp >= exB);
+      const mudOU = mud.filter(c => c.overUnder || c.lean !== 0 && !c.strike).length;
+      if (withBp.length) out.push({ key: 'Mud', icon: '🏈', score: pct(withBp.length - mud.length, withBp.length), text: mud.length ? `Changed direction in the mud (breakpoint at/inside the exit point, about board ${exB}) on ${mud.length} of ${withBp.length} shots; ${mudOU} of those missed the pocket or read wrong.` : `Your breakpoint stayed outside the exit point (about board ${exB}) all night. The ball turned in clean friction.` });
+    }
     const scored = out.filter(x => x.score != null);
     const weakest = scored.length ? scored.slice().sort((a, b) => a.score - b.score)[0] : null;
     const DRILL = {
@@ -522,6 +554,7 @@
       Angle: 'Angle drill: keep the same target and try 3 different feet positions, 3 shots each. Watch how the entry and the 6-pin change.',
       Speed: 'Tempo drill: 10 shots at the same speed. Check the lane monitor and stay within ½ mph.',
       'Rev rate & roll': 'Finish drill: 10 pocket shots. Call the exit (left / straight / right) and the 6-pin out loud before the pins settle.',
+      Mud: 'Exit-point drill: find your exit board (pattern length − 31). For 10 shots, watch the ball cross that board at the end of the oil, then turn in the dry, not before.',
     };
     return { elements: out, weakest: weakest ? weakest.key : '', drill: weakest ? DRILL[weakest.key] : '' };
   }
@@ -728,8 +761,8 @@
       const sb = startingBall(ctx, prof, pat);
       const lines = [];
       if (pat && pat.length) {
-        const bp = clamp(Math.round(pat.length - 31), 3, 15);
-        lines.push(`Rule of 31: on ${pat.length} ft, look for a breakpoint around board ${bp}.`);
+        const ex = exitBoardFor(pat);
+        lines.push(`Rule of 31: on ${pat.length} ft, plan to get the ball off the end of the pattern around board ${ex} (the exit point). Your breakpoint will be further downlane and usually a few boards outside that, in the dry. Turning at or inside board ${ex} means changing direction in the mud.`);
       }
       if (sb) lines.push(`Best starting ball in your bag for this pattern: ${sb}.`);
       if (pat && pat.volumeClass === 'light') lines.push('Light oil: expect the fronts to dry up early. Watch for high hits by game 2.');
@@ -817,7 +850,8 @@
     const avgRec = recs.length ? Math.round(recs.reduce((a, b) => a + b, 0) / recs.length) : null;
     res.angleLine = avgRec != null ? `About ${avgRec} boards of recovery from breakpoint to pocket (${angleClass === 'direct' ? 'a direct, low-angle line' : angleClass === 'steep' ? 'a big swing, high-angle line' : 'a normal angle'}).` : '';
 
-    const decide = (sit, headline, why) => {
+    const decide = (sit, headline, why, lens) => {
+      res.lens = lens || '';
       const ball = suggestBall(sit, ctx, prof);
       const step = (tried.has('Aim') && lastChange >= 0) ? 2 : 1;
       const ranked = rankMoves(sit, prof, pat, !!ball, tried, angleClass);
@@ -895,8 +929,17 @@
       return res;
     }
 
-    // ---- 4. Over/under ----
+    // ---- 4a. Mud: over/under while the breakpoint is at/inside where the ball exits the pattern ----
     const ouSignals = cnt(W, c => c.overUnder);
+    const exitB = exitBoardFor(pat);
+    const mudShots = exitB != null ? W.filter(c => c.bp != null && c.bp >= exitB) : [];
+    const isOU = (highs >= 2 && lights >= 2) || ouSignals >= 2;
+    if (isOU && mudShots.length >= 2) {
+      const avgBp = Math.round(mudShots.reduce((a, c) => a + c.bp, 0) / mudShots.length);
+      return decide('mud', 'You\'re changing direction in the mud.', `Over/under (${highs} early, ${lights} long) and your breakpoint (about board ${avgBp}) is at or inside where the ball exits the pattern (about board ${exitB} on ${pat.length} ft). The ball is trying to plant and turn while it's still in the oil. Like a receiver cutting on a muddy field, it slips one shot and grabs the next.`, '🏈 Mud');
+    }
+
+    // ---- 4. Over/under ----
     if ((highs >= 2 && lights >= 2) || ouSignals >= 2) {
       return decide('overunder', 'Over/under: some hook early, some go long.', `${highs} early/high and ${lights} long/light in your last ${W.length} good shots. The lane is unpredictable, so you want a smoother look.`);
     }
@@ -938,7 +981,8 @@
       if (sE) eyes.push(`ball drove through too hard ${sE}×`);
       if (wK) eyes.push(`${kp} laid down weak ${wK}×`);
       if (sK) eyes.push(`${kp} hit the kickback / wrapped ${sK}×`);
-      return decide(sit, 'You\'re in the pocket but not carrying.', `Pocket hits with ${leaves.join(', ') || 'leaves'}${eyes.length ? ' (' + eyes.join(', ') + ')' : ''}. Your line is fine: this is about how the ball finishes.`);
+      const head = sit === 'carryWeak' ? 'The ball is running out of energy before the pins (rolling out).' : 'The ball is arriving with too much energy (still turning hard at the pins).';
+      return decide(sit, head, `In the pocket with ${leaves.join(', ') || 'leaves'}${eyes.length ? ' (' + eyes.join(', ') + ')' : ''}. Your line is fine: this is about how much axis rotation the ball has left when it gets to the pins.`, '🌀 Energy');
     }
 
     // ---- 8. One-sided room ----

@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=72" />
+  <link rel="stylesheet" href="styles.css?v=73" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -248,8 +248,8 @@
     </div>
   </div>
 
-  <script src="app.js?v=72"></script>
-  <script src="coach.js?v=72"></script>
+  <script src="app.js?v=73"></script>
+  <script src="coach.js?v=73"></script>
   <script>
     BT.renderNav('gameday');
 
@@ -1668,7 +1668,7 @@ function saveCurrentSessionDraft() {
         .filter(Boolean).map(x => `<div class="small" style="margin-top:4px">${x}</div>`).join('');
       el.coachText.innerHTML = `
         <div style="border-left:4px solid ${border};background:${color};border-radius:0 12px 12px 0;padding:10px 12px">
-          ${r.element ? `<div class="small" style="opacity:1;font-weight:800;letter-spacing:.3px;margin-bottom:4px">${escapeHtml(r.element)}</div>` : ''}
+          ${(r.lens || r.element) ? `<div class="small" style="opacity:1;font-weight:800;letter-spacing:.3px;margin-bottom:4px">${escapeHtml([r.lens, r.element].filter(Boolean).join(' · '))}</div>` : ''}
           <div style="font-size:16px;font-weight:800;line-height:1.35;color:var(--text)">${icon} ${escapeHtml(r.headline)}</div>
           ${r.why ? `<div class="small" style="margin-top:6px;opacity:1">${escapeHtml(r.why)}</div>` : ''}
           ${r.next ? `<div class="small" style="margin-top:6px"><b>Next:</b> ${escapeHtml(r.next)}</div>` : ''}
@@ -1958,7 +1958,7 @@ function sessionSummary(shots) {
       try { if (window.BTCoach) eyeball = BTCoach.eyeballScore(sessionShots.slice().reverse(), BT.lsGet(BT.KEYS.BOWLER, {}) || {}); } catch (_e) {}
       if (eyeball) sum.eyeball = eyeball;
       let elements = null;
-      try { if (window.BTCoach) elements = BTCoach.elementsReport(sessionShots.slice().reverse(), BT.lsGet(BT.KEYS.BOWLER, {}) || {}); } catch (_e) {}
+      try { if (window.BTCoach) elements = BTCoach.elementsReport(sessionShots.slice().reverse(), BT.lsGet(BT.KEYS.BOWLER, {}) || {}, coachContext().pattern); } catch (_e) {}
       if (elements) sum.elements = elements;
       const audit = await arsenalAudit(meta, sessionShots);
 

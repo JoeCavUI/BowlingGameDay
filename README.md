@@ -49,6 +49,12 @@ npm start
 ```
 Then open http://localhost:3000
 
+## Changes in v73-beta10 — Energy & the Mud
+- Rule of 31 corrected: it estimates the **exit point** off the end of the pattern (e.g., 42 ft ≈ board 11), not the breakpoint.
+- 🏈 **Mud**: over/under with the breakpoint at or inside the exit point = changing direction in the mud. Coach gets the ball to turn in clean friction (further out / smoother ball). Heads-up note when the breakpoint drifts inside the exit board.
+- 🌀 **Energy**: carry problems are now read as axis rotation left at the pins. Rolled out → protect energy (stay in oil longer, cleaner ball, touch more speed). Too much → let it read sooner.
+- Night report adds Energy wording and a Mud line with an exit-point drill. Guide section "Energy & the Mud".
+
 ## Changes in v72-beta9 — Arsenal check
 - New 🩺 Arsenal check (Arsenal page; scope: all balls / balls I added / any saved bag):
   - Bowler ↔ ball: weight vs speed at the pins, late-night fatigue, speed/rev dominance vs covers, RG vs rev rate, tilt, LASER vs bag spread.
