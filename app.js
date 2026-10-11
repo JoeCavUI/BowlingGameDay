@@ -6,7 +6,7 @@
 
 (function () {
   // Bump this string each build so pages can display it and cache-bust resources.
-  const APP_VERSION = 'v74-beta11';
+  const APP_VERSION = 'v75-beta12';
   const KEYS = {
     CSV_CACHE: 'bt_csv_cache_v1',          // stringified { savedAt, name, rows }
     BOWLER: 'bt_bowler_v1',               // stringified object
@@ -1273,7 +1273,6 @@
       { key: 'bowler', label: 'Bowler', href: 'bowler.html' },
       { key: 'arsenal', label: 'Arsenal', href: 'arsenal.html' },
       { key: 'analyze', label: 'Analyze', href: 'analyze.html' },
-      { key: 'lane', label: 'Friction Timing', href: 'lane.html' },
       { key: 'oil', label: 'Oil', href: 'oil.html' },
       { key: 'gameday', label: 'Game Day', href: 'gameday.html' },
       { key: 'scores', label: 'Scores', href: 'scores.html' },

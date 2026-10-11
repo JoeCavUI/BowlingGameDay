@@ -49,6 +49,9 @@ npm start
 ```
 Then open http://localhost:3000
 
+## Changes in v75-beta12
+- Friction Timing screen hidden from the menu and Home while it's being redesigned (the page still exists at lane.html).
+
 ## Changes in v74-beta11 — Testing tools
 - Home → **Check for update**: clears cached files, fetches the newest version, reloads, and confirms the version.
 - Home → **Test mode**: separate sandbox (copy of my setup, or empty). Real data is set aside and restored exactly on exit; orange TEST MODE bar on every page; reset test data anytime. Backups made in Test mode are named "TEST".
