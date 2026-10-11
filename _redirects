@@ -1,0 +1,3 @@
+# Old address from the first upload -> new root address
+/bowling-tool/*  /:splat  301
+/bowling-tool   /         301

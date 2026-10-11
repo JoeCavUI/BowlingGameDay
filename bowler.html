@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1116" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Bowling" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <title>Bowler</title>
+  <link rel="stylesheet" href="styles.css?v=67" />
+</head>
+<body data-page="bowler">
+  <div class="navlinks"></div>
+  <div class="container">
+    <div class="header">
+      <h1>Bowler Profile</h1>
+      <div class="small">Saved locally in your browser on this device.</div>
+    </div>
+
+    <div class="panel">
+      <div class="grid-2">
+        <div>
+          <label>Name</label>
+          <input class="input" id="name" placeholder="e.g., Joe" />
+        </div>
+        <div>
+          <label>Handedness</label>
+          <select class="input" id="handed">
+            <option value="R">Right-handed</option>
+            <option value="L">Left-handed</option>
+          </select>
+        </div>
+        <div>
+          <label>Ball speed at foul line (mph)</label>
+          <input class="input" id="mphLine" type="number" step="0.1" placeholder="e.g., 17.5" />
+        </div>
+        <div>
+          <label>Ball speed at pins (mph)</label>
+          <input class="input" id="mphPins" type="number" step="0.1" placeholder="auto" readonly />
+          <div class="small">Estimated as ~15% speed loss from foul line.</div>
+        </div>
+        <div>
+          <label>Rev rate (rpm)</label>
+          <input class="input" id="rpm" type="number" step="1" placeholder="e.g., 350" />
+        </div>
+        <div>
+          <label>Dominance</label>
+          <input class="input" id="dominance" placeholder="auto" readonly />
+          <div class="small">Calculated from foul-line speed + rev rate.</div>
+        </div>
+        <div>
+          <label>Arsenal coverage (overall)</label>
+          <input class="input" id="equipScore" placeholder="auto" readonly />
+          <div class="small" id="equipNote">Auto-generated from your full arsenal (databalls.csv) using the Arsenal Matrix + Coach roles.</div>
+        </div>
+        <div>
+          <label>PAP (inches)</label>
+          <input class="input" id="pap" placeholder="e.g., 4 1/2 over, 1/2 up" />
+        </div>
+        <div>
+          <label>Axis tilt (deg)</label>
+          <input class="input" id="tilt" type="number" step="1" placeholder="e.g., 12" />
+        </div>
+        <div>
+          <label>Axis rotation (deg)</label>
+          <input class="input" id="rotation" type="number" step="1" placeholder="e.g., 55" />
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:16px;padding:14px;background:#0f172a;border:1px solid #243041">
+        <h2 style="margin:0 0 6px 0;color:#fff">LASER self-check</h2>
+        <div class="small" style="color:#cbd5e1">Rate how comfortable you are making each in-set adjustment right now. Coach will stay inside your game first. Equipment is app-managed.</div>
+        <div class="grid-2" style="margin-top:10px">
+          <div>
+            <label>Loft adjustment ability (1–5)</label>
+            <select class="input" id="laserLoft">
+              <option value="1">1 — Avoid it</option>
+              <option value="2">2 — Rarely comfortable</option>
+              <option value="3">3 — Sometimes</option>
+              <option value="4">4 — Comfortable</option>
+              <option value="5">5 — Strength</option>
+            </select>
+          </div>
+          <div>
+            <label>Aim adjustment ability (1–5)</label>
+            <select class="input" id="laserAim">
+              <option value="1">1 — Avoid it</option>
+              <option value="2">2 — Rarely comfortable</option>
+              <option value="3">3 — Sometimes</option>
+              <option value="4">4 — Comfortable</option>
+              <option value="5">5 — Strength</option>
+            </select>
+          </div>
+          <div>
+            <label>Speed adjustment ability (1–5)</label>
+            <select class="input" id="laserSpeed">
+              <option value="1">1 — Avoid it</option>
+              <option value="2">2 — Rarely comfortable</option>
+              <option value="3">3 — Sometimes</option>
+              <option value="4">4 — Comfortable</option>
+              <option value="5">5 — Strength</option>
+            </select>
+          </div>
+          <div>
+            <label>Release adjustment ability (1–5)</label>
+            <select class="input" id="laserRelease">
+              <option value="1">1 — Avoid it</option>
+              <option value="2">2 — Rarely comfortable</option>
+              <option value="3">3 — Sometimes</option>
+              <option value="4">4 — Comfortable</option>
+              <option value="5">5 — Strength</option>
+            </select>
+          </div>
+          <div>
+            <label>Equipment adjustment ability</label>
+            <input class="input" id="laserEquipment" value="App-managed" readonly />
+            <div class="small" style="margin-top:6px;color:#cbd5e1">Coach will handle ball-change suggestions from your selected set.</div>
+          </div>
+          <div>
+            <label>Current LASER comfort summary</label>
+            <input class="input" id="laserSummary" readonly />
+            <div class="small" style="margin-top:6px;color:#cbd5e1">Use this as an honest practice roadmap over time.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn" id="save">Save</button>
+        <button class="btn secondary" id="reset">Reset</button>
+        <div class="small" id="status"></div>
+      </div>
+    </div>
+
+    <div class="panel" id="progressPanel" style="width:100%;max-width:100%;margin-top:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div>
+          <h2 style="margin:0;color:#fff">Progress over time</h2>
+          <div class="small" style="color:#fff">Track improvement or decline across saved sessions.</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <select class="input" id="metricSelect" style="min-width:180px;color:#fff">
+            <option value="strikeRate">Strike rate</option>
+            <option value="pocketPct">Pocket hit %</option>
+            <option value="carryPct">Carry on pocket hits %</option>
+            <option value="executionScore">Execution score</option>
+          </select>
+          <select class="input" id="rangeSelect" style="min-width:160px;color:#fff">
+            <option value="all">All time</option>
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option>
+            <option value="180">Last 6 months</option>
+            <option value="365">Last 12 months</option>
+          </select>
+        </div>
+      </div>
+      <div id="progressSummary" class="small" style="margin-top:8px;color:#fff"></div>
+      <svg id="progressChart" viewBox="0 0 760 180" style="width:100%;height:auto;max-height:180px;margin-top:10px;background:#111827;border:1px solid #243041;border-radius:12px"></svg>
+    </div>
+  </div>
+
+  <script src="app.js?v=67"></script>
+  <script>
+    BT.renderNav('bowler');
+
+    const els = {
+      name: BT.$('#name'),
+      handed: BT.$('#handed'),
+      mphLine: BT.$('#mphLine'),
+      mphPins: BT.$('#mphPins'),
+      rpm: BT.$('#rpm'),
+      dominance: BT.$('#dominance'),
+      equipScore: BT.$('#equipScore'),
+      equipNote: BT.$('#equipNote'),
+      pap: BT.$('#pap'),
+      tilt: BT.$('#tilt'),
+      rotation: BT.$('#rotation'),
+      laserLoft: BT.$('#laserLoft'),
+      laserAim: BT.$('#laserAim'),
+      laserSpeed: BT.$('#laserSpeed'),
+      laserRelease: BT.$('#laserRelease'),
+      laserEquipment: BT.$('#laserEquipment'),
+      laserSummary: BT.$('#laserSummary'),
+      status: BT.$('#status'),
+      metricSelect: BT.$('#metricSelect'),
+      rangeSelect: BT.$('#rangeSelect'),
+      progressSummary: BT.$('#progressSummary'),
+      progressChart: BT.$('#progressChart'),
+    };
+
+    function laserSummaryText() {
+      const ratings = {
+        Loft: Number(els.laserLoft.value || 3),
+        Aim: Number(els.laserAim.value || 3),
+        Speed: Number(els.laserSpeed.value || 3),
+        Release: Number(els.laserRelease.value || 3),
+      };
+      const strengths = Object.entries(ratings).filter(([,v]) => v >= 4).map(([k]) => k.toLowerCase());
+      const protects = Object.entries(ratings).filter(([,v]) => v <= 2).map(([k]) => k.toLowerCase());
+      const bits = [];
+      bits.push(strengths.length ? `Lean on ${strengths.join(', ')}` : 'Balanced adjustment profile');
+      if (protects.length) bits.push(`protect ${protects.join(', ')}`);
+      bits.push('equipment by app');
+      return bits.join(' • ');
+    }
+
+    function updateLaserSummary() {
+      els.laserSummary.value = laserSummaryText();
+    }
+
+    function recalc() {
+      const mphLine = els.mphLine.value ? Number(els.mphLine.value) : null;
+      const rpm = els.rpm.value ? Number(els.rpm.value) : null;
+      const pins = mphLine != null ? BT.speedAtPinsFromFoulLine(mphLine) : null;
+      els.mphPins.value = (pins != null && Number.isFinite(pins)) ? pins.toFixed(1) : '';
+
+      const dom = BT.bowlerType({ mphLine, rpm });
+      els.dominance.value = dom === 'speed' ? 'Speed dominant' : dom === 'rev' ? 'Rev dominant' : 'Matched / balanced';
+    }
+
+    async function recalcArsenalOverview() {
+      // Overall arsenal coverage (not “best 6-ball set”).
+      // Uses full databalls.csv inventory + bowler-adjusted motion vectors.
+      try {
+        const bowler = BT.lsGet(BT.KEYS.BOWLER, {});
+        const payload = await BT.ensureCSVLoaded();
+        const rows = payload?.rows || [];
+
+        if (!Array.isArray(rows) || !rows.length) {
+          els.equipScore.value = '';
+          els.equipNote.textContent = 'Load databalls.csv (Arsenal/Analyze) to generate this overview.';
+          return;
+        }
+
+        // Matrix coverage across ALL balls.
+        const bucketKeys = [
+          'STRONG|SMOOTH','STRONG|SHARP',
+          'MEDIUM|SMOOTH','MEDIUM|SHARP',
+          'WEAK|SMOOTH','WEAK|SHARP',
+        ];
+        const counts = Object.fromEntries(bucketKeys.map(k => [k, 0]));
+        for (const r of rows) {
+          const nm = BT.ballName(r);
+          if (!nm) continue;
+          const est = BT.estimateStrengthShape(r);
+          const sb = BT.strengthBucket(est.strength);
+          const sh = BT.shapeBucket(est.shape);
+          const key = `${sb}|${sh}`;
+          if (counts[key] != null) counts[key] += 1;
+        }
+        const filled = bucketKeys.filter(k => counts[k] > 0).length;
+        const missingBuckets = bucketKeys.filter(k => counts[k] === 0)
+          .map(k => k.replace('|', ' + ').toLowerCase());
+
+        // Coach role coverage across ALL balls.
+        const roleOut = BT.equipmentScoreFromRows(rows, bowler);
+
+        els.equipScore.value = `Matrix ${filled}/6 • Roles ${roleOut.covered}/${roleOut.totalRoles}`;
+
+        const notes = [];
+        if (missingBuckets.length) notes.push(`Missing matrix cells: ${missingBuckets.join(', ')}.`);
+        else notes.push('All 6 matrix cells are covered by your full arsenal.');
+        if (roleOut?.notes?.length) notes.push(roleOut.notes.join(' '));
+        els.equipNote.textContent = notes.join(' ');
+      } catch (e) {
+        console.error(e);
+        els.equipScore.value = '';
+        els.equipNote.textContent = 'Could not compute arsenal overview. (Is databalls.csv available?)';
+      }
+    }
+
+    function load() {
+      const data = BT.lsGet(BT.KEYS.BOWLER, {});
+      els.name.value = data.name || '';
+      els.handed.value = data.handedness || 'R';
+      // Back-compat: older profiles stored `mph` only.
+      els.mphLine.value = data.mphLine ?? data.mph ?? '';
+      els.rpm.value = data.rpm ?? '';
+      els.pap.value = data.pap || '';
+      els.tilt.value = data.tilt ?? '';
+      els.rotation.value = data.rotation ?? '';
+      const laser = data.laser || {};
+      els.laserLoft.value = String(laser.loft ?? 3);
+      els.laserAim.value = String(laser.aim ?? 4);
+      els.laserSpeed.value = String(laser.speed ?? 3);
+      els.laserRelease.value = String(laser.release ?? 3);
+      updateLaserSummary();
+      els.status.textContent = data.name ? `Loaded: ${data.name}` : '';
+      recalc();
+      recalcArsenalOverview();
+      renderProgressChart();
+    }
+
+    function save() {
+      recalc();
+      const mphLine = els.mphLine.value ? Number(els.mphLine.value) : null;
+      const mphPins = els.mphPins.value ? Number(els.mphPins.value) : null;
+      const rpm = els.rpm.value ? Number(els.rpm.value) : null;
+      const data = {
+        name: els.name.value.trim(),
+        handedness: els.handed.value || 'R',
+        // Store both for clarity; other pages will prefer mphLine.
+        mphLine,
+        mphPins,
+        // Keep legacy field too (pins speed) so older code doesn't break if referenced.
+        mph: mphPins,
+        rpm,
+        dominance: BT.bowlerType({ mphLine, rpm }),
+        pap: els.pap.value.trim(),
+        tilt: els.tilt.value ? Number(els.tilt.value) : null,
+        rotation: els.rotation.value ? Number(els.rotation.value) : null,
+        laser: {
+          loft: Number(els.laserLoft.value || 3),
+          aim: Number(els.laserAim.value || 3),
+          speed: Number(els.laserSpeed.value || 3),
+          equipment: 5,
+          release: Number(els.laserRelease.value || 3),
+        },
+        savedAt: Date.now(),
+      };
+      BT.lsSet(BT.KEYS.BOWLER, data);
+      els.status.textContent = `Saved ${data.name ? '(' + data.name + ')' : ''}`;
+      recalcArsenalOverview();
+      renderProgressChart();
+    }
+
+    ['input', 'change'].forEach(evt => {
+      els.mphLine.addEventListener(evt, recalc);
+      els.rpm.addEventListener(evt, recalc);
+      [els.laserLoft, els.laserAim, els.laserSpeed, els.laserRelease].forEach(node => node.addEventListener(evt, updateLaserSummary));
+    });
+
+
+    function sessionSeries(metric, days) {
+      const sessions = BT.lsGet(BT.KEYS.GAME_SESSIONS, []);
+      const now = Date.now();
+      const cutoff = days === 'all' ? 0 : now - (Number(days) * 86400000);
+      return (Array.isArray(sessions) ? sessions : [])
+        .filter(s => s && s.savedAt && (!cutoff || s.savedAt >= cutoff))
+        .slice()
+        .sort((a,b)=>(a.savedAt||0)-(b.savedAt||0))
+        .map(s => ({ x: s.savedAt, y: Number((s.summary && s.summary[metric]) || 0), label: new Date(s.savedAt).toLocaleDateString() }));
+    }
+
+    function renderProgressChart() {
+      const metric = els.metricSelect.value || 'strikeRate';
+      const range = els.rangeSelect.value || 'all';
+      const series = sessionSeries(metric, range);
+      const svg = els.progressChart;
+      if (!svg) return;
+      const W = 760, H = 240, padL = 46, padR = 18, padT = 20, padB = 34;
+      const innerW = W - padL - padR, innerH = H - padT - padB;
+      if (!series.length) {
+        svg.innerHTML = `<text x="24" y="42" fill="#ffffff" font-size="14">No saved sessions yet.</text>`;
+        els.progressSummary.textContent = 'Save sessions from Game Day to start tracking progress.';
+        return;
+      }
+      const ys = series.map(p => p.y);
+      const minY = Math.max(0, Math.min(...ys, 0));
+      const maxY = Math.min(100, Math.max(...ys, 100));
+      const xFor = (i) => padL + (series.length === 1 ? innerW/2 : (i * innerW / (series.length - 1)));
+      const yFor = (v) => padT + innerH - ((v - minY) / Math.max(1, (maxY - minY))) * innerH;
+      const path = series.map((p,i)=>`${i===0?'M':'L'} ${xFor(i).toFixed(1)} ${yFor(p.y).toFixed(1)}`).join(' ');
+      let grid='';
+      for (let i=0;i<5;i++) {
+        const v = minY + (maxY-minY)*(i/4);
+        const y = yFor(v);
+        grid += `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#243041" stroke-width="1" />`;
+        grid += `<text x="8" y="${y+4}" fill="#ffffff" font-size="11">${Math.round(v)}</text>`;
+      }
+      const dots = series.map((p,i)=>`<circle cx="${xFor(i)}" cy="${yFor(p.y)}" r="4" fill="#60a5fa"><title>${p.label}: ${p.y}%</title></circle>`).join('');
+      const labels = series.map((p,i)=>`<text x="${xFor(i)}" y="${H-10}" text-anchor="middle" fill="#ffffff" font-size="10">${p.label.replace(/\/.*/, '')}</text>`).join('');
+      svg.innerHTML = `${grid}<line x1="${padL}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}" stroke="#475569" /><line x1="${padL}" y1="${padT}" x2="${padL}" y2="${H-padB}" stroke="#475569" /><path d="${path}" fill="none" stroke="#60a5fa" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />${dots}${labels}`;
+      const first = series[0].y, last = series[series.length-1].y;
+      const delta = Math.round((last-first)*10)/10;
+      const trend = delta > 0 ? `Up ${delta}` : delta < 0 ? `Down ${Math.abs(delta)}` : 'Flat';
+      els.progressSummary.textContent = `${series.length} session(s) • ${metric} • ${trend}`;
+    }
+
+    BT.$('#save').addEventListener('click', save);
+    BT.$('#reset').addEventListener('click', () => {
+      if (!confirm('Clear saved bowler profile on this device?')) return;
+      localStorage.removeItem(BT.KEYS.BOWLER);
+      load();
+      renderProgressChart();
+      els.status.textContent = 'Cleared.';
+    });
+
+    els.metricSelect.addEventListener('change', renderProgressChart);
+    els.rangeSelect.addEventListener('change', renderProgressChart);
+
+    load();
+    renderProgressChart();
+  </script>
+</body>
+</html>

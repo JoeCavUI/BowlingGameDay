@@ -1,0 +1,1320 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1116" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Bowling" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <title>Arsenal</title>
+  <link rel="stylesheet" href="styles.css?v=67" />
+</head>
+<body data-page="arsenal">
+  <div class="navlinks"></div>
+  <div class="container">
+    <div class="header">
+      <h1>Arsenal</h1>
+      
+      <div class="small dim" id="buildStamp" style="margin-top:2px">Build: v63b</div>
+<div class="small" id="csvStatus">CSV: not loaded</div>
+    </div>
+
+    <div class="panel" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <button class="btn secondary" id="reloadAuto">Reload databalls.csv</button>
+      <input id="csvFile" type="file" accept=".csv,text/csv" />
+      <button class="btn" id="loadFile">Load CSV</button>
+      <input class="input" id="filter" placeholder="Filter (ball / brand / cover / core / surface)..." style="max-width:420px" />
+      <button class="btn secondary" id="clearFilter">Clear filter</button>
+      <button class="btn secondary" id="addWhatIf">+ Add a ball</button>
+    </div>
+
+    <div class="panel">
+      <h2>Arsenal Matrix</h2>
+      <div class="small">Uses your CSV to estimate Strength and Shape → groups balls into Strong/Medium/Weak × Smooth/Sharp. The matrix reflects your current filter.</div>
+      <div class="hr-split"></div>
+      <div id="matrix" class="grid-2"></div>
+    </div>
+
+
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap">
+        <div>
+          <h2 style="margin:0">Role Planner</h2>
+          <div class="small">Shows the best matches for each coach role from the balls currently visible on this page. Use the filter first if you want to plan from a subset.</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <label class="small" for="plannerCount"><b>How many balls in your bag?</b></label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            <button class="btn secondary" data-bagsize="2">2</button>
+            <button class="btn secondary" data-bagsize="3">3</button>
+            <button class="btn secondary" data-bagsize="4">4</button>
+            <button class="btn secondary" data-bagsize="6">6</button>
+            <button class="btn secondary" data-bagsize="9">9</button>
+            <input class="input" id="plannerCount" type="number" inputmode="numeric" min="1" max="15" step="1" value="4" style="width:72px" aria-label="Bag size" />
+          </div>
+          <label class="small" style="display:flex;gap:6px;align-items:center;width:100%"><input type="checkbox" id="plannerMineOnly" style="width:auto" /> Only balls I added (Save to Arsenal)</label>
+          <button class="btn" id="suggestPlan">Suggest my bag</button>
+          <button class="btn secondary" id="clearSuggested">Clear suggestion</button>
+        </div>
+      </div>
+      <div class="hr-split"></div>
+      <div class="small dim" style="margin-bottom:10px">These roles now use a <b>two-layer fit</b>: your 6-box matrix family anchors what the ball naturally is, then the bowler-specific motion model checks how it rolls for <i>you</i>. That keeps results from overreacting to tuning alone. “Early / Control” means stronger and smoother. “Shape / Corner” means stronger with more downlane pop. A low % does not mean the ball is bad—only that it is farther from that specific role target. <b>Covered</b> means a strong fit, <b>Close</b> means usable, and <b>Gap</b> means the bag still lacks that motion.</div>
+      <div id="rolePlanner"></div>
+      <div id="roleSuggestion" style="margin-top:12px"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Ball list</h2>
+      <div class="small">Tap a matrix ball or use Tune in the list to open tuning.</div>
+      <div class="hr-split"></div>
+      <div class="list" id="table"></div>
+    </div>
+  </div>
+
+
+  <!-- What-if ball modal -->
+  <div id="whatIfModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div>
+          <div style="font-size:18px;font-weight:900">Add a ball</div>
+          <div class="small dim">Fill in the specs. <b>Save to Arsenal</b> = a ball you own (usable in sets and on Game Day). <b>Add what-if ball</b> = a ball you're thinking about buying (dashed tag, for comparison only).</div>
+        </div>
+        <button class="btn secondary" id="whatIfClose">Close</button>
+      </div>
+      <div class="hr-split"></div>
+
+      <div class="grid-2" style="gap:10px">
+        <div>
+          <div class="small dim">Brand</div>
+          <input class="input" id="wiBrand" placeholder="Storm / Brunswick / Motiv..." />
+        </div>
+        <div>
+          <div class="small dim">Ball name</div>
+          <input class="input" id="wiName" placeholder="e.g., !Q Tour Solid" />
+        </div>
+
+        <div>
+          <div class="small dim">Cover</div>
+          <select class="input" id="wiCover">
+            <option value="">(choose)</option>
+            <option>Solid</option>
+            <option>Hybrid</option>
+            <option>Pearl</option>
+            <option>Urethane</option>
+            <option>Plastic</option>
+          </select>
+        </div>
+        <div>
+          <div class="small dim">Core</div>
+          <select class="input" id="wiCore">
+            <option value="">(choose)</option>
+            <option>Sym</option>
+            <option>Asym</option>
+          </select>
+        </div>
+
+        <div>
+          <div class="small dim">Surface</div>
+          <input class="input" id="wiSurface" placeholder="4000, 2000, 1500 Polish, Polish, Compound..." />
+        </div>
+        <div>
+          <div class="small dim">RG</div>
+          <input class="input" id="wiRG" placeholder="2.48" />
+        </div>
+
+        <div>
+          <div class="small dim">Diff</div>
+          <input class="input" id="wiDiff" placeholder="0.050" />
+        </div>
+        <div>
+          <div class="small dim">PSA (asym diff)</div>
+          <input class="input" id="wiPSA" placeholder="0.015 (leave blank if Sym)" />
+        </div>
+      
+      <div class="hr-split" style="margin-top:14px"></div>
+      <div style="font-weight:900;margin-top:10px">Layout (Storm VLS)</div>
+      <div class="small dim">Optional. If you know your planned layout, add it here so the app can estimate timing/response more accurately.</div>
+
+      <div class="grid-3" style="gap:10px;margin-top:10px">
+        <div>
+          <div class="small dim">Pin to PAP</div>
+          <input class="input" id="wiPinToPAP" placeholder="e.g., 5.0" />
+        </div>
+        <div>
+          <div class="small dim">PSA to PAP</div>
+          <input class="input" id="wiPSAToPAP" placeholder="e.g., 4.0 (leave blank if Sym)" />
+        </div>
+        <div>
+          <div class="small dim">Pin buffer</div>
+          <input class="input" id="wiPinBuffer" placeholder="e.g., 2.0" />
+        </div>
+      </div>
+
+      <div class="hr-split" style="margin-top:14px"></div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-top:10px">
+        <div>
+          <div style="font-weight:900">What-if ball review</div>
+          <div class="small dim">Uses your Bowler Profile + ball specs + layout to estimate timing, response, and hook potential.</div>
+        </div>
+        <button class="btn secondary" id="whatIfPreview">Preview review</button>
+      </div>
+      <div class="panel" id="wiReviewBox" style="margin-top:10px;padding:12px;background:#111;color:#eee">
+        <div class="small dim">Fill in ball specs above, then click <b>Preview review</b>.</div>
+      </div>
+
+</div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+        <button class="btn secondary" id="whatIfAdd">Add what-if ball</button>
+        <button class="btn" id="whatIfSave">Save to Arsenal</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Perception tuning modal -->
+  <div id="tuneModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card" style="max-width:720px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div>
+          <div style="font-size:18px;font-weight:900">Ball perception sliders</div>
+          <div class="small dim">Adjust how <b>you</b> see this ball. These nudges affect the Arsenal Matrix and Analyze/Coach calculations.</div>
+        </div>
+        <button class="btn secondary" id="tuneClose">Close</button>
+      </div>
+      <div class="hr-split"></div>
+
+      <div style="font-weight:900;font-size:16px" id="tuneTitle">(ball)</div>
+      <div class="small dim" style="margin-top:4px">-10 = less, +10 = more. These are gentle nudges (not a full override).</div>
+
+      <div style="margin-top:14px;display:grid;gap:14px">
+        <div>
+          <div style="display:flex;justify-content:space-between;gap:10px">
+            <div><b>Surface</b> <span class="small dim">(what-if prep / finish)</span></div>
+            <div class="pill" id="tuneSurfaceVal">4000</div>
+          </div>
+          <input type="range" min="0" max="6" step="1" value="5" id="tuneSurface" style="width:100%" />
+          <div class="small dim" id="tuneSurfaceHelp" style="margin-top:6px">Rougher usually moves a ball earlier and smoother. Smoother usually creates more length and angle.</div>
+        </div>
+
+        <div>
+          <div style="display:flex;justify-content:space-between;gap:10px">
+            <div><b>Hook / Strength</b> <span class="small dim">(overall hook)</span></div>
+            <div class="pill" id="tuneHookVal">0</div>
+          </div>
+          <input type="range" min="-10" max="10" step="1" value="0" id="tuneHook" style="width:100%" />
+        </div>
+
+        <div>
+          <div style="display:flex;justify-content:space-between;gap:10px">
+            <div><b>Length</b> <span class="small dim">(push / midlane read)</span></div>
+            <div class="pill" id="tuneLenVal">0</div>
+          </div>
+          <input type="range" min="-10" max="10" step="1" value="0" id="tuneLen" style="width:100%" />
+        </div>
+
+        <div>
+          <div style="display:flex;justify-content:space-between;gap:10px">
+            <div><b>Backend</b> <span class="small dim">(sharpness / response)</span></div>
+            <div class="pill" id="tuneBackVal">0</div>
+          </div>
+          <input type="range" min="-10" max="10" step="1" value="0" id="tuneBack" style="width:100%" />
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:14px;padding:12px;background:#111">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-end;flex-wrap:wrap">
+          <div>
+            <div style="font-weight:900">Auto tune by role</div>
+            <div class="small dim">Tests common surface options and light perception nudges to find the closest match this ball can reach.</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <select class="input" id="tuneRole" style="min-width:220px"></select>
+            <button class="btn secondary" id="tuneAuto">Auto tune</button>
+          </div>
+        </div>
+        <div id="tuneAutoResult" class="small dim" style="margin-top:10px">Choose a role and click Auto tune to test this ball.</div>
+      </div>
+
+      <div class="panel" style="margin-top:14px;padding:12px;background:#111">
+        <div style="font-weight:900">Role match preview</div>
+        <div class="small dim" style="margin-top:4px">Use this to see which role the current tune is moving toward.</div>
+        <div id="tuneRolePreview" style="margin-top:10px"></div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:space-between;align-items:center;margin-top:14px">
+        <button class="btn secondary" id="tuneReset">Reset</button>
+        <div style="display:flex;gap:10px">
+          <button class="btn" id="tuneSave">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=67"></script>
+  <script>
+    BT.renderNav('arsenal');
+
+    const el = {
+      csvStatus: BT.$('#csvStatus'),
+      csvFile: BT.$('#csvFile'),
+      filter: BT.$('#filter'),
+      matrix: BT.$('#matrix'),
+      rolePlanner: BT.$('#rolePlanner'),
+      roleSuggestion: BT.$('#roleSuggestion'),
+      table: BT.$('#table'),
+    };
+
+    let allRows = [];
+    let recommendedNames = [];
+    let roleSelections = {};
+    let lastPlannerFilter = '';
+    let proposedRows = BT.lsGet('bt_proposed_balls_v1', []);
+    if (!Array.isArray(proposedRows)) proposedRows = [];
+
+    let customRows = BT.lsGet('bt_custom_balls_v1', []);
+    if (!Array.isArray(customRows)) customRows = [];
+
+    function viewRows() {
+      return allRows.concat(customRows).concat(proposedRows);
+    }
+
+    function setStatus() {
+      const cached = BT.lsGet(BT.KEYS.CSV_CACHE, null);
+      if (cached && cached.rows) {
+        el.csvStatus.textContent = `CSV: loaded (${cached.rows.length} balls) — ${cached.name}`;
+      } else {
+        el.csvStatus.textContent = 'CSV: not loaded';
+      }
+    }
+
+    function matchesFilter(row, q) {
+      if (!q) return true;
+      const s = q.toLowerCase();
+      const fields = [
+        BT.ballName(row),
+        BT.ballBrand(row),
+        BT.ballCover(row),
+        BT.ballCore(row),
+        BT.ballSurface(row),
+      ].join(' | ').toLowerCase();
+      return fields.includes(s);
+    }
+
+    function renderMatrix(rows) {
+      const buckets = {
+        'STRONG|SMOOTH': [],
+        'STRONG|SHARP': [],
+        'MEDIUM|SMOOTH': [],
+        'MEDIUM|SHARP': [],
+        'WEAK|SMOOTH': [],
+        'WEAK|SHARP': [],
+      };
+
+      for (const r of rows) {
+        const nm = BT.ballName(r);
+        if (!nm) continue;
+        const est = BT.estimateStrengthShape(r);
+        const sb = BT.strengthBucket(est.strength);
+        const sh = BT.shapeBucket(est.shape);
+        buckets[`${sb}|${sh}`].push({ nm, strength: est.strength, shape: est.shape, proposed: !!r.__proposed });
+      }
+
+      // Sort each cell so the list reads left-to-right / top-to-bottom from
+      // stronger to weaker, and within Smooth/Sharp by that shape direction.
+      function sortBucket(key, arr) {
+        const wantSharp = key.endsWith('SHARP');
+        arr.sort((a, b) => {
+          // stronger first
+          if (b.strength !== a.strength) return b.strength - a.strength;
+          // for SHARP, higher shape first; for SMOOTH, lower shape first
+          return wantSharp ? (b.shape - a.shape) : (a.shape - b.shape);
+        });
+        return arr;
+      }
+
+      for (const k of Object.keys(buckets)) sortBucket(k, buckets[k]);
+
+      function cell(title, arr) {
+        const pills = arr.slice(0, 24).map(o => {
+          const suggested = recommendedNames.includes(o.nm);
+          return `<span class="tag ${o.proposed ? "proposed" : ""} ${suggested ? "warn" : ""}" data-matrix-ball="${o.nm}" title="Tap to tune ${o.nm}" style="cursor:pointer">${o.nm}${o.proposed ? " ✳" : ""}${suggested ? " ✓" : ""}</span>`;
+        }).join('');
+        const more = arr.length > 24 ? `<div class="small">+${arr.length - 24} more</div>` : '';
+        return `<div class="panel" style="padding:12px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px">
+            <div><b>${title}</b></div>
+            <div class="small">${arr.length} balls</div>
+          </div>
+          <div style="margin-top:6px">${pills}${more}</div>
+        </div>`;
+      }
+
+      el.matrix.innerHTML = [
+        cell('STRONG • SMOOTH', buckets['STRONG|SMOOTH']),
+        cell('STRONG • SHARP', buckets['STRONG|SHARP']),
+        cell('MEDIUM • SMOOTH', buckets['MEDIUM|SMOOTH']),
+        cell('MEDIUM • SHARP', buckets['MEDIUM|SHARP']),
+        cell('WEAK • SMOOTH', buckets['WEAK|SMOOTH']),
+        cell('WEAK • SHARP', buckets['WEAK|SHARP']),
+      ].join('');
+      BT.$all('[data-matrix-ball]', el.matrix).forEach(tag => {
+        tag.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          openTune(tag.getAttribute('data-matrix-ball') || '');
+        });
+      });
+    }
+
+    function renderTable(rows) {
+      el.table.innerHTML = rows.map(r => {
+        const nm = BT.ballName(r);
+        const brand = BT.ballBrand(r);
+        const cover = BT.ballCover(r);
+        const core = BT.ballCore(r);
+        const surf = BT.ballSurface(r);
+        const tw = BT.ballTweaksFor(nm);
+        const tuned = (tw.hook || tw.length || tw.backend || tw.surfaceOverride);
+        const suggested = recommendedNames.includes(nm);
+        const rolePick = roleSelections[nm] || [];
+        const roleBadges = rolePick.map(lbl => `<span class="pill warn">${lbl}</span>`).join('');
+        return `<div class="list-item" data-name="${nm}" style="${suggested ? 'border-color:#8b6f22;box-shadow:0 0 0 1px rgba(255,205,86,.15) inset;' : ''}">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+            <div>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <div style="font-weight:700">${nm || '(unnamed)'}</div>
+                ${roleBadges}
+                ${r.__proposed ? '<span class="pill warn">What-if</span>' : ''}
+                ${r.__custom ? '<span class=\"pill\">Custom</span>' : ''}
+                ${tuned ? '<span class="pill">Tuned</span>' : ''}
+              </div>
+              <div class="small">${brand} • ${cover} • ${core} • ${surf}</div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+              <button class="btn secondary" data-tune="${nm}">Tune</button>
+                            ${((r.__proposed || r.__custom) ? `<button class="btn secondary" data-remove="${nm}" data-remove-type="${r.__proposed ? 'proposed' : 'custom'}">Remove</button>` : "")}
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+
+            BT.$all('button[data-tune]', el.table).forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openTune(btn.getAttribute('data-tune') || '');
+        });
+      });
+
+      // IMPORTANT: bind remove handlers OUTSIDE of the tune-loop.
+      // Previously this was nested, causing duplicate handlers and occasional crashes.
+      BT.$all('button[data-remove]', el.table).forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const t = btn.getAttribute('data-remove') || '';
+          const tp = btn.getAttribute('data-remove-type') || 'proposed';
+          if (!t) return;
+          if (!confirm(`Remove "${t}" from your list?`)) return;
+          try {
+            removeRowByName(t, tp);
+          } catch (err) {
+            console.error('Remove failed', err);
+            alert('Remove failed. Open DevTools → Console for details.');
+          }
+        });
+      });
+    }
+
+    // --- Perception tuning ---
+    const ROLE_DEFS = BT.equipmentRoleDefs ? BT.equipmentRoleDefs() : [];
+    const SURFACE_PRESETS = [
+      { idx: 0, label: '500', surface: '500' },
+      { idx: 1, label: '1000', surface: '1000' },
+      { idx: 2, label: '1500', surface: '1500' },
+      { idx: 3, label: '2000', surface: '2000' },
+      { idx: 4, label: '3000', surface: '3000' },
+      { idx: 5, label: '4000', surface: '4000' },
+      { idx: 6, label: 'Polish', surface: 'Polish' },
+    ];
+    const AUTO_TUNE_COARSE_LEVELS = [-4, -2, 0, 2, 4];
+    const TUNE_STEP_SCALE = 0.015;
+
+    const tune = {
+      modal: BT.$('#tuneModal'),
+      title: BT.$('#tuneTitle'),
+      surface: BT.$('#tuneSurface'),
+      surfaceVal: BT.$('#tuneSurfaceVal'),
+      surfaceHelp: BT.$('#tuneSurfaceHelp'),
+      hook: BT.$('#tuneHook'),
+      len: BT.$('#tuneLen'),
+      back: BT.$('#tuneBack'),
+      hookVal: BT.$('#tuneHookVal'),
+      lenVal: BT.$('#tuneLenVal'),
+      backVal: BT.$('#tuneBackVal'),
+      role: BT.$('#tuneRole'),
+      auto: BT.$('#tuneAuto'),
+      autoResult: BT.$('#tuneAutoResult'),
+      rolePreview: BT.$('#tuneRolePreview'),
+      save: BT.$('#tuneSave'),
+      reset: BT.$('#tuneReset'),
+      close: BT.$('#tuneClose'),
+      currentName: '',
+    };
+
+    const autoTuneCache = new Map();
+    let plannerTuneSignature = '';
+    let plannerTuneSummaryCache = new Map();
+    let plannerTunePending = new Set();
+    let autoTuneBusy = false;
+
+    function clampNum(x, a, b) {
+      const n = Number(x);
+      if (!Number.isFinite(n)) return a;
+      return Math.max(a, Math.min(b, n));
+    }
+
+    function rowByName(ballName) {
+      const nm = String(ballName || '').trim();
+      return viewRows().find(r => BT.ballName(r) === nm) || null;
+    }
+
+    function surfacePresetByIndex(idx) {
+      return SURFACE_PRESETS.find(p => p.idx === Number(idx)) || SURFACE_PRESETS[5];
+    }
+
+    function nearestSurfacePreset(surfaceStr) {
+      const grit = BT.surfaceToGrit(surfaceStr || '');
+      let best = SURFACE_PRESETS[0];
+      let bestDiff = Infinity;
+      for (const p of SURFACE_PRESETS) {
+        const diff = Math.abs(BT.surfaceToGrit(p.surface) - grit);
+        if (diff < bestDiff) {
+          bestDiff = diff;
+          best = p;
+        }
+      }
+      return best;
+    }
+
+    function roleById(roleId) {
+      return ROLE_DEFS.find(r => r.id === roleId) || ROLE_DEFS[0] || null;
+    }
+
+    function safeScoreRole(role, row, vec) {
+      if (!role || !row || !vec) return Infinity;
+      return BT.scoreEquipmentRole ? BT.scoreEquipmentRole(role, row, vec) : BT.motionDistance(role.target, vec);
+    }
+
+    function vectorWithManualTune(row, opts = {}) {
+      const bowler = BT.lsGet(BT.KEYS.BOWLER, {});
+      const clone = Object.assign({}, row || {});
+      if (opts.surface) clone.Surface = opts.surface;
+      const base = BT.motionVector(clone, bowler);
+      const rough = clampNum((4000 - BT.surfaceToGrit(opts.surface || BT.ballSurface(row) || '')) / 3000, 0, 1);
+      return {
+        hook: clampNum(base.hook + (Number(opts.hook) || 0) * TUNE_STEP_SCALE, 0, 1),
+        length: clampNum(base.length + (Number(opts.length) || 0) * TUNE_STEP_SCALE, 0, 1),
+        backend: clampNum(base.backend + (Number(opts.backend) || 0) * TUNE_STEP_SCALE, 0, 1),
+        shape: clampNum((base.shape ?? 0.5) + (Number(opts.backend) || 0) * 0.01 - (Number(opts.hook) || 0) * 0.004 + (0.45 - rough) * 0.06, 0, 1),
+        asym: clampNum(base.asym ?? 0.2, 0, 1),
+        layoutType: base.layoutType,
+      };
+    }
+
+    function tuneStateFromInputs() {
+      return {
+        surface: surfacePresetByIndex(tune.surface.value).surface,
+        hook: Number(tune.hook.value) || 0,
+        length: Number(tune.len.value) || 0,
+        backend: Number(tune.back.value) || 0,
+      };
+    }
+
+    function populateRoleSelect() {
+      if (!tune.role) return;
+      tune.role.innerHTML = ROLE_DEFS.map(r => `<option value="${r.id}">${r.label}</option>`).join('');
+      if (ROLE_DEFS[1]) tune.role.value = ROLE_DEFS[1].id;
+    }
+
+    function renderTunePreview() {
+      if (!tune.currentName || !tune.rolePreview) return;
+      const row = rowByName(tune.currentName);
+      if (!row) {
+        tune.rolePreview.innerHTML = '<div class="small dim">Ball not found.</div>';
+        return;
+      }
+      const state = tuneStateFromInputs();
+      const vec = vectorWithManualTune(row, state);
+      tune.rolePreview.innerHTML = ROLE_DEFS.map(role => {
+        const dist = safeScoreRole(role, row, vec);
+        const pct = roleMatchPct(dist);
+        const st = roleStatus(dist);
+        return `<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;padding:6px 0;border-top:1px solid rgba(255,255,255,.06)"><div><b>${role.label}</b><div class="small dim">${role.tag || ''}</div></div><div style="display:flex;gap:8px;align-items:center"><span class="pill ${st.cls}">${st.label}</span><span class="pill">${pct}%</span></div></div>`;
+      }).join('');
+    }
+
+    function setTunePills() {
+      tune.hookVal.textContent = String(tune.hook.value);
+      tune.lenVal.textContent = String(tune.len.value);
+      tune.backVal.textContent = String(tune.back.value);
+      const preset = surfacePresetByIndex(tune.surface.value);
+      tune.surfaceVal.textContent = preset.label;
+      tune.surfaceHelp.textContent = preset.idx <= 2
+        ? 'Rougher surfaces usually read earlier and smooth out the motion.'
+        : (preset.idx >= 6
+            ? 'Shinier surfaces usually create more push and faster response downlane.'
+            : 'Middle surfaces often live in benchmark / readable territory.');
+      renderTunePreview();
+    }
+
+    function openTune(ballName) {
+      const nm = String(ballName || '').trim();
+      if (!nm) return;
+      tune.currentName = nm;
+      tune.title.textContent = nm;
+      const row = rowByName(nm);
+      const tw = BT.ballTweaksFor(nm);
+      const preset = nearestSurfacePreset(tw.surfaceOverride || (row ? BT.ballSurface(row) : '4000'));
+      tune.surface.value = String(preset.idx);
+      tune.hook.value = tw.hook;
+      tune.len.value = tw.length;
+      tune.back.value = tw.backend;
+      if (tune.autoResult) tune.autoResult.innerHTML = 'Pick a role from the dropdown, then click <b>Auto tune</b>. The app will search common surfaces and light perception nudges for the closest match.';
+      setTunePills();
+      tune.modal.classList.remove('hidden');
+    }
+
+    function closeTune() {
+      tune.modal.classList.add('hidden');
+      tune.currentName = '';
+    }
+
+    function autoTuneBallForRole(ballName, roleId) {
+      const row = rowByName(ballName);
+      const role = roleById(roleId);
+      if (!row || !role) return null;
+      const cacheKey = `${ballName}__${roleId}`;
+      if (autoTuneCache.has(cacheKey)) return autoTuneCache.get(cacheKey);
+      let best = null;
+      for (const preset of SURFACE_PRESETS) {
+        for (const hk of AUTO_TUNE_COARSE_LEVELS) {
+          for (const ln of AUTO_TUNE_COARSE_LEVELS) {
+            for (const bk of AUTO_TUNE_COARSE_LEVELS) {
+              const vec = vectorWithManualTune(row, { surface: preset.surface, hook: hk, length: ln, backend: bk });
+              const dist = safeScoreRole(role, row, vec);
+              const complexity = Math.abs(hk) + Math.abs(ln) + Math.abs(bk);
+              if (!best || dist < best.dist - 1e-9 || (Math.abs(dist - best.dist) < 1e-9 && complexity < best.complexity)) {
+                best = { row, role, surface: preset.surface, surfaceLabel: preset.label, hook: hk, length: ln, backend: bk, vec, dist, complexity };
+              }
+            }
+          }
+        }
+      }
+      if (best) {
+        const refine = [Math.max(-2, best.hook - 1), best.hook, Math.min(2, best.hook + 1)].filter((v, i, a) => a.indexOf(v) === i);
+        const refineLen = [Math.max(-2, best.length - 1), best.length, Math.min(2, best.length + 1)].filter((v, i, a) => a.indexOf(v) === i);
+        const refineBack = [Math.max(-2, best.backend - 1), best.backend, Math.min(2, best.backend + 1)].filter((v, i, a) => a.indexOf(v) === i);
+        for (const hk of refine) {
+          for (const ln of refineLen) {
+            for (const bk of refineBack) {
+              const vec = vectorWithManualTune(row, { surface: best.surface, hook: hk, length: ln, backend: bk });
+              const dist = safeScoreRole(role, row, vec);
+              const complexity = Math.abs(hk) + Math.abs(ln) + Math.abs(bk);
+              if (dist < best.dist - 1e-9 || (Math.abs(dist - best.dist) < 1e-9 && complexity < best.complexity)) {
+                best = { row, role, surface: best.surface, surfaceLabel: best.surfaceLabel, hook: hk, length: ln, backend: bk, vec, dist, complexity };
+              }
+            }
+          }
+        }
+      }
+      autoTuneCache.set(cacheKey, best);
+      return best;
+    }
+
+    function rowsSignature(rows) {
+      return (rows || []).map(r => BT.ballName(r)).filter(Boolean).sort().join('|');
+    }
+
+    function getPlannerTuneSummary(rows, role) {
+      const sig = rowsSignature(rows);
+      if (sig !== plannerTuneSignature) {
+        plannerTuneSignature = sig;
+        plannerTuneSummaryCache = new Map();
+      }
+      const key = `${sig}__${role.id}`;
+      if (plannerTuneSummaryCache.has(key)) return plannerTuneSummaryCache.get(key);
+      let best = null;
+      for (const row of rows || []) {
+        const nm = BT.ballName(row);
+        if (!nm) continue;
+        const candidate = autoTuneBallForRole(nm, role.id);
+        if (!candidate) continue;
+        if (!best || candidate.dist < best.dist) best = candidate;
+      }
+      plannerTuneSummaryCache.set(key, best);
+      return best;
+    }
+
+    [tune.surface, tune.hook, tune.len, tune.back].forEach(inp => inp.addEventListener('input', setTunePills));
+    if (tune.role) tune.role.addEventListener('change', renderTunePreview);
+    tune.close.addEventListener('click', closeTune);
+    tune.modal.addEventListener('click', (e) => {
+      if (e.target === tune.modal) closeTune();
+    });
+    tune.reset.addEventListener('click', () => {
+      if (!tune.currentName) return;
+      BT.clearBallTweaks(tune.currentName);
+      autoTuneCache.clear();
+      plannerTuneSignature = '';
+      plannerTunePending = new Set();
+      const row = rowByName(tune.currentName);
+      const preset = nearestSurfacePreset(row ? BT.ballSurface(row) : '4000');
+      tune.surface.value = String(preset.idx);
+      tune.hook.value = 0;
+      tune.len.value = 0;
+      tune.back.value = 0;
+      if (tune.autoResult) tune.autoResult.textContent = 'Tune reset to the saved ball values.';
+      setTunePills();
+      applyFilter();
+    });
+    tune.save.addEventListener('click', () => {
+      if (!tune.currentName) return;
+      BT.setBallTweaks(tune.currentName, {
+        hook: Number(tune.hook.value),
+        length: Number(tune.len.value),
+        backend: Number(tune.back.value),
+        surfaceOverride: surfacePresetByIndex(tune.surface.value).surface,
+      });
+      autoTuneCache.delete(`${tune.currentName}__${tune.role ? tune.role.value : ''}`);
+      plannerTuneSignature = '';
+      plannerTunePending = new Set();
+      applyFilter();
+      closeTune();
+    });
+    if (tune.auto) tune.auto.addEventListener('click', async () => {
+      if (!tune.currentName || !tune.role || autoTuneBusy) return;
+      autoTuneBusy = true;
+      tune.auto.disabled = true;
+      tune.auto.textContent = 'Working…';
+      if (tune.autoResult) tune.autoResult.innerHTML = 'Testing this ball against common surfaces and light nudges…';
+      try {
+        if (!tune.role.value && ROLE_DEFS[0]) tune.role.value = ROLE_DEFS[0].id;
+        await new Promise(resolve => setTimeout(resolve, 0));
+        const best = autoTuneBallForRole(tune.currentName, tune.role.value);
+        if (!best) {
+          if (tune.autoResult) tune.autoResult.textContent = 'No tune result was found for this ball.';
+          return;
+        }
+        tune.surface.value = String(nearestSurfacePreset(best.surface).idx);
+        tune.hook.value = String(best.hook);
+        tune.len.value = String(best.length);
+        tune.back.value = String(best.backend);
+        setTunePills();
+        const pct = roleMatchPct(best.dist);
+        const st = roleStatus(best.dist);
+        const cell = BT.matrixCellForRow ? BT.matrixCellForRow(best.row) : null;
+        tune.autoResult.innerHTML = `<b>${best.role.label}</b>: ${pct}% match <span class="pill ${st.cls}">${st.label}</span><div style="margin-top:6px">Best tune found: <b>${best.surfaceLabel}</b> surface, Hook ${best.hook >= 0 ? '+' : ''}${best.hook}, Length ${best.length >= 0 ? '+' : ''}${best.length}, Backend ${best.backend >= 0 ? '+' : ''}${best.backend}.</div><div class="small dim" style="margin-top:4px">Base archetype${cell ? `: <b>${cell.strength} • ${cell.shape}</b>. ` : ': '}Auto tune now starts from the matrix family, then checks bowler-specific motion so surface does not unrealistically rewrite what the ball is.</div>`;
+      } catch (err) {
+        console.error('Auto tune failed', err);
+        if (tune.autoResult) tune.autoResult.textContent = `Auto tune failed: ${err && err.message ? err.message : err}`;
+      } finally {
+        autoTuneBusy = false;
+        tune.auto.disabled = false;
+        tune.auto.textContent = 'Auto tune';
+      }
+    });
+
+    populateRoleSelect();
+
+    function bestRoleCandidates(rows, limit = 3) {
+      const bowler = BT.lsGet(BT.KEYS.BOWLER, {});
+      const balls = (rows || []).map(row => ({
+        row,
+        name: BT.ballName(row),
+        vec: BT.motionVector(row, bowler),
+      })).filter(b => b.name);
+      return ROLE_DEFS.map(role => {
+        const ranked = balls
+          .map(ball => ({
+            ...ball,
+            cell: BT.matrixCellForRow ? BT.matrixCellForRow(ball.row) : null,
+            dist: safeScoreRole(role, ball.row, ball.vec),
+          }))
+          .sort((a, b) => a.dist - b.dist);
+        return { role, ranked: ranked.slice(0, limit), allRanked: ranked };
+      });
+    }
+
+    function roleStatus(dist) {
+      if (dist <= 0.22) return { label: 'Covered', cls: '', icon: '✅' };
+      if (dist <= 0.30) return { label: 'Close', cls: 'warn', icon: '🟡' };
+      return { label: 'Gap', cls: 'danger', icon: '❌' };
+    }
+
+    function roleMatchPct(dist) {
+      const pct = Math.round((1 - Math.min(dist, 0.75) / 0.75) * 100);
+      return Math.max(12, Math.min(99, pct));
+    }
+
+    function plannerCountValue() {
+      const node = BT.$('#plannerCount');
+      const raw = Number(node && node.value);
+      const count = Math.max(1, Math.min(15, Number.isFinite(raw) ? Math.round(raw) : 9));
+      if (node) node.value = String(count);
+      return count;
+    }
+
+    function selectRoleSuggestion(name) {
+      const nm = String(name || '').trim();
+      if (!nm) return;
+      el.filter.value = nm;
+      lastPlannerFilter = nm;
+      applyFilter();
+      const node = BT.$(`[data-name="${CSS.escape(nm)}"]`, el.table);
+      if (node) node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function renderRolePlanner(rows) {
+      const out = bestRoleCandidates(rows, 3);
+      if (!out.length) {
+        el.rolePlanner.innerHTML = '<div class="small dim">No role data available yet.</div>';
+        return;
+      }
+      const sig = rowsSignature(rows);
+      el.rolePlanner.innerHTML = out.map(({ role, ranked }) => {
+        const best = ranked[0];
+        const tunedKey = `${sig}__${role.id}`;
+        const bestTuned = plannerTuneSummaryCache.get(tunedKey) || null;
+        const pending = plannerTunePending.has(tunedKey);
+        const st = best ? roleStatus(best.dist) : { label: 'Gap', cls: 'danger', icon: '❌' };
+        const picks = ranked.length
+          ? ranked.map(it => {
+              const pct = roleMatchPct(it.dist);
+              const fam = it.cell ? `${it.cell.strength} • ${it.cell.shape}` : '';
+              return `<button class="btn secondary small" type="button" data-role-pick="${it.name}" title="Show ${it.name} in the list">${it.name} • ${pct}%${fam ? ` • ${fam}` : ''}</button>`;
+            }).join(' ')
+          : '<span class="small dim">No visible match</span>' ;
+        const tuneLine = bestTuned
+          ? `<div class="small dim" style="margin-top:6px"><span style="font-weight:800">Best with tuning:</span> ${bestTuned.row ? BT.ballName(bestTuned.row) : ''} at ${bestTuned.surfaceLabel} • ${roleMatchPct(bestTuned.dist)}% match${bestTuned.row && BT.matrixCellForRow ? ` • base ${BT.matrixCellForRow(bestTuned.row).strength} • ${BT.matrixCellForRow(bestTuned.row).shape}` : ''}</div>`
+          : (pending
+              ? `<div class="small dim" style="margin-top:6px">Checking tuning potential…</div>`
+              : `<div style="margin-top:6px"><button class="btn secondary small" type="button" data-role-tune="${role.id}">Check tuning potential</button></div>`);
+        return `<div class="list-item" style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap">
+            <div>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <b>${st.icon} ${role.label}</b>
+                <span class="pill ${st.cls}">${st.label}</span>
+                ${role.tag ? `<span class="pill">${role.tag}</span>` : ''}
+              </div>
+              <div class="small dim" style="margin-top:4px"><span style="font-weight:800">When:</span> ${role.when || 'Use this when you need this motion shape.'}</div>
+              <div class="small dim"><span style="font-weight:800">Why:</span> ${role.why || 'This role helps separate your arsenal.'}</div>
+              <div class="small dim" style="margin-top:6px">Best visible fits:</div>
+              <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${picks}</div>
+              ${tuneLine}
+            </div>
+            <div class="small dim" style="max-width:280px;text-align:right">Target motion: H ${Math.round(role.target.hook*100)} • L ${Math.round(role.target.length*100)} • B ${Math.round(role.target.backend*100)}</div>
+          </div>
+        </div>`;
+      }).join('');
+
+      BT.$all('[data-role-pick]', el.rolePlanner).forEach(btn => {
+        btn.addEventListener('click', () => selectRoleSuggestion(btn.getAttribute('data-role-pick') || ''));
+      });
+      BT.$all('[data-role-tune]', el.rolePlanner).forEach(btn => {
+        btn.addEventListener('click', () => computePlannerTune(rows, btn.getAttribute('data-role-tune') || ''));
+      });
+    }
+
+    function computePlannerTune(rows, roleId) {
+      const role = roleById(roleId);
+      if (!role) return;
+      const sig = rowsSignature(rows);
+      if (sig !== plannerTuneSignature) {
+        plannerTuneSignature = sig;
+        plannerTuneSummaryCache = new Map();
+        plannerTunePending = new Set();
+      }
+      const key = `${sig}__${role.id}`;
+      if (plannerTuneSummaryCache.has(key) || plannerTunePending.has(key)) return;
+      plannerTunePending.add(key);
+      renderRolePlanner(rows);
+      setTimeout(() => {
+        try {
+          const best = getPlannerTuneSummary(rows, role);
+          plannerTuneSummaryCache.set(key, best);
+        } finally {
+          plannerTunePending.delete(key);
+          const currentRows = viewRows().filter(r => matchesFilter(r, el.filter.value.trim()));
+          renderRolePlanner(currentRows);
+        }
+      }, 0);
+    }
+
+    function buildSuggestedSet(rows, targetCount) {
+      const count = Math.max(1, Math.min(15, Number(targetCount) || 9));
+      const roleData = bestRoleCandidates(rows, 10);
+      const used = new Set();
+      const chosen = [];
+      const roleMap = {};
+      const prioritizedRoles = roleData.slice(0, count >= roleData.length ? roleData.length : count);
+      for (const { role, allRanked } of prioritizedRoles) {
+        let pick = allRanked.find(it => !used.has(it.name));
+        if (!pick) pick = allRanked[0];
+        if (!pick) continue;
+        if (!used.has(pick.name)) {
+          used.add(pick.name);
+          chosen.push(pick);
+        }
+        roleMap[pick.name] = roleMap[pick.name] || [];
+        roleMap[pick.name].push(role.label);
+      }
+
+      if (chosen.length < count) {
+        const bowler = BT.lsGet(BT.KEYS.BOWLER, {});
+        const all = (rows || []).map(row => ({ row, name: BT.ballName(row), vec: BT.motionVector(row, bowler) })).filter(b => b.name);
+        while (chosen.length < count) {
+          let best = null;
+          for (const cand of all) {
+            if (used.has(cand.name)) continue;
+            let minD = Infinity;
+            for (const cur of chosen) minD = Math.min(minD, BT.motionDistance(cand.vec, cur.vec));
+            if (!best || minD > best.minD) best = { ...cand, minD };
+          }
+          if (!best) break;
+          used.add(best.name);
+          chosen.push(best);
+          roleMap[best.name] = roleMap[best.name] || ['Utility / separation'];
+        }
+      }
+
+      recommendedNames = chosen.map(c => c.name);
+      roleSelections = roleMap;
+      const title = `${count}-ball suggestion`;
+      const body = chosen.length
+        ? chosen.map((c, i) => `<div class="list-item" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><b>${i+1}. ${c.name}</b><div class="small dim">${(roleMap[c.name] || []).join(' • ')}</div></div></div></div>`).join('')
+        : '<div class="small dim">No suggestion available from the current filter.</div>' ;
+      lastSuggestion = { count, chosen: chosen.map(c => ({ name: c.name, roles: roleMap[c.name] || [], whatIf: !!(c.row && c.row.__proposed) })) };
+      const saveBox = chosen.length ? renderSaveBagBox(count) : '';
+      el.roleSuggestion.innerHTML = `<div class="panel" style="padding:12px;background:#111"><div style="font-weight:900">${title}</div><div class="small dim" style="margin-top:4px">The planner fills core role anchors first. If you ask for fewer than 6 balls, it shows only the highest-priority anchors. Extra slots then widen motion separation instead of duplicating shapes.</div><div class="small dim" style="margin-top:4px">Planner looked at ${rows.length} visible balls.</div><div style="margin-top:10px">${body}</div>${saveBox}</div>`;
+      wireSaveBagBox();
+      const box = BT.$('#saveBagBox'); if (box) box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // ---- Use the suggested bag on Game Day ----
+    let lastSuggestion = null;
+    const PREFERRED_SET_KEY = 'bt_gameday_preferred_set_v1';
+
+    function renderSaveBagBox(count) {
+      const items = lastSuggestion.chosen.map((c, i) => `
+        <label class="list-item" style="display:flex;gap:10px;align-items:center;cursor:pointer">
+          <input type="checkbox" data-bagball="${c.name.replace(/"/g, '&quot;')}" ${c.whatIf ? 'disabled' : 'checked'} style="width:22px;height:22px" />
+          <span><b>${c.name}</b>${c.whatIf ? ' <span class="small dim">(what-if ball: can\'t bowl with it yet)</span>' : ''}<br><span class="small dim">${(c.roles || []).join(' • ')}</span></span>
+        </label>`).join('');
+      return `<div id="saveBagBox" class="setup-banner" style="margin-top:12px">
+        <div style="font-weight:900;font-size:16px">Use this bag on Game Day?</div>
+        <div class="small" style="margin-top:4px;opacity:1">Uncheck any ball you aren't bringing, name the bag, and save. Game Day will have it selected and ready.</div>
+        <div class="list" style="margin-top:8px;max-height:none">${items}</div>
+        <label class="small" for="bagName" style="display:block;margin-top:10px"><b>Bag name</b></label>
+        <input class="input" id="bagName" value="Coach ${count}-ball bag" />
+        <div class="btn-row">
+          <button class="btn" id="saveBagGo">Save &amp; go to Game Day</button>
+          <button class="btn secondary" id="saveBagOnly">Save for Game Day</button>
+        </div>
+        <div class="small" id="saveBagMsg" style="margin-top:8px"></div>
+      </div>`;
+    }
+
+    function saveSuggestedBag() {
+      const names = BT.$all('[data-bagball]').filter(cb => cb.checked && !cb.disabled).map(cb => cb.getAttribute('data-bagball'));
+      if (!names.length) { alert('Check at least one ball for the bag.'); return null; }
+      const name = (BT.$('#bagName').value || '').trim() || `Coach ${names.length}-ball bag`;
+      const sets = BT.lsGet(BT.KEYS.ARSENAL_SETS, []);
+      const list = Array.isArray(sets) ? sets : [];
+      const existing = list.find(x => String(x.name || '').toLowerCase() === name.toLowerCase());
+      if (existing && !confirm(`Replace your saved bag "${existing.name}"?`)) return null;
+      const payload = { id: existing ? existing.id : `set_${Math.random().toString(36).slice(2, 10)}`, name, balls: names, savedAt: Date.now(), source: 'coach' };
+      const next = existing ? list.map(x => x.id === payload.id ? payload : x) : [payload, ...list];
+      BT.lsSet(BT.KEYS.ARSENAL_SETS, next);
+      BT.lsSet(PREFERRED_SET_KEY, name);
+      return payload;
+    }
+
+    function wireSaveBagBox() {
+      const go = BT.$('#saveBagGo'), only = BT.$('#saveBagOnly');
+      if (go) go.addEventListener('click', () => { if (saveSuggestedBag()) location.href = 'gameday.html'; });
+      if (only) only.addEventListener('click', () => {
+        const p = saveSuggestedBag();
+        if (p) BT.$('#saveBagMsg').innerHTML = `✅ Saved <b>${p.name}</b> (${p.balls.length} balls). It's ready on <a href="gameday.html" style="color:var(--accent)">Game Day</a> and listed on Analyze.`;
+      });
+    }
+
+    function clearSuggestion() {
+      recommendedNames = [];
+      roleSelections = {};
+      el.roleSuggestion.innerHTML = '';
+      if (lastPlannerFilter && el.filter.value === lastPlannerFilter) el.filter.value = '';
+      lastPlannerFilter = '';
+    }
+
+    function applyFilter() {
+      const q = el.filter.value.trim();
+      const rows = viewRows().filter(r => matchesFilter(r, q));
+      renderMatrix(rows);
+      renderRolePlanner(rows);
+      renderTable(rows);
+    }
+
+    async function init() {
+      // Display build version from shared app.js
+      try {
+        const bs = document.getElementById('buildStamp');
+        if (bs && BT && BT.APP_VERSION) bs.textContent = `Build: ${BT.APP_VERSION}`;
+      } catch (_e) {}
+      setStatus();
+      const cached = await BT.ensureCSVLoaded();
+      if (cached && cached.rows) {
+        allRows = cached.rows.filter(r => !r.__custom);
+        setStatus();
+        applyFilter();
+      } else {
+        allRows = [];
+        renderMatrix([]);
+        renderTable([]);
+      }
+    }
+
+    BT.$('#reloadAuto').addEventListener('click', async () => {
+      try {
+        const payload = await (async () => {
+          const res = await fetch('databalls.csv', { cache: 'no-store' });
+          if (!res.ok) throw new Error('Fetch failed');
+          const text = await res.text();
+          const rows = BT.parseCSV(text);
+          const p = { savedAt: Date.now(), name: 'databalls.csv', rows };
+          BT.lsSet(BT.KEYS.CSV_CACHE, p);
+          return p;
+        })();
+        allRows = payload.rows;
+        setStatus();
+        applyFilter();
+      } catch (e) {
+        alert('Could not load the starter ball list. Check your connection and try again.');
+        console.error(e);
+      }
+    });
+
+    BT.$('#loadFile').addEventListener('click', async () => {
+      const f = el.csvFile.files && el.csvFile.files[0];
+      if (!f) {
+        alert('Choose a CSV file first.');
+        return;
+      }
+      const payload = await BT.loadCSVFromUpload(f);
+      allRows = payload.rows;
+      setStatus();
+      applyFilter();
+    });
+
+    el.filter.addEventListener('input', applyFilter);
+    BT.$('#clearFilter').addEventListener('click', () => { el.filter.value = ''; applyFilter(); });
+    function plannerRows() {
+      const mineOnly = !!(BT.$('#plannerMineOnly') && BT.$('#plannerMineOnly').checked);
+      return viewRows().filter(r => matchesFilter(r, el.filter.value.trim())).filter(r => !mineOnly || r.__custom);
+    }
+    function runPlanner(n) {
+      const rows = plannerRows();
+      if (!rows.length) { alert('No balls to pick from. Add your balls with "+ Add a ball", or untick "Only balls I added".'); return; }
+      buildSuggestedSet(rows, n);
+      applyFilter();
+      const box = BT.$('#saveBagBox'); if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    BT.$('#suggestPlan').addEventListener('click', () => runPlanner(plannerCountValue()));
+    BT.$all('[data-bagsize]').forEach(b => b.addEventListener('click', () => {
+      const n = Number(b.getAttribute('data-bagsize'));
+      const inp = BT.$('#plannerCount'); if (inp) inp.value = String(n);
+      runPlanner(n);
+    }));
+    BT.$('#clearSuggested').addEventListener('click', () => { clearSuggestion(); applyFilter(); });
+
+    function showWhatIfModal(show) {
+      const m = BT.$('#whatIfModal');
+      if (!m) return;
+      m.classList.toggle('hidden', !show);
+    }
+
+    function clearWhatIfForm() {
+      for (const id of ['wiBrand','wiName','wiCover','wiCore','wiSurface','wiRG','wiDiff','wiPSA']) {
+        const n = BT.$('#'+id);
+        if (n) n.value = '';
+      }
+    }
+
+function saveWhatIfBall() {
+  const brand = (BT.$('#wiBrand').value || '').trim();
+  const nameRaw = (BT.$('#wiName').value || '').trim();
+  const cover = (BT.$('#wiCover').value || '').trim();
+  const core = (BT.$('#wiCore').value || '').trim();
+  const surface = (BT.$('#wiSurface').value || '').trim();
+  const rg = (BT.$('#wiRG').value || '').trim();
+  const diff = (BT.$('#wiDiff').value || '').trim();
+  const psa = (BT.$('#wiPSA').value || '').trim();
+
+  if (!nameRaw) { alert('Ball name is required.'); return; }
+  if (!cover) { alert('Cover is required.'); return; }
+  if (!core) { alert('Core is required.'); return; }
+
+  let name = nameRaw;
+  const existingNames = new Set(viewRows().map(r => BT.ballName(r)).filter(Boolean));
+  if (existingNames.has(name)) name = name + ' (Custom)';
+
+  const tmpRow = {
+    '#': '',
+    'Brand': brand,
+    'Ball Name': name,
+    'Cover': cover,
+    'Core': core,
+    'Surface': surface,
+    'RG': rg ? String(parseFloat(rg)) : '',
+    'Diff': diff ? String(parseFloat(diff)) : '',
+    'PSA': psa ? String(parseFloat(psa)) : '',
+  };
+
+  const layout = layoutFromForm();
+  const out = buildWhatIfReview(tmpRow, layout);
+
+  const row = Object.assign({}, tmpRow, {
+    '__custom': '1',
+    '__layout': JSON.stringify(layout || {}),
+    '__review': out?.review || '',
+  });
+
+  customRows.push(row);
+  BT.lsSet('bt_custom_balls_v1', customRows);
+  showWhatIfModal(false);
+  clearWhatIfForm();
+  applyFilter();
+}
+
+
+// --- What-if designer helpers (VLS + review) ---
+function numOrNull(v) {
+  const n = parseFloat(String(v || '').trim());
+  return Number.isFinite(n) ? n : null;
+}
+
+function layoutFromForm() {
+  return {
+    pinToPAP: numOrNull(BT.$('#wiPinToPAP')?.value),
+    psaToPAP: numOrNull(BT.$('#wiPSAToPAP')?.value),
+    pinBuffer: numOrNull(BT.$('#wiPinBuffer')?.value),
+  };
+}
+
+function clearWhatIfForm() {
+  ['#wiBrand','#wiName','#wiCover','#wiCore','#wiSurface','#wiRG','#wiDiff','#wiPSA','#wiPinToPAP','#wiPSAToPAP','#wiPinBuffer'].forEach(sel => {
+    const el = BT.$(sel);
+    if (!el) return;
+    if (el.tagName === 'SELECT') el.value = '';
+    else el.value = '';
+  });
+  const box = BT.$('#wiReviewBox');
+  if (box) box.innerHTML = '<div class="small dim">Fill in ball specs above, then click <b>Preview review</b>.</div>';
+}
+
+function labelFromScore(v, bands) {
+  for (const b of bands) if (v <= b.max) return b.label;
+  return bands[bands.length - 1].label;
+}
+
+function buildWhatIfReview(row, layout) {
+  const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
+  const speed = numOrNull(bowler.ballSpeedMph || bowler.speedMph || bowler.speed) || null;
+  const revs = numOrNull(bowler.revRate || bowler.revs) || null;
+  const axisRot = numOrNull(bowler.axisRotationDeg || bowler.axisRotation) || null;
+
+  const est = BT.estimateStrengthShape(row);
+  const mv = BT.motionVector(row); // {hook,length,backend} 0..1
+
+  const p2p = layout?.pinToPAP;
+  const pbuf = layout?.pinBuffer;
+  const psa = layout?.psaToPAP;
+
+  // Timing (higher = later)
+  let timing = mv.length;
+  if (p2p != null) timing += (p2p >= 5.25 ? 0.08 : p2p <= 3.5 ? -0.08 : 0);
+  if (speed != null) timing += (speed >= 18.5 ? 0.06 : speed <= 15.5 ? -0.04 : 0);
+  if (revs != null) timing += (revs >= 380 ? -0.05 : revs <= 250 ? 0.05 : 0);
+  timing = Math.max(0, Math.min(1, timing));
+
+  // Response (higher = faster)
+  let response = mv.backend;
+  if (pbuf != null) response += (pbuf <= 2.0 ? 0.10 : pbuf >= 4.0 ? -0.06 : 0);
+  if (axisRot != null) response += (axisRot >= 55 ? 0.06 : axisRot <= 25 ? -0.04 : 0);
+  if (psa != null) response += (psa <= 3.0 ? 0.06 : psa >= 5.0 ? -0.03 : 0);
+  response = Math.max(0, Math.min(1, response));
+
+  // Horsepower (overall hook potential)
+  let hp = (est.strength * 0.6) + (mv.hook * 0.4);
+  if (revs != null) hp += (revs >= 380 ? 0.06 : revs <= 250 ? -0.04 : 0);
+  if (p2p != null) hp += (p2p >= 3.5 && p2p <= 5.0 ? 0.04 : 0);
+  hp = Math.max(0, Math.min(1, hp));
+
+  const timingLabel = labelFromScore(timing, [
+    {max:0.32,label:'Early'},
+    {max:0.52,label:'Mid'},
+    {max:0.70,label:'Mid-Late'},
+    {max:1.00,label:'Late'},
+  ]);
+
+  const responseLabel = labelFromScore(response, [
+    {max:0.38,label:'Slow'},
+    {max:0.62,label:'Medium'},
+    {max:1.00,label:'Fast'},
+  ]);
+
+  const shapeLabel = labelFromScore(mv.backend, [
+    {max:0.38,label:'Smooth'},
+    {max:0.62,label:'Arc'},
+    {max:1.00,label:'Sharp'},
+  ]);
+
+  const hpLabel = labelFromScore(hp, [
+    {max:0.38,label:'Low'},
+    {max:0.66,label:'Medium'},
+    {max:1.00,label:'High'},
+  ]);
+
+  const layoutText = (layout && (layout.pinToPAP!=null || layout.psaToPAP!=null || layout.pinBuffer!=null))
+    ? `${layout.pinToPAP ?? '—'} × ${layout.psaToPAP ?? '—'} × ${layout.pinBuffer ?? '—'}`
+    : 'Not provided';
+
+  const bowlerTextParts = [];
+  if (speed != null) bowlerTextParts.push(`${speed.toFixed(1)} mph`);
+  if (revs != null) bowlerTextParts.push(`${Math.round(revs)} rpm`);
+  const bowlerText = bowlerTextParts.length ? bowlerTextParts.join(' / ') : 'Bowler profile not set';
+
+  const use = [];
+  if (timingLabel === 'Early') use.push('Fresh / higher volume');
+  if (timingLabel === 'Late') use.push('Friction / transition');
+  if (responseLabel === 'Fast') use.push('Carrydown / need finish');
+  if (shapeLabel === 'Smooth') use.push('Over/under control');
+  if (hpLabel === 'High') use.push('Need more hook');
+  if (!use.length) use.push('Benchmark / readable look');
+
+  const review = `
+    <div style="font-weight:900;font-size:16px">${BT.ballName(row) || 'What-if ball'}</div>
+    <div class="small dim" style="margin-top:4px">Layout (VLS): <b>${layoutText}</b> • Bowler: <b>${bowlerText}</b></div>
+    <div style="margin-top:10px;line-height:1.4">
+      <div>• <b>Friction timing:</b> ${timingLabel}</div>
+      <div>• <b>Response:</b> ${responseLabel}</div>
+      <div>• <b>Shape:</b> ${shapeLabel}</div>
+      <div>• <b>Horsepower:</b> ${hpLabel}</div>
+    </div>
+    <div class="small dim" style="margin-top:10px"><b>Best for:</b> ${use.join(' • ')}</div>
+  `.trim();
+
+  return { timingLabel, responseLabel, shapeLabel, hpLabel, review };
+}
+
+function previewWhatIf() {
+  const brand = (BT.$('#wiBrand').value || '').trim();
+  const nameRaw = (BT.$('#wiName').value || '').trim();
+  const cover = (BT.$('#wiCover').value || '').trim();
+  const core = (BT.$('#wiCore').value || '').trim();
+  const surface = (BT.$('#wiSurface').value || '').trim();
+  const rg = (BT.$('#wiRG').value || '').trim();
+  const diff = (BT.$('#wiDiff').value || '').trim();
+  const psa = (BT.$('#wiPSA').value || '').trim();
+  if (!nameRaw || !cover || !core) {
+    const box = BT.$('#wiReviewBox');
+    if (box) box.innerHTML = '<div class="small dim">Add at least <b>Ball name</b>, <b>Cover</b>, and <b>Core</b> to preview a review.</div>';
+    return;
+  }
+  const tmpRow = {
+    '#':'',
+    'Brand': brand,
+    'Ball Name': nameRaw,
+    'Cover': cover,
+    'Core': core,
+    'Surface': surface,
+    'RG': rg ? String(parseFloat(rg)) : '',
+    'Diff': diff ? String(parseFloat(diff)) : '',
+    'PSA': psa ? String(parseFloat(psa)) : '',
+  };
+  const layout = layoutFromForm();
+  const out = buildWhatIfReview(tmpRow, layout);
+  const box = BT.$('#wiReviewBox');
+  if (box) box.innerHTML = out.review;
+}
+
+function removeRowByName(name, type) {
+  const nm = String(name||'').trim();
+  if (!nm) return;
+  if (type === 'proposed') {
+    proposedRows = (proposedRows || []).filter(r => BT.ballName(r) !== nm);
+    BT.lsSet('bt_proposed_balls_v1', proposedRows);
+  } else if (type === 'custom') {
+    customRows = (customRows || []).filter(r => BT.ballName(r) !== nm);
+    BT.lsSet('bt_custom_balls_v1', customRows);
+  }
+  applyFilter();
+}
+
+    function addWhatIfBall() {
+      const brand = (BT.$('#wiBrand').value || '').trim();
+      const nameRaw = (BT.$('#wiName').value || '').trim();
+      const cover = (BT.$('#wiCover').value || '').trim();
+      const core = (BT.$('#wiCore').value || '').trim();
+      const surface = (BT.$('#wiSurface').value || '').trim();
+      const rg = (BT.$('#wiRG').value || '').trim();
+      const diff = (BT.$('#wiDiff').value || '').trim();
+      const psa = (BT.$('#wiPSA').value || '').trim();
+
+      if (!nameRaw) { alert('Ball name is required.'); return; }
+      if (!cover) { alert('Cover is required.'); return; }
+      if (!core) { alert('Core is required.'); return; }
+
+      let name = nameRaw;
+      const existingNames = new Set(viewRows().map(r => BT.ballName(r)).filter(Boolean));
+      if (existingNames.has(name)) name = name + ' (What-if)';
+
+      const row = {
+        '#': '',
+        'Brand': brand,
+        'Ball Name': name,
+        'Cover': cover,
+        'Core': core,
+        'Surface': surface,
+        'RG': rg ? String(parseFloat(rg)) : '',
+        'Diff': diff ? String(parseFloat(diff)) : '',
+        'PSA': psa ? String(parseFloat(psa)) : '',
+        '__proposed': '1',
+      };
+
+      proposedRows.push(row);
+      BT.lsSet('bt_proposed_balls_v1', proposedRows);
+      showWhatIfModal(false);
+      clearWhatIfForm();
+      applyFilter();
+    }
+
+    BT.$('#addWhatIf').addEventListener('click', () => showWhatIfModal(true));
+    BT.$('#whatIfClose').addEventListener('click', () => showWhatIfModal(false));
+    BT.$('#whatIfAdd').addEventListener('click', addWhatIfBall);
+    BT.$('#whatIfPreview')?.addEventListener('click', previewWhatIf);
+    BT.$('#whatIfSave')?.addEventListener('click', saveWhatIfBall);
+    BT.$('#whatIfModal').addEventListener('click', (e) => {
+      if (e.target && e.target.id === 'whatIfModal') showWhatIfModal(false);
+    });
+
+
+    init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1116" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Bowling" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <title>Bowling Tool</title>
+  <link rel="stylesheet" href="styles.css?v=67" />
+</head>
+<body data-page="home">
+  <div class="navlinks"></div>
+  <div class="container">
+    <div class="header">
+      <h1>Bowling Tool</h1>
+      <div class="header-right">
+        <div class="small"><span class="tag" id="buildTag">Beta</span></div>
+      </div>
+    </div>
+
+    <!-- Shown in Safari only (hidden once it's opened from the Home Screen) -->
+    <div class="panel setup-banner" id="installCard" style="display:none;margin-top:14px">
+      <b>Install on your iPhone</b>
+      <div class="small" style="margin-top:6px;opacity:1">
+        Tap the <b>Share</b> button in Safari (the square with the arrow), then <b>Add to Home Screen</b>.
+        Open it from the new icon. It runs full-screen, works without signal at the lanes, and keeps your data safer.
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:14px">
+      <div class="panel">
+        <h2>Get set up</h2>
+        <div class="small">Do these once. Game Day needs steps 2–4 before you can log shots. New here? <a href="guide.html" style="color:var(--accent);font-weight:700">Read the step-by-step guide →</a></div>
+        <ul class="checklist" id="checklist"></ul>
+      </div>
+
+      <div class="panel">
+        <h2>Your data</h2>
+        <div class="small" id="backupStatus">Everything is saved on this phone only.</div>
+        <div class="btn-row">
+          <button class="btn" id="exportBtn">Back up my data</button>
+          <label class="btn secondary" for="importFile" style="display:inline-flex;align-items:center">Restore from backup</label>
+          <input id="importFile" type="file" accept=".json,application/json" style="display:none" />
+        </div>
+        <div class="small" style="margin-top:10px">
+          Back up after each league night. Save the file to Files or email it to yourself. If you switch phones or clear Safari, use <b>Restore</b> to bring everything back.
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:14px">
+      <div class="panel">
+        <h2>Game Day</h2>
+        <div class="small">Track shots + coaching + save session to Scores.</div>
+        <div style="margin-top:10px"><a class="btn" href="gameday.html">Open Game Day</a></div>
+      </div>
+      <div class="panel">
+        <h2>Scores</h2>
+        <div class="small">History: sessions by date/house/pattern + summary.</div>
+        <div style="margin-top:10px"><a class="btn" href="scores.html">Open Scores</a></div>
+      </div>
+      <div class="panel">
+        <h2>Bowler</h2>
+        <div class="small">Save your PAP, speed, rev rate, tilt, rotation, etc.</div>
+        <div style="margin-top:10px"><a class="btn" href="bowler.html">Open Bowler Info</a></div>
+      </div>
+      <div class="panel">
+        <h2>Arsenal</h2>
+        <div class="small">Add your balls → matrix + table.</div>
+        <div style="margin-top:10px"><a class="btn" href="arsenal.html">Open Arsenal</a></div>
+      </div>
+      <div class="panel">
+        <h2>Analyze</h2>
+        <div class="small">Build / save an arsenal set, tournament bag helper.</div>
+        <div style="margin-top:10px"><a class="btn" href="analyze.html">Open Analyze</a></div>
+      </div>
+      <div class="panel">
+        <h2>Oil</h2>
+        <div class="small">Save houses and oil patterns (length, volume, ratio, notes).</div>
+        <div style="margin-top:10px"><a class="btn" href="oil.html">Open Oil</a></div>
+      </div>
+      <div class="panel">
+        <h2>Friction Timing</h2>
+        <div class="small">HP / Response Time / Response Length sliders + matching balls.</div>
+        <div style="margin-top:10px"><a class="btn" href="lane.html">Open Friction Timing</a></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=67"></script>
+  <script>
+    BT.renderNav('home');
+    BT.$('#buildTag').textContent = 'Beta ' + BT.APP_VERSION;
+
+    // Install hint: only in a mobile browser tab, not once it's on the Home Screen.
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile && !BT.isStandalone()) BT.$('#installCard').style.display = '';
+
+    function renderChecklist() {
+      const s = BT.setupStatus();
+      const steps = [
+        { done: s.bowler, title: 'Enter your bowler info', sub: 'Speed, rev rate, PAP, tilt, rotation.', href: 'bowler.html', link: 'Bowler' },
+        { done: s.houses && s.patterns, title: 'Add your bowling house and an oil pattern', sub: s.houses && !s.patterns ? 'House added. Now add a pattern.' : 'Example: your league house + its house shot.', href: 'oil.html', link: 'Oil' },
+        { done: s.customBalls > 0, optional: true, title: 'Add your own balls', sub: 'Tap “+ Add a ball” and use “Save to Arsenal”. A starter list of 35 balls is already loaded.', href: 'arsenal.html', link: 'Arsenal' },
+        { done: s.sets, title: 'Save a ball set (the balls in your bag tonight)', sub: 'Pick balls, name the set, save it.', href: 'analyze.html', link: 'Analyze' },
+        { done: s.sessions > 0, title: 'Bowl! Log shots on Game Day and save the session', sub: s.sessions ? `${s.sessions} session${s.sessions === 1 ? '' : 's'} saved.` : 'Saved sessions show up in Scores.', href: 'gameday.html', link: 'Game Day' },
+      ];
+      BT.$('#checklist').innerHTML = steps.map((st, i) => `
+        <li class="${st.done ? 'done' : ''}">
+          <span class="mark">${st.done ? '✓' : (i + 1)}</span>
+          <div>
+            <div><b>${st.title}</b>${st.optional ? ' <span class="small">(optional)</span>' : ''}</div>
+            <div class="small">${st.sub} <a href="${st.href}">Open ${st.link} →</a></div>
+          </div>
+        </li>`).join('');
+    }
+
+    function renderBackupStatus() {
+      const at = BT.lastBackupAt();
+      const s = BT.setupStatus();
+      const box = BT.$('#backupStatus');
+      if (!at) {
+        box.textContent = s.sessions ? 'Not backed up yet. Your data is only on this phone.' : 'Everything is saved on this phone only.';
+        box.style.color = s.sessions ? 'var(--danger)' : '';
+        return;
+      }
+      const days = Math.floor((Date.now() - at) / 86400000);
+      box.textContent = `Last backup: ${new Date(at).toLocaleDateString()}${days >= 7 ? ` (${days} days ago, time for a new one)` : ''}.`;
+      box.style.color = days >= 7 ? 'var(--danger)' : '';
+    }
+
+    BT.$('#exportBtn').addEventListener('click', async () => {
+      try {
+        const ok = await BT.exportBackup();
+        if (ok) renderBackupStatus();
+      } catch (e) {
+        alert('Backup failed: ' + (e && e.message ? e.message : e));
+      }
+    });
+
+    BT.$('#importFile').addEventListener('change', async (ev) => {
+      const f = ev.target.files && ev.target.files[0];
+      ev.target.value = '';
+      if (!f) return;
+      if (!confirm('Restore this backup? It replaces everything currently saved in the app on this phone.')) return;
+      try {
+        const r = await BT.importBackupFile(f);
+        alert('Restored' + (r.exportedAt ? ' backup from ' + new Date(r.exportedAt).toLocaleString() : '') + '.');
+        location.reload();
+      } catch (e) {
+        alert(e && e.message ? e.message : 'Could not restore that file.');
+      }
+    });
+
+    renderChecklist();
+    renderBackupStatus();
+  </script>
+</body>
+</html>

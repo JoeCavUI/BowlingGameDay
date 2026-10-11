@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1116" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Bowling" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <title>Friction Timing</title>
+  <link rel="stylesheet" href="styles.css?v=67" />
+</head>
+<body data-page="lane">
+  <div class="navlinks"></div>
+  <div class="container">
+    <div class="header">
+      <h1>Friction Timing</h1>
+      <div class="small" id="csvStatus">CSV: not loaded</div>
+    </div>
+
+    <div class="panel" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <input id="csvFile" type="file" accept=".csv,text/csv" />
+      <button class="btn" id="loadFile">Load CSV</button>
+      <button class="btn secondary" id="reloadAuto">Reload databalls.csv</button>
+      <div class="small" id="hint">Tip: running on <b>http://localhost:3000</b> lets databalls.csv auto-load.</div>
+    </div>
+
+    <div class="panel">
+      <div class="grid-2">
+        <div>
+          <label>Horsepower (1-5): <b id="hpV">3</b></label>
+          <input id="hp" type="range" min="1" max="5" step="1" value="3" />
+        </div>
+        <div>
+          <label>Response Time (1-5): <b id="rtV">3</b></label>
+          <input id="rt" type="range" min="1" max="5" step="1" value="3" />
+        </div>
+        <div>
+          <label>Response Length (1-5): <b id="rlV">3</b></label>
+          <input id="rl" type="range" min="1" max="5" step="1" value="3" />
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+          <button class="btn" id="update">Update Friction Timing</button>
+          <button class="btn secondary" id="reset">Reset</button>
+          <div class="small">Values save automatically.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Matching Balls</h2>
+      <div class="small">Matches are ranked by how close your sliders are to each ball’s estimated Strength (horsepower), response timing, and backend shape.</div>
+      <div class="hr-split"></div>
+      <div class="list" id="matches" style="max-height:70vh"></div>
+    </div>
+  </div>
+
+  <script src="app.js?v=67"></script>
+  <script>
+    BT.renderNav('lane');
+
+    const el = {
+      csvStatus: BT.$('#csvStatus'),
+      csvFile: BT.$('#csvFile'),
+      matches: BT.$('#matches'),
+      hp: BT.$('#hp'), rt: BT.$('#rt'), rl: BT.$('#rl'),
+      hpV: BT.$('#hpV'), rtV: BT.$('#rtV'), rlV: BT.$('#rlV'),
+    };
+
+    const SLIDER_KEY = 'bt_friction_sliders_v1';
+
+    let rows = [];
+
+    function setStatus() {
+      const cached = BT.lsGet(BT.KEYS.CSV_CACHE, null);
+      if (cached && cached.rows) el.csvStatus.textContent = `CSV: loaded (${cached.rows.length} balls) — ${cached.name}`;
+      else el.csvStatus.textContent = 'CSV: not loaded';
+    }
+
+    function sliderTarget() {
+      // normalize 1..5 -> 0..1
+      const hp = (Number(el.hp.value) - 1) / 4;
+      const rt = (Number(el.rt.value) - 1) / 4;
+      const rl = (Number(el.rl.value) - 1) / 4;
+      return { hp, rt, rl };
+    }
+
+    function scoreBall(row, t) {
+      const est = BT.estimateStrengthShape(row);
+      const strength = est.strength;
+      const shape = est.shape;
+
+      // response time proxy: smoother (lower shape) tends to be slower response
+      const respTime = 1 - shape;
+
+      // response length proxy: more surface/cover strength tends to start earlier (shorter skid), so length is inverse of strength.
+      const respLen = 1 - strength;
+
+      const d1 = Math.abs(strength - t.hp);
+      const d2 = Math.abs(respTime - t.rt);
+      const d3 = Math.abs(respLen - t.rl);
+
+      // weighted distance
+      const dist = (d1 * 0.45) + (d2 * 0.30) + (d3 * 0.25);
+      return { dist, strength, shape, respTime, respLen };
+    }
+
+    function renderMatches() {
+      if (!rows.length) {
+        el.matches.innerHTML = `<div class="list-item small">Load a CSV to see matches.</div>`;
+        return;
+      }
+      const t = sliderTarget();
+      const scored = rows
+        .map(r => ({ row: r, name: BT.ballName(r), brand: BT.ballBrand(r), cover: BT.ballCover(r), surface: BT.ballSurface(r), ...scoreBall(r, t) }))
+        .filter(x => x.name)
+        .sort((a,b) => a.dist - b.dist)
+        .slice(0, 60);
+
+      el.matches.innerHTML = scored.map(s => {
+        const hp = Math.round(s.strength * 5 * 10)/10;
+        const rt = Math.round(s.respTime * 5 * 10)/10;
+        const rl = Math.round(s.respLen * 5 * 10)/10;
+        return `<div class="list-item">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+            <div>
+              <div style="font-weight:800">${s.name}</div>
+              <div class="small">${s.brand} • ${s.cover} • ${s.surface}</div>
+              <div class="kpi" style="margin-top:6px">
+                <span class="pill">HP ~ ${hp}</span>
+                <span class="pill">RespTime ~ ${rt}</span>
+                <span class="pill">RespLen ~ ${rl}</span>
+              </div>
+            </div>
+            <div class="small">match ${(1 - s.dist).toFixed(2)}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function syncSliderLabels() {
+      el.hpV.textContent = el.hp.value;
+      el.rtV.textContent = el.rt.value;
+      el.rlV.textContent = el.rl.value;
+    }
+
+    function saveSliders() {
+      BT.lsSet(SLIDER_KEY, { hp: Number(el.hp.value), rt: Number(el.rt.value), rl: Number(el.rl.value) });
+    }
+
+    function loadSliders() {
+      const s = BT.lsGet(SLIDER_KEY, { hp: 3, rt: 3, rl: 3 });
+      el.hp.value = s.hp || 3;
+      el.rt.value = s.rt || 3;
+      el.rl.value = s.rl || 3;
+      syncSliderLabels();
+    }
+
+    async function init() {
+      setStatus();
+      loadSliders();
+      const cached = await BT.ensureCSVLoaded();
+      if (cached && cached.rows) {
+        rows = cached.rows;
+      } else {
+        rows = [];
+      }
+      setStatus();
+      renderMatches();
+    }
+
+    BT.$('#loadFile').addEventListener('click', async () => {
+      const f = el.csvFile.files && el.csvFile.files[0];
+      if (!f) return alert('Choose a CSV file first.');
+      const payload = await BT.loadCSVFromUpload(f);
+      rows = BT.withCustomBalls(payload.rows);
+      setStatus();
+      renderMatches();
+    });
+
+    BT.$('#reloadAuto').addEventListener('click', async () => {
+      try {
+        const res = await fetch('databalls.csv', { cache: 'no-store' });
+        if (!res.ok) throw new Error('Fetch failed');
+        const text = await res.text();
+        const parsed = BT.parseCSV(text);
+        BT.lsSet(BT.KEYS.CSV_CACHE, { savedAt: Date.now(), name: 'databalls.csv', rows: parsed });
+        rows = BT.withCustomBalls(parsed);
+        setStatus();
+        renderMatches();
+      } catch (e) {
+        alert('Could not load the starter ball list. Check your connection and try again.');
+        console.error(e);
+      }
+    });
+
+    BT.$('#update').addEventListener('click', () => {
+      syncSliderLabels();
+      saveSliders();
+      renderMatches();
+    });
+
+    BT.$('#reset').addEventListener('click', () => {
+      el.hp.value = 3; el.rt.value = 3; el.rl.value = 3;
+      syncSliderLabels();
+      saveSliders();
+      renderMatches();
+    });
+
+    [el.hp, el.rt, el.rl].forEach(r => {
+      r.addEventListener('input', () => {
+        syncSliderLabels();
+        saveSliders();
+      });
+    });
+
+    init();
+  </script>
+</body>
+</html>

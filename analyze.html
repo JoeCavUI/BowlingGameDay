@@ -1,0 +1,884 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1116" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Bowling" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <title>Analyze Arsenal</title>
+  <link rel="stylesheet" href="styles.css?v=67" />
+</head>
+<body data-page="analyze">
+  <div class="navlinks"></div>
+  <div class="container">
+    <div class="header">
+      <h1>Analyze Arsenal</h1>
+      <div class="small" id="csvStatus">CSV: not loaded</div>
+    </div>
+
+    <div class="panel" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <button class="btn secondary" id="reloadAuto">Reload databalls.csv</button>
+      <input id="csvFile" type="file" accept=".csv,text/csv" />
+      <button class="btn" id="loadFile">Load CSV</button>
+      <input class="input" id="filter" placeholder="Filter (ball / brand / cover / surface)..." style="max-width:420px" />
+    </div>
+
+    <div class="grid-3" style="align-items:start">
+      <!-- Column 1 -->
+      <div class="panel">
+        <h2>Saved arsenal sets</h2>
+        <div class="small">Create a named set that Game Day can use (instead of the entire CSV).</div>
+        <div class="hr-split"></div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <input class="input" id="setName" placeholder="Set name (e.g., THS Bag)" style="max-width:260px" />
+          <button class="btn" id="saveSet">Save current selection</button>
+          <button class="btn secondary" id="clearSelection">Clear selection</button>
+        </div>
+
+        <div style="margin-top:12px">
+          <b>Current selection <span id="selectionCount" class="small dim"></span></b>
+          <div class="list" id="selection" style="max-height:360px;margin-top:8px"></div>
+        </div>
+
+        <div style="margin-top:12px">
+          <b>Saved sets <span id="setsCount" class="small dim"></span></b>
+          <div class="list" id="sets" style="max-height:320px;margin-top:8px"></div>
+        </div>
+      </div>
+
+      <!-- Column 2 -->
+      <div class="panel">
+        <h2>Tournament bag helper <span id="bagCount" class="small dim"></span></h2>
+        <div class="small">Try combinations without restarting. Add as many balls as you want, remove any time.</div>
+        <div class="hr-split"></div>
+
+        <div class="list list-tall" id="bag"></div>
+        <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn secondary" id="bagClear">Clear bag</button>
+        </div>
+
+        <div class="hr-split"></div>
+        <h2>Gaps + overlaps</h2>
+        <div class="small dim">Most similar pairs = overlaps. Most different pairs = largest motion separation.</div>
+        <div id="gaps" class="list"></div>
+
+        <div class="hr-split"></div>
+        <h2>Coach summary</h2>
+        <div class="small dim">Checks show a role is covered by at least one ball in your bag.</div>
+        <div id="coach" class="list"></div>
+      </div>
+
+      <!-- Column 3 -->
+      <div class="panel">
+        <h2>Ball list</h2>
+        <div class="small">Tap to add to selection + bag.</div>
+        <div class="list list-tall" id="ballList"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=67"></script>
+  <script>
+    BT.renderNav('analyze');
+
+    const el = {
+      csvStatus: BT.$('#csvStatus'),
+      csvFile: BT.$('#csvFile'),
+      filter: BT.$('#filter'),
+      setName: BT.$('#setName'),
+      selection: BT.$('#selection'),
+      selectionCount: BT.$('#selectionCount'),
+      sets: BT.$('#sets'),
+      setsCount: BT.$('#setsCount'),
+      ballList: BT.$('#ballList'),
+      bag: BT.$('#bag'),
+      bagCount: BT.$('#bagCount'),
+      gaps: BT.$('#gaps'),
+      coach: BT.$('#coach'),
+    };
+
+    let allRows = [];
+    let filteredRows = [];
+    let currentSelection = []; // ball names
+    let roleSuggestCache = {}; // roleId -> [{name,row,vec,d,inBag}]
+    let currentBag = []; // ball names
+
+    function setStatus() {
+      const cached = BT.lsGet(BT.KEYS.CSV_CACHE, null);
+      if (cached && cached.rows) {
+        el.csvStatus.textContent = `CSV: loaded (${cached.rows.length} balls) — ${cached.name}`;
+      } else {
+        el.csvStatus.textContent = 'CSV: not loaded';
+      }
+    }
+
+    function matchesFilter(row, q) {
+      if (!q) return true;
+      const s = q.toLowerCase();
+      const fields = [
+        BT.ballName(row),
+        BT.ballBrand(row),
+        BT.ballCover(row),
+        BT.ballSurface(row),
+      ].join(' | ').toLowerCase();
+      return fields.includes(s);
+    }
+
+    function renderSelection() {
+      if (el.selectionCount) el.selectionCount.textContent = `(${currentSelection.length})`;
+      el.selection.innerHTML = currentSelection.map(n => {
+        return `<div class="list-item" style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+          <div><b>${n}</b></div>
+          <button class="btn danger" data-remove="${n}" style="min-width:110px">Remove</button>
+        </div>`;
+      }).join('') || `<div class="list-item small">No balls selected yet.</div>`;
+
+      BT.$all('button[data-remove]', el.selection).forEach(b => {
+        b.addEventListener('click', () => {
+          const n = b.getAttribute('data-remove');
+          currentSelection = currentSelection.filter(x => x !== n);
+          renderSelection();
+        });
+      });
+    }
+
+    function renderBag() {
+      if (el.bagCount) el.bagCount.textContent = `(${currentBag.length})`;
+      const bagClearBtn = BT.$('#bagClear');
+      if (bagClearBtn) bagClearBtn.textContent = `Clear bag (${currentBag.length})`;
+      el.bag.innerHTML = currentBag.map(n => {
+        return `<div class="list-item" style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+          <div><b>${n}</b></div>
+          <button class="btn danger" data-bagremove="${n}" style="min-width:110px">Remove</button>
+        </div>`;
+      }).join('') || `<div class="list-item small">Bag is empty.</div>`;
+
+      BT.$all('button[data-bagremove]', el.bag).forEach(b => {
+        b.addEventListener('click', () => {
+          const n = b.getAttribute('data-bagremove');
+          currentBag = currentBag.filter(x => x !== n);
+          renderBag();
+        });
+      });
+
+      // Keep these in sync as the bag changes.
+      renderGapsOverlaps();
+      renderCoachSummary();
+    }
+
+    // --- Gaps/Overlaps + Coach Summary (bowler-adjusted motion model)
+    function bagAsMotion() {
+      const bowler = BT.lsGet(BT.KEYS.BOWLER, {});
+      const byName = new Map(
+        allRows
+          .map(r => [BT.ballName(r), r])
+          .filter(([nm]) => nm)
+      );
+
+      return currentBag
+        .map(nm => {
+          const row = byName.get(String(nm ?? '').trim());
+          if (!row) return null;
+          const vec = BT.motionVector(row, bowler);
+          return {
+            name: BT.ballName(row),
+            row,
+            vec,
+          };
+        })
+        .filter(Boolean);
+    }
+
+    function ensureRoleSuggestModal() {
+      if (BT.$('#roleSuggestModal')) return;
+      const div = document.createElement('div');
+      div.id = 'roleSuggestModal';
+      div.className = 'modal-overlay hidden';
+      div.innerHTML = `
+        <div class="modal-card" role="dialog" aria-modal="true">
+          <div class="modal-head">
+            <div id="roleSuggestTitle" style="font-weight:900"></div>
+            <button class="btn small" id="roleSuggestClose" type="button">Close</button>
+          </div>
+          <div class="small dim" id="roleSuggestSubtitle" style="margin-top:2px"></div>
+          <div id="roleSuggestBody" style="margin-top:10px"></div>
+        </div>
+      `;
+      document.body.appendChild(div);
+
+      const close = () => div.classList.add('hidden');
+      div.addEventListener('click', (e) => { if (e.target === div) close(); });
+      BT.$('#roleSuggestClose').addEventListener('click', close);
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !div.classList.contains('hidden')) close(); });
+    }
+
+    const ROLE_OK = 0.22;
+const ROLE_WARN = 0.30;
+function roleThresholdStatus(dist){ return (dist <= ROLE_OK) ? 'Covered' : ((dist <= ROLE_WARN) ? 'Close' : 'Gap'); }
+
+    function openRoleSuggestModal(roleId, roleLabel) {
+      const esc = (v) => String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+      const gritOf = (surfaceStr) => {
+        const s = String(surfaceStr || '').toLowerCase();
+        const m = s.match(/(\d{3,4})/);
+        if (m) return Number(m[1]);
+        if (s.includes('1500 polish')) return 1500;
+        if (s.includes('polish')) return 5500;
+        if (s.includes('compound')) return 4500;
+        return 4000;
+      };
+      const currentFamily = (vec) => {
+        const strength = (vec.hook >= 0.67 ? 'Strong' : (vec.hook >= 0.45 ? 'Medium' : 'Weak'));
+        const shape = (vec.backend >= 0.60 ? 'Sharp' : 'Smooth');
+        return `${strength} + ${shape}`;
+      };
+      const rawSurfaceOf = (row) => String((row && (row['Surface'] || row['Finish'])) || '').trim() || '—';
+      const roleSurfaceAdvice = (role, row, vec) => {
+        const currentSurface = String(BT.ballSurface(row) || '').trim() || '—';
+        const grit = gritOf(currentSurface);
+        const suggest = (target, why, extra='') => {
+          const already = Math.abs(grit - target) <= 300 || (target >= 5000 && grit >= 5000);
+          const label = target >= 5000 ? '5000 / Polish' : `${target}`;
+          return {
+            currentSurface,
+            targetLabel: label,
+            why,
+            note: already ? `Current surface is already in that range.` : extra || `Change surface toward ${label} to move this ball closer to ${role.label}.`
+          };
+        };
+        if (role.id === 'early') return suggest(2000, 'Earlier read and smoother response help create a true control shape.', 'Start around 2000; if it still looks too clean, test 1500.');
+        if (role.id === 'benchmark') return suggest(3000, 'A balanced 3000-ish surface usually reads the lane best without jumping.', 'Try 3000 to make the motion more readable and baseline-friendly.');
+        if (role.id === 'corner') return suggest(4000, 'More retained energy and continuation help the ball finish through the pins.', 'Try 4000 first; if you need even more pop, test polish.');
+        if (role.id === 'clean') return suggest(5000, 'More length and quicker response help the ball clear the fronts and create angle.', 'Try 5000 or polish to increase length and cornering.');
+        if (role.id === 'burn') return suggest(4000, 'Cleaner motion keeps the ball from reading too early as the fronts go away.', 'Try 4000 first; polish only if it still hooks too soon.');
+        if (role.id === 'blend') return suggest(2000, 'A touch more surface smooths the breakpoint and blends wet/dry.', 'Try 2000–3000 to calm down jumpy backend motion.');
+        return { currentSurface, targetLabel: currentSurface, why: 'Keep this shape close to its current motion window.', note: 'No surface change suggested.' };
+      };
+
+      const previewRoleDistance = (role, row) => {
+        try {
+          const bowler = BT.lsGet(BT.KEYS.BOWLER, {});
+          const vec = BT.motionVector(row, bowler);
+          const d = BT.scoreEquipmentRole(role, row, vec);
+          return Number.isFinite(d) ? d : null;
+        } catch (e) {
+          return null;
+        }
+      };
+
+
+      ensureRoleSuggestModal();
+      const modal = BT.$('#roleSuggestModal');
+      const title = BT.$('#roleSuggestTitle');
+      const subtitle = BT.$('#roleSuggestSubtitle');
+      const body = BT.$('#roleSuggestBody');
+
+      title.textContent = `Role suggestions: ${roleLabel}`;
+      const list0 = roleSuggestCache?.[roleId] || [];
+      const role = (BT.equipmentRoleDefs().find(r => r.id === roleId)) || { id: roleId, label: roleLabel };
+      // Sort best-to-worst (best = highest match / lowest distance), then hide <49% matches.
+      const list = [...list0]
+        .sort((a,b) => a.d - b.d)
+        .map(it => ({ ...it, match: Math.max(0, Math.min(100, Math.round(100 - (it.d * 100)))) }))
+        .filter(it => it.match >= 49);
+
+      subtitle.textContent = list.length
+        ? 'Closest matches from your loaded arsenal (not just current bag).'
+        : 'No eligible balls found at 49%+ match for this role.';
+
+      const rows = list.slice(0, 10).map((it, idx) => {
+        const c = (BT.ballCover(it.row) || '').trim();
+        const s = (BT.ballSurface(it.row) || '').trim();
+        const rg = BT.ballRG(it.row);
+        const diff = BT.ballDiff(it.row);
+        const psa = BT.ballPSA(it.row);
+        const inBag = it.inBag ? '<span class="pill">In bag</span>' : '';
+        const match = it.match;
+        const weak = match < 80;
+        const badge = weak ? '<span class="pill warn">⚠ Low</span>' : '<span class="pill ok">✓ Good</span>';
+        const matchHtml = weak
+          ? `<div class="small" style="white-space:nowrap;font-weight:900;color:var(--danger)">Match ${match}%</div>`
+          : `<div class="small" style="white-space:nowrap;font-weight:900">Match ${match}%</div>`;
+        const advice = roleSurfaceAdvice(role, it.row, it.vec);
+        const baseSurface = rawSurfaceOf(it.row);
+        const hasOverride = String(advice.currentSurface).trim() !== String(baseSurface).trim();
+
+        let projectedMatch = match;
+        let projectedStatus = roleThresholdStatus(it.d);
+        const targetSurface = String(advice.targetLabel || '').trim();
+        if (targetSurface) {
+          const tempRow = { ...it.row, Surface: targetSurface, Finish: targetSurface, 'Ball Name': `${it.name}__preview__` };
+          const tempVec = BT.motionVector(tempRow, BT.lsGet(BT.KEYS.BOWLER, {}));
+          const projectedDist = previewRoleDistance(role, tempRow);
+          if (Number.isFinite(projectedDist)) {
+            projectedMatch = Math.max(0, Math.min(100, Math.round(100 - (projectedDist * 100))));
+            projectedStatus = roleThresholdStatus(projectedDist);
+          } else {
+            projectedMatch = match;
+            projectedStatus = roleThresholdStatus(it.d);
+          }
+        }
+        const statusColor = projectedStatus === 'Covered' ? 'var(--ok)' : (projectedStatus === 'Close' ? 'var(--warn)' : 'var(--danger)');
+        const beforeAfterHtml = String(advice.currentSurface).trim() !== targetSurface
+          ? `<div class="small dim"><span style="font-weight:800">Before → after:</span> ${match}% → ${projectedMatch}%</div>`
+          : `<div class="small dim"><span style="font-weight:800">Current modeled match:</span> ${projectedMatch}%</div>`;
+        const statusHtml = `<div class="small" style="font-weight:800;color:${statusColor}">Status after override: ${projectedStatus}</div>`;
+        return `
+          <div class="list-item" style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+            <div>
+              <div style="font-weight:900">${idx+1}. ${esc(it.name)} ${inBag} ${badge}</div>
+              <div class="small dim">${esc(c)} • ${esc(s)} • RG ${rg || '—'} • Diff ${diff || '—'} • PSA ${psa || '—'}</div>
+              <div class="small dim"><span style="font-weight:800">Current tendency:</span> ${esc(currentFamily(it.vec))}</div>
+              <div class="small dim"><span style="font-weight:800">Suggested surface:</span> ${esc(advice.targetLabel)} <span class="dim">(current ${esc(advice.currentSurface)})</span></div>
+              ${beforeAfterHtml}
+              ${statusHtml}
+              <div class="small dim"><span style="font-weight:800">Why:</span> ${esc(advice.why)}</div>
+              <div class="small dim">${esc(advice.note)} This uses an app override and does not change the CSV.</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+                <button class="btn small" type="button" data-apply-surface="${esc(it.name)}" data-surface-value="${esc(advice.targetLabel)}">Apply override</button>
+                ${hasOverride ? `<button class="btn small" type="button" data-clear-surface="${esc(it.name)}">Remove override</button>` : ''}
+              </div>
+            </div>
+            ${matchHtml}
+          </div>
+        `;
+      }).join('');
+      body.innerHTML = rows || '<div class="list-item small dim">No suggestions available at 49%+ match.</div>';
+      BT.$all('[data-apply-surface]', body).forEach(btn => {
+        btn.addEventListener('click', () => {
+          const nm = btn.getAttribute('data-apply-surface');
+          const surface = btn.getAttribute('data-surface-value') || '';
+          if (!nm || !surface) return;
+          BT.setBallSurfaceOverride(nm, surface);
+          applyFilter();
+          renderSelection();
+          renderBag();
+          openRoleSuggestModal(roleId, roleLabel);
+        });
+      });
+      BT.$all('[data-clear-surface]', body).forEach(btn => {
+        btn.addEventListener('click', () => {
+          const nm = btn.getAttribute('data-clear-surface');
+          if (!nm) return;
+          BT.clearBallSurfaceOverride(nm);
+          applyFilter();
+          renderSelection();
+          renderBag();
+          openRoleSuggestModal(roleId, roleLabel);
+        });
+      });
+      modal.classList.remove('hidden');
+    }
+
+
+    function renderGapsOverlaps() {
+      if (!el.gaps) return;
+      try {
+        const bag = bagAsMotion();
+        if (bag.length < 2) {
+          el.gaps.innerHTML = '<div class="list-item small">Add 2+ balls to your bag to see overlaps (too similar) and gaps (nice variety).</div>';
+          return;
+        }
+
+        // Motion distance is weighted Euclidean; maximum possible distance in our 0–1 space.
+        // We include soft shape + asymmetry terms to better match real-world motion.
+        // (hook 1.1, length 1.0, backend 1.0, shape 0.95, asym 0.55)
+        const MAX_DIST = Math.sqrt(1.1 * 1.1 + 1 + 1 + 0.95 * 0.95 + 0.55 * 0.55);
+
+        const similarityScore = (dist) => {
+          const s = (1 - (dist / MAX_DIST)) * 100;
+          return Math.max(0, Math.min(100, Math.round(s)));
+        };
+
+        const pairInsight = (p) => {
+          const sim = similarityScore(p.dist);
+          const adh = Math.abs(p.dh);
+          const adl = Math.abs(p.dl);
+          const adb = Math.abs(p.db);
+          const ads = Math.abs(p.ds);
+          const ada = Math.abs(p.da);
+
+          const maxA = Math.max(adh, adl, adb, ads, ada);
+          let axis = null;
+          if (maxA >= 0.18) {
+            axis = (maxA === adh) ? 'hook'
+              : (maxA === adl) ? 'length'
+              : (maxA === adb) ? 'backend'
+              : (maxA === ads) ? 'shape'
+              : 'asym';
+          }
+
+          let blurb = '';
+          if (sim >= 90) blurb = 'Near-duplicate reaction for you.';
+          else if (sim >= 80) blurb = 'Very similar reaction for you.';
+          else if (sim >= 65) blurb = 'Some separation — you’ll notice a difference.';
+          else blurb = 'Clear shape change — good option for a move.';
+
+          if (!axis) return blurb;
+
+          if (axis === 'hook') {
+            const more = (p.dh >= 0) ? p.a : p.b;
+            blurb += ` More total hook: ${more}.`;
+          } else if (axis === 'length') {
+            const longer = (p.dl >= 0) ? p.a : p.b;
+            blurb += ` More length: ${longer}.`;
+          } else if (axis === 'backend') {
+            const sharper = (p.db >= 0) ? p.a : p.b;
+            blurb += ` Sharper backend: ${sharper}.`;
+          } else if (axis === 'shape') {
+            const sharper = (p.ds >= 0) ? p.a : p.b;
+            blurb += ` More angular shape: ${sharper}.`;
+          } else {
+            const moreAsym = (p.da >= 0) ? p.a : p.b;
+            blurb += ` More asym/core torque: ${moreAsym}.`;
+          }
+          return blurb;
+        };
+
+        const pairs = [];
+        for (let i = 0; i < bag.length; i++) {
+          for (let j = i + 1; j < bag.length; j++) {
+            const a = bag[i], b = bag[j];
+            const dh = a.vec.hook - b.vec.hook;
+            const dl = a.vec.length - b.vec.length;
+            const db = a.vec.backend - b.vec.backend;
+            const ds = (a.vec.shape ?? 0.5) - (b.vec.shape ?? 0.5);
+            const da = (a.vec.asym ?? 0) - (b.vec.asym ?? 0);
+            const d = BT.motionDistance(a.vec, b.vec);
+            pairs.push({ a: a.name, b: b.name, dist: d, dh, dl, db, ds, da, va: a.vec, vb: b.vec });
+          }
+        }
+        pairs.sort((x,y)=>x.dist-y.dist);
+
+        const overlaps = pairs.slice(0, Math.min(4, pairs.length));
+        const gaps = pairs.slice(-Math.min(4, pairs.length)).reverse();
+
+        const mk = (p) => {
+          const sim = similarityScore(p.dist);
+          const tier = sim >= 90 ? 'Very High' : sim >= 80 ? 'High' : sim >= 65 ? 'Medium' : 'Low';
+          return `
+            <div class="list-item">
+              <div style="font-weight:800">${p.a} <span class="dim">vs</span> ${p.b}</div>
+              <div class="small" style="margin-top:2px"><span class="dim">Similarity:</span> <span style="font-weight:800">${sim}/100</span> <span class="dim">(${tier})</span></div>
+              <div class="small dim">Δhook ${(p.dh*100).toFixed(0)}% · Δlength ${(p.dl*100).toFixed(0)}% · Δbackend ${(p.db*100).toFixed(0)}% · Δshape ${(p.ds*100).toFixed(0)}% · Δasym ${(p.da*100).toFixed(0)}%</div>
+              <div class="small dim" style="margin-top:2px">${pairInsight(p)}</div>
+            </div>
+          `;
+        };
+
+        el.gaps.innerHTML = `
+          <div class="list-item" style="padding:10px 12px">
+            <details>
+              <summary style="cursor:pointer;font-weight:800">What do these numbers mean?</summary>
+              <div class="small dim" style="margin-top:6px;line-height:1.35">
+                Each ball is scored on a motion model for <b>your</b> bowler profile: <b>Hook</b> (total strength), <b>Length</b> (how long it pushes), <b>Backend</b> (downlane response), plus softer terms for <b>Shape</b> (smooth→sharp), <b>Asym</b> (core torque), and <b>CSV layout influence</b> (short pin / control / long pin).
+                <br/><br/>
+                <b>Overlaps</b> = pairs that react most similarly. <b>Gaps</b> = pairs that give the biggest shape change.
+                <br/><br/>
+                The <b>Similarity</b> score (0–100) is a quick summary: 90+ is near-duplicate, 80–89 very similar, 65–79 noticeable, below 65 is a clear move.
+              </div>
+            </details>
+          </div>
+          <div class="list-item small" style="font-weight:900">Overlaps (most similar)</div>
+          ${overlaps.map(mk).join('') || '<div class="list-item small dim">No pairs.</div>'}
+          <div class="list-item small" style="margin-top:10px;font-weight:900">Largest motion separation</div>
+          ${gaps.map(mk).join('') || '<div class="list-item small dim">No pairs.</div>'}
+        `;
+      } catch (e) {
+        console.error('renderGapsOverlaps failed', e);
+        el.gaps.innerHTML = '<div class="list-item small dim">Couldn\'t compute gaps/overlaps. Open DevTools → Console for details.</div>';
+      }
+    }
+
+    function renderCoachSummary() {
+      if (!el.coach) return;
+      try {
+        const bag = bagAsMotion();
+        if (!bag.length) {
+          el.coach.innerHTML = '<div class="list-item small">Add balls to your bag to see coaching notes.</div>';
+          return;
+        }
+
+        const coverOf = (b) => (BT.ballCover(b.row) || '').toLowerCase();
+        const hasUrethane = bag.some(b => coverOf(b).includes('urethane'));
+        const hasPlastic = bag.some(b => {
+          const c = coverOf(b);
+          return c.includes('plastic') || c.includes('poly') || c.includes('polyester');
+        });
+
+        const roleDefs = BT.equipmentRoleDefs();
+
+        const REUSE_PENALTY = 0.08;
+
+const useCount = new Map(); // ballName -> times used
+
+function gritOf(b) {
+  const s = BT.ballSurface(b.row) || '';
+  return BT.surfaceToGrit(s);
+}
+function roughOf(b) {
+  const grit = gritOf(b);
+  return Math.max(0, Math.min(1, (4000 - grit) / 3000));
+}
+function coverClass(b) {
+  const c = coverOf(b);
+  if (c.includes('urethane')) return 'urethane';
+  if (c.includes('plastic') || c.includes('poly')) return 'plastic';
+  if (c.includes('pearl')) return 'pearl';
+  if (c.includes('hybrid')) return 'hybrid';
+  if (c.includes('solid')) return 'solid';
+  return 'unknown';
+}
+
+// Simple eligibility rules so roles aren't "auto-covered" by the least-wrong ball
+function eligible(role, b) {
+  const cc = coverClass(b);
+  const rough = roughOf(b);
+
+  // Optional hard-ish eligibility to prevent silly matches
+  if (role.id === 'early') {
+    if (cc === 'pearl') return false;
+    if (rough < 0.15) return false; // too clean/shiny for early control
+  }
+  if (role.id === 'clean') {
+    if (!(cc === 'pearl' || cc === 'hybrid')) return false;
+    if (rough > 0.60) return false; // too early/rolly for angle role
+  }
+  if (role.id === 'burn') {
+    if (rough > 0.70) return false; // super rough doesn't behave like a burn ball
+  }
+  // no hard requirement for asym; shared role scoring handles that as a preference
+
+  return true;
+}
+
+const roles = roleDefs.map(role => {
+  const candidates = bag
+    .filter(b => eligible(role, b))
+    .map(b => {
+      let d = BT.scoreEquipmentRole(role, b.row, b.vec);
+
+      // penalize reuse so one ball doesn't "win" everything
+      const k = useCount.get(b.name) || 0;
+      d += k * REUSE_PENALTY;
+
+      return { b, d };
+    })
+    .sort((x, y) => x.d - y.d);
+
+  const best = candidates[0];
+  if (!best) return { id: role.id, label: role.label, ball: null, ok: false, warn: false };
+
+  const ok = best.d <= ROLE_OK;
+  const warn = !ok && best.d <= ROLE_WARN;
+
+  if (ok) useCount.set(best.b.name, (useCount.get(best.b.name) || 0) + 1);
+
+  return { id: role.id, label: role.label, tag: role.tag, when: role.when, why: role.why, ball: best.b, ok, warn, dist: best.d };
+});
+
+roles.push({ id:'urethane', label:'Urethane / short (optional)', ok: hasUrethane });
+        roles.push({ id:'spare', label:'Spare / plastic (optional)', ok: hasPlastic });
+
+        // Redundancy note
+       
+
+        // Suggestions cache: for missing roles, show best candidates from the full loaded arsenal
+        try {
+          const bowler = BT.lsGet(BT.KEYS.BOWLER, {});
+          const inBagSet = new Set(currentBag.map(n => String(n ?? '').trim()).filter(Boolean));
+          const all = allRows
+            .map(row => {
+              const name = BT.ballName(row);
+              if (!name) return null;
+              const vec = BT.motionVector(row, bowler);
+              return { name, row, vec, inBag: inBagSet.has(String(name).trim()) };
+            })
+            .filter(Boolean);
+
+          const suggestByRole = {};
+          for (const role of roleDefs) {
+            const cands = all
+              .filter(b => eligible(role, b))
+              .map(b => ({ ...b, d: BT.scoreEquipmentRole(role, b.row, b.vec) }))
+              .sort((a, b) => a.d - b.d);
+            suggestByRole[role.id] = cands.slice(0, 15);
+          }
+          roleSuggestCache = suggestByRole;
+        } catch (e) {
+          console.warn('role suggestions cache build failed', e);
+          roleSuggestCache = {};
+        }
+ const overlaps = [];
+        for (let i = 0; i < bag.length; i++) {
+          for (let j = i + 1; j < bag.length; j++) {
+            const d = BT.motionDistance(bag[i].vec, bag[j].vec);
+            if (d < 0.18) overlaps.push(`${bag[i].name} & ${bag[j].name}`);
+          }
+        }
+
+        const quadrantTag = (row) => { const cell = BT.matrixCellForRow(row); return `${cell.strength} + ${cell.shape}`; };
+
+        const roleRows = roles.map(r => {
+          const isOptional = (r.id === 'urethane' || r.id === 'spare');
+          const ok = (typeof r.ok === 'boolean') ? r.ok : !!r.ball;
+          const missing = (!ok && !r.warn && !isOptional);
+          const icon = ok ? '✅' : (r.warn ? '⚠️' : (isOptional ? '➖' : '❌'));
+          const who = r.ball ? r.ball.name : (ok ? 'In bag' : 'Missing');
+          const hint = missing ? '<div class="small dim">Tap for suggestions</div>' : '';
+          return `
+            <div class="list-item coach-role" data-role="${r.id}" data-missing="${missing ? 1 : 0}" style="display:flex;justify-content:space-between;gap:10px;align-items:center;cursor:${missing?'pointer':'default'}">
+              <div>
+                <div style="font-weight:900">${icon} ${r.label}</div>
+                <div class="small dim">${who}</div>
+                ${r.ball ? `<div class="small dim">(${quadrantTag(r.ball.row)})</div>` : (r.tag ? `<div class="small dim">(${r.tag})</div>` : ``)}
+                ${(r.when||r.why) ? `<div class="small dim"><span style="font-weight:800">When:</span> ${r.when||''}</div><div class="small dim"><span style="font-weight:800">Why:</span> ${r.why||''}</div>` : ''}
+                ${hint}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        // Bag bias (automatic): detects if your selected bag is clustered toward one motion style.
+        function avgMotionVec(bagList){
+          if(!bagList.length) return {hook:0,length:0,backend:0};
+          const s = bagList.reduce((acc,b)=>({hook:acc.hook+b.vec.hook, length:acc.length+b.vec.length, backend:acc.backend+b.vec.backend}), {hook:0,length:0,backend:0});
+          return {hook:s.hook/bagList.length, length:s.length/bagList.length, backend:s.backend/bagList.length};
+        }
+        function avgPairwiseDistance(bagList){
+          if(bagList.length<2) return 0;
+          let sum=0, n=0;
+          for(let i=0;i<bagList.length;i++){
+            for(let j=i+1;j<bagList.length;j++){
+              sum += BT.motionDistance(bagList[i].vec, bagList[j].vec);
+              n++;
+            }
+          }
+          return n? (sum/n) : 0;
+        }
+        function lengthBand(x){ return (x<0.50)?'Early' : (x>0.65)?'Late' : 'Mid'; }
+        function responseBand(x){ return (x<0.45)?'Smooth' : (x>0.62)?'Sharp' : 'Arc'; }
+
+        const coreRoles = roles.filter(r => !['urethane','spare'].includes(r.id));
+        const coveredCount = coreRoles.filter(r => (typeof r.ok==='boolean') ? r.ok : !!r.ball).length;
+        const missingList = coreRoles
+          .filter(r => {
+            const ok = (typeof r.ok==='boolean') ? r.ok : !!r.ball;
+            const isMissing = (!ok && !r.warn);
+            return isMissing;
+          })
+          .map(r => r.label);
+
+        const avgV = avgMotionVec(bag);
+        const spread = avgPairwiseDistance(bag);
+        const biasLabel = `${lengthBand(avgV.length)} + ${responseBand(avgV.backend)}`;
+        const overlapHeavy = (bag.length>=3 && spread < 0.13);
+
+        let meaning = '';
+        if (biasLabel.includes('Early') && biasLabel.includes('Smooth')) meaning = 'Control-heavy bag: great for fresh / sport reads, can struggle creating angle late.';
+        else if (biasLabel.includes('Late') && biasLabel.includes('Sharp')) meaning = 'Angle-heavy bag: great when you need recovery, can be jumpy on wet/dry.';
+        else if (biasLabel.includes('Late') && biasLabel.includes('Smooth')) meaning = 'Long + smooth: great for blending, may struggle to kick corners when carrydown builds.';
+        else if (biasLabel.includes('Early') && biasLabel.includes('Sharp')) meaning = 'Early + quick: can read strong, may overreact when fronts go away.';
+        else meaning = 'Balanced mix in the motion window.';
+
+        let addHint = '';
+        if (missingList.length) {
+          addHint = `Missing roles: ${missingList.slice(0,2).join(', ')}${missingList.length>2?'…':''}.`;
+        } else if (overlapHeavy || overlaps.length) {
+          addHint = 'Some overlap detected — consider swapping one ball for a different role to widen your window.';
+        } else {
+          addHint = 'Coverage looks balanced for this bag size.';
+        }
+
+        const biasBlock = (bag.length>=2)
+          ? `<div class="list-item"><div style="font-weight:900">🧠 Bag bias: ${biasLabel}</div>
+               <div class="small dim">${meaning}</div>
+               <div class="small dim">${addHint}</div>
+             </div>`
+          : '';
+
+        const extra = overlaps.length
+          ? `<div class="list-item"><div style="font-weight:900">⚠️ Possible overlap</div><div class="small dim">${overlaps.slice(0,3).join(', ')}${overlaps.length>3?'…':''}</div></div>`
+          : `<div class="list-item"><div style="font-weight:900">✅ Variety check</div><div class="small dim">No obvious redundancies detected.</div></div>`;
+
+        el.coach.innerHTML = roleRows + '<div style="margin-top:10px"></div>' + biasBlock + extra;
+
+        // Enable suggestions: tap missing roles (red X)
+        BT.$all('.coach-role[data-missing="1"]', el.coach).forEach(node => {
+          node.onclick = () => {
+            const roleId = node.getAttribute('data-role');
+            const roleLabel = (roleDefs.find(r => r.id === roleId)?.label) || roleId;
+            openRoleSuggestModal(roleId, roleLabel);
+          };
+        });
+
+      } catch (e) {
+        console.error('renderCoachSummary failed', e);
+        el.coach.innerHTML = '<div class="list-item small dim">Couldn\'t build coach summary. Open DevTools → Console for details.</div>';
+      }
+    }
+
+    function renderSets() {
+      const sets = BT.lsGet(BT.KEYS.ARSENAL_SETS, []);
+      if (el.setsCount) el.setsCount.textContent = `(${sets.length})`;
+      el.sets.innerHTML = sets.map(s => {
+        const when = new Date(s.savedAt || Date.now()).toLocaleString();
+        return `<div class="list-item">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+            <div>
+              <div style="font-weight:800">${s.name}</div>
+              <div class="small">${s.balls.length} balls • saved ${when}</div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn secondary" data-loadset="${s.id}">Load</button>
+              <button class="btn danger" data-delset="${s.id}" style="min-width:110px">Remove</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('') || `<div class="list-item small">No saved sets yet.</div>`;
+
+      BT.$all('button[data-loadset]', el.sets).forEach(b => {
+        b.addEventListener('click', () => {
+          const id = b.getAttribute('data-loadset');
+          const sets = BT.lsGet(BT.KEYS.ARSENAL_SETS, []);
+          const s = sets.find(x => x.id === id);
+          if (!s) return;
+          currentSelection = [...s.balls];
+          // Loading a saved set should also populate the Bag helper so
+          // Gaps/Overlaps + Coach Summary recalc immediately.
+          // Use up to 6 balls for the helper (the saved set may be larger).
+          currentBag = [...s.balls];
+          el.setName.value = s.name;
+          renderSelection();
+          // Safety: repaint dependent panels after the bag is set.
+          renderBag();
+        });
+      });
+
+      BT.$all('button[data-delset]', el.sets).forEach(b => {
+        b.addEventListener('click', () => {
+          const id = b.getAttribute('data-delset');
+          if (!confirm('Remove this saved set?')) return;
+          const sets = BT.lsGet(BT.KEYS.ARSENAL_SETS, []).filter(x => x.id !== id);
+          BT.lsSet(BT.KEYS.ARSENAL_SETS, sets);
+          renderSets();
+        });
+      });
+    }
+
+    function renderBallList() {
+      el.ballList.innerHTML = filteredRows.map(r => {
+        const nm = BT.ballName(r);
+        const brand = BT.ballBrand(r);
+        const cover = BT.ballCover(r);
+        const surf = BT.ballSurface(r);
+        return `<div class="list-item" data-add="${nm}" style="cursor:pointer">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+            <div>
+              <div style="font-weight:800">${nm}</div>
+              <div class="small">${brand} • ${cover} • ${surf}</div>
+            </div>
+            <div class="small">Tap to add</div>
+          </div>
+        </div>`;
+      }).join('') || `<div class="list-item small">No balls match the filter.</div>`;
+
+      BT.$all('[data-add]', el.ballList).forEach(div => {
+        div.addEventListener('click', () => {
+          const nm = div.getAttribute('data-add');
+          if (!nm) return;
+          if (!currentSelection.includes(nm)) currentSelection.push(nm);
+          if (!currentBag.includes(nm)) currentBag.push(nm);
+          renderSelection();
+          renderBag();
+        });
+      });
+    }
+
+    function applyFilter() {
+      const q = el.filter.value.trim();
+      filteredRows = allRows.filter(r => matchesFilter(r, q)).filter(r => BT.ballName(r));
+      renderBallList();
+    }
+
+    async function init() {
+      setStatus();
+      const cached = await BT.ensureCSVLoaded();
+      if (cached && cached.rows) {
+        allRows = cached.rows;
+      } else {
+        allRows = [];
+      }
+      setStatus();
+      applyFilter();
+      renderSelection();
+      renderBag();
+      renderSets();
+    }
+
+    BT.$('#reloadAuto').addEventListener('click', async () => {
+      try {
+        const res = await fetch('databalls.csv', { cache: 'no-store' });
+        if (!res.ok) throw new Error('Fetch failed');
+        const text = await res.text();
+        const rows = BT.parseCSV(text);
+        BT.lsSet(BT.KEYS.CSV_CACHE, { savedAt: Date.now(), name: 'databalls.csv', rows });
+        allRows = BT.withCustomBalls(rows);
+        setStatus();
+        applyFilter();
+      } catch (e) {
+        alert('Could not load the starter ball list. Check your connection and try again.');
+        console.error(e);
+      }
+    });
+
+    BT.$('#loadFile').addEventListener('click', async () => {
+      const f = el.csvFile.files && el.csvFile.files[0];
+      if (!f) return alert('Choose a CSV file first.');
+      const payload = await BT.loadCSVFromUpload(f);
+      allRows = BT.withCustomBalls(payload.rows);
+      setStatus();
+      applyFilter();
+    });
+
+    el.filter.addEventListener('input', applyFilter);
+
+    BT.$('#clearSelection').addEventListener('click', () => {
+      currentSelection = [];
+      renderSelection();
+    });
+
+    BT.$('#bagClear').addEventListener('click', () => {
+      currentBag = [];
+      renderBag();
+    });
+
+    BT.$('#saveSet').addEventListener('click', () => {
+      const name = el.setName.value.trim();
+      if (!name) return alert('Enter a set name first.');
+      if (!currentSelection.length) return alert('Select at least one ball.');
+      const sets = BT.lsGet(BT.KEYS.ARSENAL_SETS, []);
+      const existing = sets.find(s => s.name.toLowerCase() === name.toLowerCase());
+      const payload = {
+        id: existing ? existing.id : `set_${Math.random().toString(36).slice(2,10)}`,
+        name,
+        balls: [...currentSelection],
+        savedAt: Date.now(),
+      };
+      const next = existing ? sets.map(s => s.id === payload.id ? payload : s) : [payload, ...sets];
+      BT.lsSet(BT.KEYS.ARSENAL_SETS, next);
+      renderSets();
+      alert('Saved. Game Day can now use this set.');
+    });
+
+    init();
+  </script>
+</body>
+</html>

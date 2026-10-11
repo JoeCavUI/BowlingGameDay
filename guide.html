@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1116" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Bowling" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <title>Guide</title>
+  <link rel="stylesheet" href="styles.css?v=67" />
+  <style>
+    .guide { max-width: 760px; margin: 0 auto; line-height: 1.55; font-size: 16px; }
+    .guide h2 { margin: 0 0 6px; font-size: 21px; }
+    .guide h3 { margin: 18px 0 6px; font-size: 17px; }
+    .guide p { margin: 8px 0; }
+    .guide section { scroll-margin-top: 80px; margin-top: 14px; }
+    .guide ol, .guide ul { padding-left: 22px; margin: 8px 0; }
+    .guide li { margin: 6px 0; }
+    .guide .why { border-left: 3px solid var(--accent); padding: 6px 12px; margin: 10px 0; background: rgba(99,230,210,0.06); border-radius: 0 10px 10px 0; font-size: 15px; }
+    .guide .warn { border-left-color: var(--danger); background: rgba(255,107,107,0.07); }
+    .guide .k { display: inline-block; padding: 1px 8px; border: 1px solid rgba(255,255,255,0.22); border-radius: 8px; background: rgba(255,255,255,0.07); font-weight: 700; font-size: 14px; white-space: nowrap; }
+    .guide .stepnum { display: inline-flex; width: 28px; height: 28px; border-radius: 50%; align-items: center; justify-content: center; background: rgba(99,230,210,0.22); color: var(--accent); font-weight: 800; margin-right: 8px; font-size: 15px; }
+    .toc { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .toc a { display: block; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; color: var(--text); text-decoration: none; background: rgba(255,255,255,0.04); font-size: 15px; }
+    .toc a span { color: var(--accent); font-weight: 800; margin-right: 6px; }
+    .reads { margin-top: 8px; display: grid; gap: 8px; }
+    .read { border: 1px solid rgba(255,255,255,0.10); border-radius: 12px; padding: 10px 12px; background: rgba(255,255,255,0.03); font-size: 15px; }
+    .read > div { margin: 3px 0; }
+    .read-name { font-weight: 800; color: var(--accent); font-size: 16px; }
+    .read .lbl { color: var(--muted); }
+    .top { display: inline-block; margin-top: 10px; font-size: 14px; color: var(--accent); }
+    @media (max-width: 520px) {
+      .toc { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body data-page="guide">
+  <div class="navlinks"></div>
+  <div class="container">
+    <div class="guide">
+      <div class="header" style="border-bottom:none;padding-left:0;padding-right:0">
+        <h1 id="top">How to use Bowling Tool</h1>
+      </div>
+
+      <div class="panel">
+        <p style="margin-top:0"><b>What this app does:</b> you tap in what happened on each shot. Coach watches for patterns you might miss in the moment, like the lane drying up, the ball going long, or repeat 10-pins. Then it tells you what to move and <b>which ball in your bag</b> fits best right now.</p>
+        <p style="margin-bottom:0">Setup takes about 10 minutes, once. After that, logging a shot takes about 5 seconds.</p>
+        <div class="toc">
+          <a href="#install"><span>1</span>Install on iPhone</a>
+          <a href="#bowler"><span>2</span>Bowler info</a>
+          <a href="#oil"><span>3</span>House + oil pattern</a>
+          <a href="#balls"><span>4</span>Add your balls</a>
+          <a href="#bag"><span>5</span>Build your bag</a>
+          <a href="#gameday"><span>6</span>Game Day setup</a>
+          <a href="#shot"><span>7</span>Logging each shot</a>
+          <a href="#coach"><span>8</span>How Coach works</a>
+          <a href="#end"><span>9</span>Between games + saving</a>
+          <a href="#scores"><span>10</span>Scores + history</a>
+          <a href="#backup"><span>11</span>Backing up</a>
+          <a href="#help"><span>?</span>Troubleshooting</a>
+        </div>
+      </div>
+
+      <!-- 1 -->
+      <section class="panel" id="install">
+        <h2><span class="stepnum">1</span>Install it on your iPhone</h2>
+        <ol>
+          <li>Open the app link in <b>Safari</b> (not Chrome, and not the preview inside Messages).</li>
+          <li>Tap <span class="k">Share</span>, the square with the up arrow.</li>
+          <li>Scroll down and tap <span class="k">Add to Home Screen</span>, then <span class="k">Add</span>.</li>
+          <li>From now on, open it from the <b>Bowling</b> icon on your home screen.</li>
+        </ol>
+        <div class="why">Opening it from the icon makes it full-screen, lets it work with <b>no signal</b> at the lanes, and keeps your data safer.</div>
+        <a class="top" href="#top">↑ Back to top</a>
+      </section>
+
+      <!-- 2 -->
+      <section class="panel" id="bowler">
+        <h2><span class="stepnum">2</span>Enter your bowler info</h2>
+        <p>Tap <span class="k">Bowler</span> in the top bar.</p>
+        <ol>
+          <li><b>Name</b> and <b>Handedness</b>. Handedness matters because Coach says "move left" or "move right" based on it.</li>
+          <li><b>Ball speed at foul line</b> (mph) and <b>Rev rate</b> (rpm). Your best guess is fine. Dominance fills in automatically.</li>
+          <li><b>PAP</b>, <b>Axis tilt</b> and <b>Axis rotation</b> if you know them (your pro shop can tell you). Leave them blank if not.</li>
+          <li><b>LASER ratings (1–5)</b>: how comfortable you are adjusting <b>Loft, Aim, Speed and Release</b>. Be honest.</li>
+          <li>Tap <span class="k">Save</span>.</li>
+        </ol>
+        <div class="why">Speed, revs, tilt and rotation change how Coach thinks each ball will react <i>for you</i>. The LASER ratings decide which moves Coach suggests first. If you rate Speed 1, Coach won't tell you to change speed.</div>
+        <a class="top" href="#top">↑ Back to top</a>
+      </section>
+
+      <!-- 3 -->
+      <section class="panel" id="oil">
+        <h2><span class="stepnum">3</span>Add your bowling house and oil pattern</h2>
+        <p>Tap <span class="k">Oil</span>.</p>
+        <h3>Houses</h3>
+        <ol>
+          <li>In <b>Houses</b>, type your bowling center (e.g., "Shelby Lanes") and tap <span class="k">Add</span>.</li>
+        </ol>
+        <h3>Oil patterns</h3>
+        <ol>
+          <li>Enter a <b>Pattern Name</b> (e.g., "House Shot" or "Shark").</li>
+          <li>Fill in what you know: <b>Length</b> (ft), <b>Volume</b> (mL), <b>Ratio</b>, and <b>Surface notes</b> (e.g., "tight middle, crisp backends"). All optional.</li>
+          <li>Tap <span class="k">Save pattern</span>.</li>
+        </ol>
+        <div class="why">Game Day groups your history by house, league and pattern. Next time you bowl the same league, Game Day shows what worked last time.</div>
+        <a class="top" href="#top">↑ Back to top</a>
+      </section>
+
+      <!-- 4 -->
+      <section class="panel" id="balls">
+        <h2><span class="stepnum">4</span>Add your balls</h2>
+        <p>Tap <span class="k">Arsenal</span>. A starter list of balls is already loaded. If yours are on it, skip to step 5.</p>
+        <ol>
+          <li>Tap <span class="k">+ Add a ball</span>.</li>
+          <li>Enter <b>Brand</b>, <b>Ball name</b>, <b>Cover</b> and <b>Core</b> (required), plus <b>Surface</b> (e.g., 2000, 4000, Polish), <b>RG</b>, <b>Diff</b> and <b>PSA</b> if you have them. Specs are on the manufacturer's website.</li>
+          <li>Fill in the layout section if you know your drilling.</li>
+          <li>Tap <span class="k">Save to Arsenal</span>.</li>
+        </ol>
+        <div class="why"><b>Save to Arsenal</b> = a ball you own. You can bag it and bowl with it.<br><b>Add what-if ball</b> = a ball you're thinking about buying. It shows as a dashed tag for comparison only.</div>
+        <p><b>Tuning:</b> tap any ball in the <b>Arsenal Matrix</b> to open its sliders. If a ball hooks more or less for you than the numbers suggest, nudge <b>Hook</b>, <b>Length</b> or <b>Backend</b>. If you've resurfaced it, change <b>Surface</b>. Coach uses your adjusted version.</p>
+        <a class="top" href="#top">↑ Back to top</a>
+      </section>
+
+      <!-- 5 -->
+      <section class="panel" id="bag">
+        <h2><span class="stepnum">5</span>Build your bag (a "set")</h2>
+        <p>A <b>set</b> (or bag) is the balls you're bringing tonight. There are two ways to make one.</p>
+        <h3>Option A: Let Coach pick your bag (fastest)</h3>
+        <ol>
+          <li>Tap <span class="k">Arsenal</span> and scroll to <b>Role Planner</b>.</li>
+          <li>Under <b>How many balls in your bag?</b>, tap <span class="k">2</span> <span class="k">3</span> <span class="k">4</span> <span class="k">6</span> or <span class="k">9</span>. To choose only from balls you added yourself, tick <b>Only balls I added</b> first.</li>
+          <li>Coach picks the balls that cover the most different lane conditions without doubling up.</li>
+          <li>In the <b>Use this bag on Game Day?</b> box, uncheck anything you aren't bringing, name the bag, and tap <span class="k">Save &amp; go to Game Day</span>. The bag is already selected when Game Day opens.</li>
+        </ol>
+        <h3>Option B: Pick the balls yourself</h3>
+        <p>Tap <span class="k">Analyze</span>.</p>
+        <ol>
+          <li>In the <b>Ball list</b>, tap each ball you're bringing. Use the filter box to find one fast.</li>
+          <li>Check <b>Gaps + overlaps</b> and <b>Coach summary</b>. They show if your bag is missing a role (e.g., nothing for when the lanes burn up) or has two balls that do the same thing. Tap a missing role to see suggestions.</li>
+          <li>Type a <b>Set name</b> (e.g., "Tuesday League Bag") and tap <span class="k">Save current selection</span>.</li>
+        </ol>
+        <div class="why warn"><b>Bag at least 2 balls.</b> Coach can only recommend a ball change if there's another ball in the set to switch to. A set of 3–4 balls with different strengths works best.</div>
+        <a class="top" href="#top">↑ Back to top</a>
+      </section>
+
+      <!-- 6 -->
+      <section class="panel" id="gameday">
+        <h2><span class="stepnum">6</span>Game Day: set up before your first shot</h2>
+        <p>Tap <span class="k">Game Day</span>. In <b>1) Environment + setup</b>:</p>
+        <ol>
+          <li><b>House</b>: pick your center.</li>
+          <li><b>League</b>: pick one, or tap <span class="k">Add</span> next to it to create one for that house.</li>
+          <li><b>Lanes / Pair</b>: type your pair, e.g., <b>23-24</b>.</li>
+          <li><b>Starting lane</b>: left or right lane of the pair. The app then alternates lanes for you every frame.</li>
+          <li><b>Oil Pattern</b> and <b>Arsenal set</b>: pick the pattern and the bag you saved.</li>
+        </ol>
+        <p>In <b>2) Line + ball</b>:</p>
+        <ol>
+          <li><b>Current ball</b>: the ball you're starting with. You can also tap a ball in the <b>Ball list</b> panel.</li>
+          <li><b>Feet</b>, <b>Target at arrows</b> and <b>Breakpoint</b> as board numbers. These stay filled in between shots, so you only change them when you move.</li>
+        </ol>
+        <div class="why">If you see a <b>"Before you bowl"</b> banner, a step is missing. Tap the link in it.</div>
+        <a class="top" href="#top">↑ Back to top</a>
+      </section>
+
+      <!-- 7 -->
+      <section class="panel" id="shot">
+        <h2><span class="stepnum">7</span>Logging each shot (about 5 seconds)</h2>
+        <p>After every first ball, in <b>3) Quick reads</b>:</p>
+        <ol>
+          <li><b>Leave / result</b>: tap <span class="k">Strike</span>, <span class="k">Brooklyn</span>, <span class="k">Flat 10</span> or <span class="k">Ringing 10</span>. For anything else, tap the <b>pins left standing</b> on the pin deck.</li>
+          <li><b>Miss room</b>: did the shot go where you meant it to?
+            <ul>
+              <li><span class="k">No miss</span>: it went where you meant.</li>
+              <li><span class="k">Miss left held</span> / <span class="k">Miss right recovered</span>: you missed, but the lane still got it back to the pocket.</li>
+              <li><span class="k">Miss left</span> / <span class="k">Miss right</span>: you missed and the lane didn't save it.</li>
+            </ul>
+          </li>
+          <li><b>Pocket</b>: <span class="k">Flush</span>, <span class="k">Light</span>, <span class="k">High</span>, or missed left or right.</li>
+          <li><b>Ball reaction</b> (only if you saw it): <span class="k">Too early</span>, <span class="k">Too long</span>, <span class="k">Over/under</span> or <span class="k">Carrydown</span>.</li>
+          <li>Optional: <b>Execution</b> (Good / OK / Poor), <b>Ball exit</b>, <b>Speed vs normal</b>, <b>Notes</b>.</li>
+          <li>If you moved or changed balls, update <b>Feet / Arrows / Current ball</b>.</li>
+          <li>Tap <span class="k">Log this shot</span>.</li>
+        </ol>
+        <div class="why"><b>The three taps that matter most:</b> leave, miss room, and pocket. Coach reads the lane from those. If you're in a hurry, do just those three and tap Log.</div>
+        <div class="why warn"><b>Be honest with "Didn't track."</b> Only use it when you really didn't see the shot. Guessing feeds Coach bad information. Using it a lot lowers your <b>Observation rating</b>, and Coach gets more cautious.</div>
+        <p>Frame numbers, 10th-frame fill balls and lane alternation are automatic. You don't need to log spare shots.</p>
+        <a class="top" href="#top">↑ Back to top</a>
+      </section>
+
+      <!-- 8 -->
+      <section class="panel" id="coach">
+        <h2><span class="stepnum">8</span>How Coach works</h2>
+        <p><b>Coach updates by itself after every shot</b>, starting with the 3rd. The <b>Coach review</b> box is right under the Log button.</p>
+
+        <h3>What Coach looks at</h3>
+        <ul>
+          <li>Your last ~8 shots, mostly the ones you marked as good execution. Bad shots don't make Coach think the lane changed.</li>
+          <li>Leaves (10-pins, 4-pins, 2-pins, splits), miss room, pocket hits and ball reaction.</li>
+          <li>Each game separately, so it can spot the lane <b>changing over the night</b> (e.g., Game 1 typical, Game 3 burning up).</li>
+        </ul>
+
+        <h3>The lane reads</h3>
+        <div class="reads">
+          <div class="read"><div class="read-name">Blend / Typical</div><div><span class="lbl">You're seeing:</span> Misses still come back (held inside, recovered outside). There's room to miss.</div><div><span class="lbl">Coach suggests:</span> Stay put and make small moves. Wide window.</div></div>
+          <div class="read"><div class="read-name">Burn</div><div><span class="lbl">You're seeing:</span> High hits, 4-pins, 4-9s, ringing 10s. The fronts and middle are drying up.</div><div><span class="lbl">Coach suggests:</span> Follow the miss: feet 2 boards <b>left</b>, eyes 1 board left (righties; lefties go right) to get into more oil. A touch more speed, and a <b>cleaner, longer</b> ball in your bag.</div></div>
+          <div class="read"><div class="read-name">Carrydown</div><div><span class="lbl">You're seeing:</span> Flat 10s, 8s, 2-8s. The ball looks good but dies at the pins.</div><div><span class="lbl">Coach suggests:</span> Feet 2 boards <b>right</b>, eyes 1 board right (righties; lefties go left) so the ball sees friction sooner. Slightly less speed, and a <b>stronger ball that keeps driving</b>.</div></div>
+          <div class="read"><div class="read-name">Over/Under</div><div><span class="lbl">You're seeing:</span> A mix of high and light hits. It hooks early one shot and goes long the next.</div><div><span class="lbl">Coach suggests:</span> Small, parallel moves and a <b>smoother</b> ball to make the lane predictable.</div></div>
+          <div class="read"><div class="read-name">Flat / Tight</div><div><span class="lbl">You're seeing:</span> Not much miss room either way.</div><div><span class="lbl">Coach suggests:</span> Play tighter to the oil, use a <b>smoother, earlier-reading</b> ball, and don't open up the lane yet.</div></div>
+        </div>
+
+        <h3>🔔 Coach alerts</h3>
+        <p>A highlighted alert appears at the top of the Coach box when:</p>
+        <ul>
+          <li><b>The lane read changes</b>, e.g., "Lane read changed: Blend → Burn".</li>
+          <li><b>A pattern is confirmed and another ball in your bag fits better</b>, e.g., "Best ball in your bag for this: Phaze 2". Coach compares your <b>current ball</b> to every ball in tonight's set and picks the one that best fixes the problem.</li>
+          <li><b>A problem keeps repeating</b>, e.g., three "too long" reads.</li>
+        </ul>
+
+        <h3>The rest of the Coach box</h3>
+        <ul>
+          <li><b>Lane map</b>: the read for each game, and whether it's changing.</li>
+          <li><b>You</b>: tempo creeping faster or slower, execution drifting, or misses leaking one way.</li>
+          <li><b>LASER next move</b>: the next 1–2 moves (Loft, Aim, Speed, Equipment, Release), picked from the ones you rated yourself good at.</li>
+          <li><b>Observation rating</b>: how well you're tracking. Higher means Coach is more confident.</li>
+        </ul>
+        <div class="why"><b>Which way to move:</b> Coach follows the classic "2-and-1" rule: <b>follow your miss</b>. Ball hooking early or hitting high → move feet 2 and eyes 1 <b>left</b>. Ball going long or hitting light → move feet 2 and eyes 1 <b>right</b>. (Lefties: the opposite.)</div>
+        <div class="why"><b>How to use it:</b> make <b>one</b> change at a time, either a move or a ball, not both. Then let Coach see 2–3 good shots before changing again. Coach is a second set of eyes. Your own read of the ball still matters most.</div>
+        <a class="top" href="#top">↑ Back to top</a>
+      </section>
+
+      <!-- 9 -->
+      <section class="panel" id="end">
+        <h2><span class="stepnum">9</span>Between games and saving the night</h2>
+        <ul>
+          <li><span class="k">Start next game</span>: tap it at the start of each new game. That's how Coach tracks the lane changing game to game.</li>
+          <li>The <b>Lane scoreboard</b> shows left lane vs right lane: strike %, pocket %, carry. Useful when one lane plays differently from the other.</li>
+          <li>When you're done, tap <span class="k">Save Session</span>. This moves the night into <b>Scores</b> and adds an <b>arsenal review</b>: what your bag was missing and the best in-bag ball for the conditions you saw.</li>
+          <li><span class="k">Reset current session</span> clears the log without saving. Only use it if you want to start over.</li>
+        </ul>
+        <div class="why">Your in-progress session is saved as you go. If the app closes or your phone locks mid-game, just open it again.</div>
+        <a class="top" href="#top">↑ Back to top</a>
+      </section>
+
+      <!-- 10 -->
+      <section class="panel" id="scores">
+        <h2><span class="stepnum">10</span>Scores and history</h2>
+        <ul>
+          <li>Tap <span class="k">Scores</span> to see every saved night: house, lanes, pattern, strike rate, pocket %, execution.</li>
+          <li>Tap a session to see every shot and the arsenal review.</li>
+          <li>Logged something wrong? <b>Tap the shot</b> to edit or delete it.</li>
+          <li>Next time you set up Game Day for the same <b>house + league + pattern</b>, the prep box shows your best set and how each lane went last time.</li>
+        </ul>
+        <a class="top" href="#top">↑ Back to top</a>
+      </section>
+
+      <!-- 11 -->
+      <section class="panel" id="backup">
+        <h2><span class="stepnum">11</span>Back up your data</h2>
+        <p>Everything is stored <b>on your phone only</b>. Back up after each league night:</p>
+        <ol>
+          <li>Go to <span class="k">Home</span> and tap <span class="k">Back up my data</span>.</li>
+          <li>Choose <b>Save to Files</b>, or email or AirDrop it to yourself.</li>
+        </ol>
+        <p>New phone, or cleared Safari? <b>Home → Restore from backup</b> and pick the file.</p>
+        <a class="top" href="#top">↑ Back to top</a>
+      </section>
+
+      <!-- Extras -->
+      <section class="panel" id="extras">
+        <h2>Other tools</h2>
+        <ul>
+          <li><b>Friction Timing</b>: set how the lane is playing (head friction, response time, response length) and see which balls match.</li>
+          <li><b>Arsenal Matrix</b>: every ball sorted Strong/Medium/Weak × Smooth/Sharp, so you can see where your bag has holes.</li>
+        </ul>
+      </section>
+
+      <!-- Troubleshooting -->
+      <section class="panel" id="help">
+        <h2>Troubleshooting</h2>
+        <h3>"Pick a current ball" when I tap Log</h3>
+        <p>Pick an <b>Arsenal set</b> in Game Day section 1. If the set list is empty, save one on Analyze first.</p>
+        <h3>Coach never suggests a different ball</h3>
+        <p>Make sure the set has <b>2 or more balls</b>, and that you're tracking leaves and ball reaction. On a <b>Blend / Typical</b> read, Coach usually says stay where you are, and that's normal.</p>
+        <h3>My ball isn't in the list</h3>
+        <p>Add it on <b>Arsenal → + Add a ball → Save to Arsenal</b>, then add it to your set on Analyze.</p>
+        <h3>Lane numbers look wrong</h3>
+        <p>Type the pair as <b>23-24</b> (left lane first) and set <b>Starting lane</b> correctly.</p>
+        <h3>My data is gone</h3>
+        <p>Use <b>Home → Restore from backup</b>. Also make sure you're opening the app from the home-screen icon, not a Safari tab. They keep separate data.</p>
+        <a class="top" href="#top">↑ Back to top</a>
+      </section>
+
+      <div class="small" style="text-align:center;margin:20px 0 30px" id="ver"></div>
+    </div>
+  </div>
+
+  <script src="app.js?v=67"></script>
+  <script>
+    BT.renderNav('guide');
+    BT.$('#ver').textContent = 'Bowling Tool ' + BT.APP_VERSION;
+  </script>
+</body>
+</html>

@@ -1,0 +1,1982 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1116" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Bowling" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <title>Game Day</title>
+  <link rel="stylesheet" href="styles.css?v=67" />
+</head>
+<body data-page="gameday">
+  <div class="navlinks"></div>
+  <div class="container">
+    <div class="header">
+      <h1>Game Day</h1>
+      <div class="small">Fast inputs → coach-style review. “Best ball is your eyeball.” Track what you saw and Coach will interpret the pattern.</div>
+    </div>
+    <div id="setupBanner" class="setup-banner" style="display:none"></div>
+
+    <div class="grid-3" style="grid-template-columns: 0.9fr 1.2fr 0.9fr; align-items:start">
+      <!-- Column 1: Ball list + environment -->
+      <div>
+
+        <div class="panel">
+          <h2>Ball list (from selected set)</h2>
+          <div class="small" id="setHint">Select an arsenal set in section 1.</div>
+          <div class="hr-split"></div>
+          <div class="list" id="setList" style="max-height:28vh"></div>
+        </div>
+        <div class="panel">
+          <h2>1) Environment + setup</h2>
+          <div class="grid-2">
+            <div>
+              <label>House</label>
+              <select id="house" class="input"></select>
+              <div class="small" style="margin-top:6px">Pulled from Oil → Houses.</div>
+            </div>
+            <div>
+              <label>League</label>
+              <div style="display:flex;gap:8px;align-items:center">
+                <select id="league" class="input" style="flex:1"></select>
+                <button class="btn secondary" id="addLeagueBtn" type="button">Add</button>
+              </div>
+              <div class="small" style="margin-top:6px">Saved list (per house). Used for week-to-week recommendations.</div>
+            </div>
+
+            <div>
+              <label>Lanes / Pair</label>
+              <input id="lanes" class="input" placeholder="e.g., 23-24" inputmode="text" />
+            </div>
+            <div>
+              <label>Starting lane (league)</label>
+              <select id="startLane" class="input">
+                <option value="left">Start on left lane</option>
+                <option value="right">Start on right lane</option>
+              </select>
+              <div class="small" style="margin-top:6px">Some nights you start on the right lane. This keeps lane stats accurate.</div>
+            </div>
+            <div>
+              <label>Oil Pattern</label>
+              <select id="pattern" class="input"></select>
+              <div class="small" id="patternSummary" style="margin-top:6px"></div>
+              <div class="small" style="margin-top:6px">Pulled from Oil → Patterns.</div>
+            </div>
+            <div>
+              <label>Arsenal set</label>
+              <select id="set" class="input"></select>
+              <div class="small" style="margin-top:6px">Pulled from Analyze → Saved sets.</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Column 2: Section 2 & 3 -->
+      <div>
+        <div class="panel">
+          <h2>2) Line + ball</h2>
+          <div class="grid-2">
+            <div>
+              <label>Feet (board)</label>
+              <input id="feet" class="input" type="number" step="1" />
+            </div>
+            <div>
+              <label>Target at arrows (board)</label>
+              <input id="arrows" class="input" type="number" step="1" />
+            </div>
+            <div>
+              <label>Breakpoint (board)</label>
+              <input id="bp" class="input" type="number" step="1" />
+            </div>
+            <div>
+              <label>Pocket board</label>
+              <input id="pocketBoard" class="input" type="number" step="0.5" placeholder="17.5" />
+              <div class="small" style="margin-top:6px">Use 17.5 for a right-hander's 1–3 pocket, 22.5 for lefty 1–2.</div>
+            </div>
+            <div>
+              <label>Mode</label>
+              <select id="mode" class="input">
+                <option value="stability">Stability Mode (maximize margin)</option>
+                <option value="shape">Shape Mode (create angle)</option>
+                <option value="control">Control Mode (reduce over/under)</option>
+              </select>
+            </div>
+            <div style="grid-column:1/-1">
+              <label>Current ball</label>
+              <select id="ball" class="input"></select>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>3) Quick reads (tap)</h2>
+          <div class="small">Log first shots. Tap pins that remained standing (pin deck), then “Log this shot”. Section 3 resets after every log to prevent confusion.</div>
+          <div class="hr-split"></div>
+
+          <div>
+            <b>Leave / result</b>
+            <div class="small" style="margin-top:6px">Quick buttons for special cases. Otherwise tap the pin deck for the pins left standing.</div>
+            <div id="quickResults" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"></div>
+
+            <div style="margin-top:10px">
+              <div id="pinDeckWrap" style="display:flex;justify-content:center"></div>
+              <div class="small" style="text-align:center;margin-top:6px" id="pinDeckHint">Tap pins to toggle. Selected pins = standing pins.</div>
+            </div>
+            <div class="hr-split"></div>
+
+            <div class="grid-3" style="grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:end;margin-bottom:10px">
+              <div>
+                <label>Frame (auto)</label>
+                <input id="frame" class="input" readonly />
+              </div>
+              <div>
+                <label>10th frame fill shot?</label>
+                <select id="fill" class="input">
+                  <option value="auto">Auto</option>
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
+              </div>
+              <div>
+                <label>Next shot lane (auto)</label>
+                <select id="lanePick" class="input">
+                  <option value="">—</option>
+                </select>
+              </div>
+            </div>
+            <div class="small" style="margin-top:-2px;margin-bottom:10px">Fill shots (10th bonus) are excluded from coaching calculations. Next shot lane alternates automatically based on pair + starting lane.</div>
+
+            <b>Observations</b>
+            <div class="small" style="margin-top:6px">Top: shot quality. Bottom: ball/lane reaction.</div>
+            <div id="readsQuality" style="margin-top:6px"></div>
+            <div class="hr-split" style="margin:10px 0"></div>
+            <div class="small" style="margin-top:6px">Miss room (single tap). Use with Pocket + leaves to map the lane. <b>No miss</b> boosts execution score. <b>Didn't track</b> lowers your Brad Angelo “best ball is your eyeball” observation rating for the night.</div>
+            <div id="readsMiss" style="margin-top:6px"></div>
+            <div class="hr-split" style="margin:10px 0"></div>
+            <div id="readsBallObs" style="margin-top:6px"></div>
+            <div class="hr-split" style="margin:10px 0"></div>
+            <div>
+              <label>Pocket</label>
+              <div id="readsPocket" style="margin-top:6px"></div>
+            </div>
+            <div class="hr-split" style="margin:10px 0"></div>
+            <div>
+              <label>Ball exit off deck</label>
+              <div id="readsExit" style="margin-top:6px"></div>
+            </div>
+            <div class="hr-split" style="margin:10px 0"></div>
+            <div>
+              <label>Speed vs normal</label>
+              <div id="readsSpeed" style="margin-top:6px"></div>
+              <div class="small" style="margin-top:6px">Helps Coach separate “touchy” (tempo drift) from true mismatch.</div>
+            </div>
+          </div>
+
+          <div style="margin-top:10px">
+            <label>Notes (optional)</label>
+            <input id="notes" class="input" placeholder="Use notes only for long-term pattern memory." />
+          </div>
+<div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn" id="log">Log this shot</button>
+            <button class="btn secondary" id="coach">Refresh coach review</button>
+            <button class="btn" id="saveSession">Save Session</button>
+            <button class="btn secondary" id="nextGame">Start next game</button>
+            <button class="btn danger" id="resetSession">Reset current session</button>
+          </div>
+
+          <div class="hr-split"></div>
+          <div class="panel" style="padding:12px">
+            <b>Coach review</b> <a href="guide.html#coach" class="small" style="color:var(--accent);margin-left:6px">How Coach works →</a>
+            <div class="small" id="coachText" style="margin-top:6px">Log a few shots to get feedback.</div>
+          </div>
+
+          <div class="panel" style="padding:12px;margin-top:12px">
+            <b>Lane geometry table</b>
+            <div class="small" style="margin-top:6px">Simple model: entry demand ≈ launch/outward projection + recovery. This helps find when a ball is stable versus when you are asking it to recover too many boards.</div>
+            <div id="laneGeometry" class="small" style="margin-top:8px">Log a few shots with feet, arrows, breakpoint, and pocket board.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Column 3: Prep + scoreboard + log -->
+      <div>
+        <div class="panel" id="prepPanel">
+          <h2>Prep recommendation</h2>
+          <div class="small">Based on your last sessions at this house + league + pattern.</div>
+          <div class="hr-split"></div>
+          <div id="prepText" class="small">Select House, League, and Pattern to see suggestions.</div>
+        </div>
+
+        <div class="panel" id="scoreboardPanel">
+          <h2>Lane scoreboard</h2>
+          <div class="small">Strikes + pocket/carry by lane for this session.</div>
+          <div class="hr-split"></div>
+          <div id="laneScoreboard" class="small">Enter a lane pair (e.g., 21/22) and log a few shots.</div>
+        </div>
+        <div class="panel">
+          <h2>Current session log</h2>
+          <div class="small">This session only. Use “Save Session” to store it in Scores.</div>
+          <div class="hr-split"></div>
+          <div class="list" id="logList" style="max-height:80vh"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="app.js?v=67"></script>
+  <script>
+    BT.renderNav('gameday');
+
+    // Quick result buttons (pin deck handles everything else)
+    const quickResults = ['Strike','Brooklyn','Flat 10','Ringing 10'];
+
+    // Observations split: shot quality vs ball reaction
+    const qualityObs = ['Good execution','OK execution','Poor execution'];
+    const ballObs = ['Too early','Too long','Over/under','Carrydown'];
+	    // Miss room (single-select). Saved per shot.
+	    const missObs = [
+	      { val: 'noMiss', label: 'No miss' },
+          { val: 'didntTrack', label: "Didn't track" },
+	      { val: 'rightRecovered', label: 'Miss right recovered' },
+	      { val: 'leftHeld', label: 'Miss left held' },
+	      { val: 'rightMiss', label: 'Miss right' },
+	      { val: 'leftMiss', label: 'Miss left' },
+	    ];
+    const pocketObs = [
+      { val: 'Unknown', label: 'Unknown' },
+      { val: 'Pocket flush', label: 'Flush' },
+      { val: 'Pocket light', label: 'Light' },
+      { val: 'Pocket high', label: 'High' },
+      { val: 'Missed left', label: 'Missed left' },
+      { val: 'Missed right', label: 'Missed right' },
+      { val: 'Brooklyn', label: 'Brooklyn' },
+    ];
+    const exitObs = [
+      { val: "Didn't notice", label: "Didn't notice" },
+      { val: 'Exit left', label: 'Exit left' },
+      { val: 'Exit right', label: 'Exit right' },
+      { val: 'Exit straight', label: 'Exit straight' },
+    ];
+    const speedObs = [
+      { val: 'unknown', label: "Didn't track" },
+      { val: 'slower', label: 'Slower' },
+      { val: 'same', label: 'Same' },
+      { val: 'faster', label: 'Faster' },
+    ];
+
+    const el = {
+      house: BT.$('#house'),
+      lanes: BT.$('#lanes'),
+      startLane: BT.$('#startLane'),
+      pattern: BT.$('#pattern'),
+      league: BT.$('#league'),
+      addLeagueBtn: BT.$('#addLeagueBtn'),
+      patternSummary: BT.$('#patternSummary'),
+      set: BT.$('#set'),
+      feet: BT.$('#feet'),
+      arrows: BT.$('#arrows'),
+      bp: BT.$('#bp'),
+      pocketBoard: BT.$('#pocketBoard'),
+      mode: BT.$('#mode'),
+      ball: BT.$('#ball'),
+      quickResults: BT.$('#quickResults'),
+      pinDeckWrap: BT.$('#pinDeckWrap'),
+      readsQuality: BT.$('#readsQuality'),
+	      readsMiss: BT.$('#readsMiss'),
+      readsBallObs: BT.$('#readsBallObs'),
+      readsPocket: BT.$('#readsPocket'),
+      readsExit: BT.$('#readsExit'),
+      readsSpeed: BT.$('#readsSpeed'),
+      lanePick: BT.$('#lanePick'),
+      adjust: BT.$('#adjust'),
+      frame: BT.$('#frame'),
+      fill: BT.$('#fill'),
+      notes: BT.$('#notes'),
+      logList: BT.$('#logList'),
+      setList: BT.$('#setList'),
+      setHint: BT.$('#setHint'),
+      coachText: BT.$('#coachText'),
+      laneScoreboard: BT.$('#laneScoreboard'),
+      laneGeometry: BT.$('#laneGeometry'),
+      nextGame: BT.$('#nextGame'),
+    };
+
+    let selectedSetBalls = []; // names
+    let sessionShots = [];
+
+    let selectedPins = new Set(); // pins left standing
+    let resultTag = ''; // Strike / Brooklyn / Flat 10 / Ringing 10 (optional)
+
+
+    const SESSION_KEY = 'bt_current_session_v1';
+    const LAST_LINE_KEY = 'bt_gameday_last_line_v1';
+    const START_LANE_KEY = 'bt_gameday_start_lane_v1';
+
+    function currentGameNumber() {
+      const nums = sessionShots.map(s => Number(s && s.gameNo)).filter(n => Number.isFinite(n) && n > 0);
+      return nums.length ? Math.max(...nums) : 1;
+    }
+
+    function gameStartIndexInChron(chron) {
+      for (let i = chron.length - 1; i >= 0; i--) {
+        if (chron[i] && chron[i].type === 'gameStart') return i + 1;
+      }
+      return 0;
+    }
+
+    function currentGameShotsChron() {
+      const chron = [...sessionShots].reverse();
+      const start = gameStartIndexInChron(chron);
+      return chron.slice(start).filter(s => s && s.type !== 'gameStart');
+    }
+
+    function startNextGame() {
+      const next = currentGameNumber() + 1;
+      sessionShots.unshift({
+        id: `mk_${Math.random().toString(36).slice(2,10)}`,
+        at: Date.now(),
+        type: 'gameStart',
+        gameNo: next,
+        note: `Start Game ${next}`,
+      });
+      saveCurrentSessionDraft();
+      renderLog();
+      renderLaneGeometry();
+      syncNextLane();
+      updateFrameUI();
+      markCoachDirty();
+      el.coachText.innerHTML = bulletListHtml('Coach review', `Game ${next} started.`, ['Continue logging shots so Coach can map the transition.']);
+    }
+
+    function saveLastLineDraft() {
+      BT.lsSet(LAST_LINE_KEY, {
+        feet: el.feet.value ? Number(el.feet.value) : null,
+        arrows: el.arrows.value ? Number(el.arrows.value) : null,
+        bp: el.bp.value ? Number(el.bp.value) : null,
+        pocketBoard: el.pocketBoard && el.pocketBoard.value ? Number(el.pocketBoard.value) : null,
+        mode: el.mode.value,
+        ball: el.ball.value || '',
+      });
+    }
+
+    function restoreLastLineDraft() {
+      // Prefer the most recent logged shot if present; otherwise use the saved draft.
+      const lastShot = sessionShots && sessionShots.length ? sessionShots[0] : null;
+      const d = lastShot ? {
+        feet: lastShot.feet,
+        arrows: lastShot.arrows,
+        bp: lastShot.bp,
+        pocketBoard: lastShot.pocketBoard,
+        mode: lastShot.mode,
+        ball: lastShot.ball,
+      } : BT.lsGet(LAST_LINE_KEY, null);
+
+      if (!d) return;
+      if (Number.isFinite(d.feet)) el.feet.value = d.feet;
+      if (Number.isFinite(d.arrows)) el.arrows.value = d.arrows;
+      if (Number.isFinite(d.bp)) el.bp.value = d.bp;
+      if (el.pocketBoard && Number.isFinite(d.pocketBoard)) el.pocketBoard.value = d.pocketBoard;
+      if (d.mode) el.mode.value = d.mode;
+      // ball may not exist yet until set is loaded; save so loadSetToUI can apply it.
+      if (d.ball) {
+        const cur = BT.lsGet(LAST_LINE_KEY, {}) || {};
+        cur.ball = d.ball;
+        BT.lsSet(LAST_LINE_KEY, cur);
+      }
+    }
+
+    function pillButtons(container, items) {
+      container.innerHTML = items.map(t => `<button class="btn secondary" data-pill="${t}" style="padding:8px 10px;border-radius:999px">${t}</button>`).join('');
+    }
+
+	    function pillButtonsCustom(container, items) {
+	      // items: [{val,label}]
+	      container.innerHTML = items.map(o => {
+	        return `<button class="btn secondary" data-pill="${o.val}" style="padding:8px 10px;border-radius:999px">${o.label}</button>`;
+	      }).join('');
+	    }
+
+    function pillButtonsRows(container, rows) {
+      container.innerHTML = rows.map(items => {
+        const btns = items.map(t => `<button class="btn secondary" data-pill="${t}" style="padding:8px 10px;border-radius:999px">${t}</button>`).join('');
+        return `<div style="display:flex;gap:8px;flex-wrap:wrap">${btns}</div>`;
+      }).join('<div style="height:8px"></div>');
+    }
+
+    
+    function renderQuickResults() {
+      if (!el.quickResults) return;
+      el.quickResults.innerHTML = quickResults.map(t => `<button class="btn secondary" data-qr="${t}" style="padding:8px 10px;border-radius:999px">${t}</button>`).join('');
+      BT.$all('button[data-qr]', el.quickResults).forEach(b => {
+        b.addEventListener('click', () => {
+          const tag = b.getAttribute('data-qr');
+          setResultTag(tag);
+          markCoachDirty();
+        });
+      });
+      updateQuickResultUI();
+    }
+
+    function setResultTag(tag) {
+      resultTag = tag || '';
+      if (resultTag === 'Strike' || resultTag === 'Brooklyn') {
+        selectedPins = new Set(); // strike implies empty pins
+      }
+      if (resultTag === 'Flat 10' || resultTag === 'Ringing 10') {
+        selectedPins = new Set([10]);
+      }
+      updatePinDeckUI();
+      updateQuickResultUI();
+    }
+
+    function updateQuickResultUI() {
+      if (!el.quickResults) return;
+      BT.$all('button[data-qr]', el.quickResults).forEach(b => {
+        const t = b.getAttribute('data-qr');
+        const on = (resultTag === t);
+        b.classList.toggle('active', on);
+        b.style.outline = on ? '2px solid rgba(80,227,194,0.45)' : 'none';
+      });
+    }
+
+    function renderPinDeck() {
+      if (!el.pinDeckWrap) return;
+      // Simple SVG rack. Tap pins to toggle (selected = standing).
+      const svg = `
+        <svg id="pinDeck" width="220" height="170" viewBox="0 0 220 170" style="max-width:100%;height:auto">
+          ${pinCircle(1, 110, 145)}
+          ${pinCircle(2, 95, 115)}
+          ${pinCircle(3, 125, 115)}
+          ${pinCircle(4, 80, 85)}
+          ${pinCircle(5, 110, 85)}
+          ${pinCircle(6, 140, 85)}
+          ${pinCircle(7, 65, 55)}
+          ${pinCircle(8, 95, 55)}
+          ${pinCircle(9, 125, 55)}
+          ${pinCircle(10,155, 55)}
+        </svg>`;
+      el.pinDeckWrap.innerHTML = svg;
+
+      BT.$all('[data-pin]', el.pinDeckWrap).forEach(node => {
+        node.addEventListener('click', () => {
+          const p = Number(node.getAttribute('data-pin'));
+          if (!Number.isFinite(p)) return;
+          // If user taps pins manually, clear special resultTag unless it still matches.
+          if (resultTag && !['Flat 10','Ringing 10'].includes(resultTag)) resultTag = '';
+          if (selectedPins.has(p)) selectedPins.delete(p);
+          else selectedPins.add(p);
+
+          // If user selects a non-10 pin, clear flat/ringing tag.
+          if (selectedPins.size && !(selectedPins.size === 1 && selectedPins.has(10))) {
+            if (resultTag === 'Flat 10' || resultTag === 'Ringing 10') resultTag = '';
+          }
+          updatePinDeckUI();
+          updateQuickResultUI();
+          markCoachDirty();
+        });
+      });
+
+      updatePinDeckUI();
+    }
+
+    function pinCircle(num, cx, cy) {
+      return `
+        <g data-pin="${num}" style="cursor:pointer">
+          <circle cx="${cx}" cy="${cy}" r="16" fill="rgba(255,255,255,0.10)" stroke="rgba(255,255,255,0.55)" stroke-width="2"></circle>
+          <text x="${cx}" y="${cy+5}" text-anchor="middle" font-size="12" fill="rgba(255,255,255,0.85)" font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial">${num}</text>
+        </g>`;
+    }
+
+    function updatePinDeckUI() {
+      if (!el.pinDeckWrap) return;
+      BT.$all('[data-pin] circle', el.pinDeckWrap).forEach(c => {
+        const p = Number(c.parentElement.getAttribute('data-pin'));
+        const on = selectedPins.has(p);
+        c.setAttribute('fill', on ? 'rgba(80,227,194,0.35)' : 'rgba(255,255,255,0.10)');
+        c.setAttribute('stroke', on ? 'rgba(80,227,194,0.95)' : 'rgba(255,255,255,0.55)');
+      });
+    }
+
+    function clearPinDeck() {
+      selectedPins = new Set();
+      resultTag = '';
+      updatePinDeckUI();
+      updateQuickResultUI();
+    }
+
+    function wireQualityPills(container) {
+      // Mutual exclusion between execution quality options (Good/OK/Poor).
+      BT.$all('button[data-pill]', container).forEach(b => {
+        b.addEventListener('click', () => {
+          const t = b.getAttribute('data-pill');
+          // Toggle desired button first
+          const willOn = !b.classList.contains('active');
+
+          // Clear all first
+          BT.$all('button[data-pill]', container).forEach(x => {
+            x.classList.remove('active');
+            x.style.outline = 'none';
+          });
+
+          if (willOn) {
+            b.classList.add('active');
+            b.style.outline = '2px solid rgba(80,227,194,0.45)';
+          }
+
+          markCoachDirty();
+        });
+      });
+    }
+
+function selectedPills(container) {
+      return BT.$all('button[data-pill].active', container).map(b => b.getAttribute('data-pill'));
+    }
+
+    function singlePillValue(container, fallback) {
+      const arr = selectedPills(container);
+      return arr.length ? arr[0] : fallback;
+    }
+
+    function togglePill(btn) {
+      btn.classList.toggle('active');
+      if (btn.classList.contains('active')) {
+        btn.style.outline = '2px solid rgba(80,227,194,0.45)';
+      } else {
+        btn.style.outline = 'none';
+      }
+      // Any input change should clear coach output until new data is logged.
+      markCoachDirty();
+    }
+
+    function wirePills(container) {
+      BT.$all('button[data-pill]', container).forEach(b => {
+        b.addEventListener('click', () => togglePill(b));
+      });
+    }
+
+    function clearPills() {
+	      [el.readsQuality, el.readsMiss, el.readsBallObs, el.readsPocket, el.readsExit, el.readsSpeed].forEach(c => {
+	        if (!c) return;
+        BT.$all('button[data-pill]', c).forEach(b => {
+          b.classList.remove('active');
+          b.style.outline = 'none';
+        });
+      });
+    }
+
+    function renderHouses() {
+      const houses = BT.lsGet(BT.KEYS.HOUSES, []);
+      const opts = ['— Select house (optional for now) —', ...houses];
+      el.house.innerHTML = opts.map((h, idx) => `<option value="${idx===0?'':h}">${h}</option>`).join('');
+    }
+
+
+    function renderLeagues() {
+      const house = el.house.value || '';
+      const leagues = BT.getLeagues().filter(l => !house || String(l.houseId||'') === String(house));
+      const opts = ['— Select league —', ...leagues.map(l => l.name)];
+      // store id in value but show name
+      el.league.innerHTML = ['<option value="">— Select league —</option>']
+        .concat(leagues.map(l => `<option value="${l.id}">${l.name}</option>`))
+        .join('');
+    }
+
+    function leagueNameById(id) {
+      const l = BT.getLeagueById(id);
+      return l ? l.name : '';
+    }
+
+    function contextKey() {
+      return [el.house.value||'', el.league.value||'', el.pattern.value||''].join('|');
+    }
+
+    function computeLaneStats(shots, lanesStr, startLane) {
+      const pair = parseLanePair(lanesStr);
+      const leftNum = pair.length === 2 ? pair[0] : 'Left';
+      const rightNum = pair.length === 2 ? pair[1] : 'Right';
+      function laneForIndex(i){
+        const startLeft = (startLane||'left') === 'left';
+        const isLeft = startLeft ? (i % 2 === 0) : (i % 2 === 1);
+        return isLeft ? {label:`${leftNum} (left lane)`, side:'left'} : {label:`${rightNum} (right lane)`, side:'right'};
+      }
+      const by = {left:{shots:[], label:`${leftNum} (left lane)`}, right:{shots:[], label:`${rightNum} (right lane)`}};
+      // shots are stored newest-first; reverse to get chronological
+      const chron = [...shots].reverse();
+      chron.forEach((s, idx)=>{
+        const lane = laneForIndex(idx);
+        by[lane.side].shots.push(s);
+      });
+      function stat(arr){
+        const leaves = arr.flatMap(s=>s.leaves||[]);
+        const strikes = leaves.filter(x=>x==='Strike' || x==='Brooklyn').length;
+        const pocketHits = arr.filter(s=>String(s.pocket||'').startsWith('Pocket')).length;
+        const carry = pocketHits ? (leaves.filter(x=>x==='Strike' || x==='Brooklyn').length / pocketHits) : 0;
+        const execScore = arr.length ? Math.round(arr.reduce((a,s)=>a + effectiveExecutionValue(s), 0) / (arr.length*5) * 100) : 0;
+        return { shots: arr.length, strikes, pocketHits, pocketPct: arr.length? pocketHits/arr.length : 0, carryPct: carry, execScore };
+      }
+      return { left:{...by.left, ...stat(by.left.shots)}, right:{...by.right, ...stat(by.right.shots)} };
+    }
+
+    function updatePrep() {
+      const box = BT.$('#prepText');
+      if (!box) return;
+      const k = contextKey();
+      if (!el.house.value || !el.league.value || !el.pattern.value) {
+        box.textContent = 'Select House, League, and Pattern to see suggestions.';
+        return;
+      }
+      const sessions = BT.lsGet(BT.KEYS.GAME_SESSIONS, []);
+      const same = (Array.isArray(sessions)?sessions:[]).filter(s => (s.contextKey||'') === k);
+      if (!same.length) {
+        box.textContent = 'No history yet for this league/pattern. Bowl a session and save it to build recommendations.';
+        return;
+      }
+      // best set by strike rate (last 5 sessions)
+      const recent = same.slice(0, 5);
+      const bySet = {};
+      recent.forEach(s=>{
+        const setName = s.setName || '';
+        const strikes = (s.summary && s.summary.strikes) ? s.summary.strikes : 0;
+        const total = (s.summary && s.summary.total) ? s.summary.total : 0;
+        if (!setName) return;
+        const cur = bySet[setName] || { setName, strikes:0, total:0, sessions:0 };
+        cur.strikes += strikes; cur.total += total; cur.sessions += 1;
+        bySet[setName]=cur;
+      });
+      const ranked = Object.values(bySet).sort((a,b)=>(b.total?b.strikes/b.total:0)-(a.total?a.strikes/a.total:0));
+      const best = ranked[0];
+      const last = same[0];
+      const laneStats = last.laneStats || computeLaneStats(last.shots||[], last.lanes||'', last.startLane||'left');
+      const bestLine = best ? `Recommended set: ${best.setName} (best strike rate over last ${best.sessions} sessions)` : `Last set: ${last.setName||'—'}`;
+      const lastLine = `Last time: ${last.summary?.strikes||0}/${last.summary?.total||0} strikes. Left lane strikes: ${laneStats.left.strikes}, Right lane strikes: ${laneStats.right.strikes}.`;
+      const audit = last.arsenalAudit?.headline ? `Note: ${last.arsenalAudit.headline}` : '';
+      box.textContent = [bestLine, lastLine, audit].filter(Boolean).join(' ');
+    }
+    function renderPatterns() {
+      const patterns = BT.lsGet(BT.KEYS.OIL_PATTERNS, []);
+      el.pattern.innerHTML = ['— Select oil pattern —', ...patterns.map(p => p.name)].map((n,i) => `<option value="${i===0?'':n}">${n}</option>`).join('');
+      updatePatternSummary();
+    }
+
+    function updatePatternSummary() {
+      const name = el.pattern.value;
+      if (!name) { el.patternSummary.textContent = ''; return; }
+      const p = BT.lsGet(BT.KEYS.OIL_PATTERNS, []).find(x => x.name === name);
+      if (!p) { el.patternSummary.textContent = ''; return; }
+      el.patternSummary.textContent = `${p.center || ''} • ${p.length || '?'}ft • ${p.volume || '?'}mL • ${p.ratio || '?'}${p.notes ? ' • ' + p.notes : ''}`;
+    }
+
+    function parseLanePair(text) {
+      const s = (text || '').trim();
+      if (!s) return [];
+      // Accepts "23-24", "23/24", "23 24", "23 & 24", "23–24", "23,24", "Lanes 23 and 24".
+      const m = s.match(/(\d{1,3})\s*(?:[\/\-–—,&+]|and|\s)\s*(\d{1,3})/i);
+      if (!m) return [];
+      const a = Number(m[1]);
+      const b = Number(m[2]);
+      if (!Number.isFinite(a) || !Number.isFinite(b)) return [];
+      return [a, b];
+    }
+
+    function updateLanePick() {
+      const pair = parseLanePair(el.lanes.value);
+      const current = el.lanePick.value;
+      if (pair.length === 2) {
+        const [L, R] = pair;
+        el.lanePick.innerHTML = [
+          `<option value="">—</option>`,
+          `<option value="${L}">${L} (left lane)</option>`,
+          `<option value="${R}">${R} (right lane)</option>`
+        ].join('');
+      } else {
+        el.lanePick.innerHTML = `<option value="">—</option>`;
+      }
+      // Keep selection if still valid
+      if (current && BT.$(`option[value="${current}"]`, el.lanePick)) el.lanePick.value = current;
+
+      // Always refresh the auto "next lane" display
+      syncNextLane();
+    }
+
+    function nextLaneNumber() {
+      const pair = parseLanePair(el.lanes.value);
+      if (pair.length !== 2) return '';
+      const [leftLane, rightLane] = pair;
+      const start = el.startLane.value || 'left';
+      const first = (start === 'left') ? leftLane : rightLane;
+      const second = (start === 'left') ? rightLane : leftLane;
+
+      const info = computeFrameInfo();
+
+      // If we're logging 10th-frame fill shots, stay on the 10th-frame lane (do not alternate).
+      if (info.defaultFill) {
+        const lastNonFill = sessionShots.find(s => s && s.isFill !== true && s.lane);
+        if (lastNonFill && lastNonFill.lane) return String(lastNonFill.lane);
+        // Fallback: 10th frame lane based on first-ball alternation
+        return String((info.nonFillCount % 2 === 0) ? first : second);
+      }
+
+      // Alternate lanes based on number of non-fill (frame) shots already logged.
+      return String((info.nonFillCount % 2 === 0) ? first : second);
+    }
+
+    function syncNextLane() {
+      const lane = nextLaneNumber();
+      // Disable manual lane picking; this is auto.
+      el.lanePick.disabled = true;
+      if (!lane) {
+        el.lanePick.value = '';
+        renderScoreboard();
+        return;
+      }
+      const opt = BT.$(`option[value="${lane}"]`, el.lanePick);
+      if (opt) el.lanePick.value = lane;
+      renderScoreboard();
+    }
+
+    
+    function computeFrameInfo() {
+      // Count non-fill first-ball shots only within the current game.
+      const gameShots = currentGameShotsChron();
+      const nonFillCount = gameShots.filter(s => !s || s.isFill !== true).length;
+      const frame = Math.min(10, nonFillCount + 1);
+      const defaultFill = (frame === 10 && nonFillCount >= 10);
+      return { frame, defaultFill, nonFillCount, gameNo: currentGameNumber() };
+    }
+
+    function updateFrameUI() {
+      if (!el.frame || !el.fill) return;
+      const info = computeFrameInfo();
+      el.frame.value = String(info.frame);
+      if (info.frame !== 10) {
+        el.fill.value = 'no';
+        el.fill.disabled = true;
+      } else {
+        el.fill.disabled = false;
+        // If we've already logged 10 first balls, default to fill.
+        if (info.defaultFill) el.fill.value = 'yes';
+        else if (el.fill.value === 'yes') el.fill.value = 'no';
+      }
+    }
+
+    function resetSection3AfterLog() {
+      // Reset everything in section 3 to avoid previous-shot confusion.
+      clearPills();
+      clearPinDeck();
+
+      if (el.adjust) el.adjust.value = '';
+	      // Miss is tracked via buttons (readsMiss); clearPills() handles reset.
+      if (el.notes) el.notes.value = '';
+
+      updateFrameUI();
+    }
+
+
+    // Compute the move since the last non-fill shot based on feet/arrows deltas.
+    // This is used as an "adjustment attempt" signal without asking the user to select it.
+    function computeAutoAdjustment(prevShot, curFeet, curArrows) {
+      if (!prevShot) return '—';
+      const pf = (prevShot.feet != null) ? Number(prevShot.feet) : null;
+      const pa = (prevShot.arrows != null) ? Number(prevShot.arrows) : null;
+      const cf = (curFeet != null) ? Number(curFeet) : null;
+      const ca = (curArrows != null) ? Number(curArrows) : null;
+      if (pf == null || pa == null || cf == null || ca == null) return '—';
+      const df = Math.round(cf - pf);
+      const da = Math.round(ca - pa);
+      if (df === 0 && da === 0) return 'None';
+      const sameSign = (df === 0 || da === 0) ? false : (df > 0) === (da > 0);
+      const absf = Math.abs(df), absa = Math.abs(da);
+      if (absf === absa) return `Parallel (${df>0?'+':''}${df})`;
+      if (sameSign && absf === 2 && absa === 1) return `2&1 (${df>0?'+':''}${df}/${da>0?'+':''}${da})`;
+      if (sameSign && absf === 3 && absa === 2) return `3&2 (${df>0?'+':''}${df}/${da>0?'+':''}${da})`;
+      if (sameSign && absf === 1 && absa === 2) return `1&2 (${df>0?'+':''}${df}/${da>0?'+':''}${da})`;
+      return `Custom (${df>0?'+':''}${df}/${da>0?'+':''}${da})`;
+    }
+
+    // Lightweight note tagger: extracts common lane/shape keywords from Notes.
+    function noteTagsFromText(txt) {
+      const t = String(txt || '').toLowerCase();
+      const tags = [];
+      const add = (k) => { if (!tags.includes(k)) tags.push(k); };
+      if (!t) return tags;
+      if (/(carry\s*down|carrydown)/.test(t)) add('carrydown');
+      if (/(burn|burnt|fried)/.test(t)) add('burn');
+      if (/(cliff|wet\s*dry|wet\/dry)/.test(t)) add('wet/dry');
+      if (/(early|hooking\s*early)/.test(t)) add('early');
+      if (/(late|skid|too\s*long)/.test(t)) add('long');
+      if (/(over\s*under|over\/under)/.test(t)) add('over/under');
+      if (/(speed\s*up|too\s*fast|faster)/.test(t)) add('speed up');
+      if (/(slow|too\s*slow|slower)/.test(t)) add('slow down');
+      if (/(flat\s*10)/.test(t)) add('flat 10');
+      if (/(ring(ing)?\s*10)/.test(t)) add('ringing 10');
+      return tags;
+    }
+
+function isStrike(shot) {
+      const leaves = shot.leaves || [];
+      return leaves.includes('Strike') || leaves.includes('Brooklyn');
+    }
+
+    function isPocket(shot) {
+      const p = (shot.pocket || 'Unknown');
+      return p.startsWith('Pocket');
+    }
+
+    function effectiveExecutionValue(shot) {
+      const base = (shot && typeof shot.executionQuality !== 'undefined')
+        ? (Number.isFinite(Number(shot.executionQuality)) ? Number(shot.executionQuality) : 3)
+        : (shot && shot.qualityShot ? 3 : 1);
+      const miss = String((shot && shot.miss) || 'na');
+      const bonus = (miss === 'noMiss') ? 1 : 0;
+      return Math.max(1, Math.min(5, base + bonus));
+    }
+
+    function observationRating(shots) {
+      const real = (shots || []).filter(s => s && s.type !== 'gameStart' && !s.isFill);
+      if (!real.length) return { score: 55, label: 'Building', note: 'Best ball is your eyeball — track the next few shots clearly.' };
+      let points = 0;
+      let possible = 0;
+      let didntTrack = 0;
+      real.forEach(s => {
+        const miss = String(s.miss || 'didntTrack');
+        possible += 4;
+        if (miss !== 'didntTrack') points += 2;
+        else didntTrack += 1;
+        if (Array.isArray(s.obs) && s.obs.length) points += 1;
+        if (String(s.pocket || 'Unknown') !== 'Unknown') points += 0.5;
+        if (String(s.exit || "Didn't notice") !== "Didn't notice") points += 0.5;
+      });
+      const raw = possible ? (points / possible) * 100 : 0;
+      const penalty = real.length ? (didntTrack / real.length) * 18 : 0;
+      const score = Math.max(0, Math.min(100, Math.round(raw - penalty)));
+      const label = score >= 82 ? 'Sharp' : score >= 64 ? 'Building' : 'Foggy';
+      const note = score >= 82
+        ? 'Best ball is your eyeball — your lane map is trustworthy tonight.'
+        : score >= 64
+          ? 'Keep logging what you saw so Coach can sharpen the lane map.'
+          : 'Use the miss-room and ball-reaction buttons more often before making bigger moves.';
+      return { score, label, note, didntTrack };
+    }
+
+    function shotWeight(shot) {
+      return effectiveExecutionValue(shot);
+    }
+
+    function renderScoreboard() {
+      const pair = parseLanePair(el.lanes.value);
+      if (pair.length !== 2) {
+        el.laneScoreboard.textContent = 'Enter a lane pair (e.g., 21/22) and log a few shots.';
+        return;
+      }
+      const [L, R] = pair;
+      const byLane = { [String(L)]: [], [String(R)]: [] };
+      sessionShots.filter(s => s && s.type !== 'gameStart' && !s.isFill).forEach(s => {
+        if (s.lane && byLane[s.lane]) byLane[s.lane].push(s);
+      });
+
+      function laneStats(laneId) {
+        const shots = byLane[laneId] || [];
+        let totalW = 0, strikeW = 0, pocketW = 0, pocketStrikeW = 0, flushW = 0, qualityW = 0;
+        shots.forEach(s => {
+          const w = shotWeight(s);
+          totalW += w;
+          if (isPocket(s)) pocketW += w;
+          if (isStrike(s)) strikeW += w;
+          if (isPocket(s) && isStrike(s)) pocketStrikeW += w;
+          if (String(s.pocket||'') === 'Pocket flush') flushW += w;
+          if (effectiveExecutionValue(s) >= 3) qualityW += w;
+        });
+        const strikePct = totalW ? Math.round((strikeW / totalW) * 100) : 0;
+        const carry = pocketW ? Math.round((pocketStrikeW / pocketW) * 100) : 0;
+        const pocketPct = totalW ? Math.round((pocketW / totalW) * 100) : 0;
+        const flushPct = totalW ? Math.round((flushW / totalW) * 100) : 0;
+        const qualityPct = totalW ? Math.round((qualityW / totalW) * 100) : 0;
+        const execScore = shots.length ? Math.round(shots.reduce((a,s)=>a + effectiveExecutionValue(s), 0) / (shots.length*5) * 100) : 0;
+        return { total: shots.length, strikePct, pocketPct, carry, flushPct, qualityPct, execScore, strikes: shots.filter(isStrike).length };
+      }
+
+      const sL = laneStats(String(L));
+      const sR = laneStats(String(R));
+
+      el.laneScoreboard.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="panel" style="padding:10px;margin:0">
+            <div><b>LEFT (${L})</b></div>
+            <div>Shots: <b>${sL.total}</b> • Strikes: <b>${sL.strikes}</b></div>
+            <div>Strike %: <b>${sL.strikePct}%</b></div>
+            <div>Pocket hit %: <b>${sL.pocketPct}%</b> • Flush %: <b>${sL.flushPct}%</b></div>
+            <div>Carry on pocket hits: <b>${sL.carry}%</b> • Quality %: <b>${sL.qualityPct}%</b> • Execution: <b>${sL.execScore}%</b></div>
+          </div>
+          <div class="panel" style="padding:10px;margin:0">
+            <div><b>RIGHT (${R})</b></div>
+            <div>Shots: <b>${sR.total}</b> • Strikes: <b>${sR.strikes}</b></div>
+            <div>Strike %: <b>${sR.strikePct}%</b></div>
+            <div>Pocket hit %: <b>${sR.pocketPct}%</b> • Flush %: <b>${sR.flushPct}%</b></div>
+            <div>Carry on pocket hits: <b>${sR.carry}%</b> • Quality %: <b>${sR.qualityPct}%</b> • Execution: <b>${sR.execScore}%</b></div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSets() {
+      const sets = BT.lsGet(BT.KEYS.ARSENAL_SETS, []);
+      el.set.innerHTML = [sets.length ? '— Pick your bag —' : '— No saved sets yet —', ...sets.map(s => s.name)].map((n,i) => `<option value="${i===0?'':n}">${n}</option>`).join('');
+      // Pre-select the bag saved from Arsenal's Coach, or the last bag used here.
+      const pref = BT.lsGet('bt_gameday_preferred_set_v1', '');
+      if (pref && sets.some(x => x.name === pref)) el.set.value = pref;
+      loadSetToUI();
+    }
+
+    function loadSetToUI() {
+      const name = el.set.value;
+      const sets = BT.lsGet(BT.KEYS.ARSENAL_SETS, []);
+      const set = sets.find(s => s.name === name);
+      selectedSetBalls = set ? [...set.balls] : [];
+
+      // right panel list
+      el.setHint.textContent = set ? `Set: ${set.name} (${set.balls.length} balls)` : 'Select an arsenal set in section 1.';
+      el.setList.innerHTML = selectedSetBalls.map(n => `<div class="list-item" data-pick="${n}" style="cursor:pointer">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+          <div><b>${n}</b></div>
+          <div class="small">tap to select</div>
+        </div>
+      </div>`).join('') || `<div class="list-item small">No set selected (or set is empty).</div>`;
+
+      // ball dropdown
+      el.ball.innerHTML = (selectedSetBalls.length ? selectedSetBalls : ['—']).map(n => `<option value="${n==='—'?'':n}">${n}</option>`).join('');
+
+      // Restore last-used ball if we have it
+      const last = BT.lsGet(LAST_LINE_KEY, null);
+      if (last && last.ball) {
+        const opt = BT.$(`option[value="${CSS.escape(last.ball)}"]`, el.ball);
+        if (opt) el.ball.value = last.ball;
+      }
+
+      BT.$all('[data-pick]', el.setList).forEach(div => {
+        div.addEventListener('click', () => {
+          const n = div.getAttribute('data-pick');
+          el.ball.value = n;
+          saveLastLineDraft();
+        });
+      });
+    }
+
+    function escapeHtml(v) {
+      return String(v == null ? '' : v).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+    }
+
+    function geometryForShot(s) {
+      const arrows = Number(s && s.arrows);
+      const bp = Number(s && s.bp);
+      const pocket = Number(s && s.pocketBoard);
+      if (!Number.isFinite(arrows) || !Number.isFinite(bp) || !Number.isFinite(pocket)) return null;
+      const outward = Math.abs(arrows - bp);
+      const recovery = Math.abs(pocket - bp);
+      const entryDemand = outward + recovery;
+      let zone = 'Stable window';
+      let note = 'Recovery demand is in the usable strike window for many house-shot looks.';
+      if (recovery >= 13) { zone = 'Jumpy / steep'; note = 'You are asking for a lot of recovery; watch for ring 10s, splits, and over/under.'; }
+      else if (recovery <= 8) { zone = 'Too flat / weak'; note = 'Not much recovery is required; watch for flat 10s, 2-8s, or weak continuation.'; }
+      else if (entryDemand >= 16) { zone = 'Narrow window'; note = 'Total angle demand is high; execution and ball response have to be very precise.'; }
+      return { outward, recovery, entryDemand, zone, note };
+    }
+
+    function renderLaneGeometry() {
+      if (!el.laneGeometry) return;
+      const real = sessionShots.filter(s => s && s.type !== 'gameStart' && !s.isFill);
+      const rows = real.filter(s => geometryForShot(s)).slice(0, 10);
+      if (!rows.length) {
+        el.laneGeometry.innerHTML = 'Log shots with arrows, breakpoint, and pocket board to build the geometry table.';
+        return;
+      }
+      const latest = geometryForShot(rows[0]);
+      const summary = latest ? `<div style="margin-bottom:8px"><b>Latest:</b> outward ${latest.outward.toFixed(1)} boards + recovery ${latest.recovery.toFixed(1)} boards = entry demand ${latest.entryDemand.toFixed(1)}. <b>${latest.zone}</b> — ${latest.note}</div>` : '';
+      const trs = rows.map(s => {
+        const g = geometryForShot(s);
+        const leaveText = s.leaveTag || (Array.isArray(s.leavePins) && s.leavePins.length ? s.leavePins.join('-') : 'Strike');
+        const cls = g.recovery >= 13 || g.recovery <= 8 ? 'background:rgba(255,255,255,.04)' : '';
+        return `<tr style="${cls}"><td>${s.feet ?? ''}</td><td>${s.arrows ?? ''}</td><td>${s.bp ?? ''}</td><td>${s.pocketBoard ?? ''}</td><td>${g.outward.toFixed(1)}</td><td>${g.recovery.toFixed(1)}</td><td>${g.entryDemand.toFixed(1)}</td><td>${escapeHtml(leaveText)}</td><td>${escapeHtml(s.ball || '')}</td><td>${g.zone}</td></tr>`;
+      }).join('');
+      el.laneGeometry.innerHTML = `${summary}<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th>Feet</th><th>Arrow</th><th>BP</th><th>Pocket</th><th>Out</th><th>Recovery</th><th>Demand</th><th>Leave</th><th>Ball</th><th>Read</th></tr></thead><tbody>${trs}</tbody></table></div>`;
+    }
+
+    function renderLog() {
+      el.logList.innerHTML = sessionShots.map(s => {
+        if (s && s.type === 'gameStart') {
+          return `<div class="list-item" style="background:rgba(255,255,255,.04)"><div><b>— Game ${s.gameNo} —</b></div><div class="small">${new Date(s.at).toLocaleString()}</div></div>`;
+        }
+        const dt = new Date(s.at).toLocaleString();
+
+        const leaveText = (() => {
+          if (s.leaveTag) return s.leaveTag;
+          if (Array.isArray(s.leavePins) && s.leavePins.length) return s.leavePins.join('-');
+          return 'Strike';
+        })();
+
+        const obsBits = [];
+        if (typeof s.executionQuality !== 'undefined') {
+          const q = effectiveExecutionValue(s);
+          const qLabel = (q >= 5) ? 'Good execution' : (q <= 1) ? 'Poor execution' : 'OK execution';
+          obsBits.push(qLabel);
+        } else if (s.qualityShot) {
+          obsBits.push('OK execution');
+        }
+        if (s.speedTrend && s.speedTrend !== 'unknown') obsBits.push('Speed: ' + s.speedTrend);
+        if (s.adjust && s.adjust !== 'none') obsBits.push('Attempt: ' + s.adjust);
+        (s.obs || []).forEach(x => obsBits.push(x));
+
+        const reads = [leaveText].concat(obsBits).filter(Boolean).join(', ') || '—';
+        const laneTxt = s.lane ? ` • Lane: ${s.lane}` : '';
+        const gameTxt = Number.isFinite(Number(s.gameNo)) ? `G${s.gameNo}` : '';
+        const frameTxt = (typeof s.frame === 'number') ? `F${s.frame}${s.isFill ? ' (fill)' : ''}` : '';
+        const missLabel = (m) => {
+          if (!m || m === 'na') return '';
+          if (m === 'noMiss') return 'No miss';
+          if (m === 'didntTrack') return "Miss not tracked";
+          if (m === 'rightRecovered') return 'Miss right recovered';
+          if (m === 'leftHeld') return 'Miss left held';
+          if (m === 'rightMiss') return 'Miss right';
+          if (m === 'leftMiss') return 'Miss left';
+          return String(m);
+        };
+        const missTxt = missLabel(s.miss) ? ` • ${missLabel(s.miss)}` : '';
+
+        return `<div class="list-item">
+          <div class="small">${dt}${gameTxt || frameTxt ? ' • ' : ''}${[gameTxt, frameTxt].filter(Boolean).join(' ')}</div>
+          <div><b>${s.ball || 'Ball?'}</b> • ${reads}</div>
+          <div class="small">Line: ${s.feet}/${s.arrows}/${s.bp}${Number.isFinite(Number(s.pocketBoard)) ? '/' + s.pocketBoard : ''}${laneTxt} • Pocket: ${s.pocket} • Exit: ${s.exit}${missTxt}</div>
+          ${s.notes ? `<div class="small">Notes: ${s.notes}</div>` : ''}
+        </div>`;
+      }).join('') || `<div class="list-item small">No shots logged yet.</div>`;
+    }
+function saveCurrentSessionDraft() {
+      BT.lsSet(SESSION_KEY, {
+        shots: sessionShots,
+        meta: collectMeta(),
+        savedAt: Date.now(),
+      });
+    }
+
+    function loadCurrentSessionDraft() {
+      const d = BT.lsGet(SESSION_KEY, null);
+      if (d && Array.isArray(d.shots)) sessionShots = d.shots;
+    }
+
+    function collectMeta() {
+      return {
+        house: el.house.value || '',
+        lanes: el.lanes.value.trim(),
+        pattern: el.pattern.value || '',
+        setName: el.set.value || '',
+        leagueId: el.league.value || '',
+        leagueName: leagueNameById(el.league.value || ''),
+        contextKey: contextKey(),
+        startLane: el.startLane.value || 'left',
+      };
+    }
+
+    // --- Reaction Stability Score (RSS)
+    // Hidden unless unstable: detects likely ball/shape mismatch within ~3-5 shots.
+    function reactionStability(shots) {
+      const nMin = 3;
+      const windowN = 5;
+      if (!shots || shots.length < nMin) return { status: 'unknown', conf: 'Low', why: '' };
+
+      const w = shots.slice(-windowN);
+      const n = w.length;
+
+      const pocketTxt = w.map(s => String(s.pocket || 'Unknown'));
+      const pocketGood = pocketTxt.filter(p => p.startsWith('Pocket')).length;
+      const pocketRate = pocketGood / n;
+
+	      const highish = w.filter(s => {
+	        const p = String(s.pocket || '');
+	        return p === 'Pocket high' || p === 'Missed left' || (s.miss === 'leftHeld') || (s.miss === 'leftMiss');
+	      }).length;
+	      const lightish = w.filter(s => {
+	        const p = String(s.pocket || '');
+	        return p === 'Pocket light' || p === 'Missed right' || (s.miss === 'rightRecovered') || (s.miss === 'rightMiss');
+	      }).length;
+
+      const obsAll = w.flatMap(s => s.obs || []);
+      const obsCore = obsAll.filter(x => ['Too early','Too long','Over/under','Carrydown'].includes(x));
+      const obsSet = new Set(obsCore);
+
+      const leavesAll = w.flatMap(s => s.leaves || []).filter(x => x && x !== 'Strike' && x !== 'Brooklyn');
+      const uniqueLeaves = new Set(leavesAll);
+
+      const quality = w.filter(s => s.qualityShot).length;
+      const trusted = quality >= Math.ceil(n * 0.5);
+
+      // Directional = mostly high OR mostly light (alignment/targeting)
+      const dirDominant = (highish >= Math.ceil(n*0.6) && lightish <= 1) || (lightish >= Math.ceil(n*0.6) && highish <= 1);
+
+      // Unstable = mixed direction OR mixed reads OR lots of unique leaves, with poor pocket rate
+      const mixedDir = (highish >= 2 && lightish >= 2);
+      const mixedReads = obsSet.size >= 2;
+      const noisyLeaves = uniqueLeaves.size >= 4;
+
+      let status = 'stable';
+      if (pocketRate < 0.45 && (mixedDir || mixedReads || noisyLeaves)) status = 'unstable';
+      else if (pocketRate < 0.55 && (mixedDir || mixedReads)) status = 'unstable';
+      else if (dirDominant || obsSet.size === 1) status = 'directional';
+
+      // Confidence
+      let conf = 'Low';
+      if (n >= 5 && trusted) conf = 'High';
+      else if (n >= 4 && (trusted || pocketRate < 0.5)) conf = 'Medium';
+
+      let why = '';
+      if (status === 'unstable') {
+        const bits = [];
+        if (pocketRate < 0.5) bits.push('low pocket%');
+        if (mixedDir) bits.push('high+light misses');
+        if (mixedReads) bits.push('mixed reads');
+        if (noisyLeaves) bits.push('random leaves');
+        why = bits.length ? bits.join(', ') : 'unstable reaction';
+      }
+      return { status, conf, why };
+    }
+
+    // Preload ball rows for in-set recommendations.
+    let BALL_ROW_MAP = null;
+    async function ensureBallRowMap() {
+      if (BALL_ROW_MAP) return BALL_ROW_MAP;
+      BALL_ROW_MAP = new Map();
+      try {
+        const payload = await BT.ensureCSVLoaded();
+        const rows = payload && Array.isArray(payload.rows) ? payload.rows : [];
+        rows.forEach(r => {
+          const nm = (BT.ballName(r) || '').trim();
+          if (nm) BALL_ROW_MAP.set(nm, r);
+        });
+      } catch (_e) {}
+      return BALL_ROW_MAP;
+    }
+
+    
+    // ===== Next-level lane intelligence (no new inputs) =====
+    // This layer classifies the *lane environment* (hold/recovery/over-under/carrydown/burn/flat)
+    // using only existing shot logs: miss direction, pocket hit, leave patterns, speed trend, and observations.
+    // It then suggests an in-set ball matchup using the existing motion-vector system (BT.motionVector).
+
+    // Saved sets store ball names as strings (older builds may have stored {name}).
+    function setBallNames(setObj) {
+      if (!setObj || !Array.isArray(setObj.balls)) return [];
+      return setObj.balls.map(b => (typeof b === 'string') ? b : (b && b.name) || '').map(x => String(x).trim()).filter(Boolean);
+    }
+
+    function _pinsKey(pins) {
+      const a = Array.isArray(pins) ? pins.slice().filter(n=>Number.isFinite(n)).sort((x,y)=>x-y) : [];
+      return a.join('-');
+    }
+
+    function _leaveCategory(shot) {
+      // Prefer explicit tags when present
+      const tag = (shot && shot.leaveTag) ? String(shot.leaveTag) : '';
+      if (tag === 'Flat 10') return 'deflection';
+      if (tag === 'Ringing 10') return 'high';
+
+      const key = _pinsKey(shot && shot.leavePins);
+      if (!key) return 'strike';
+
+      // Deflection / weak continuation
+      if (['10','2-8','8-10','8'].includes(key)) return 'deflection';
+
+      // High hit / early hook
+      if (['4','4-9','4-6-7-10','9'].includes(key)) return 'high';
+
+      // Skid / too long (light hit clues)
+      if (['2','2-10'].includes(key)) return 'skid';
+
+      // Over/under signatures
+      if (['2-10','4-10'].includes(key)) return 'overunder';
+
+      // Execution signatures
+      if (['5-7','1-2-4-10'].includes(key)) return 'execution';
+
+      return 'neutral';
+    }
+
+    function _laneShapeFromShots(shots) {
+      const recent = (shots || []).filter(s=>s && s.type !== 'gameStart' && !s.isFill).slice(-10);
+      const q = recent.filter(s=>effectiveExecutionValue(s) >= 3);
+      const win = (q.length >= 4 ? q.slice(-8) : recent.slice(-8));
+
+      const counts = { hold:0, recovery:0, high:0, deflection:0, overunder:0, skid:0, execution:0, missL:0, missR:0 };
+      const evidence = [];
+
+      for (const s of win) {
+        const pocket = String(s.pocket||'');
+        const isPocketHit = pocket.startsWith('Pocket');
+        const miss = String(s.miss||'na');
+        if (miss === 'leftHeld') { counts.hold++; counts.missL++; }
+        else if (miss === 'rightRecovered') { counts.recovery++; counts.missR++; }
+        else if (miss === 'leftMiss') counts.missL++;
+        else if (miss === 'rightMiss') counts.missR++;
+        if (isPocketHit && miss === 'leftMiss') counts.execution++;
+        if (isPocketHit && miss === 'rightMiss') counts.execution++;
+        const cat = _leaveCategory(s);
+        if (cat in counts) counts[cat]++;
+      }
+
+      const blend = (counts.hold >= 1 && counts.recovery >= 1) || (counts.hold >= 2) || (counts.recovery >= 2);
+      const burn = counts.high >= 2 && counts.deflection <= 1;
+      const carrydown = counts.deflection >= 2 && counts.high <= 1;
+      const overUnder = (counts.high >= 1 && (counts.skid >= 1 || counts.overunder >= 1)) || counts.overunder >= 2;
+      const flatTight = !blend && !burn && !carrydown && !overUnder;
+
+      let shape = 'Blend / Typical House';
+      let confidence = 'Low';
+      if (overUnder) {
+        shape = 'Over/Under';
+        confidence = (counts.overunder >= 2 || (counts.high + counts.skid) >= 3) ? 'High' : 'Medium';
+        evidence.push('Mixed early + late reaction');
+      } else if (carrydown) {
+        shape = 'Carrydown';
+        confidence = counts.deflection >= 3 ? 'High' : 'Medium';
+        evidence.push('Deflection / weak-corner pattern');
+      } else if (burn) {
+        shape = 'Burn';
+        confidence = counts.high >= 3 ? 'High' : 'Medium';
+        evidence.push('High-hit / early-read pattern');
+      } else if (blend) {
+        shape = 'Blend / Typical House';
+        confidence = (counts.hold >= 2 && counts.recovery >= 2) ? 'High' : 'Medium';
+        if (counts.hold) evidence.push('Hold inside');
+        if (counts.recovery) evidence.push('Recovery outside');
+      } else if (flatTight) {
+        shape = 'Flat / Tight';
+        confidence = win.length >= 4 ? 'Medium' : 'Low';
+        evidence.push('Miss room limited both ways');
+      }
+
+      let window = 'Unknown';
+      const room = counts.hold + counts.recovery;
+      if (room >= 4) window = 'Wide';
+      else if (room >= 2) window = 'Medium';
+      else window = 'Tight';
+
+      return { shape, confidence, window, counts, evidence: evidence.slice(0,3) };
+    }
+
+    function _needVectorForShape(laneShape) {
+      const need = { hook:0, length:0, backend:0, note:'' };
+
+      if (laneShape.includes('Carrydown')) {
+        need.backend += 0.10;
+        need.hook += 0.06;
+        need.length -= 0.04;
+        need.note = 'Need more continuation through the pins.';
+      } else if (laneShape.includes('Burn')) {
+        need.length += 0.12;
+        need.hook -= 0.06;
+        need.backend += 0.02;
+        need.note = 'Need cleaner through the fronts / delay hook.';
+      } else if (laneShape.includes('Over/Under')) {
+        need.backend -= 0.10;
+        need.hook -= 0.02;
+        need.length += 0.06;
+        need.note = 'Need a blended, less jumpy shape.';
+      } else if (laneShape.includes('Flat')) {
+        need.hook += 0.10;
+        need.backend -= 0.06;
+        need.length -= 0.04;
+        need.note = 'Need earlier read / control.';
+      } else if (laneShape.includes('Cliffed')) {
+        need.backend -= 0.04;
+        need.hook += 0.02;
+        need.note = 'Maximize control and pocket window.';
+      }
+
+      return need;
+    }
+
+    function _recommendInSetBallByNeed(currentBall, setBalls, bowler, need) {
+      try {
+        const map = BALL_ROW_MAP;
+        if (!map || !map.size) return null;
+        if (!Array.isArray(setBalls) || setBalls.length < 2) return null;
+
+        const curRow = map.get(currentBall);
+        const curVec = curRow ? BT.motionVector(curRow, bowler) : null;
+        if (!curVec) return null;
+
+        const target = {
+          hook: Math.max(0, Math.min(1, curVec.hook + (need.hook||0))),
+          length: Math.max(0, Math.min(1, curVec.length + (need.length||0))),
+          backend: Math.max(0, Math.min(1, curVec.backend + (need.backend||0))),
+        };
+
+        let best = null;
+        for (const nm of setBalls) {
+          if (!nm || nm === currentBall) continue;
+          const row = map.get(nm);
+          if (!row) continue;
+          const v = BT.motionVector(row, bowler);
+          const d = BT.motionDistance(v, target);
+          if (!best || d < best.d) best = { name: nm, d };
+        }
+        return best ? best.name : null;
+      } catch (_e) {
+        return null;
+      }
+    }
+
+    function gameLaneMap(shots) {
+      const real = (shots || []).filter(s => s && s.type !== 'gameStart' && !s.isFill);
+      const byGame = {};
+      real.forEach(s => {
+        const g = Number(s.gameNo) || 1;
+        byGame[g] = byGame[g] || [];
+        byGame[g].push(s);
+      });
+      const keys = Object.keys(byGame).map(Number).sort((a,b)=>a-b);
+      return keys.map(g => {
+        const intel = _laneShapeFromShots(byGame[g]);
+        return { gameNo: g, shape: intel.shape, window: intel.window, confidence: intel.confidence, evidence: intel.evidence || [], shots: byGame[g] };
+      });
+    }
+
+    function laneMapSentence(maps) {
+      const parts = (maps || []).slice(0,3).map(m => `G${m.gameNo}: ${m.shape}`);
+      return parts.join(' → ');
+    }
+
+    function latestGameTrend(maps) {
+      const arr = Array.isArray(maps) ? maps : [];
+      if (!arr.length) return '';
+      const last = arr[arr.length - 1];
+      const prev = arr.length >= 2 ? arr[arr.length - 2] : null;
+      if (!prev) return `Game ${last.gameNo} is reading as ${last.shape.toLowerCase()}.`;
+      if (last.shape === prev.shape) return `Games ${prev.gameNo}-${last.gameNo} are both reading ${last.shape.toLowerCase()}.`;
+      if (last.shape === 'Burn') return 'The set is getting drier and earlier as the night goes on.';
+      if (last.shape === 'Carrydown') return 'The lane is getting tighter downlane and the ball is losing some finish.';
+      if (last.shape === 'Over/Under') return 'The lane is getting more cliffed, so the miss room is shrinking.';
+      if (last.shape === 'Blend / Typical House' && prev.shape !== last.shape) return 'The lane read has blended out compared with the earlier game.';
+      return `The lane read has shifted from ${prev.shape.toLowerCase()} to ${last.shape.toLowerCase()}.`;
+    }
+
+    function currentLineSnapshot(shots) {
+      const real = (shots || []).filter(s => s && s.type !== 'gameStart' && !s.isFill);
+      const last = real[real.length - 1] || null;
+      if (!last) return '';
+      const bits = [];
+      if (Number.isFinite(last.feet)) bits.push(`feet ${Math.round(last.feet)}`);
+      if (Number.isFinite(last.arrows)) bits.push(`target ${Math.round(last.arrows)}`);
+      if (Number.isFinite(last.bp)) bits.push(`breakpoint ${Math.round(last.bp)}`);
+      return bits.length ? `Current look: ${bits.join(' • ')} with ${last.ball || 'your current ball'}.` : '';
+    }
+
+    function bowlerChangeSummary(shots) {
+      const real = (shots || []).filter(s => s && s.type !== 'gameStart' && !s.isFill);
+      if (!real.length) return '';
+      const recent = real.slice(-6);
+      const speed = recent.map(s => String(s.speedTrend || 'unknown'));
+      const faster = speed.filter(x => x === 'faster').length;
+      const slower = speed.filter(x => x === 'slower').length;
+      const poor = recent.filter(s => Number(s.executionQuality || 3) <= 1).length;
+      const noMiss = recent.filter(s => String(s.miss || '') === 'noMiss').length;
+      const didnt = recent.filter(s => String(s.miss || '') === 'didntTrack').length;
+      const missesL = recent.filter(s => ['leftMiss','leftHeld'].includes(String(s.miss||''))).length;
+      const missesR = recent.filter(s => ['rightMiss','rightRecovered'].includes(String(s.miss||''))).length;
+      if (faster >= 2 && faster > slower) return 'Your tempo looks a touch faster now than it did earlier in the set.';
+      if (slower >= 2 && slower > faster) return 'Your tempo looks a touch slower now than it did earlier in the set.';
+      if (poor >= 2 && noMiss <= 1) return 'Execution has drifted a little, so match your best shot before making a bigger change.';
+      if (didnt >= 3) return 'A lot of shots were not tracked, so trust the next few clear ball reads before making a big move.';
+      if (missesL >= 3 && missesL > missesR) return 'Recent misses have mostly leaked left of the intended shape.';
+      if (missesR >= 3 && missesR > missesL) return 'Recent misses have mostly leaked right of the intended shape.';
+      return 'Your release looks steady enough that you can trust a small adjustment.';
+    }
+
+    function getLaserProfile() {
+      const bowler = (typeof BT !== 'undefined' && BT.lsGet) ? (BT.lsGet(BT.KEYS.BOWLER, {}) || {}) : {};
+      const laser = bowler.laser || {};
+      return {
+        Loft: Number(laser.loft ?? 3),
+        Aim: Number(laser.aim ?? 4),
+        Speed: Number(laser.speed ?? 3),
+        Equipment: 5,
+        Release: Number(laser.release ?? 3),
+      };
+    }
+
+    function laserHint(label, issue, deeperDir, shallowerDir, ballSuggestion) {
+      if (label === 'Loft') {
+        if (issue === 'tooEarly' || issue === 'high') return 'Loft: add just a touch more loft only if you use that move well.';
+        if (issue === 'tooLong' || issue === 'carrydown') return 'Loft: keep it normal tonight so the ball can see the lane sooner.';
+        return 'Loft: keep it as a small feel move, not the first move.';
+      }
+      if (label === 'Aim') {
+        if (issue === 'tooEarly' || issue === 'high') return `Aim: follow the miss. Move your feet 2 boards ${deeperDir.toLowerCase()} and your eyes 1 board ${deeperDir.toLowerCase()} (into the oil).`;
+        if (issue === 'tooLong' || issue === 'flat10' || issue === 'carrydown') return `Aim: follow the miss. Move your feet 2 boards ${shallowerDir.toLowerCase()} and your eyes 1 board ${shallowerDir.toLowerCase()} (toward the dry).`;
+        if (issue === 'overunder') return 'Aim: square the lane up with a small parallel move first.';
+        return 'Aim: make the smallest move first, then judge the next two clear shots.';
+      }
+      if (label === 'Speed') {
+        if (issue === 'tooEarly' || issue === 'high') return 'Speed: let it get there a touch cleaner with a little more tempo.';
+        if (issue === 'tooLong' || issue === 'flat10' || issue === 'carrydown') return 'Speed: take a little off it so the ball reads the lane sooner.';
+        return 'Speed: keep tempo quiet so you can separate lane change from execution.';
+      }
+      if (label === 'Equipment') {
+        return ballSuggestion ? `Equipment: ${ballSuggestion} is the best alternate look in the set right now.` : 'Equipment: stay in the same ball until two good reads tell you otherwise.';
+      }
+      if (label === 'Release') {
+        if (issue === 'tooEarly' || issue === 'high') return 'Release: soften the hand slightly if you need the ball to blend more.';
+        if (issue === 'tooLong' || issue === 'flat10' || issue === 'carrydown') return 'Release: let it roll a little sooner with less side roll if that is comfortable.';
+        if (issue === 'overunder') return 'Release: take a little hit off the side of it and favor the more forward roll.';
+        return 'Release: trust your normal release unless the next two shots confirm the same look.';
+      }
+      return '';
+    }
+
+    function laserPlan(issue, laneShape, deeperDir, shallowerDir, ballSuggestion) {
+      const profile = getLaserProfile();
+      const base = { Loft:0, Aim:0, Speed:0, Equipment:0, Release:0 };
+      if (issue === 'tooEarly' || issue === 'high' || laneShape === 'Burn') Object.assign(base, { Aim:5, Equipment:4, Speed:3, Release:2, Loft:2 });
+      else if (issue === 'tooLong' || issue === 'carrydown' || laneShape === 'Carrydown' || laneShape === 'Flat / Tight') Object.assign(base, { Equipment:5, Aim:4, Release:3, Speed:2, Loft:1 });
+      else if (issue === 'overunder' || laneShape === 'Over/Under') Object.assign(base, { Aim:5, Equipment:4, Release:3, Speed:2, Loft:1 });
+      else if (issue === 'flat10') Object.assign(base, { Equipment:5, Aim:4, Release:3, Speed:2, Loft:1 });
+      else Object.assign(base, { Aim:4, Equipment:4, Speed:3, Release:2, Loft:1 });
+      const scored = Object.keys(base).map(k => ({ key:k, score: base[k] * 10 + profile[k] * 3 + (k === 'Equipment' ? 1 : 0) }))
+        .sort((a,b)=>b.score-a.score);
+      const picks = [];
+      for (const item of scored) {
+        if (item.key !== 'Equipment' && profile[item.key] <= 1) continue;
+        const msg = laserHint(item.key, issue, deeperDir, shallowerDir, ballSuggestion);
+        if (msg) picks.push(msg);
+        if (picks.length >= 2) break;
+      }
+      if (!picks.some(x => x.startsWith('Equipment:'))) {
+        const eq = laserHint('Equipment', issue, deeperDir, shallowerDir, ballSuggestion);
+        if (eq) picks.push(eq);
+      }
+      return picks.slice(0,2);
+    }
+
+    function adjustmentPlan(issue, laneShape, deeperDir, shallowerDir, ballSuggestion) {
+      const bullets = [];
+      if (issue === 'tooEarly' || laneShape === 'Burn') {
+        bullets.push(`Move your feet 2 boards ${deeperDir.toLowerCase()} and your eyes 1 board ${deeperDir.toLowerCase()} to get into more oil.`);
+        bullets.push(ballSuggestion ? `Ball option: go to ${ballSuggestion} for more length through the fronts.` : 'Stay with cleaner shape if the fronts keep going away.');
+      } else if (issue === 'tooLong' || laneShape === 'Carrydown') {
+        bullets.push(`Move your feet 2 boards ${shallowerDir.toLowerCase()} and your eyes 1 board ${shallowerDir.toLowerCase()} so the ball sees friction sooner.`);
+        bullets.push(ballSuggestion ? `Ball option: go to ${ballSuggestion} for earlier read and stronger continuation.` : 'Stay in a stronger read shape if the corners stay weak.');
+      } else if (issue === 'overunder' || laneShape === 'Over/Under') {
+        bullets.push('Square the angles up first and make the smallest possible parallel move.');
+        bullets.push(ballSuggestion ? `Ball option: go to ${ballSuggestion} for a smoother, more blended look.` : 'Favor the smoother ball choice over the more angular one.');
+      } else if (issue === 'flat10') {
+        bullets.push(`Move your feet 1–2 boards ${shallowerDir.toLowerCase()} (eyes 1 board) so the ball picks up a touch sooner and drives through the pins.`);
+        bullets.push(ballSuggestion ? `Ball option: go to ${ballSuggestion} if you need more continuation through the pins.` : 'Stay with the same ball only if the next two shots read stronger through the deck.');
+      } else if (issue === 'high') {
+        bullets.push(`Move your feet 1–2 boards ${deeperDir.toLowerCase()} (eyes 1 board) to soften the hit.`);
+        bullets.push(ballSuggestion ? `Ball option: go to ${ballSuggestion} if the current ball still jumps too hard off friction.` : 'Consider the cleaner option in the set if the ball keeps checking early.');
+      } else if (laneShape === 'Flat / Tight') {
+        bullets.push('Keep your line tighter to the oil and trust the smoother motion first.');
+        bullets.push(ballSuggestion ? `Ball option: go to ${ballSuggestion} if you need an earlier, rounder read.` : 'Do not open the lane up until you see a stronger midlane read.');
+      } else {
+        bullets.push('Make one small move first and judge the next two well-tracked shots before changing again.');
+        bullets.push(ballSuggestion ? `Ball option: ${ballSuggestion} is the best alternate look in the set right now.` : 'Stay in the same ball unless the next two shots confirm a trend.');
+      }
+      return bullets.filter(Boolean).slice(0,2);
+    }
+
+    function bulletListHtml(title, subtitle, bullets) {
+      const safeBullets = (bullets || []).filter(Boolean).slice(0, 4);
+      const sub = subtitle ? `<div class="small" style="margin-top:4px">${subtitle}</div>` : '';
+      const items = safeBullets.map(b => `<li style="margin:4px 0">${b}</li>`).join('');
+      return `<div>${title ? `<b>${title}</b>` : ''}${sub}<ul style="margin:8px 0 0 18px;padding:0">${items}</ul></div>`;
+    }
+
+    function movementBullet(reason, deeperDir, shallowerDir) {
+      if (reason === 'tooEarly' || reason === 'high') return `Move your feet 2 boards ${deeperDir.toLowerCase()} and your eyes 1 board ${deeperDir.toLowerCase()}.`;
+      if (reason === 'tooLong' || reason === 'flat10' || reason === 'carrydown') return `Move your feet 2 boards ${shallowerDir.toLowerCase()} and your eyes 1 board ${shallowerDir.toLowerCase()} to create a touch more shape.`;
+      if (reason === 'overunder') return 'Reduce the angle first with a small parallel move and softer shape.';
+      return 'Make one small move first, then judge the next two good shots before changing again.';
+    }
+
+    function coachReview(shots) {
+      const real = (shots || []).filter(s => s && s.type !== 'gameStart' && !s.isFill);
+      if (!real.length) return bulletListHtml('Coach review', 'Log a few shots to build the lane map.', [
+        'Track miss room, pocket, and ball reaction on the next few shots.',
+        'Use No miss when the shot matched your intent and Did\'t track only when you truly did not see it.'
+      ]);
+
+      const last = real.slice(-8);
+      const obs = last.flatMap(s => s.obs || []);
+      const leaves = last.flatMap(s => s.leaves || []);
+
+      const bowler = (typeof BT !== 'undefined' && BT.lsGet) ? (BT.lsGet(BT.KEYS.BOWLER, {}) || {}) : {};
+      const handed = ((bowler.handedness || bowler.hand || 'Right') + '').toLowerCase();
+      const isLefty = handed.startsWith('l');
+      // "Follow the miss": hooking early / high → move deeper (left for righties, right for lefties);
+      // going long / light / weak 10s → move toward the dry (right for righties, left for lefties).
+      const deeperDir = isLefty ? 'right' : 'left';
+      const shallowerDir = isLefty ? 'left' : 'right';
+
+      const laneIntel = _laneShapeFromShots(real);
+      const laneMaps = gameLaneMap(real);
+      const obsRating = observationRating(real);
+
+      const tooEarly = obs.includes('Too early');
+      const tooLong = obs.includes('Too long');
+      const overUnder = obs.includes('Over/under');
+      const carrydown = obs.includes('Carrydown');
+
+      let issue = '';
+      if (tooEarly) issue = 'tooEarly';
+      else if (tooLong) issue = 'tooLong';
+      else if (overUnder) issue = 'overunder';
+      else if (carrydown) issue = 'carrydown';
+      else if (leaves.includes('Flat 10')) issue = 'flat10';
+      else if (leaves.includes('Ringing 10')) issue = 'high';
+
+      let ballSuggestion = '';
+      try {
+        const meta = collectMeta();
+        const setName = meta.setName || '';
+        const sets = BT.lsGet(BT.KEYS.ARSENAL_SETS, []);
+        const setObj = (Array.isArray(sets)?sets:[]).find(s => s.name === setName) || null;
+        const setBalls = setBallNames(setObj);
+        const currentBall = (el.ball && el.ball.value) ? el.ball.value : '';
+        let need = null;
+        if (issue === 'tooEarly' || laneIntel.shape === 'Burn') need = { hook:-0.06, length:0.12, backend:0.03 };
+        else if (issue === 'tooLong' || laneIntel.shape === 'Carrydown') need = { hook:0.08, length:-0.10, backend:0.06 };
+        else if (issue === 'overunder' || laneIntel.shape === 'Over/Under') need = { hook:-0.02, length:0.05, backend:-0.10 };
+        else if (issue === 'flat10') need = { hook:0.03, length:-0.04, backend:0.08 };
+        else if (issue === 'high') need = { hook:-0.06, length:0.04, backend:-0.04 };
+        else if (laneIntel.shape === 'Flat / Tight') need = { hook:0.08, length:-0.06, backend:-0.04 };
+        if (need && setBalls.length >= 2) ballSuggestion = _recommendInSetBallByNeed(currentBall, setBalls, bowler, need) || '';
+      } catch (_e) {}
+
+      const bullets = [];
+      const laneSentence = laneMapSentence(laneMaps);
+      const trendSentence = latestGameTrend(laneMaps);
+      const lineSentence = currentLineSnapshot(real);
+      bullets.push([laneSentence ? `Lane map: ${laneSentence}.` : '', trendSentence, lineSentence].filter(Boolean).join(' '));
+
+      let gameBullet = `${bowlerChangeSummary(real)} ${obsRating.note}`.trim();
+      bullets.push(gameBullet);
+
+      const laserBullets = laserPlan(issue, laneIntel.shape, deeperDir, shallowerDir, ballSuggestion);
+      bullets.splice(1, 0, `<b>LASER next move:</b> ${laserBullets.join(' ')}`);
+
+      const geo = geometryForShot(real[real.length - 1]);
+      if (geo) {
+        bullets.push(`Geometry: outward ${geo.outward.toFixed(1)} + recovery ${geo.recovery.toFixed(1)} = demand ${geo.entryDemand.toFixed(1)}. ${geo.zone}: ${geo.note}`);
+      }
+
+      const subtitle = `Current read: ${laneIntel.shape} • Observation rating ${obsRating.score}/100 (${obsRating.label}).`;
+
+      // Alerts: things the bowler might not notice in the moment.
+      const alerts = [];
+      if (lastCoachRead && lastCoachRead !== laneIntel.shape && laneIntel.confidence !== 'Low') {
+        alerts.push(`Lane read changed: ${lastCoachRead} → <b>${laneIntel.shape}</b>.`);
+      }
+      if (ballSuggestion && laneIntel.confidence !== 'Low' && ballSuggestion !== (el.ball && el.ball.value)) {
+        alerts.push(`Pattern is showing <b>${laneIntel.shape}</b> (${laneIntel.confidence.toLowerCase()} confidence). Best ball in your bag for this: <b>${ballSuggestion}</b>.`);
+      } else if (issue && real.length >= 3) {
+        const issueText = { tooEarly:'hooking too early', tooLong:'going too long', overunder:'over/under reactions', carrydown:'carrydown', flat10:'flat 10s', high:'ringing 10s / high hits' }[issue];
+        if (issueText) alerts.push(`Repeating pattern: <b>${issueText}</b> in your recent shots.`);
+      }
+      lastCoachRead = laneIntel.shape;
+      lastCoachBall = ballSuggestion || '';
+      const alertHtml = alerts.length
+        ? `<div class="setup-banner" style="margin:0 0 10px">🔔 ${alerts.join('<br>🔔 ')}</div>`
+        : '';
+      return alertHtml + bulletListHtml('', subtitle, bullets);
+    }
+
+    function markCoachDirty() {
+      // Coach now updates automatically after each logged shot, so keep the last advice on screen
+      // while the bowler fills in the next shot.
+    }
+
+    let lastCoachRead = null;   // lane read at the previous auto review
+    let lastCoachBall = '';     // ball suggestion at the previous auto review
+    function autoCoach() {
+      const chron = sessionShots.slice().reverse();
+      const real = chron.filter(s => s && s.type !== 'gameStart' && !s.isFill);
+      if (real.length < 3) {
+        el.coachText.innerHTML = real.length
+          ? `<div class="small">Coach starts reading patterns after 3 shots (${real.length}/3 logged). Keep tracking pocket, leave and ball reaction.</div>`
+          : 'Log a few shots to get feedback.';
+        return;
+      }
+      el.coachText.innerHTML = coachReview(chron);
+    }
+
+    function refreshCoach() {
+      const chron = sessionShots.slice().reverse();
+      el.coachText.innerHTML = coachReview(chron);
+    }
+
+    function logShot() {
+      const meta = collectMeta();
+
+      // Frame + fill handling
+      const info = computeFrameInfo();
+      const frame = info.frame;
+      const fillChoice = (el.fill && el.fill.value) ? el.fill.value : 'auto';
+      const isFill = (frame === 10) ? (
+        fillChoice === 'yes' ? true :
+        fillChoice === 'no' ? false :
+        info.defaultFill
+      ) : false;
+
+      // Auto-assign lane based on pair + starting lane.
+      const laneAuto = nextLaneNumber();
+
+      const leavePins = Array.from(selectedPins).filter(n => Number.isFinite(n)).sort((a,b)=>a-b);
+      const leaveTag = resultTag || '';
+
+      // Backward-compatible "leaves" text for existing UI/scoreboard logic.
+      const leavesCompat = (() => {
+        if (leaveTag) return [leaveTag];
+        if (!leavePins.length) return ['Strike'];
+        if (leavePins.length === 1) return [String(leavePins[0])];
+        return [leavePins.join('-')];
+      })();
+
+      const qSel = selectedPills(el.readsQuality);
+      const execQuality = qSel.includes('Good execution') ? 5
+        : qSel.includes('OK execution') ? 3
+        : qSel.includes('Poor execution') ? 1
+        : 3;
+      // Backward-compatible flag used throughout Coach: treat Good/OK as quality, Poor as non-quality.
+      const missRead = (selectedPills(el.readsMiss)[0] || 'didntTrack');
+      const qualityShot = Math.max(execQuality, (missRead === 'noMiss' ? execQuality + 1 : execQuality)) >= 3;
+      const missTarget = '';
+
+
+      const shot = {
+        id: `sh_${Math.random().toString(36).slice(2,10)}`,
+        at: Date.now(),
+        house: meta.house,
+        lanes: meta.lanes,
+        pattern: meta.pattern,
+        setName: meta.setName,
+
+        frame,
+        gameNo: info.gameNo || currentGameNumber(),
+        isFill,
+
+        feet: el.feet.value ? Number(el.feet.value) : null,
+        arrows: el.arrows.value ? Number(el.arrows.value) : null,
+        bp: el.bp.value ? Number(el.bp.value) : null,
+        pocketBoard: el.pocketBoard && el.pocketBoard.value ? Number(el.pocketBoard.value) : null,
+        mode: el.mode.value,
+        ball: el.ball.value,
+        lane: laneAuto || el.lanePick.value || '',
+
+        // Leave data
+        leaveTag,
+        leavePins,
+        leaves: leavesCompat,
+
+        // Observations
+        obs: selectedPills(el.readsBallObs),
+        executionQuality: execQuality,
+        qualityShot,
+        missTarget,
+
+        // New coaching layers
+        speedTrend: singlePillValue(el.readsSpeed, 'unknown'),
+        adjust: null,
+
+        pocket: singlePillValue(el.readsPocket, 'Unknown'),
+        exit: singlePillValue(el.readsExit, "Didn't notice"),
+	        miss: missRead,
+        notes: el.notes.value.trim(),
+      };
+
+      
+      // Auto-calculate the adjustment attempt since the last non-fill shot.
+      const prevNonFill = sessionShots.find(s => s && s.isFill !== true) || null;
+      const autoAdj = computeAutoAdjustment(prevNonFill, shot.feet, shot.arrows);
+      shot.adjust = autoAdj;
+      if (el.adjust) el.adjust.value = autoAdj;
+
+      // Notes: store tags and allow them to inform coaching as additional observations.
+      shot.noteTags = noteTagsFromText(shot.notes);
+      if (shot.noteTags && shot.noteTags.length) {
+        shot.obs = Array.isArray(shot.obs) ? shot.obs : [];
+        shot.noteTags.forEach(t => { if (!shot.obs.includes(t)) shot.obs.push(t); });
+      }
+
+if (!shot.ball) return alert('Pick a current ball (select an arsenal set in Environment + setup).');
+
+      sessionShots.unshift(shot);
+
+      // Persist the current line/ball for the next shot.
+      saveLastLineDraft();
+
+      resetSection3AfterLog();
+
+      renderLog();
+      renderLaneGeometry();
+      saveCurrentSessionDraft();
+      syncNextLane();
+      updateFrameUI();
+      autoCoach();
+    }
+
+    async function arsenalAudit(meta, shots) {
+      // Post-session only: may look at the full ball list to recommend what to add/replace next week.
+      // Keep it simple + coach-like.
+      const last = shots.slice(0, 24); // newest-first; enough sample
+      const obs = last.flatMap(s => s.obs || []);
+      const leaves = last.flatMap(s => s.leaves || []);
+      const tooEarly = obs.filter(x => x === 'Too early').length;
+      const tooLong = obs.filter(x => x === 'Too long').length;
+      const overUnder = obs.filter(x => x === 'Over/under').length;
+      const carrydown = obs.filter(x => x === 'Carrydown').length;
+      const flat10 = leaves.filter(x => x === 'Flat 10').length;
+      const ring10 = leaves.filter(x => x === 'Ringing 10').length;
+
+      const need = { hook:0, length:0, backend:0, tags:[] };
+
+      if (tooEarly >= 3) { need.length += 0.14; need.hook -= 0.10; need.tags.push('Needed more length / cleaner'); }
+      if (tooLong >= 3) { need.length -= 0.12; need.hook += 0.10; need.tags.push('Needed earlier read / more hook'); }
+      if (overUnder >= 2 || carrydown >= 2) { need.backend -= 0.06; need.tags.push('Needed smoother control'); }
+      if (flat10 + ring10 >= 3) { need.backend += 0.10; need.tags.push('Needed more continuation / backend'); }
+
+      const headline = need.tags.length ? need.tags.slice(0,2).join(' + ') : 'No strong equipment gaps detected.';
+
+      // Evaluate current set coverage
+      const setName = meta.setName || '';
+      const sets = BT.lsGet(BT.KEYS.ARSENAL_SETS, []);
+      const setObj = (Array.isArray(sets)?sets:[]).find(s => s.name === setName) || null;
+      const setBalls = setBallNames(setObj);
+      let bestInSet = null;
+
+      // Load full CSV to recommend (next week)
+      let csv = null;
+      try { csv = await BT.ensureCSVLoaded(); } catch(_e) {}
+      const rows = csv && Array.isArray(csv.rows) ? csv.rows : [];
+
+      const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
+      function vecForName(name){
+        const row = rows.find(r => (BT.ballName(r) || '') === name);
+        if (!row) return null;
+        return BT.motionVector(row, bowler);
+      }
+
+      // If we can, compute whether any ball in the set is close to the "needed" direction relative to the main ball used most
+      const usedCounts = {};
+      last.forEach(s=>{ const n=s.ball||''; if(!n) return; usedCounts[n]=(usedCounts[n]||0)+1; });
+      const mainBall = Object.entries(usedCounts).sort((a,b)=>b[1]-a[1])[0]?.[0] || (setBalls[0]||'');
+      const mainVec = mainBall ? vecForName(mainBall) : null;
+
+      function dist(a,b){ if(!a||!b) return 999; return Math.sqrt((a.hook-b.hook)**2 + (a.length-b.length)**2 + (a.backend-b.backend)**2); }
+      function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+
+      if (mainVec && need.tags.length) {
+        const target = {
+          hook: clamp01(mainVec.hook + need.hook),
+          length: clamp01(mainVec.length + need.length),
+          backend: clamp01(mainVec.backend + need.backend),
+        };
+
+        // Best match inside set
+        let bestD = 999;
+        setBalls.forEach(n=>{
+          const v = vecForName(n);
+          const d = dist(v, target);
+          if (d < bestD) { bestD = d; bestInSet = n; }
+        });
+
+        // Best match in full database (for next week bag build)
+        let bestDB = null, bestDBD = 999;
+        rows.forEach(r=>{
+          const n = BT.ballName(r);
+          if (!n) return;
+          const v = BT.motionVector(r, bowler);
+          const d = dist(v, target);
+          if (d < bestDBD) { bestDBD = d; bestDB = n; }
+        });
+
+        const gap = (bestInSet && bestD <= 0.22) ? '' : 'No strong match in your selected set.';
+        const rec = bestDB ? `Next-week add/consider: ${bestDB}.` : '';
+        return { headline, mainBall, bestInSet: bestInSet || '', gap, recommendedAdd: bestDB || '', target, need };
+      }
+
+      return { headline, mainBall: mainBall || '', bestInSet: '', gap: '', recommendedAdd: '', need };
+    }
+
+function sessionSummary(shots) {
+      const real = shots.filter(s => s && s.type !== 'gameStart');
+      const leaves = real.flatMap(s => s.leaves || []);
+      const obs = real.flatMap(s => s.obs || []);
+      const strikes = real.filter(s => isStrike(s)).length;
+      const pocketFlush = real.filter(s => s.pocket === 'Pocket flush').length;
+      const pocketLight = real.filter(s => s.pocket === 'Pocket light').length;
+      const pocketHigh = real.filter(s => s.pocket === 'Pocket high').length;
+      const pocketHits = real.filter(s => isPocket(s)).length;
+      const tooEarly = obs.filter(x => x === 'Too early').length;
+      const tooLong = obs.filter(x => x === 'Too long').length;
+      const weighted = real.reduce((acc,s)=>{
+        const w = shotWeight(s); acc.total += w; if (isStrike(s)) acc.strike += w; if (isPocket(s)) acc.pocket += w; if (isPocket(s) && isStrike(s)) acc.carry += w; if (effectiveExecutionValue(s) >= 3) acc.quality += w; return acc;
+      }, {total:0,strike:0,pocket:0,carry:0,quality:0});
+      return {
+        strikes, pocketFlush, pocketLight, pocketHigh, pocketHits, tooEarly, tooLong, total: real.length,
+        strikeRate: weighted.total ? Math.round((weighted.strike/weighted.total)*100) : 0,
+        strikePct: weighted.total ? Math.round((weighted.strike/weighted.total)*100) : 0,
+        pocketPct: weighted.total ? Math.round((weighted.pocket/weighted.total)*100) : 0,
+        carryPct: weighted.pocket ? Math.round((weighted.carry/weighted.pocket)*100) : 0,
+        qualityPct: weighted.total ? Math.round((weighted.quality/weighted.total)*100) : 0,
+        executionScore: real.length ? Math.round(real.reduce((a,s)=>a + effectiveExecutionValue(s), 0) / (real.length*5) * 100) : 0,
+        observationRating: observationRating(real),
+      };
+    }
+
+    async function saveSession() {
+      if (!sessionShots.length) return alert('No shots logged yet.');
+      const meta = collectMeta();
+      const sum = sessionSummary(sessionShots);
+      
+      const laneStats = computeLaneStats(sessionShots, meta.lanes, meta.startLane);
+      const audit = await arsenalAudit(meta, sessionShots);
+
+      const payload = {
+        id: `sess_${Math.random().toString(36).slice(2,10)}`,
+        savedAt: Date.now(),
+        ...meta,
+        summary: sum,
+        laneStats,
+        arsenalAudit: audit,
+        games: currentGameNumber(),
+        shots: [...sessionShots],
+      };
+      const sessions = BT.lsGet(BT.KEYS.GAME_SESSIONS, []);
+      sessions.unshift(payload);
+      BT.lsSet(BT.KEYS.GAME_SESSIONS, sessions);
+      localStorage.removeItem(SESSION_KEY);
+      alert('Saved to Scores.');
+    }
+
+    function resetSession() {
+      if (!confirm('Clear the current session log?')) return;
+      sessionShots = [];
+      lastCoachRead = null; lastCoachBall = '';
+      localStorage.removeItem(SESSION_KEY);
+      el.coachText.innerHTML = 'Log a few shots to get feedback.';
+      renderLog();
+      renderLaneGeometry();
+      syncNextLane();
+      updateFrameUI();
+      markCoachDirty();
+    }
+
+    function renderSetupBanner() {
+      const box = BT.$('#setupBanner');
+      if (!box) return;
+      const st = BT.setupStatus();
+      const missing = [];
+      if (!st.houses) missing.push('<a href="oil.html">add your house on Oil</a>');
+      if (!st.sets) missing.push('<a href="analyze.html">save a ball set on Analyze</a>');
+      if (!missing.length) { box.style.display = 'none'; return; }
+      box.innerHTML = `<b>Before you bowl:</b> ${missing.join(' and ')}. Then come back here to log shots.`;
+      box.style.display = '';
+    }
+
+    async function init() {
+      renderSetupBanner();
+      // Preload ball rows so coach can recommend an in-set swap quickly.
+      await ensureBallRowMap();
+
+      renderQuickResults();
+      renderPinDeck();
+      pillButtons(el.readsQuality, qualityObs);
+	      pillButtonsCustom(el.readsMiss, missObs);
+      pillButtons(el.readsBallObs, ballObs);
+      pillButtonsCustom(el.readsPocket, pocketObs);
+      pillButtonsCustom(el.readsExit, exitObs);
+      pillButtonsCustom(el.readsSpeed, speedObs);
+      wireQualityPills(el.readsQuality);
+	      wireQualityPills(el.readsMiss);
+      wirePills(el.readsBallObs);
+      wireQualityPills(el.readsPocket);
+      wireQualityPills(el.readsExit);
+      wireQualityPills(el.readsSpeed);
+
+      renderHouses();
+      renderPatterns();
+      renderSets();
+      renderLeagues();
+      updatePrep();
+
+      // Starting lane preference (league)
+      const savedStart = BT.lsGet(START_LANE_KEY, 'left');
+      if (savedStart === 'right') el.startLane.value = 'right';
+      el.startLane.addEventListener('change', () => {
+        BT.lsSet(START_LANE_KEY, el.startLane.value || 'left');
+        syncNextLane();
+        markCoachDirty();
+      });
+
+      updateLanePick();
+
+      el.pattern.addEventListener('change', updatePatternSummary);
+      el.set.addEventListener('change', () => { if (el.set.value) BT.lsSet('bt_gameday_preferred_set_v1', el.set.value); loadSetToUI(); });
+      el.lanes.addEventListener('input', () => { updateLanePick(); markCoachDirty(); });
+      // Keep the coach suggestion current as you adjust context.
+      el.ball.addEventListener('change', markCoachDirty);
+      el.house.addEventListener('change', () => { renderLeagues(); updatePrep(); markCoachDirty(); });
+      el.pattern.addEventListener('change', () => { updatePrep(); markCoachDirty(); });
+      el.league.addEventListener('change', () => { updatePrep(); markCoachDirty(); });
+      el.addLeagueBtn.addEventListener('click', () => {
+        const house = el.house.value || '';
+        if (!house) return alert('Select a House first (from Oil page).');
+        const name = prompt('New league name (for this house):');
+        if (!name) return;
+        const l = BT.addLeague(name, house);
+        renderLeagues();
+        if (l) el.league.value = l.id;
+        updatePrep();
+      });
+      // Any section-3 change clears coach output until you log a shot.
+      if (el.adjust) el.adjust.addEventListener('change', markCoachDirty);
+	      // Miss buttons are wired via wireQualityPills(el.readsMiss)
+      el.fill.addEventListener('change', () => { updateFrameUI(); markCoachDirty(); });
+      el.lanePick.addEventListener('change', markCoachDirty);
+      el.notes.addEventListener('input', markCoachDirty);
+
+      // Keep a draft of your current line/ball so you don't have to re-enter every time.
+      [el.feet, el.arrows, el.bp].forEach(x => {
+        x.addEventListener('input', saveLastLineDraft);
+        x.addEventListener('input', markCoachDirty);
+      });
+      el.mode.addEventListener('change', saveLastLineDraft);
+      el.mode.addEventListener('change', markCoachDirty);
+      el.ball.addEventListener('change', saveLastLineDraft);
+
+      loadCurrentSessionDraft();
+      restoreLastLineDraft();
+      renderLog();
+      renderLaneGeometry();
+      syncNextLane();
+      updateFrameUI();
+      autoCoach();
+    }
+
+    // Houses are managed on the Oil page.
+
+    BT.$('#log').addEventListener('click', logShot);
+    BT.$('#coach').addEventListener('click', refreshCoach);
+    BT.$('#saveSession').addEventListener('click', saveSession);
+    BT.$('#nextGame').addEventListener('click', startNextGame);
+    BT.$('#resetSession').addEventListener('click', resetSession);
+
+    init();
+  </script>
+</body>
+</html>

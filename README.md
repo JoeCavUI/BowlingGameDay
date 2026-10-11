@@ -1,0 +1,76 @@
+# Bowling Tool (beta)
+
+A phone-first web app for game-day shot tracking, lane stats, and arsenal planning.
+Everything is plain HTML/JS at the root of this repository, with no build step.
+
+## Put it online for iPhone beta testing
+
+The app has to be served over **https** for the iPhone install and offline mode to work.
+Any static host works. Two free options:
+
+**Current setup:** this repository is linked to Netlify. Every push to `main` publishes automatically to https://bowlinggameday.netlify.app (no build command, publish directory `/`).
+
+**Option A: Netlify Drop (easiest)**
+1. Go to https://app.netlify.com/drop and sign in (free account).
+2. Drag the **`bowling-tool`** folder (not the whole project) onto the page.
+3. You get a link like `https://something.netlify.app`. Rename it in Site settings if you like.
+4. To update later: open the site in Netlify → Deploys → drag the folder again.
+
+**Option B: GitHub Pages**
+1. Create a GitHub repo and upload the contents of `bowling-tool/` to it.
+2. Repo → Settings → Pages → Source: "Deploy from a branch", branch `main`, folder `/ (root)`.
+3. Your link will be `https://<username>.github.io/<repo>/`.
+
+## Installing on an iPhone (send this to testers)
+1. Open the link in **Safari**.
+2. Tap **Share** (square with the up-arrow) → **Add to Home Screen** → Add.
+3. Open the app from the new **Bowling** icon. It runs full-screen and works with no signal.
+4. Follow the **Get set up** checklist on the Home screen.
+5. After each league night: Home → **Back up my data** → Save to Files (or email it to yourself).
+
+## Data
+- Data is stored on the device (browser localStorage, keys starting with `bt_`).
+- **Back up / Restore** on the Home screen moves everything to a `.json` file and back,
+  for switching phones or recovering after Safari data is cleared.
+- Testers' data never leaves their phone unless they share a backup file with you.
+
+## Releasing an update
+Bump all three so phones pick up the new version:
+1. `APP_VERSION` at the top of `bowling-tool/app.js`
+2. The `?v=64` on `app.js` / `styles.css` in every `.html` file and in `sw.js`
+3. `CACHE` name at the top of `bowling-tool/sw.js`
+
+Installed apps update the next time they're opened with a connection (sometimes it takes two opens).
+
+## Run locally on a computer (optional)
+```bash
+npm install
+npm start
+```
+Then open http://localhost:3000
+
+## Changes in v67-beta4
+- Arsenal → Role Planner: pick a bag size (2/3/4/6/9), Coach suggests the bag, then "Use this bag on Game Day?" lets you uncheck balls, name it, and save (or save & jump to Game Day). Option to plan only from balls you added.
+- Game Day pre-selects the bag saved from Arsenal and remembers the last bag you used.
+- Guide updated with "Let Coach pick your bag".
+
+## Changes in v66-beta3
+- Coach move directions fixed to "follow the miss" (2-and-1 rule): early/high → move left (RH), long/light → move right (RH); lefties mirrored.
+- Old /bowling-tool/ address now redirects to the main address.
+
+## Changes in v65-beta2
+- New **Guide** page (in the top bar, and linked from Home and the Coach box): step-by-step setup, logging shots, how Coach works, backup, troubleshooting.
+- Fixed: Coach never recommended a ball from your bag (it couldn't read the saved set). Same fix for the end-of-night arsenal review in Scores.
+- Coach now updates automatically after every shot (from the 3rd shot on) and stays on screen while you enter the next shot.
+- New 🔔 Coach alerts: lane read changed, pattern confirmed + best ball in your bag, repeating problem.
+- Fixed: the "LASER next move" line was being cut off; it now shows right after the lane map.
+
+## Changes in v64-beta1
+- iPhone layout: nav bar scrolls and every button is reachable; Game Day collapses to one column; the "Log this shot" button can be tapped; no more zoom when tapping a field; dropdown text readable.
+- Double-click actions are now single taps (edit shot in Scores, tune a ball in Arsenal, role suggestions in Analyze).
+- Lane pairs typed as `23-24`, `23/24`, `23 24`, etc. now all read correctly (fixes per-lane stats).
+- Installable to the Home Screen (icon, full-screen) and works offline.
+- Back up / Restore of all data.
+- Home screen setup checklist + Game Day "before you bowl" banner.
+- Balls added with **Arsenal → + Add a ball → Save to Arsenal** now appear in Analyze, Game Day and Friction Timing.
+- Removed 15 old `app_vXX.js` copies.

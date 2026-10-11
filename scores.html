@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1116" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Bowling" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <title>Scores</title>
+  <link rel="stylesheet" href="styles.css?v=67" />
+</head>
+<body data-page="scores">
+  <div class="navlinks"></div>
+  <div class="container">
+    <div class="header">
+      <h1>Scores / History</h1>
+      <div class="small">Sessions saved from Game Day.</div>
+    </div>
+
+    <div class="panel" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <button class="btn secondary" id="refresh">Refresh</button>
+      <button class="btn danger" id="clearAll">Clear all sessions</button>
+      <div class="small" id="count"></div>
+    </div>
+
+    <div class="grid-2" style="grid-template-columns: 0.9fr 1.1fr; align-items:start">
+      <div class="panel">
+        <h2>Session list</h2>
+        <div class="list" id="list" style="max-height:80vh"></div>
+      </div>
+      <div class="panel">
+        <h2>Details</h2>
+        <div class="small" id="detailHint">Select a session to view details.</div>
+        <div class="hr-split"></div>
+        <div id="details"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="editModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card" style="max-width:760px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <h3 style="margin:0">Edit shot</h3>
+        <button class="btn secondary" id="editCancel" type="button">Close</button>
+      </div>
+      <div class="hr-split"></div>
+      <div class="small" style="margin-bottom:10px">Tap any saved shot to open this editor.</div>
+      <div class="grid-2">
+        <div><label>Ball</label><input id="editBall" class="input" /></div>
+        <div><label>Game / Frame</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><input id="editGame" class="input" type="number" min="1"/><input id="editFrame" class="input" type="number" min="1" max="10"/></div></div>
+        <div><label>Feet / Arrows / BP</label><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px"><input id="editFeet" class="input" type="number"/><input id="editArrows" class="input" type="number"/><input id="editBP" class="input" type="number"/></div></div>
+        <div><label>Execution</label><select id="editExec" class="input"><option value="5">Good</option><option value="3">OK</option><option value="1">Poor</option></select></div>
+        <div><label>Pocket</label><input id="editPocket" class="input" /></div>
+        <div><label>Exit</label><input id="editExit" class="input" /></div>
+        <div><label>Leave / tag</label><input id="editLeaveTag" class="input" placeholder="Strike / Flat 10 / 4-7"/></div>
+        <div><label>Miss room</label><input id="editMiss" class="input" placeholder="na / rightRecovered / leftHeld / rightMiss / leftMiss"/></div>
+        <div style="grid-column:1/-1"><label>Notes</label><input id="editNotes" class="input" /></div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+        <button class="btn danger" id="editDelete" type="button">Delete shot</button>
+        <button class="btn" id="editSave" type="button">Save changes</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=67"></script>
+  <script>
+    BT.renderNav('scores');
+
+    const el = {
+      list: BT.$('#list'),
+      details: BT.$('#details'),
+      detailHint: BT.$('#detailHint'),
+      count: BT.$('#count'),
+      editModal: BT.$('#editModal'),
+      editCancel: BT.$('#editCancel'),
+      editSave: BT.$('#editSave'),
+      editDelete: BT.$('#editDelete'),
+      editBall: BT.$('#editBall'),
+      editGame: BT.$('#editGame'),
+      editFrame: BT.$('#editFrame'),
+      editFeet: BT.$('#editFeet'),
+      editArrows: BT.$('#editArrows'),
+      editBP: BT.$('#editBP'),
+      editPocket: BT.$('#editPocket'),
+      editExit: BT.$('#editExit'),
+      editExec: BT.$('#editExec'),
+      editLeaveTag: BT.$('#editLeaveTag'),
+      editMiss: BT.$('#editMiss'),
+      editNotes: BT.$('#editNotes'),
+    };
+
+    let sessions = [];
+    let activeSessionId = '';
+    let activeShotIndex = -1;
+
+    function fmtSummary(s) {
+      const sum = s.summary || {};
+      return `Shot attempts: ${sum.total || 0} • Strike shots: ${sum.strikes || 0} • Strike rate: ${sum.strikeRate || 0}% • Pocket(flush/light/high): ${(sum.pocketFlush||0)}/${(sum.pocketLight||0)}/${(sum.pocketHigh||0)} • Execution: ${sum.executionScore || 0}`;
+    }
+
+    function renderList() {
+      el.count.textContent = `${sessions.length} session(s)`;
+      el.list.innerHTML = sessions.map(s => {
+        const dt = new Date(s.savedAt).toLocaleString();
+        const house = s.house || '—';
+        const pat = s.pattern || '—';
+        return `<div class="list-item" data-id="${s.id}" style="cursor:pointer">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+            <div>
+              <div style="font-weight:900">${dt}</div>
+              <div class="small">${house} • ${s.lanes || ''} • ${pat}</div>
+              <div class="small">${fmtSummary(s)}</div>
+            </div>
+            <button class="btn danger" data-del="${s.id}" style="min-width:110px">Remove</button>
+          </div>
+        </div>`;
+      }).join('') || `<div class="list-item small">No sessions saved yet. Go to Game Day → Save Session.</div>`;
+
+      BT.$all('[data-id]', el.list).forEach(div => {
+        div.addEventListener('click', (e) => {
+          if (e.target && e.target.matches('button[data-del]')) return;
+          showDetails(div.getAttribute('data-id'));
+        });
+      });
+
+      BT.$all('button[data-del]', el.list).forEach(b => {
+        b.addEventListener('click', () => {
+          const id = b.getAttribute('data-del');
+          if (!confirm('Remove this session?')) return;
+          sessions = sessions.filter(x => x.id !== id);
+          BT.lsSet(BT.KEYS.GAME_SESSIONS, sessions);
+          renderList();
+          el.details.innerHTML = '';
+          el.detailHint.textContent = 'Select a session to view details.';
+        });
+      });
+    }
+
+    function recomputeSessionSummary(s) {
+      const shots = (s.shots || []).filter(Boolean);
+      const isStrike = (sh) => (sh.leaves||[]).includes('Strike') || (sh.leaves||[]).includes('Brooklyn');
+      const isPocket = (sh) => String(sh.pocket||'').startsWith('Pocket');
+      const weighted = shots.reduce((acc,sh)=>{ const w = Number(sh.executionQuality||3)||3; acc.total += w; if (isStrike(sh)) acc.strike += w; if (isPocket(sh)) acc.pocket += w; if (isPocket(sh)&&isStrike(sh)) acc.carry += w; if (String(sh.pocket||'')==='Pocket flush') acc.flush += w; if ((Number(sh.executionQuality||3)||3) >= 3) acc.quality += w; return acc; }, {total:0,strike:0,pocket:0,carry:0,flush:0,quality:0});
+      s.summary = {
+        total: shots.length,
+        strikes: shots.filter(isStrike).length,
+        strikeRate: shots.length ? Math.round((shots.filter(isStrike).length/shots.length)*100) : 0,
+        pocketFlush: shots.filter(sh=>String(sh.pocket||'')==='Pocket flush').length,
+        pocketLight: shots.filter(sh=>String(sh.pocket||'')==='Pocket light').length,
+        pocketHigh: shots.filter(sh=>String(sh.pocket||'')==='Pocket high').length,
+        pocketPct: weighted.total ? Math.round((weighted.pocket/weighted.total)*100) : 0,
+        carryPct: weighted.pocket ? Math.round((weighted.carry/weighted.pocket)*100) : 0,
+        qualityPct: weighted.total ? Math.round((weighted.quality/weighted.total)*100) : 0,
+        executionScore: shots.length ? Math.round(shots.reduce((a,sh)=>a + (Number(sh.executionQuality||3)||3),0)/(shots.length*5)*100) : 0,
+      };
+    }
+
+    function recomputeLaneStats(s) {
+      const shots = (s.shots || []).filter(Boolean);
+      const parsePair = (lanesStr) => {
+        if (!lanesStr) return null;
+        const m = String(lanesStr).match(/(\d+)\D+(\d+)/);
+        if (!m) return null;
+        return [Number(m[1]), Number(m[2])];
+      };
+      const pair = parsePair(s.lanes);
+      const leftNum = pair ? pair[0] : 'Left';
+      const rightNum = pair ? pair[1] : 'Right';
+      function laneForIndex(i){
+        const startLeft = (s.startLane||'left') === 'left';
+        const isLeft = startLeft ? (i % 2 === 0) : (i % 2 === 1);
+        return isLeft ? {label:`${leftNum} (left lane)`, side:'left'} : {label:`${rightNum} (right lane)`, side:'right'};
+      }
+      const by = {left:{shots:[], label:`${leftNum} (left lane)`}, right:{shots:[], label:`${rightNum} (right lane)`}};
+      const chron = [...shots].reverse();
+      chron.forEach((sh, idx)=>{
+        const lane = laneForIndex(idx);
+        by[lane.side].shots.push(sh);
+      });
+      function stat(arr){
+        const leaves = arr.flatMap(sh=>sh.leaves||[]);
+        const strikes = leaves.filter(x=>x==='Strike' || x==='Brooklyn').length;
+        const pocketHits = arr.filter(sh=>String(sh.pocket||'').startsWith('Pocket')).length;
+        const carry = pocketHits ? (leaves.filter(x=>x==='Strike' || x==='Brooklyn').length / pocketHits) : 0;
+        const execScore = arr.length ? Math.round(arr.reduce((a,sh)=>a + (Number(sh.executionQuality||3)||3),0)/(arr.length*5)*100) : 0;
+        return { shots: arr.length, strikes, strikeRate: arr.length ? strikes/arr.length : 0, pocketHits, pocketPct: arr.length ? pocketHits/arr.length : 0, carryPct: carry, execScore };
+      }
+      s.laneStats = { left:{...by.left, ...stat(by.left.shots)}, right:{...by.right, ...stat(by.right.shots)} };
+    }
+
+    function openEditShot(sessionId, shotIndex) {
+      const s = sessions.find(x => x.id === sessionId);
+      if (!s || !s.shots || !s.shots[shotIndex]) return;
+      const sh = s.shots[shotIndex];
+      activeSessionId = sessionId;
+      activeShotIndex = shotIndex;
+      el.editBall.value = sh.ball || '';
+      el.editGame.value = Number(sh.gameNo || 1);
+      el.editFrame.value = Number(sh.frame || 1);
+      el.editFeet.value = sh.feet ?? '';
+      el.editArrows.value = sh.arrows ?? '';
+      el.editBP.value = sh.bp ?? '';
+      el.editPocket.value = sh.pocket || '';
+      el.editExit.value = sh.exit || '';
+      el.editExec.value = String(Number(sh.executionQuality || 3));
+      el.editLeaveTag.value = sh.leaveTag || (Array.isArray(sh.leavePins)&&sh.leavePins.length ? sh.leavePins.join('-') : (Array.isArray(sh.leaves)&&sh.leaves[0]) || '');
+      el.editMiss.value = sh.miss || 'na';
+      el.editNotes.value = sh.notes || '';
+      el.editModal.classList.remove('hidden');
+    }
+
+    function closeEditShot() {
+      el.editModal.classList.add('hidden');
+      activeShotIndex = -1;
+    }
+
+    function saveEditedShot() {
+      const s = sessions.find(x => x.id === activeSessionId);
+      if (!s || !s.shots || activeShotIndex < 0 || !s.shots[activeShotIndex]) return;
+      const sh = s.shots[activeShotIndex];
+      sh.ball = el.editBall.value.trim() || sh.ball || 'Unknown';
+      sh.gameNo = Number(el.editGame.value || sh.gameNo || 1);
+      sh.frame = Number(el.editFrame.value || sh.frame || 1);
+      sh.feet = el.editFeet.value === '' ? null : Number(el.editFeet.value);
+      sh.arrows = el.editArrows.value === '' ? null : Number(el.editArrows.value);
+      sh.bp = el.editBP.value === '' ? null : Number(el.editBP.value);
+      sh.pocket = el.editPocket.value.trim() || 'Unknown';
+      sh.exit = el.editExit.value.trim() || "Didn't notice";
+      sh.executionQuality = Number(el.editExec.value || 3);
+      sh.qualityShot = sh.executionQuality >= 3;
+      sh.miss = el.editMiss.value.trim() || 'na';
+      sh.notes = el.editNotes.value.trim();
+      const leaveRaw = el.editLeaveTag.value.trim();
+      sh.leaveTag = '';
+      sh.leavePins = [];
+      if (leaveRaw) {
+        if (/^\d+(?:-\d+)*$/.test(leaveRaw)) {
+          sh.leavePins = leaveRaw.split('-').map(n => Number(n)).filter(Number.isFinite);
+          sh.leaves = [leaveRaw];
+        } else {
+          sh.leaveTag = leaveRaw;
+          sh.leaves = [leaveRaw];
+        }
+      }
+      recomputeSessionSummary(s);
+      recomputeLaneStats(s);
+      BT.lsSet(BT.KEYS.GAME_SESSIONS, sessions);
+      closeEditShot();
+      renderList();
+      showDetails(activeSessionId);
+    }
+
+    function deleteEditedShot() {
+      const s = sessions.find(x => x.id === activeSessionId);
+      if (!s || !s.shots || activeShotIndex < 0 || !s.shots[activeShotIndex]) return;
+      if (!confirm('Delete this shot from the saved session?')) return;
+      s.shots.splice(activeShotIndex, 1);
+      recomputeSessionSummary(s);
+      recomputeLaneStats(s);
+      BT.lsSet(BT.KEYS.GAME_SESSIONS, sessions);
+      closeEditShot();
+      renderList();
+      showDetails(activeSessionId);
+    }
+
+    function showDetails(id) {
+      const s = sessions.find(x => x.id === id);
+      if (!s) return;
+      activeSessionId = s.id;
+      el.detailHint.textContent = '';
+      const dt = new Date(s.savedAt).toLocaleString();
+      const shots = s.shots || [];
+      const chronShots = [...shots].slice().sort((a,b)=>(a.at||0)-(b.at||0));
+      let nonFillIdx = 0;
+      const frameById = new Map();
+      chronShots.forEach((sh, idx) => {
+        if (sh && sh.isFill === true) return;
+        const frame = Math.min(10, Math.floor(nonFillIdx / 2) + 1);
+        if (sh && sh.id) frameById.set(sh.id, frame);
+        else frameById.set(`__idx_${idx}`, frame);
+        nonFillIdx += 1;
+      });
+      shots.forEach((sh, idx) => {
+        if (!sh) return;
+        if (typeof sh.frame === 'number') return;
+        if (sh.id && frameById.has(sh.id)) sh.frame = frameById.get(sh.id);
+        else if (frameById.has(`__idx_${idx}`)) sh.frame = frameById.get(`__idx_${idx}`);
+      });
+      const parsePair = (lanesStr) => {
+        if (!lanesStr) return null;
+        const m = String(lanesStr).match(/(\d+)\D+(\d+)/);
+        if (!m) return null;
+        const a = Number(m[1]);
+        const b = Number(m[2]);
+        if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+        return [a, b];
+      };
+      const pair = parsePair(s.lanes);
+      const laneLabel = (lane) => {
+        if (!lane) return '—';
+        const n = Number(lane);
+        if (!Number.isFinite(n) || !pair) return String(lane);
+        const [L, R] = pair;
+        if (n === L) return `${n} (left lane)`;
+        if (n === R) return `${n} (right lane)`;
+        return String(lane);
+      };
+
+      const ballCounts = {};
+      for (const sh of shots) {
+        const b = sh.ball || 'Unknown';
+        ballCounts[b] = (ballCounts[b] || 0) + 1;
+      }
+      const balls = Object.entries(ballCounts).sort((a,b)=>b[1]-a[1]);
+
+      el.details.innerHTML = `
+        <div class="panel" style="padding:12px">
+          <div><b>${dt}</b></div>
+          <div class="small">House: ${s.house || '—'} • League: ${s.leagueName || '—'} • Lanes: ${s.lanes || '—'} • Pattern: ${s.pattern || '—'} • Set: ${s.setName || '—'}</div>
+          <div class="small" style="margin-top:6px">${fmtSummary(s)}</div>
+          <div class="small">Pocket hit %: ${s.summary?.pocketPct||0}% • Carry on pocket hits: ${s.summary?.carryPct||0}% • Quality %: ${s.summary?.qualityPct||0}% • Execution score: ${s.summary?.executionScore||0}</div>
+        </div>
+
+        <div class="panel" style="padding:12px;margin-top:10px">
+          <b>Lane scoreboard (session)</b>
+          <div class="hr-split"></div>
+          ${(() => {
+            const ls = s.laneStats;
+            if (!ls) return '<div class="small">No lane stats saved.</div>';
+            const fmt = (p) => `${Math.round((p||0)*100)}%`;
+            return `
+              <div class="small"><b>Left:</b> Shot attempts ${ls.left.shots} • Strike shots ${ls.left.strikes} • Strike rate ${fmt(ls.left.strikeRate)} • Pocket hit ${fmt(ls.left.pocketPct)} • Carry on pocket hits ${fmt(ls.left.carryPct)} • Execution ${ls.left.execScore||0}</div>
+              <div class="small"><b>Right:</b> Shot attempts ${ls.right.shots} • Strike shots ${ls.right.strikes} • Strike rate ${fmt(ls.right.strikeRate)} • Pocket hit ${fmt(ls.right.pocketPct)} • Carry on pocket hits ${fmt(ls.right.carryPct)} • Execution ${ls.right.execScore||0}</div>
+            `;
+          })()}
+        </div>
+
+        <div class="panel" style="padding:12px;margin-top:10px">
+          <b>Arsenal audit (end of night)</b>
+          <div class="hr-split"></div>
+          ${(() => {
+            const a = s.arsenalAudit;
+            if (!a) return '<div class="small">No audit saved.</div>';
+            const lines = [];
+            lines.push(`<div class="small"><b>Headline:</b> ${a.headline || '—'}</div>`);
+            if (a.mainBall) lines.push(`<div class="small"><b>Main ball used:</b> ${a.mainBall}</div>`);
+            if (a.bestInSet) lines.push(`<div class="small"><b>Best in-set adjustment ball:</b> ${a.bestInSet}</div>`);
+            if (a.gap) lines.push(`<div class="small"><b>Gap:</b> ${a.gap}</div>`);
+            if (a.recommendedAdd) lines.push(`<div class="small"><b>Next-week add/consider:</b> ${a.recommendedAdd}</div>`);
+            return lines.join('');
+          })()}
+        </div>
+
+        <div class="panel" style="padding:12px;margin-top:10px">
+          <b>Ball usage</b>
+          <div class="hr-split"></div>
+          ${balls.length ? balls.map(([b,c]) => `<div class="small">${b}: ${c} shot(s)</div>`).join('') : '<div class="small">No data.</div>'}
+        </div>
+
+        <div class="panel" style="padding:12px;margin-top:10px">
+          <b>Shot log</b>
+          <div class="small" style="margin-top:4px">Tap any shot to edit it.</div>
+          <div class="hr-split"></div>
+          <div class="list" style="max-height:45vh">
+            ${shots.map((sh, idx) => {
+              const t = new Date(sh.at).toLocaleTimeString();
+              const reads = [...(sh.leaves||[]), ...(sh.obs||[])].join(', ') || '—';
+              const gameTxt = `G${Number(sh.gameNo || 1)}`;
+              const frameTxt = (sh.frame ? `F${sh.frame}${sh.isFill ? ' (fill)' : ''}` : 'F—');
+              const laneTxt = laneLabel(sh.lane);
+              return `<div class="list-item" data-shot-index="${idx}" title="Tap to edit this shot">
+                <div class="small">${t} • ${gameTxt} ${frameTxt} • Lane ${laneTxt}</div>
+                <div><b>${sh.ball || 'Ball?'}</b> • ${reads}</div>
+                <div class="small">Line: ${sh.feet}/${sh.arrows}/${sh.bp} • ${sh.pocket}</div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+      `;
+
+      BT.$all('[data-shot-index]', el.details).forEach(row => {
+        row.style.cursor='pointer'; row.addEventListener('click', () => openEditShot(activeSessionId, Number(row.getAttribute('data-shot-index'))));
+      });
+    }
+
+    function refresh() {
+      sessions = BT.lsGet(BT.KEYS.GAME_SESSIONS, []);
+      (Array.isArray(sessions)?sessions:[]).forEach(s=>{ recomputeSessionSummary(s); recomputeLaneStats(s); });
+      BT.lsSet(BT.KEYS.GAME_SESSIONS, sessions);
+      renderList();
+    }
+
+    BT.$('#refresh').addEventListener('click', refresh);
+    el.editCancel.addEventListener('click', closeEditShot);
+    el.editSave.addEventListener('click', saveEditedShot);
+    el.editDelete.addEventListener('click', deleteEditedShot);
+    el.editModal.addEventListener('click', (e) => { if (e.target === el.editModal) closeEditShot(); });
+    BT.$('#clearAll').addEventListener('click', () => {
+      if (!confirm('Clear ALL saved sessions?')) return;
+      sessions = [];
+      BT.lsSet(BT.KEYS.GAME_SESSIONS, sessions);
+      renderList();
+      el.details.innerHTML = '';
+      el.detailHint.textContent = 'Select a session to view details.';
+    });
+
+    refresh();
+  </script>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1116" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Bowling" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <title>Oil / Pattern</title>
+  <link rel="stylesheet" href="styles.css?v=67" />
+</head>
+<body data-page="oil">
+  <div class="navlinks"></div>
+  <div class="container">
+    <div class="header">
+      <h1>Oil / Pattern</h1>
+      <div class="small">Saved locally on this device. Use this on Game Day.</div>
+    </div>
+
+    <div class="panel">
+      <div class="grid-2">
+        <div>
+          <label>Pattern Name</label>
+          <input class="input" id="pName" placeholder="e.g., House Shot / Shark" />
+        </div>
+        <div>
+          <label>Center / Location (optional)</label>
+          <input class="input" id="pCenter" placeholder="e.g., Imperial Lanes" />
+        </div>
+        <div>
+          <label>Pattern Length (ft)</label>
+          <input class="input" id="pLen" type="number" step="1" placeholder="e.g., 42" />
+        </div>
+        <div>
+          <label>Oil Volume (mL)</label>
+          <input class="input" id="pVol" type="number" step="0.1" placeholder="e.g., 24.5" />
+        </div>
+        <div>
+          <label>Ratio</label>
+          <input class="input" id="pRatio" placeholder="e.g., 8:1" />
+        </div>
+        <div>
+          <label>Surface Notes</label>
+          <input class="input" id="pNotes" placeholder="e.g., crisp backends, tight middle" />
+        </div>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn" id="save">Save pattern</button>
+        <button class="btn secondary" id="clear">Clear form</button>
+        <div class="small" id="status"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Saved patterns</h2>
+      <div class="list" id="patterns"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Houses</h2>
+      <div class="small">Game Day uses this list for the House dropdown.</div>
+      <div class="hr-split"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <input class="input" id="houseName" placeholder="Add a bowling center" style="max-width:320px" />
+        <button class="btn" id="addHouse">Add</button>
+      </div>
+      <div style="margin-top:10px" class="list" id="houses"></div>
+    </div>
+  </div>
+
+  <script src="app.js?v=67"></script>
+  <script>
+    BT.renderNav('oil');
+
+    const el = {
+      pName: BT.$('#pName'),
+      pCenter: BT.$('#pCenter'),
+      pLen: BT.$('#pLen'),
+      pVol: BT.$('#pVol'),
+      pRatio: BT.$('#pRatio'),
+      pNotes: BT.$('#pNotes'),
+      status: BT.$('#status'),
+      patterns: BT.$('#patterns'),
+      houseName: BT.$('#houseName'),
+      houses: BT.$('#houses'),
+    };
+
+    function renderPatterns() {
+      const patterns = BT.lsGet(BT.KEYS.OIL_PATTERNS, []);
+      el.patterns.innerHTML = patterns.map(p => {
+        const when = new Date(p.savedAt || Date.now()).toLocaleString();
+        const summary = `${p.name} • ${p.length || '?'}ft • ${p.volume || '?'}mL • ${p.ratio || '?'} • ${p.center || ''}`;
+        return `<div class="list-item">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+            <div>
+              <div style="font-weight:800">${p.name}</div>
+              <div class="small">${summary}</div>
+              <div class="small">Saved ${when}</div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn secondary" data-load="${p.id}">Load</button>
+              <button class="btn danger" data-del="${p.id}" style="min-width:110px">Remove</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('') || `<div class="list-item small">No patterns saved yet.</div>`;
+
+      BT.$all('button[data-load]', el.patterns).forEach(b => {
+        b.addEventListener('click', () => {
+          const id = b.getAttribute('data-load');
+          const patterns = BT.lsGet(BT.KEYS.OIL_PATTERNS, []);
+          const p = patterns.find(x => x.id === id);
+          if (!p) return;
+          el.pName.value = p.name || '';
+          el.pCenter.value = p.center || '';
+          el.pLen.value = p.length ?? '';
+          el.pVol.value = p.volume ?? '';
+          el.pRatio.value = p.ratio || '';
+          el.pNotes.value = p.notes || '';
+          el.status.textContent = 'Loaded pattern into form.';
+        });
+      });
+
+      BT.$all('button[data-del]', el.patterns).forEach(b => {
+        b.addEventListener('click', () => {
+          const id = b.getAttribute('data-del');
+          if (!confirm('Remove this pattern?')) return;
+          const patterns = BT.lsGet(BT.KEYS.OIL_PATTERNS, []).filter(x => x.id !== id);
+          BT.lsSet(BT.KEYS.OIL_PATTERNS, patterns);
+          renderPatterns();
+        });
+      });
+    }
+
+    function renderHouses() {
+      const houses = BT.lsGet(BT.KEYS.HOUSES, []);
+      el.houses.innerHTML = houses.map((h, idx) => {
+        return `<div class="list-item" style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+          <div><b>${h}</b></div>
+          <button class="btn danger" data-hdel="${idx}" style="min-width:110px">Remove</button>
+        </div>`;
+      }).join('') || `<div class="list-item small">No houses yet. Add one above.</div>`;
+
+      BT.$all('button[data-hdel]', el.houses).forEach(b => {
+        b.addEventListener('click', () => {
+          const idx = Number(b.getAttribute('data-hdel'));
+          const houses = BT.lsGet(BT.KEYS.HOUSES, []);
+          houses.splice(idx, 1);
+          BT.lsSet(BT.KEYS.HOUSES, houses);
+          renderHouses();
+        });
+      });
+    }
+
+    function save() {
+      const name = el.pName.value.trim();
+      if (!name) return alert('Pattern name is required.');
+      const patterns = BT.lsGet(BT.KEYS.OIL_PATTERNS, []);
+      const existing = patterns.find(p => p.name.toLowerCase() === name.toLowerCase());
+      const payload = {
+        id: existing ? existing.id : `pat_${Math.random().toString(36).slice(2,10)}`,
+        name,
+        center: el.pCenter.value.trim(),
+        length: el.pLen.value ? Number(el.pLen.value) : null,
+        volume: el.pVol.value ? Number(el.pVol.value) : null,
+        ratio: el.pRatio.value.trim(),
+        notes: el.pNotes.value.trim(),
+        savedAt: Date.now(),
+      };
+      const next = existing ? patterns.map(p => p.id === payload.id ? payload : p) : [payload, ...patterns];
+      BT.lsSet(BT.KEYS.OIL_PATTERNS, next);
+      el.status.textContent = 'Saved.';
+      renderPatterns();
+    }
+
+    BT.$('#save').addEventListener('click', save);
+    BT.$('#clear').addEventListener('click', () => {
+      el.pName.value = '';
+      el.pCenter.value = '';
+      el.pLen.value = '';
+      el.pVol.value = '';
+      el.pRatio.value = '';
+      el.pNotes.value = '';
+      el.status.textContent = '';
+    });
+
+    BT.$('#addHouse').addEventListener('click', () => {
+      const name = el.houseName.value.trim();
+      if (!name) return;
+      const houses = BT.lsGet(BT.KEYS.HOUSES, []);
+      if (!houses.some(h => h.toLowerCase() === name.toLowerCase())) houses.unshift(name);
+      BT.lsSet(BT.KEYS.HOUSES, houses);
+      el.houseName.value = '';
+      renderHouses();
+    });
+
+    renderPatterns();
+    renderHouses();
+  </script>
+</body>
+</html>
