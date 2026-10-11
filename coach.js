@@ -109,7 +109,22 @@
     lean = clamp(lean, -2, 2);
 
     const pocketHit = ['high', 'flush', 'light', 'brooklyn'].includes(hit);
+
+    // "Best ball is your eyeball": how the ball left the deck and what the key pin did.
+    // Righty: exit right = deflected (weak), exit left = drove through too hard (strong). Lefty mirrored.
+    const exitRaw = String(s.exit || "Didn't notice");
+    let exitRead = '';
+    if (exitRaw === 'Exit straight') exitRead = 'good';
+    else if (exitRaw === 'Exit right') exitRead = lefty ? 'strong' : 'weak';
+    else if (exitRaw === 'Exit left') exitRead = lefty ? 'weak' : 'strong';
+    const keyPin = String(s.keyPin || '');
+    let finish = '';
+    if (keyPin === 'weak' || (pocketHit && exitRead === 'weak')) finish = 'weak';
+    else if (keyPin === 'wrap' || keyPin === 'kickback' || (pocketHit && exitRead === 'strong')) finish = 'strong';
+    else if (pocketHit && exitRead === 'good') finish = 'good';
+
     return {
+      exitRaw, exitRead, keyPin, finish,
       shot: s, execution, missSide, saved, hit, strike, meaning, early, long, lean,
       pocketHit, carryFail: pocketHit && !strike,
       overUnder: obs.includes('Over/under') || meaning === 'split',
@@ -322,8 +337,61 @@
     } catch (_e) { return ''; }
   }
 
+  // Notes that ride along with any verdict
+  function sideNotes(res, C, W, prof) {
+    const kp = prof.lefty ? '4-pin' : '6-pin';
+    const pocket3 = W.filter(c => c.pocketHit).slice(-3);
+    const wf = pocket3.filter(c => c.finish === 'weak').length;
+    const sf = pocket3.filter(c => c.finish === 'strong').length;
+    if (res.status !== 'move') {
+      if (wf >= 2) res.notes.push(`⚠️ Early warning: the ball is losing energy on ${wf} of your last ${pocket3.length} pocket hits (deflecting off the deck / ${kp} laying down). Flat 10s are next if it continues.`);
+      else if (sf >= 2) res.notes.push(`⚠️ Early warning: the ball is hitting too hard on ${sf} of your last ${pocket3.length} pocket hits (driving left off the deck / ${kp} wrapping). Watch for ringing 10s and 4-pins.`);
+    }
+    const last = C[C.length - 1];
+    const pocketShots = C.filter(c => c.pocketHit);
+    const exitSeen = pocketShots.filter(c => c.exitRaw !== "Didn't notice").length;
+    if (last && last.pocketHit && last.exitRaw === "Didn't notice" && pocketShots.length >= 2 && exitSeen / pocketShots.length < 0.6) {
+      res.notes.push(`👀 Best ball is your eyeball: on your next pocket hit, watch where the ball leaves the deck${prof.lefty ? '' : ''} and what the ${kp} does.`);
+    }
+    return res;
+  }
+
+  // Eyeball score: how much of what matters you actually watched (0–100).
+  function eyeballScore(shots, bowler) {
+    const prof = bowlerProfile(bowler);
+    const C = (shots || []).filter(s => s && s.type !== 'gameStart' && !s.isFill).map(s => classify(s, prof.lefty));
+    if (!C.length) return { score: 0, label: '—', parts: {}, n: 0 };
+    const pct = (a, b) => b ? a / b : null;
+    const mark = pct(C.filter(c => String(c.shot.miss || 'didntTrack') !== 'didntTrack').length, C.length);
+    const pocket = pct(C.filter(c => String(c.shot.pocket || 'Unknown') !== 'Unknown' || c.strike).length, C.length);
+    const ph = C.filter(c => c.pocketHit);
+    const exit = pct(ph.filter(c => c.exitRaw !== "Didn't notice").length, ph.length);
+    const corner = prof.lefty ? '7' : '10';
+    const cornerLeaves = C.filter(c => c.pocketHit && (pinsText(c.shot) === corner || ['Flat 10', 'Ringing 10'].includes(c.shot.leaveTag)));
+    const key = pct(cornerLeaves.filter(c => c.keyPin && c.keyPin !== 'unknown').length, cornerLeaves.length);
+    const parts = [[mark, 40], [pocket, 25], [exit, 25], [key, 10]].filter(([v]) => v !== null);
+    const wsum = parts.reduce((a, [, w]) => a + w, 0);
+    const score = Math.round(parts.reduce((a, [v, w]) => a + v * w, 0) / (wsum || 1) * 100);
+    const label = score >= 85 ? 'Sharp eye' : score >= 65 ? 'Good eye' : score >= 45 ? 'Building' : 'Foggy';
+    const r = (v) => v === null ? null : Math.round(v * 100);
+    return { score, label, n: C.length, parts: { mark: r(mark), pocket: r(pocket), exit: r(exit), keyPin: r(key) }, pocketHits: ph.length, cornerLeaves: cornerLeaves.length };
+  }
+
   // ---------- main ----------
   function evaluate(ctx) {
+    const out = evaluateCore(ctx);
+    try {
+      const prof = bowlerProfile(ctx && ctx.bowler);
+      const all = ((ctx && ctx.shots) || []).filter(s => s && s.type !== 'gameStart' && !s.isFill);
+      const C = all.map(s => classify(s, prof.lefty));
+      const W = C.filter(c => c.execution !== 'poor').slice(-5);
+      if (C.length >= 3) sideNotes(out, C, W, prof);
+      out.eyeball = eyeballScore(ctx && ctx.shots, ctx && ctx.bowler);
+    } catch (_e) {}
+    return out;
+  }
+
+  function evaluateCore(ctx) {
     ctx = ctx || {};
     const prof = bowlerProfile(ctx.bowler);
     const pat = patternProfile(ctx.pattern);
@@ -504,12 +572,28 @@
 
     // ---- 7. In the pocket but not carrying ----
     const recentPocket = W.slice(-4);
-    if (cnt(recentPocket, c => c.pocketHit) >= 3 && cnt(recentPocket, c => c.strike) <= 1) {
-      const weak = carryFails.filter(c => c.meaning === 'weak' || c.shot.leaveTag === 'Flat 10').length;
-      const strong = carryFails.filter(c => c.meaning === 'high' || c.shot.leaveTag === 'Ringing 10').length;
+    const pocket3 = W.filter(c => c.pocketHit).slice(-3);
+    const weakFinish = cnt(pocket3, c => c.finish === 'weak');
+    const strongFinish = cnt(pocket3, c => c.finish === 'strong');
+    const finishProblem = pocket3.length >= 2 && cnt(pocket3, c => c.strike) === 0 && (weakFinish >= 2 || strongFinish >= 2);
+    if ((cnt(recentPocket, c => c.pocketHit) >= 3 && cnt(recentPocket, c => c.strike) <= 1) || finishProblem) {
+      // What the bowler SAW (exit / key pin) beats what the leave alone suggests.
+      const carryType = (c) => c.finish === 'weak' || c.finish === 'strong' ? c.finish
+        : (c.shot.leaveTag === 'Flat 10' || c.meaning === 'weak') ? 'weak'
+        : (c.shot.leaveTag === 'Ringing 10' || c.meaning === 'high') ? 'strong' : '';
+      const weak = carryFails.filter(c => carryType(c) === 'weak').length;
+      const strong = carryFails.filter(c => carryType(c) === 'strong').length;
       const sit = strong > weak ? 'carryStrong' : 'carryWeak';
       const leaves = carryFails.slice(-3).map(c => c.shot.leaveTag || pinsText(c.shot)).filter(Boolean);
-      return decide(sit, 'You\'re in the pocket but not carrying.', `Pocket hits with ${leaves.join(', ') || 'leaves'}. Your line is fine: this is about how the ball finishes.`);
+      const eyes = [];
+      const wE = carryFails.filter(c => c.exitRead === 'weak').length, sE = carryFails.filter(c => c.exitRead === 'strong').length;
+      const wK = carryFails.filter(c => c.keyPin === 'weak').length, sK = carryFails.filter(c => c.keyPin === 'wrap' || c.keyPin === 'kickback').length;
+      const kp = prof.lefty ? '4-pin' : '6-pin';
+      if (wE) eyes.push(`ball deflected off the deck ${wE}×`);
+      if (sE) eyes.push(`ball drove through too hard ${sE}×`);
+      if (wK) eyes.push(`${kp} laid down weak ${wK}×`);
+      if (sK) eyes.push(`${kp} hit the kickback / wrapped ${sK}×`);
+      return decide(sit, 'You\'re in the pocket but not carrying.', `Pocket hits with ${leaves.join(', ') || 'leaves'}${eyes.length ? ' (' + eyes.join(', ') + ')' : ''}. Your line is fine: this is about how the ball finishes.`);
     }
 
     // ---- 8. One-sided room ----
@@ -532,5 +616,5 @@
     return res;
   }
 
-  root.BTCoach = { evaluate, _internals: { classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
+  root.BTCoach = { evaluate, eyeballScore, _internals: { classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
 })(typeof window !== 'undefined' ? window : globalThis);

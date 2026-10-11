@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Guide</title>
-  <link rel="stylesheet" href="styles.css?v=69" />
+  <link rel="stylesheet" href="styles.css?v=70" />
   <style>
     .guide { max-width: 760px; margin: 0 auto; line-height: 1.55; font-size: 16px; }
     .guide h2 { margin: 0 0 6px; font-size: 21px; }
@@ -184,7 +184,9 @@
           </li>
           <li><b>Pocket</b>: <span class="k">Flush</span>, <span class="k">Light</span>, <span class="k">High</span>, or missed left or right.</li>
           <li><b>Ball reaction</b> (only if you saw it): <span class="k">Too early</span>, <span class="k">Too long</span>, <span class="k">Over/under</span> or <span class="k">Carrydown</span>.</li>
-          <li>Optional: <b>Execution</b> (Good / OK / Poor), <b>Ball exit</b>, <b>Speed vs normal</b>, <b>Notes</b>.</li>
+          <li><b>Ball exit off deck</b> on pocket hits: <span class="k">Exit straight</span> (finished), <span class="k">Exit right</span> or <span class="k">Exit left</span>. For righties, exit right = deflected/weak and exit left = drove through too hard (lefties: the opposite).</li>
+          <li><b>6-pin pop-up</b> (4-pin for lefties): hit the pocket and leave just the 10 (7 for lefties), and Game Day asks what the 6 did: <b>laid down weak</b>, <b>hit the kickback and missed</b>, or <b>wrapped around it</b>. One tap.</li>
+          <li>Optional: <b>Execution</b> (Good / OK / Poor), <b>Speed vs normal</b>, <b>Notes</b>.</li>
           <li>If you moved or changed balls, update <b>Feet / Arrows / Current ball</b>.</li>
           <li>Tap <span class="k">Log this shot</span>.</li>
         </ol>
@@ -215,7 +217,8 @@
           <div class="read"><div class="read-name">✅ Wide window: the best look</div><div>Missed outside and it <b>recovered</b> to the pocket, <i>and</i> missed inside and it <b>held</b> to the pocket. You have room both ways. Stay put.</div></div>
           <div class="read"><div class="read-name">🔔 Hooking early → move</div><div><b>2 good shots in a row</b> high (high pocket, 4-pin, 4-9, ringing 10, Brooklyn, crossed over, "too early"). Follow the miss: feet 2 boards <b>left</b>, eyes 1 left (righties; lefties go right). Or a cleaner, longer ball.</div></div>
           <div class="read"><div class="read-name">🔔 Holding / going long → move</div><div><b>2 good shots in a row</b> light (light pocket, flat 10, missed light, "too long"). Feet 2 boards <b>right</b>, eyes 1 right (righties; lefties go left). Or slow down a touch, or an earlier-reading ball.</div></div>
-          <div class="read"><div class="read-name">🔔 In the pocket but not carrying</div><div>Your line is fine. This is about how the ball finishes: a ball change, speed or release, not a big move.</div></div>
+          <div class="read"><div class="read-name">🔔 In the pocket but not carrying</div><div>Your line is fine. This is about how the ball finishes: a ball change, speed or release, not a big move. Your <b>eyes decide which way</b>: ball deflecting right off the deck or the 6-pin laying down = needs <b>more finish</b>; ball driving left or the 6 wrapping = <b>too strong</b>, go smoother.</div></div>
+          <div class="read"><div class="read-name">⚠️ Early warning</div><div>Even while you're striking, if the ball deflects off the deck (or the 6-pin lays down) on 2 of your last 3 pocket hits, Coach warns you before the flat 10s start.</div></div>
           <div class="read"><div class="read-name">🔔 Over/under</div><div>Some early, some long. Coach goes smoother: a small parallel move or a smoother ball.</div></div>
           <div class="read"><div class="read-name">👀 Just made a change?</div><div>Coach waits for <b>2 good shots</b> before judging it, then tells you whether it worked. If the same problem continues, it gives you the next step, usually a bigger move or a different kind of change.</div></div>
         </div>
@@ -232,6 +235,7 @@
           <li><span class="k">Start next game</span>: tap it at the start of each new game. That's how Coach tracks the lane changing game to game.</li>
           <li>The <b>Lane scoreboard</b> shows left lane vs right lane: strike %, pocket %, carry. Useful when one lane plays differently from the other.</li>
           <li>When you're done, tap <span class="k">Save Session</span>. This moves the night into <b>Scores</b> and adds an <b>arsenal review</b>: what your bag was missing and the best in-bag ball for the conditions you saw.</li>
+          <li>👁️ <b>Eyeball score</b> (0–100) shows in the Coach box and when you save: how much of what matters you actually watched. That's your mark (miss room), where it hit the pocket, where the ball left the deck on pocket hits, and the key pin on corner-pin leaves. Scores shows it for every night, with your trend. <b>Best ball is your eyeball.</b></li>
           <li><span class="k">Reset current session</span> clears the log without saving. Only use it if you want to start over.</li>
         </ul>
         <div class="why">Your in-progress session is saved as you go. If the app closes or your phone locks mid-game, just open it again.</div>
@@ -293,7 +297,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=69"></script>
+  <script src="app.js?v=70"></script>
   <script>
     BT.renderNav('guide');
     BT.$('#ver').textContent = 'Bowling Tool ' + BT.APP_VERSION;

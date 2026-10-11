@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=69" />
+  <link rel="stylesheet" href="styles.css?v=70" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -234,8 +234,22 @@
     </div>
   </div>
 
-  <script src="app.js?v=69"></script>
-  <script src="coach.js?v=69"></script>
+  <!-- Key-pin pop-up: 6-pin (righty) / 4-pin (lefty) on a single corner-pin pocket leave -->
+  <div id="keyPinModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card" style="max-width:420px">
+      <div style="font-size:18px;font-weight:900" id="keyPinTitle">What did the 6-pin do?</div>
+      <div class="small" style="margin-top:4px">Pocket hit, one corner pin left. Best ball is your eyeball: how the key pin moved tells Coach whether the ball was weak or too strong.</div>
+      <div style="display:grid;gap:8px;margin-top:12px">
+        <button class="btn" data-keypin="weak" style="text-align:left;padding:12px 14px">😴 <b>Laid down weak</b><br><span class="small">Slid or rolled softly into the gutter in front of the corner pin</span></button>
+        <button class="btn" data-keypin="kickback" style="text-align:left;padding:12px 14px">↩️ <b>Hit the kickback and missed</b><br><span class="small">Hit the side wall hard, bounced back, but missed the corner pin</span></button>
+        <button class="btn" data-keypin="wrap" style="text-align:left;padding:12px 14px">🌀 <b>Wrapped around it</b><br><span class="small">Flew around / in front of the corner pin (ringing)</span></button>
+        <button class="btn secondary" data-keypin="unknown" style="padding:10px 14px">Didn't see it</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=70"></script>
+  <script src="coach.js?v=70"></script>
   <script>
     BT.renderNav('gameday');
 
@@ -1645,6 +1659,8 @@ function saveCurrentSessionDraft() {
       const border = { good: 'var(--accent)', move: '#ffc400', warn: 'var(--danger)', info: 'rgba(255,255,255,0.18)' }[r.tone] || 'rgba(255,255,255,0.18)';
       const notes = (r.notes || []).map(n => `<div class="small" style="margin-top:6px;opacity:1">${escapeHtml(n)}</div>`).join('');
       const ballBtn = r.ballSuggestion ? `<button class="btn secondary" id="coachUseBall" style="margin-top:8px">Switch to ${escapeHtml(r.ballSuggestion)}</button>` : '';
+      const eb = r.eyeball && r.eyeball.n ? r.eyeball : null;
+      const eyeLine = eb ? `<div class="small" style="margin-top:8px;opacity:1">👁️ <b>Eyeball score tonight: ${eb.score}</b> (${escapeHtml(eb.label)})</div>` : '';
       const details = [r.profileLine && `<b>You:</b> ${escapeHtml(r.profileLine)}`, r.patternLine && `<b>Pattern:</b> ${escapeHtml(r.patternLine)}`, r.read && `<b>Lane read this game:</b> ${escapeHtml(r.read)}`]
         .filter(Boolean).map(x => `<div class="small" style="margin-top:4px">${x}</div>`).join('');
       el.coachText.innerHTML = `
@@ -1654,6 +1670,7 @@ function saveCurrentSessionDraft() {
           ${r.next ? `<div class="small" style="margin-top:6px"><b>Next:</b> ${escapeHtml(r.next)}</div>` : ''}
           ${notes}
           ${ballBtn}
+          ${eyeLine}
         </div>
         ${details ? `<details style="margin-top:8px"><summary class="small" style="cursor:pointer">What Coach is using</summary>${details}</details>` : ''}`;
       const b = BT.$('#coachUseBall');
@@ -1674,6 +1691,36 @@ function saveCurrentSessionDraft() {
     }
 
     function refreshCoach() { autoCoach(); }
+
+    // ---- Key pin (6-pin righty / 4-pin lefty) on a single corner-pin pocket leave ----
+    let keyPinRead = '';      // 'weak' | 'kickback' | 'wrap' | 'unknown' | ''
+    let keyPinAsked = false;  // only ask once per shot
+    function isLeftyBowler() {
+      const b = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
+      return String(b.handedness || b.hand || 'R').toUpperCase().startsWith('L');
+    }
+    function maybeAskKeyPin() {
+      if (keyPinAsked) return;
+      const lefty = isLeftyBowler();
+      const corner = lefty ? 7 : 10;
+      const pins = Array.from(selectedPins);
+      const singleCorner = pins.length === 1 && pins[0] === corner;
+      if (!singleCorner) return;
+      if (resultTag === 'Flat 10' || resultTag === 'Ringing 10') return; // already says what the 6 did
+      const pocket = singlePillValue(el.readsPocket, 'Unknown');
+      if (!['Pocket flush', 'Pocket light', 'Pocket high'].includes(pocket)) return;
+      keyPinAsked = true;
+      BT.$('#keyPinTitle').textContent = `What did the ${lefty ? '4' : '6'}-pin do?`;
+      BT.$('#keyPinModal').classList.remove('hidden');
+    }
+    BT.$all('[data-keypin]').forEach(b => b.addEventListener('click', () => {
+      keyPinRead = b.getAttribute('data-keypin');
+      BT.$('#keyPinModal').classList.add('hidden');
+    }));
+    // Ask after either order: pins first or pocket first
+    document.addEventListener('click', (e) => {
+      if (e.target.closest && (e.target.closest('#pinDeckWrap') || e.target.closest('#readsPocket'))) setTimeout(maybeAskKeyPin, 0);
+    });
 
     function logShot() {
       const meta = collectMeta();
@@ -1751,6 +1798,7 @@ function saveCurrentSessionDraft() {
 
         pocket: singlePillValue(el.readsPocket, 'Unknown'),
         exit: singlePillValue(el.readsExit, "Didn't notice"),
+        keyPin: keyPinRead || (resultTag === 'Flat 10' ? 'weak' : resultTag === 'Ringing 10' ? 'wrap' : ''),
 	        miss: missRead,
         notes: el.notes.value.trim(),
       };
@@ -1777,6 +1825,7 @@ if (!shot.ball) return alert('Pick a current ball (select an arsenal set in Envi
       saveLastLineDraft();
 
       resetSection3AfterLog();
+      keyPinRead = ''; keyPinAsked = false;
 
       renderLog();
       renderLaneGeometry();
@@ -1901,6 +1950,9 @@ function sessionSummary(shots) {
       const sum = sessionSummary(sessionShots);
       
       const laneStats = computeLaneStats(sessionShots, meta.lanes, meta.startLane);
+      let eyeball = null;
+      try { if (window.BTCoach) eyeball = BTCoach.eyeballScore(sessionShots.slice().reverse(), BT.lsGet(BT.KEYS.BOWLER, {}) || {}); } catch (_e) {}
+      if (eyeball) sum.eyeball = eyeball;
       const audit = await arsenalAudit(meta, sessionShots);
 
       const payload = {
@@ -1917,7 +1969,15 @@ function sessionSummary(shots) {
       sessions.unshift(payload);
       BT.lsSet(BT.KEYS.GAME_SESSIONS, sessions);
       localStorage.removeItem(SESSION_KEY);
-      alert('Saved to Scores.');
+      if (eyeball && eyeball.n) {
+        const p = eyeball.parts || {};
+        const bits = [`Mark tracked ${p.mark ?? '—'}%`, `Pocket ${p.pocket ?? '—'}%`];
+        if (p.exit != null) bits.push(`Exit watched ${p.exit}% of pocket hits`);
+        if (p.keyPin != null) bits.push(`Key pin seen ${p.keyPin}%`);
+        alert(`Saved to Scores.\n\n👁️ Eyeball score: ${eyeball.score} (${eyeball.label})\n${bits.join(' • ')}\n\nBest ball is your eyeball.`);
+      } else {
+        alert('Saved to Scores.');
+      }
     }
 
     function resetSession() {

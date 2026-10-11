@@ -49,6 +49,12 @@ npm start
 ```
 Then open http://localhost:3000
 
+## Changes in v70-beta7 — "Best ball is your eyeball"
+- Coach now uses **ball exit off the deck** (righty: exit right = weak/deflecting, exit left = too strong; lefty mirrored).
+- **6-pin pop-up** (4-pin for lefties): pocket hit + single 10-pin (7 for lefties) asks what the key pin did (laid down weak / hit kickback and missed / wrapped). Flat 10 / Ringing 10 taps fill it in automatically.
+- Coach uses exit + key pin to decide "needs more finish" vs "too strong", and gives an **early warning** when the ball starts deflecting even while you're striking.
+- **Eyeball score** (0–100): live in the Coach box, in the Save Session message, and on Scores (per night, with trend vs your recent average).
+
 ## Changes in v69-beta6 — Coach v2
 - New decision engine (`coach.js`) using, in order: bowler profile → LASER confidence → oil pattern (length/volume/ratio) → ball cover/surface/core in tonight's bag → shot reads.
 - Never moves off a poor shot; 2 good shots in a row telling the same story triggers a move; one change at a time with a "next step" if it doesn't work.

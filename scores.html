@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Scores</title>
-  <link rel="stylesheet" href="styles.css?v=69" />
+  <link rel="stylesheet" href="styles.css?v=70" />
 </head>
 <body data-page="scores">
   <div class="navlinks"></div>
@@ -68,7 +68,8 @@
     </div>
   </div>
 
-  <script src="app.js?v=69"></script>
+  <script src="app.js?v=70"></script>
+  <script src="coach.js?v=70"></script>
   <script>
     BT.renderNav('scores');
 
@@ -99,9 +100,22 @@
     let activeSessionId = '';
     let activeShotIndex = -1;
 
+    // Eyeball score: saved with new sessions; computed on the fly for older ones.
+    function eyeballFor(s) {
+      if (s.summary && s.summary.eyeball && s.summary.eyeball.n) return s.summary.eyeball;
+      try {
+        if (!window.BTCoach) return null;
+        const chron = [...(s.shots || [])].sort((a, b) => (a.at || 0) - (b.at || 0));
+        const e = BTCoach.eyeballScore(chron, BT.lsGet(BT.KEYS.BOWLER, {}) || {});
+        return e && e.n ? e : null;
+      } catch (_e) { return null; }
+    }
+
     function fmtSummary(s) {
       const sum = s.summary || {};
-      return `Shot attempts: ${sum.total || 0} • Strike shots: ${sum.strikes || 0} • Strike rate: ${sum.strikeRate || 0}% • Pocket(flush/light/high): ${(sum.pocketFlush||0)}/${(sum.pocketLight||0)}/${(sum.pocketHigh||0)} • Execution: ${sum.executionScore || 0}`;
+      const eb = eyeballFor(s);
+      const eyeTxt = eb ? ` • 👁️ Eyeball: ${eb.score} (${eb.label})` : '';
+      return `Shot attempts: ${sum.total || 0} • Strike shots: ${sum.strikes || 0} • Strike rate: ${sum.strikeRate || 0}% • Pocket(flush/light/high): ${(sum.pocketFlush||0)}/${(sum.pocketLight||0)}/${(sum.pocketHigh||0)} • Execution: ${sum.executionScore || 0}${eyeTxt}`;
     }
 
     function renderList() {
@@ -326,6 +340,24 @@
           <div class="small" style="margin-top:6px">${fmtSummary(s)}</div>
           <div class="small">Pocket hit %: ${s.summary?.pocketPct||0}% • Carry on pocket hits: ${s.summary?.carryPct||0}% • Quality %: ${s.summary?.qualityPct||0}% • Execution score: ${s.summary?.executionScore||0}</div>
         </div>
+        ${(() => {
+          const eb = eyeballFor(s);
+          if (!eb) return '';
+          const p = eb.parts || {};
+          const idx = sessions.findIndex(x => x.id === s.id);
+          const prev = sessions.slice(idx + 1, idx + 6).map(eyeballFor).filter(Boolean);
+          const avg = prev.length ? Math.round(prev.reduce((a, e) => a + e.score, 0) / prev.length) : null;
+          const trend = avg == null ? '' : eb.score > avg ? ` ▲ up from your recent average of ${avg}` : eb.score < avg ? ` ▼ down from your recent average of ${avg}` : ` = your recent average`;
+          const row = (lbl, v, hint) => v == null ? '' : `<div class="small" style="margin-top:4px">${lbl}: <b>${v}%</b> <span style="opacity:.7">${hint}</span></div>`;
+          return `<div class="panel" style="padding:12px;margin-top:10px">
+            <b>👁️ Eyeball score: ${eb.score} (${eb.label})</b><span class="small">${trend}</span>
+            <div class="small" style="margin-top:2px;opacity:.8">Best ball is your eyeball: how much of what matters you actually watched.</div>
+            ${row('Hit your mark? (miss room tracked)', p.mark, '')}
+            ${row('Where it hit the pocket', p.pocket, '')}
+            ${row('Where the ball left the deck', p.exit, `on ${eb.pocketHits} pocket hits`)}
+            ${row('What the key pin did', p.keyPin, `on ${eb.cornerLeaves} corner-pin leaves`)}
+          </div>`;
+        })()}
 
         <div class="panel" style="padding:12px;margin-top:10px">
           <b>Lane scoreboard (session)</b>
