@@ -6,7 +6,7 @@
 
 (function () {
   // Bump this string each build so pages can display it and cache-bust resources.
-  const APP_VERSION = 'v68-beta5';
+  const APP_VERSION = 'v69-beta6';
   const KEYS = {
     CSV_CACHE: 'bt_csv_cache_v1',          // stringified { savedAt, name, rows }
     BOWLER: 'bt_bowler_v1',               // stringified object
@@ -346,8 +346,9 @@
   function surfaceToGrit(surfaceStr) {
     const s = String(surfaceStr || '').toLowerCase();
     const m = s.match(/(\d{3,4})/);
+    // "1500 Polish" = sanded to 1500 then polished: it rolls like a polished ball, not a 1500 sanded one.
+    if (s.includes('polish')) return m ? Math.max(5000, Number(m[1]) + 3500) : 5500;
     if (m) return Number(m[1]);
-    if (s.includes('polish')) return 5500;
     if (s.includes('compound')) return 4500;
     return 4000;
   }
@@ -1093,6 +1094,7 @@
     const surfRaw = ballSurface(row).toLowerCase();
 
     const grit = (function () {
+      if (surfRaw.includes('polish')) return NaN; // polished: handled as polish below, whatever grit it was sanded to first
       const m = surfRaw.match(/(\d{3,4})/);
       if (!m) return NaN;
       return Number(m[1]);

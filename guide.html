@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Guide</title>
-  <link rel="stylesheet" href="styles.css?v=68" />
+  <link rel="stylesheet" href="styles.css?v=69" />
   <style>
     .guide { max-width: 760px; margin: 0 auto; line-height: 1.55; font-size: 16px; }
     .guide h2 { margin: 0 0 6px; font-size: 21px; }
@@ -197,41 +197,31 @@
       <!-- 8 -->
       <section class="panel" id="coach">
         <h2><span class="stepnum">8</span>How Coach works</h2>
-        <p><b>Coach updates by itself after every shot</b>, starting with the 3rd. The <b>Coach review</b> box is right under the Log button.</p>
+        <p><b>Coach updates after every shot.</b> Before your first shot it gives you a starting plan. After that, the top line of the Coach box is always the one thing to do next.</p>
 
-        <h3>What Coach looks at</h3>
-        <ul>
-          <li>Your last ~8 shots, mostly the ones you marked as good execution. Bad shots don't make Coach think the lane changed.</li>
-          <li>Leaves (10-pins, 4-pins, 2-pins, splits), miss room, pocket hits and ball reaction.</li>
-          <li>Each game separately, so it can spot the lane <b>changing over the night</b> (e.g., Game 1 typical, Game 3 burning up).</li>
-        </ul>
+        <h3>What Coach uses, in order</h3>
+        <ol>
+          <li><b>You:</b> your Bowler page (speed vs. revs, tilt, rotation, hand).</li>
+          <li><b>What you're good at adjusting:</b> your LASER ratings (5 = strength, 1 = avoid). Coach won't suggest a move you rated 1, and it leads with the ones you rated highest.</li>
+          <li><b>The lane:</b> your oil pattern's length, volume and ratio. Flat/sport patterns get smaller moves. Light oil means expect the lane to dry up early.</li>
+          <li><b>Your bag:</b> each ball's cover, surface, core and layout. Ball changes only come from tonight's bag, and only if a ball actually fixes the problem.</li>
+          <li><b>Each shot:</b> did you hit your mark (miss room), where it hit the pocket, what you left, and ball reaction.</li>
+        </ol>
 
-        <h3>The lane reads</h3>
+        <h3>The rules Coach follows</h3>
         <div class="reads">
-          <div class="read"><div class="read-name">Blend / Typical</div><div><span class="lbl">You're seeing:</span> Misses still come back (held inside, recovered outside). There's room to miss.</div><div><span class="lbl">Coach suggests:</span> Stay put and make small moves. Wide window.</div></div>
-          <div class="read"><div class="read-name">Burn</div><div><span class="lbl">You're seeing:</span> High hits, 4-pins, 4-9s, ringing 10s. The fronts and middle are drying up.</div><div><span class="lbl">Coach suggests:</span> Follow the miss: feet 2 boards <b>left</b>, eyes 1 board left (righties; lefties go right) to get into more oil. A touch more speed, and a <b>cleaner, longer</b> ball in your bag.</div></div>
-          <div class="read"><div class="read-name">Carrydown</div><div><span class="lbl">You're seeing:</span> Flat 10s, 8s, 2-8s. The ball looks good but dies at the pins.</div><div><span class="lbl">Coach suggests:</span> Feet 2 boards <b>right</b>, eyes 1 board right (righties; lefties go left) so the ball sees friction sooner. Slightly less speed, and a <b>stronger ball that keeps driving</b>.</div></div>
-          <div class="read"><div class="read-name">Over/Under</div><div><span class="lbl">You're seeing:</span> A mix of high and light hits. It hooks early one shot and goes long the next.</div><div><span class="lbl">Coach suggests:</span> Small, parallel moves and a <b>smoother</b> ball to make the lane predictable.</div></div>
-          <div class="read"><div class="read-name">Flat / Tight</div><div><span class="lbl">You're seeing:</span> Not much miss room either way.</div><div><span class="lbl">Coach suggests:</span> Play tighter to the oil, use a <b>smoother, earlier-reading</b> ball, and don't open up the lane yet.</div></div>
+          <div class="read"><div class="read-name">✋ Bad shot? Don't move.</div><div>Missed your mark and the lane didn't save it (Miss left / Miss right), or you marked <b>Poor execution</b>: Coach ignores that shot for the lane read and tells you to repeat.</div></div>
+          <div class="read"><div class="read-name">✅ Striking? Stay.</div><div>2 strikes in your last 3 good shots means don't touch anything.</div></div>
+          <div class="read"><div class="read-name">✅ Wide window: the best look</div><div>Missed outside and it <b>recovered</b> to the pocket, <i>and</i> missed inside and it <b>held</b> to the pocket. You have room both ways. Stay put.</div></div>
+          <div class="read"><div class="read-name">🔔 Hooking early → move</div><div><b>2 good shots in a row</b> high (high pocket, 4-pin, 4-9, ringing 10, Brooklyn, crossed over, "too early"). Follow the miss: feet 2 boards <b>left</b>, eyes 1 left (righties; lefties go right). Or a cleaner, longer ball.</div></div>
+          <div class="read"><div class="read-name">🔔 Holding / going long → move</div><div><b>2 good shots in a row</b> light (light pocket, flat 10, missed light, "too long"). Feet 2 boards <b>right</b>, eyes 1 right (righties; lefties go left). Or slow down a touch, or an earlier-reading ball.</div></div>
+          <div class="read"><div class="read-name">🔔 In the pocket but not carrying</div><div>Your line is fine. This is about how the ball finishes: a ball change, speed or release, not a big move.</div></div>
+          <div class="read"><div class="read-name">🔔 Over/under</div><div>Some early, some long. Coach goes smoother: a small parallel move or a smoother ball.</div></div>
+          <div class="read"><div class="read-name">👀 Just made a change?</div><div>Coach waits for <b>2 good shots</b> before judging it, then tells you whether it worked. If the same problem continues, it gives you the next step, usually a bigger move or a different kind of change.</div></div>
         </div>
 
-        <h3>🔔 Coach alerts</h3>
-        <p>A highlighted alert appears at the top of the Coach box when:</p>
-        <ul>
-          <li><b>The lane read changes</b>, e.g., "Lane read changed: Blend → Burn".</li>
-          <li><b>A pattern is confirmed and another ball in your bag fits better</b>, e.g., "Best ball in your bag for this: Phaze 2". Coach compares your <b>current ball</b> to every ball in tonight's set and picks the one that best fixes the problem.</li>
-          <li><b>A problem keeps repeating</b>, e.g., three "too long" reads.</li>
-        </ul>
-
-        <h3>The rest of the Coach box</h3>
-        <ul>
-          <li><b>Lane map</b>: the read for each game, and whether it's changing.</li>
-          <li><b>You</b>: tempo creeping faster or slower, execution drifting, or misses leaking one way.</li>
-          <li><b>LASER next move</b>: the next 1–2 moves (Loft, Aim, Speed, Equipment, Release), picked from the ones you rated yourself good at.</li>
-          <li><b>Observation rating</b>: how well you're tracking. Higher means Coach is more confident.</li>
-        </ul>
-        <div class="why"><b>Which way to move:</b> Coach follows the classic "2-and-1" rule: <b>follow your miss</b>. Ball hooking early or hitting high → move feet 2 and eyes 1 <b>left</b>. Ball going long or hitting light → move feet 2 and eyes 1 <b>right</b>. (Lefties: the opposite.)</div>
-        <div class="why"><b>How to use it:</b> make <b>one</b> change at a time, either a move or a ball, not both. Then let Coach see 2–3 good shots before changing again. Coach is a second set of eyes. Your own read of the ball still matters most.</div>
+        <div class="why"><b>One change at a time.</b> Coach always gives you a single move, plus what to try next if 2 more good shots say the same thing.</div>
+        <div class="why"><b>Help Coach help you:</b> tapping your <b>miss room</b> (No miss / held / recovered / Miss left / Miss right) is what lets Coach tell a bad shot from a lane change. Tap <b>What Coach is using</b> under the advice to see the profile and pattern it's working from.</div>
         <a class="top" href="#top">↑ Back to top</a>
       </section>
 
@@ -303,7 +293,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=68"></script>
+  <script src="app.js?v=69"></script>
   <script>
     BT.renderNav('guide');
     BT.$('#ver').textContent = 'Bowling Tool ' + BT.APP_VERSION;

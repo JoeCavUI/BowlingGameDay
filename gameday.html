@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=68" />
+  <link rel="stylesheet" href="styles.css?v=69" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -234,7 +234,8 @@
     </div>
   </div>
 
-  <script src="app.js?v=68"></script>
+  <script src="app.js?v=69"></script>
+  <script src="coach.js?v=69"></script>
   <script>
     BT.renderNav('gameday');
 
@@ -1613,28 +1614,66 @@ function saveCurrentSessionDraft() {
     }
 
     function markCoachDirty() {
-      // Coach now updates automatically after each logged shot, so keep the last advice on screen
-      // while the bowler fills in the next shot.
+      // Context (pattern, bag, current ball) can change the advice; shot taps don't, so this is cheap to rerun.
+      if (typeof BTCoach !== 'undefined' && BALL_ROW_MAP) autoCoach();
     }
 
     let lastCoachRead = null;   // lane read at the previous auto review
     let lastCoachBall = '';     // ball suggestion at the previous auto review
-    function autoCoach() {
+    // ===== Coach v2 (coach.js): profile → LASER → oil pattern → bag → shot reads =====
+    function coachContext() {
       const chron = sessionShots.slice().reverse();
-      const real = chron.filter(s => s && s.type !== 'gameStart' && !s.isFill);
-      if (real.length < 3) {
-        el.coachText.innerHTML = real.length
-          ? `<div class="small">Coach starts reading patterns after 3 shots (${real.length}/3 logged). Keep tracking pocket, leave and ball reaction.</div>`
-          : 'Log a few shots to get feedback.';
-        return;
-      }
-      el.coachText.innerHTML = coachReview(chron);
+      const sets = BT.lsGet(BT.KEYS.ARSENAL_SETS, []);
+      const setObj = (Array.isArray(sets) ? sets : []).find(x => x.name === el.set.value) || null;
+      const names = setBallNames(setObj);
+      const map = BALL_ROW_MAP || new Map();
+      const pats = BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || [];
+      return {
+        shots: chron,
+        bowler: BT.lsGet(BT.KEYS.BOWLER, {}) || {},
+        pattern: (Array.isArray(pats) ? pats : []).find(p => patternName(p) === el.pattern.value) || null,
+        setBalls: names.map(n => ({ name: n, row: map.get(n) })).filter(b => b.row),
+        currentBall: el.ball ? el.ball.value : '',
+        motion: { vector: (r, b) => BT.motionVector(r, b), distance: (a, b) => BT.motionDistance(a, b) },
+        ballInfo: (r) => ({ cover: BT.ballCover(r), grit: BT.surfaceToGrit(BT.ballSurface(r)), asym: /asym/i.test(BT.ballCore(r) || '') }),
+      };
     }
 
-    function refreshCoach() {
-      const chron = sessionShots.slice().reverse();
-      el.coachText.innerHTML = coachReview(chron);
+    function renderCoachV2(r) {
+      const icon = { good: '✅', move: '🔔', warn: '✋', info: '👀' }[r.tone] || '👀';
+      const color = { good: 'rgba(99,230,210,0.14)', move: 'rgba(255,196,0,0.16)', warn: 'rgba(255,107,107,0.14)', info: 'rgba(255,255,255,0.05)' }[r.tone] || 'rgba(255,255,255,0.05)';
+      const border = { good: 'var(--accent)', move: '#ffc400', warn: 'var(--danger)', info: 'rgba(255,255,255,0.18)' }[r.tone] || 'rgba(255,255,255,0.18)';
+      const notes = (r.notes || []).map(n => `<div class="small" style="margin-top:6px;opacity:1">${escapeHtml(n)}</div>`).join('');
+      const ballBtn = r.ballSuggestion ? `<button class="btn secondary" id="coachUseBall" style="margin-top:8px">Switch to ${escapeHtml(r.ballSuggestion)}</button>` : '';
+      const details = [r.profileLine && `<b>You:</b> ${escapeHtml(r.profileLine)}`, r.patternLine && `<b>Pattern:</b> ${escapeHtml(r.patternLine)}`, r.read && `<b>Lane read this game:</b> ${escapeHtml(r.read)}`]
+        .filter(Boolean).map(x => `<div class="small" style="margin-top:4px">${x}</div>`).join('');
+      el.coachText.innerHTML = `
+        <div style="border-left:4px solid ${border};background:${color};border-radius:0 12px 12px 0;padding:10px 12px">
+          <div style="font-size:16px;font-weight:800;line-height:1.35;color:var(--text)">${icon} ${escapeHtml(r.headline)}</div>
+          ${r.why ? `<div class="small" style="margin-top:6px;opacity:1">${escapeHtml(r.why)}</div>` : ''}
+          ${r.next ? `<div class="small" style="margin-top:6px"><b>Next:</b> ${escapeHtml(r.next)}</div>` : ''}
+          ${notes}
+          ${ballBtn}
+        </div>
+        ${details ? `<details style="margin-top:8px"><summary class="small" style="cursor:pointer">What Coach is using</summary>${details}</details>` : ''}`;
+      const b = BT.$('#coachUseBall');
+      if (b) b.addEventListener('click', () => {
+        const opt = BT.$(`option[value="${CSS.escape(r.ballSuggestion)}"]`, el.ball);
+        if (opt) { el.ball.value = r.ballSuggestion; saveLastLineDraft(); autoCoach(); }
+      });
     }
+
+    function autoCoach() {
+      if (!el || !el.coachText) return;
+      try {
+        if (window.BTCoach) return renderCoachV2(BTCoach.evaluate(coachContext()));
+      } catch (e) { console.error('Coach v2 failed', e); }
+      // Fallback: previous coach
+      const chron = sessionShots.slice().reverse();
+      el.coachText.innerHTML = chron.length >= 3 ? coachReview(chron) : 'Log a few shots to get feedback.';
+    }
+
+    function refreshCoach() { autoCoach(); }
 
     function logShot() {
       const meta = collectMeta();
@@ -1702,6 +1741,7 @@ function saveCurrentSessionDraft() {
         // Observations
         obs: selectedPills(el.readsBallObs),
         executionQuality: execQuality,
+        execTapped: qSel.length > 0,
         qualityShot,
         missTarget,
 
@@ -1885,8 +1925,8 @@ function sessionSummary(shots) {
       sessionShots = [];
       lastCoachRead = null; lastCoachBall = '';
       localStorage.removeItem(SESSION_KEY);
-      el.coachText.innerHTML = 'Log a few shots to get feedback.';
       renderLog();
+      autoCoach();
       renderLaneGeometry();
       syncNextLane();
       updateFrameUI();
