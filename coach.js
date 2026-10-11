@@ -18,7 +18,7 @@
   'use strict';
 
   // ---------- helpers ----------
-  const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : null; };
+  const num = (v) => { if (v === null || v === undefined || v === '') return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 
   // Mirror a lefty's pins to right-hander equivalents so one leave table works for both.
@@ -103,7 +103,7 @@
     if (hit === 'light' || hit === 'missLight') lean -= 1;
     if (early) lean += 1;
     if (long) lean -= 1;
-    if (!strike && meaning === 'high') lean += 0.5;
+    if (!strike && meaning === 'high' && hit !== 'flush') lean += 0.5; // flush pocket = the line was fine; it's a carry read
     if (!strike && meaning === 'weak' && hit !== 'flush') lean -= 0.5;
     if (strike && hit !== 'brooklyn') lean = 0; // a real strike says the line is fine
     lean = clamp(lean, -2, 2);
@@ -123,13 +123,35 @@
     else if (keyPin === 'wrap' || keyPin === 'kickback' || (pocketHit && exitRead === 'strong')) finish = 'strong';
     else if (pocketHit && exitRead === 'good') finish = 'good';
 
+    // Carrydown tap: oil pushed downlane -> ball skids further and arrives weak.
+    const carrydown = obs.includes('Carrydown');
+    if (carrydown && !finish) finish = 'weak';
+    if (carrydown && !strike) lean = clamp(lean - 0.5, -2, 2);
+
+    // SPEED: a faster-than-normal shot that went long (or slower one that hooked early) is the bowler, not the lane.
+    const speed = String(s.speedTrend || 'unknown');
+    const speedCaused = !strike && ((speed === 'faster' && lean < 0) || (speed === 'slower' && lean > 0));
+    if (speedCaused) execution = 'poor';
+
+    // ANGLE: target (arrows) -> breakpoint -> pocket, in boards.
+    const arrows = num(s.arrows), bp = num(s.bp);
+    // Empty pocket board = standard pocket. Lefties counting boards from the right gutter (target > 20) use 22.5.
+    const pocketBoard = num(s.pocketBoard) ?? ((lefty && arrows != null && arrows > 20) ? 22.5 : 17.5);
+    let outward = null, recovery = null, angleClass = '';
+    if (arrows != null && bp != null) {
+      outward = Math.abs(arrows - bp);
+      recovery = Math.abs(pocketBoard - bp);
+      const demand = outward + recovery;
+      angleClass = recovery <= 8 ? 'direct' : (recovery >= 13 || demand >= 16) ? 'steep' : 'normal';
+    }
+
     return {
-      exitRaw, exitRead, keyPin, finish,
+      exitRaw, exitRead, keyPin, finish, speed, speedCaused, bp, outward, recovery, angleClass,
       shot: s, execution, missSide, saved, hit, strike, meaning, early, long, lean,
       pocketHit, carryFail: pocketHit && !strike,
       overUnder: obs.includes('Over/under') || meaning === 'split',
-      carrydown: obs.includes('Carrydown'),
-      feet: num(s.feet), arrows: num(s.arrows), ball: s.ball || '', lane: s.lane || '', gameNo: num(s.gameNo) || 1,
+      carrydown,
+      feet: num(s.feet), arrows, ball: s.ball || '', lane: s.lane || '', gameNo: num(s.gameNo) || 1,
     };
   }
 
@@ -204,7 +226,26 @@
     return `Make a small parallel move: feet and eyes 1–2 boards ${prof.deeper} to give yourself more room.`;
   }
 
-  function moveText(kind, sit, prof, pat, ball, step) {
+  // The Five Elements of scoring: every suggestion is a change to one of them.
+  const ELEMENT = {
+    Aim: '🎯 Direction', Angle: '📐 Angle', Speed: '⚡ Speed', Release: '🌀 Rev rate & roll',
+    Loft: '🎯 Direction (loft)', Equipment: '🎳 Equipment',
+  };
+  // More angle = feet move, eyes stay (more swing). Less angle = eyes move more than feet (straighter).
+  function angleWant(sit, angleClass) {
+    if ((sit === 'carryWeak' || sit === 'late') && angleClass === 'direct') return 'more';
+    if ((sit === 'carryStrong' || sit === 'overunder' || sit === 'early') && angleClass === 'steep') return 'less';
+    return '';
+  }
+  function angleText(sit, prof, angleClass) {
+    const want = angleWant(sit, angleClass);
+    if (want === 'more') return `Open your angle: move your feet 2 boards ${prof.deeper} and keep your eyes on the same target. More swing gives the ball more entry angle.`;
+    if (want === 'less') return `Tighten your angle: move your eyes 2 boards ${prof.deeper} and your feet only 1. A straighter line means less swing and a smoother entry.`;
+    return '';
+  }
+
+  function moveText(kind, sit, prof, pat, ball, step, angleClass) {
+    if (kind === 'Angle') return angleText(sit, prof, angleClass);
     if (kind === 'Aim') return aimText(sit, prof, pat, step);
     if (kind === 'Equipment') return ball ? `Switch to ${ball} for ${NEED[sit].say}.` : '';
     if (kind === 'Speed') {
@@ -217,19 +258,23 @@
       return 'Lay it down a little sooner (less loft) so the ball sees the lane earlier.';
     }
     if (kind === 'Release') {
-      if (sit === 'early' || sit === 'carryStrong') return 'Soften your hand: a little less side roll, more forward roll.';
-      if (sit === 'late' || sit === 'carryWeak') return 'Add a little more hand / rotation so the ball turns harder.';
-      return 'Take a little side roll off and favor forward roll for a smoother shape.';
+      if (sit === 'carryWeak') return 'Add a little more hand (rotation) so the ball saves energy and is still turning at the pins, not rolling out early.';
+      if (sit === 'late') return 'Add a little more hand / rotation so the ball turns harder off the breakpoint.';
+      if (sit === 'early' || sit === 'carryStrong') return 'Soften your hand: less side rotation, more forward roll, so the ball arrives smoother.';
+      return 'Take a little side roll off and favor forward roll for a smoother, more predictable shape.';
     }
     return '';
   }
 
-  function rankMoves(sit, prof, pat, hasBall, tried) {
-    const base = BASE[sit] || BASE.early;
+  function rankMoves(sit, prof, pat, hasBall, tried, angleClass) {
+    const base = Object.assign({}, BASE[sit] || BASE.early);
+    // Angle only enters the menu when the line's geometry says it's the issue.
+    const want = angleWant(sit, angleClass);
+    if (want) base.Angle = (sit === 'carryWeak' || sit === 'carryStrong') ? 9 : sit === 'overunder' ? 8 : 6;
     const out = [];
     for (const kind of Object.keys(base)) {
       if (kind === 'Equipment' && !hasBall) continue;
-      const rating = prof.laser[kind] ?? 3;
+      const rating = kind === 'Angle' ? (prof.laser.Aim ?? 4) : (prof.laser[kind] ?? 3);
       if (rating <= 1) continue; // "avoid it"
       let score = base[kind] + rating * 1.5;
       // Bowler profile shaping
@@ -338,15 +383,48 @@
   }
 
   // Notes that ride along with any verdict
-  function sideNotes(res, C, W, prof) {
+  function sideNotes(res, C, W, prof, pat) {
     const kp = prof.lefty ? '4-pin' : '6-pin';
     const pocket3 = W.filter(c => c.pocketHit).slice(-3);
     const wf = pocket3.filter(c => c.finish === 'weak').length;
     const sf = pocket3.filter(c => c.finish === 'strong').length;
     if (res.status !== 'move') {
-      if (wf >= 2) res.notes.push(`⚠️ Early warning: the ball is losing energy on ${wf} of your last ${pocket3.length} pocket hits (deflecting off the deck / ${kp} laying down). Flat 10s are next if it continues.`);
-      else if (sf >= 2) res.notes.push(`⚠️ Early warning: the ball is hitting too hard on ${sf} of your last ${pocket3.length} pocket hits (driving left off the deck / ${kp} wrapping). Watch for ringing 10s and 4-pins.`);
+      if (wf >= 2) res.notes.push(`⚠️ 🌀 Roll / energy early warning: the ball is losing energy on ${wf} of your last ${pocket3.length} pocket hits (deflecting off the deck / ${kp} laying down). Flat 10s are next if it continues.`);
+      else if (sf >= 2) res.notes.push(`⚠️ 🌀 Roll / energy early warning: the ball is hitting too hard on ${sf} of your last ${pocket3.length} pocket hits (driving left off the deck / ${kp} wrapping). Watch for ringing 10s and 4-pins.`);
     }
+    const trusted = C.filter(c => c.execution !== 'poor');
+    const avg = (arr) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+
+    // 🛣️ Lane by lane: one lane of the pair can play differently
+    const lanes = [...new Set(trusted.map(c => String(c.lane || '')).filter(Boolean))];
+    if (lanes.length === 2) {
+      const look = lanes.map(l => {
+        const L = trusted.filter(c => String(c.lane) === l).slice(-4);
+        return { l, n: L.length, hi: L.filter(c => c.lean > 0).length, lo: L.filter(c => c.lean < 0).length };
+      });
+      if (look.every(x => x.n >= 3)) {
+        for (const [a, b] of [[look[0], look[1]], [look[1], look[0]]]) {
+          if (a.hi >= 2 && b.hi === 0) { res.notes.push(`🛣️ Lane ${a.l} is reading high (${a.hi} of your last ${a.n} there) while lane ${b.l} isn't. Make the move on ${a.l} only.`); break; }
+          if (a.lo >= 2 && b.lo === 0) { res.notes.push(`🛣️ Lane ${a.l} is holding (${a.lo} of your last ${a.n} light) while lane ${b.l} isn't. Make the move on ${a.l} only.`); break; }
+        }
+      }
+    }
+
+    // 📈 Game-to-game transition
+    const games = [...new Set(trusted.map(c => c.gameNo))].sort((a, b) => a - b);
+    if (games.length >= 2) {
+      const g1 = trusted.filter(c => c.gameNo === games[0]), gN = trusted.filter(c => c.gameNo === games[games.length - 1]);
+      if (g1.length >= 4 && gN.length >= 4) {
+        const d = avg(gN.map(c => c.lean)) - avg(g1.map(c => c.lean));
+        if (d >= 0.4) res.notes.push(`📈 Transition: game ${games[games.length - 1]} is hooking earlier than game ${games[0]}. The fronts are drying up${pat && pat.volumeClass === 'light' ? ', as expected on light oil' : ''}. Expect to keep moving ${prof.deeper}.`);
+        else if (d <= -0.4) res.notes.push(`📉 Transition: game ${games[games.length - 1]} is holding more than game ${games[0]}. Oil may be carrying down; watch for flat 10s.`);
+        // 🎯 Breakpoint drift on good results
+        const bp1 = avg(g1.filter(c => c.bp != null && (c.pocketHit || c.strike)).map(c => c.bp));
+        const bpN = avg(gN.filter(c => c.bp != null && (c.pocketHit || c.strike)).map(c => c.bp));
+        if (bp1 != null && bpN != null && Math.abs(bpN - bp1) >= 2) res.notes.push(`🎯 Your breakpoint has moved from about board ${Math.round(bp1)} to ${Math.round(bpN)} since game ${games[0]}. That's the lane moving.`);
+      }
+    }
+
     const last = C[C.length - 1];
     const pocketShots = C.filter(c => c.pocketHit);
     const exitSeen = pocketShots.filter(c => c.exitRaw !== "Didn't notice").length;
@@ -377,6 +455,77 @@
     return { score, label, n: C.length, parts: { mark: r(mark), pocket: r(pocket), exit: r(exit), keyPin: r(key) }, pocketHits: ph.length, cornerLeaves: cornerLeaves.length };
   }
 
+  // ---------- Five Elements ----------
+  // Plain-words profile for the Bowler page.
+  function elementsProfile(bowler) {
+    const p = bowlerProfile(bowler);
+    const L = p.laser;
+    const conf = (r) => r >= 5 ? 'a strength' : r >= 4 ? 'comfortable' : r >= 3 ? 'sometimes' : r >= 2 ? 'rarely comfortable' : 'avoid';
+    const tiltTxt = p.tilt == null ? null : p.tilt < 10 ? 'low tilt: the ball reads the lane early and rolls sooner'
+      : p.tilt <= 20 ? 'medium tilt: the ball saves some energy, then reads mid-lane' : 'high tilt: the ball skids longer before it hooks';
+    const rotTxt = p.rotation == null ? null : p.rotation < 30 ? 'low rotation: more forward roll, a smooth arc'
+      : p.rotation <= 60 ? 'medium rotation: a balanced skid–hook–roll' : 'high rotation: a sharper turn at the breakpoint';
+    const sideOf = p.lefty ? 'right' : 'left';
+    return [
+      { key: 'Direction', icon: '🎯', value: `Aim ${L.Aim}/5 (${conf(L.Aim)})`,
+        meaning: 'Where you stand, what you aim at, and where the ball goes. Every "feet 2, eyes 1" move is a direction change.',
+        tip: L.Aim >= 4 ? 'Moving your feet and target is your best tool. Coach will lead with it.' : 'Direction moves aren\'t your strength yet, so Coach will lean on equipment and speed first.' },
+      { key: 'Angle', icon: '📐', value: 'From your feet, target and breakpoint',
+        meaning: 'How much the ball has to come back from the breakpoint to the pocket. More angle = more swing; less angle = a straighter line.',
+        tip: p.dom < -0.3 ? `As a speed-dominant bowler you usually create angle with lane position (feet ${sideOf}, eyes stay) or equipment, more than with your hand.` : 'Angle comes from where you stand vs. where you aim.' },
+      { key: 'Speed', icon: '⚡', value: p.mph ? `${p.mph} mph at the foul line${L.Speed ? ` · speed changes ${conf(L.Speed)}` : ''}` : 'Not entered yet',
+        meaning: 'Faster = the ball goes longer and hooks later; slower = it reads sooner.',
+        tip: p.dom < -0.3 ? 'You\'re speed-dominant: your speed outruns your revs, so the ball can skid long. A touch less speed, or earlier-reading equipment, helps it finish.' : p.dom > 0.3 ? 'You\'re rev-dominant: a touch more speed keeps the ball from hooking too early.' : 'Your speed and revs are matched, so small speed changes are a fine-tuning tool.' },
+      { key: 'Rev rate', icon: '🔄', value: p.rpm ? `${p.rpm} rpm (${p.lowRev ? 'lower rev' : p.highRev ? 'high rev' : 'medium rev'})` : 'Not entered yet',
+        meaning: 'How fast the ball spins. More revs = more hook and more pin action; fewer = a straighter, steadier ball.',
+        tip: p.lowRev ? 'With lower revs, rely on stronger covers / rougher surfaces to get the ball to finish. Your hand alone won\'t add much hook.' : 'Your revs give you hook. Use smoother equipment when the lanes get dry.' },
+      { key: 'Roll (axis)', icon: '🌀', value: [p.tilt != null ? `${p.tilt}° tilt` : null, p.rotation != null ? `${p.rotation}° rotation` : null].filter(Boolean).join(', ') || 'Not entered yet',
+        meaning: 'How the ball goes through skid → hook → roll. Watch the exit off the deck and the 6-pin: they show whether the ball rolled out early or was still turning.',
+        tip: [tiltTxt, rotTxt].filter(Boolean).join('; ') + (L.Release ? `. Release changes: ${conf(L.Release)}.` : '') },
+    ];
+  }
+
+  // End-of-night report: one line per element + one drill for the weakest.
+  function elementsReport(shots, bowler) {
+    const prof = bowlerProfile(bowler);
+    const C = (shots || []).filter(s => s && s.type !== 'gameStart' && !s.isFill).map(s => classify(s, prof.lefty));
+    if (C.length < 3) return null;
+    const pct = (a, b) => b ? Math.round(a / b * 100) : null;
+    const out = [];
+    // Direction: hit your mark
+    const trackedMark = C.filter(c => String(c.shot.miss || 'didntTrack') !== 'didntTrack');
+    const onMark = trackedMark.filter(c => c.shot.miss === 'noMiss' || c.saved).length;
+    const dirPct = pct(onMark, trackedMark.length);
+    out.push({ key: 'Direction', icon: '🎯', score: dirPct, text: dirPct == null ? 'Track your miss room to grade direction.' : `On your mark (or saved by the lane) on ${onMark} of ${trackedMark.length} tracked shots.` });
+    // Angle: what happened on direct vs steep lines
+    const withGeo = C.filter(c => c.angleClass);
+    if (withGeo.length) {
+      const steepBad = withGeo.filter(c => c.angleClass === 'steep' && (c.finish === 'strong' || c.overUnder || c.hit === 'brooklyn')).length;
+      const directBad = withGeo.filter(c => c.angleClass === 'direct' && (c.finish === 'weak' || c.shot.leaveTag === 'Flat 10')).length;
+      const good = withGeo.filter(c => c.strike || c.finish === 'good').length;
+      out.push({ key: 'Angle', icon: '📐', score: pct(good, withGeo.length), text: `${good} of ${withGeo.length} shots with a breakpoint logged finished well.` + (steepBad ? ` ${steepBad} came in too strong on a big-swing line.` : '') + (directBad ? ` ${directBad} came in weak on a direct line.` : '') });
+    } else out.push({ key: 'Angle', icon: '📐', score: null, text: 'Enter your breakpoint to grade angle.' });
+    // Speed
+    const sp = C.filter(c => c.speed && c.speed !== 'unknown');
+    const same = sp.filter(c => c.speed === 'same').length;
+    const spCaused = C.filter(c => c.speedCaused).length;
+    out.push({ key: 'Speed', icon: '⚡', score: pct(same, sp.length), text: sp.length ? `Normal speed on ${same} of ${sp.length} tracked shots.${spCaused ? ` ${spCaused} miss${spCaused > 1 ? 'es were' : ' was'} from speed, not the lane.` : ''}` : 'Tap "Speed vs normal" to grade speed.' });
+    // Rev rate & roll: how the ball finished on pocket hits
+    const ph = C.filter(c => c.pocketHit && (c.finish || c.strike));
+    const fin = ph.filter(c => c.strike || c.finish === 'good').length;
+    const weak = ph.filter(c => c.finish === 'weak').length, strong = ph.filter(c => c.finish === 'strong').length;
+    out.push({ key: 'Rev rate & roll', icon: '🌀', score: pct(fin, ph.length), text: ph.length ? `Ball finished well on ${fin} of ${ph.length} pocket hits.${weak ? ` Rolled out / weak ${weak}×.` : ''}${strong ? ` Too strong ${strong}×.` : ''}` : 'Watch the exit and the 6-pin on pocket hits to grade roll.' });
+    const scored = out.filter(x => x.score != null);
+    const weakest = scored.length ? scored.slice().sort((a, b) => a.score - b.score)[0] : null;
+    const DRILL = {
+      Direction: 'Spot drill: 10 shots, same feet and target. Goal: 8 of 10 over your mark.',
+      Angle: 'Angle drill: keep the same target and try 3 different feet positions, 3 shots each. Watch how the entry and the 6-pin change.',
+      Speed: 'Tempo drill: 10 shots at the same speed. Check the lane monitor and stay within ½ mph.',
+      'Rev rate & roll': 'Finish drill: 10 pocket shots. Call the exit (left / straight / right) and the 6-pin out loud before the pins settle.',
+    };
+    return { elements: out, weakest: weakest ? weakest.key : '', drill: weakest ? DRILL[weakest.key] : '' };
+  }
+
   // ---------- main ----------
   function evaluate(ctx) {
     const out = evaluateCore(ctx);
@@ -385,7 +534,7 @@
       const all = ((ctx && ctx.shots) || []).filter(s => s && s.type !== 'gameStart' && !s.isFill);
       const C = all.map(s => classify(s, prof.lefty));
       const W = C.filter(c => c.execution !== 'poor').slice(-5);
-      if (C.length >= 3) sideNotes(out, C, W, prof);
+      if (C.length >= 3) sideNotes(out, C, W, prof, patternProfile(ctx && ctx.pattern));
       out.eyeball = eyeballScore(ctx && ctx.shots, ctx && ctx.bowler);
     } catch (_e) {}
     return out;
@@ -485,19 +634,31 @@
       const a = C[lastChange - 1], b = C[lastChange];
       if (a && b && a.ball !== b.ball) tried.add('Equipment');
       if (a && b && (a.feet !== b.feet || a.arrows !== b.arrows)) tried.add('Aim');
+      if (a && b && a.feet != null && b.feet != null && a.arrows != null && b.arrows != null && Math.abs((b.feet - a.feet) - (b.arrows - a.arrows)) >= 2) tried.add('Angle');
     }
+
+    // Typical angle on the current line (from target / breakpoint / pocket board)
+    const angles = W.map(c => c.angleClass).filter(Boolean);
+    const angleClass = angles.length ? ['steep', 'direct', 'normal'].sort((a, b) => angles.filter(x => x === b).length - angles.filter(x => x === a).length)[0] : '';
+    const recs = W.map(c => c.recovery).filter(v => v != null);
+    const avgRec = recs.length ? Math.round(recs.reduce((a, b) => a + b, 0) / recs.length) : null;
+    res.angleLine = avgRec != null ? `About ${avgRec} boards of recovery from breakpoint to pocket (${angleClass === 'direct' ? 'a direct, low-angle line' : angleClass === 'steep' ? 'a big swing, high-angle line' : 'a normal angle'}).` : '';
 
     const decide = (sit, headline, why) => {
       const ball = suggestBall(sit, ctx, prof);
       const step = (tried.has('Aim') && lastChange >= 0) ? 2 : 1;
-      const ranked = rankMoves(sit, prof, pat, !!ball, tried);
+      const ranked = rankMoves(sit, prof, pat, !!ball, tried, angleClass);
       const first = ranked[0], second = ranked[1];
-      const firstText = first ? moveText(first.kind, sit, prof, pat, ball, step) : '';
-      const secondText = second ? moveText(second.kind, sit, prof, pat, ball, step) : '';
+      const firstText = first ? moveText(first.kind, sit, prof, pat, ball, step, angleClass) : '';
+      const secondText = second ? moveText(second.kind, sit, prof, pat, ball, step, angleClass) : '';
       res.status = 'move'; res.tone = 'move';
+      res.element = first ? ELEMENT[first.kind] : '';
       res.headline = `${headline} ${firstText}`;
-      res.why = why + (first ? (first.kind === 'Equipment' ? ' (Ball change: picked from tonight\'s bag.)' : ` (${first.kind}: you rated yourself ${first.rating}/5.)`) : '');
-      res.next = secondText ? `If 2 more good shots say the same thing, next: ${secondText}` : '';
+      const ratingNote = !first ? '' : first.kind === 'Equipment' ? ' (Ball change: picked from tonight\'s bag.)'
+        : first.kind === 'Angle' ? ` (Angle: ${res.angleLine.replace(/^About /, 'about ').replace(/\.$/, '')}. Aim rated ${first.rating}/5.)`
+        : ` (${first.kind}: you rated yourself ${first.rating}/5.)`;
+      res.why = why + ratingNote;
+      res.next = secondText ? `If 2 more good shots say the same thing, next: ${ELEMENT[second.kind]}: ${secondText}` : '';
       if (!ball && (ctx.setBalls || []).length >= 2 && ['late', 'carryWeak', 'early', 'overunder', 'carryStrong'].includes(sit)) {
         res.notes.push(`Nothing else in tonight's bag gives ${NEED[sit].say} compared with ${ctx.currentBall || 'your current ball'}, so stick with line and speed moves.`);
       }
@@ -508,8 +669,19 @@
     };
 
     // ---- 1. Poor shot: don't move ----
+    if (last.execution === 'poor' && last.speedCaused) {
+      res.status = 'repeat'; res.tone = 'warn'; res.element = '⚡ Speed';
+      res.headline = last.speed === 'faster'
+        ? 'That one was faster than normal and went long. That\'s speed, not the lane. Don\'t move, just match your normal tempo.'
+        : 'That one was slower than normal and hooked early. That\'s speed, not the lane. Don\'t move, just match your normal tempo.';
+      const drift = C.slice(-5).filter(c => c.speed === last.speed).length;
+      res.why = drift >= 3 ? `${drift} of your last 5 shots were ${last.speed} than normal. Your tempo is drifting.` : 'Coach is leaving this shot out of the lane read.';
+      res.next = 'Same feet, same target, normal tempo on the next one.';
+      if (moveVerdict) res.notes.push(moveVerdict);
+      return res;
+    }
     if (last.execution === 'poor') {
-      res.status = 'repeat'; res.tone = 'warn';
+      res.status = 'repeat'; res.tone = 'warn'; res.element = '🎯 Direction';
       res.headline = 'That was an execution miss. Don\'t move. Repeat your shot.';
       res.why = last.missSide ? `You missed ${last.missSide} and the lane didn't save it. That tells us about the throw, not the lane.` : 'You marked it as a poor shot, so Coach is ignoring it for the lane read.';
       const poorRun = C.slice(-3).filter(c => c.execution === 'poor').length;
@@ -529,7 +701,7 @@
 
     // ---- 2. Utopia: room both ways ----
     if (outsideSaved && insideSaved) {
-      res.status = 'utopia'; res.tone = 'good';
+      res.status = 'utopia'; res.tone = 'good'; res.element = '🎯 Direction';
       res.headline = 'Wide window both ways. Stay right where you are.';
       res.why = `You missed outside and it recovered${outsideSaved.strike ? ' for a strike' : ' to the pocket'}, and missed inside and it held${insideSaved.strike ? ' for a strike' : ' in the pocket'}. That's the best look you can have.`;
       res.next = 'Don\'t change a thing until a good shot misses the pocket.';
@@ -541,7 +713,7 @@
     const s3 = W.slice(-3);
     const clean = (c) => c.strike && c.hit !== 'brooklyn'; // a Brooklyn strike is a high miss, not a reason to stay
     if (cnt(s3, clean) >= 2 || cnt(W, clean) >= 3) {
-      res.status = 'stay'; res.tone = 'good';
+      res.status = 'stay'; res.tone = 'good'; res.element = '';
       res.headline = 'You\'re striking. Stay put.';
       res.why = `${cnt(W, clean)} pocket strikes in your last ${W.length} good shots on this line.`;
       const bk = W.slice(-3).filter(c => c.hit === 'brooklyn').length;
@@ -616,5 +788,5 @@
     return res;
   }
 
-  root.BTCoach = { evaluate, eyeballScore, _internals: { classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
+  root.BTCoach = { evaluate, eyeballScore, elementsProfile, elementsReport, _internals: { classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
 })(typeof window !== 'undefined' ? window : globalThis);

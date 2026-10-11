@@ -49,6 +49,14 @@ npm start
 ```
 Then open http://localhost:3000
 
+## Changes in v71-beta8 — The Five Elements
+- Every Coach suggestion is tagged with its element: 🎯 Direction, 📐 Angle, ⚡ Speed, 🌀 Rev rate & roll, 🎳 Equipment.
+- **Angle** is now part of Coach: target → breakpoint → pocket recovery. Weak on a direct line → open the angle; too strong on a big swing → tighten it.
+- **Speed vs normal** is used: faster + long (or slower + early) is the bowler, not the lane, so no move.
+- **Carrydown** tap, **lane-by-lane** differences, **game-to-game transition** and **breakpoint drift** now feed Coach notes.
+- Five Elements profile card on the Bowler page; Five Elements night report (grades + one drill) at Save Session and on Scores.
+- Fixed: an empty pocket-board field was read as board 0 (skewed angle and the geometry table).
+
 ## Changes in v70-beta7 — "Best ball is your eyeball"
 - Coach now uses **ball exit off the deck** (righty: exit right = weak/deflecting, exit left = too strong; lefty mirrored).
 - **6-pin pop-up** (4-pin for lefties): pocket hit + single 10-pin (7 for lefties) asks what the key pin did (laid down weak / hit kickback and missed / wrapped). Flat 10 / Ringing 10 taps fill it in automatically.

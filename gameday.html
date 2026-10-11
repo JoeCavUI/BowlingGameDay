@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=70" />
+  <link rel="stylesheet" href="styles.css?v=71" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -248,8 +248,8 @@
     </div>
   </div>
 
-  <script src="app.js?v=70"></script>
-  <script src="coach.js?v=70"></script>
+  <script src="app.js?v=71"></script>
+  <script src="coach.js?v=71"></script>
   <script>
     BT.renderNav('gameday');
 
@@ -1008,7 +1008,9 @@ function isStrike(shot) {
     function geometryForShot(s) {
       const arrows = Number(s && s.arrows);
       const bp = Number(s && s.bp);
-      const pocket = Number(s && s.pocketBoard);
+      const pbRaw = s && s.pocketBoard;
+      const leftyHere = (typeof isLeftyBowler === 'function') && isLeftyBowler();
+      const pocket = (pbRaw === null || pbRaw === undefined || pbRaw === '') ? ((leftyHere && arrows > 20) ? 22.5 : 17.5) : Number(pbRaw); // empty = standard pocket
       if (!Number.isFinite(arrows) || !Number.isFinite(bp) || !Number.isFinite(pocket)) return null;
       const outward = Math.abs(arrows - bp);
       const recovery = Math.abs(pocket - bp);
@@ -1661,10 +1663,11 @@ function saveCurrentSessionDraft() {
       const ballBtn = r.ballSuggestion ? `<button class="btn secondary" id="coachUseBall" style="margin-top:8px">Switch to ${escapeHtml(r.ballSuggestion)}</button>` : '';
       const eb = r.eyeball && r.eyeball.n ? r.eyeball : null;
       const eyeLine = eb ? `<div class="small" style="margin-top:8px;opacity:1">👁️ <b>Eyeball score tonight: ${eb.score}</b> (${escapeHtml(eb.label)})</div>` : '';
-      const details = [r.profileLine && `<b>You:</b> ${escapeHtml(r.profileLine)}`, r.patternLine && `<b>Pattern:</b> ${escapeHtml(r.patternLine)}`, r.read && `<b>Lane read this game:</b> ${escapeHtml(r.read)}`]
+      const details = [r.profileLine && `<b>You:</b> ${escapeHtml(r.profileLine)}`, r.patternLine && `<b>Pattern:</b> ${escapeHtml(r.patternLine)}`, r.read && `<b>Lane read this game:</b> ${escapeHtml(r.read)}`, r.angleLine && `<b>📐 Angle:</b> ${escapeHtml(r.angleLine)}`]
         .filter(Boolean).map(x => `<div class="small" style="margin-top:4px">${x}</div>`).join('');
       el.coachText.innerHTML = `
         <div style="border-left:4px solid ${border};background:${color};border-radius:0 12px 12px 0;padding:10px 12px">
+          ${r.element ? `<div class="small" style="opacity:1;font-weight:800;letter-spacing:.3px;margin-bottom:4px">${escapeHtml(r.element)}</div>` : ''}
           <div style="font-size:16px;font-weight:800;line-height:1.35;color:var(--text)">${icon} ${escapeHtml(r.headline)}</div>
           ${r.why ? `<div class="small" style="margin-top:6px;opacity:1">${escapeHtml(r.why)}</div>` : ''}
           ${r.next ? `<div class="small" style="margin-top:6px"><b>Next:</b> ${escapeHtml(r.next)}</div>` : ''}
@@ -1953,6 +1956,9 @@ function sessionSummary(shots) {
       let eyeball = null;
       try { if (window.BTCoach) eyeball = BTCoach.eyeballScore(sessionShots.slice().reverse(), BT.lsGet(BT.KEYS.BOWLER, {}) || {}); } catch (_e) {}
       if (eyeball) sum.eyeball = eyeball;
+      let elements = null;
+      try { if (window.BTCoach) elements = BTCoach.elementsReport(sessionShots.slice().reverse(), BT.lsGet(BT.KEYS.BOWLER, {}) || {}); } catch (_e) {}
+      if (elements) sum.elements = elements;
       const audit = await arsenalAudit(meta, sessionShots);
 
       const payload = {
@@ -1974,7 +1980,8 @@ function sessionSummary(shots) {
         const bits = [`Mark tracked ${p.mark ?? '—'}%`, `Pocket ${p.pocket ?? '—'}%`];
         if (p.exit != null) bits.push(`Exit watched ${p.exit}% of pocket hits`);
         if (p.keyPin != null) bits.push(`Key pin seen ${p.keyPin}%`);
-        alert(`Saved to Scores.\n\n👁️ Eyeball score: ${eyeball.score} (${eyeball.label})\n${bits.join(' • ')}\n\nBest ball is your eyeball.`);
+        const el5 = elements ? '\n\nFIVE ELEMENTS\n' + elements.elements.map(e => `${e.icon} ${e.key}${e.score != null ? ' ' + e.score + '%' : ''}: ${e.text}`).join('\n') + (elements.drill ? `\n\nWork on ${elements.weakest}: ${elements.drill}` : '') : '';
+        alert(`Saved to Scores.\n\n👁️ Eyeball score: ${eyeball.score} (${eyeball.label})\n${bits.join(' • ')}${el5}\n\nBest ball is your eyeball.`);
       } else {
         alert('Saved to Scores.');
       }

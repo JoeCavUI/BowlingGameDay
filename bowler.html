@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Bowler</title>
-  <link rel="stylesheet" href="styles.css?v=70" />
+  <link rel="stylesheet" href="styles.css?v=71" />
 </head>
 <body data-page="bowler">
   <div class="navlinks"></div>
@@ -70,6 +70,12 @@
           <label>Axis rotation (deg)</label>
           <input class="input" id="rotation" type="number" step="1" placeholder="e.g., 55" />
         </div>
+      </div>
+
+      <div class="panel" style="margin-top:16px;padding:14px">
+        <h2 style="margin:0 0 4px 0">The Five Elements: your profile</h2>
+        <div class="small">Direction, angle, speed, rev rate and roll. Every Coach suggestion is a change to one of these. Updates when you save.</div>
+        <div id="fiveElements" style="display:grid;gap:8px;margin-top:10px"></div>
       </div>
 
       <div class="panel" style="margin-top:16px;padding:14px;background:#0f172a;border:1px solid #243041">
@@ -163,7 +169,8 @@
     </div>
   </div>
 
-  <script src="app.js?v=70"></script>
+  <script src="app.js?v=71"></script>
+  <script src="coach.js?v=71"></script>
   <script>
     BT.renderNav('bowler');
 
@@ -381,7 +388,21 @@
       els.progressSummary.textContent = `${series.length} session(s) • ${metric} • ${trend}`;
     }
 
+    function renderFiveElements() {
+      const box = BT.$('#fiveElements');
+      if (!box || !window.BTCoach) return;
+      const esc = (t) => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      const list = BTCoach.elementsProfile(BT.lsGet(BT.KEYS.BOWLER, {}) || {});
+      box.innerHTML = list.map(e => `
+        <div class="list-item" style="border:1px solid rgba(255,255,255,0.10);border-radius:12px">
+          <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>${e.icon} ${esc(e.key)}</b><span class="small" style="opacity:1">${esc(e.value)}</span></div>
+          <div class="small" style="margin-top:4px">${esc(e.meaning)}</div>
+          <div class="small" style="margin-top:4px;opacity:1;color:var(--accent)">${esc(e.tip)}</div>
+        </div>`).join('');
+    }
+
     BT.$('#save').addEventListener('click', save);
+    BT.$('#save').addEventListener('click', renderFiveElements);
     BT.$('#reset').addEventListener('click', () => {
       if (!confirm('Clear saved bowler profile on this device?')) return;
       localStorage.removeItem(BT.KEYS.BOWLER);
@@ -395,6 +416,7 @@
 
     load();
     renderProgressChart();
+    renderFiveElements();
   </script>
 </body>
 </html>

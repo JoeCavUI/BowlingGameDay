@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Guide</title>
-  <link rel="stylesheet" href="styles.css?v=70" />
+  <link rel="stylesheet" href="styles.css?v=71" />
   <style>
     .guide { max-width: 760px; margin: 0 auto; line-height: 1.55; font-size: 16px; }
     .guide h2 { margin: 0 0 6px; font-size: 21px; }
@@ -59,6 +59,7 @@
           <a href="#gameday"><span>6</span>Game Day setup</a>
           <a href="#shot"><span>7</span>Logging each shot</a>
           <a href="#coach"><span>8</span>How Coach works</a>
+          <a href="#elements"><span>🎳</span>The Five Elements</a>
           <a href="#end"><span>9</span>Between games + saving</a>
           <a href="#scores"><span>10</span>Scores + history</a>
           <a href="#backup"><span>11</span>Backing up</a>
@@ -228,6 +229,24 @@
         <a class="top" href="#top">↑ Back to top</a>
       </section>
 
+      <section class="panel" id="elements">
+        <h2>🎳 The Five Elements of scoring</h2>
+        <p>Every shot is made of five things: <b>direction, angle, speed, rev rate and roll</b>. Every Coach suggestion is labeled with the element it changes, so you learn to think in elements.</p>
+        <div class="reads">
+          <div class="read"><div class="read-name">🎯 Direction</div><div>Where you stand, aim and send the ball. "Feet 2 left, eyes 1 left" is a direction move. Graded by how often you hit your mark.</div></div>
+          <div class="read"><div class="read-name">📐 Angle</div><div>How far the ball comes back from the <b>breakpoint</b> to the pocket. Coach measures it from your target, breakpoint and pocket board. Weak hits on a <b>direct</b> line → <b>open your angle</b> (feet move, eyes stay). Too strong on a <b>big swing</b> → <b>tighten your angle</b> (eyes move more than feet). Enter your breakpoint so Coach can see angle.</div></div>
+          <div class="read"><div class="read-name">⚡ Speed</div><div>Faster = longer and later; slower = earlier. Tap <b>Speed vs normal</b>: a faster shot that went long is <b>you, not the lane</b>, so Coach won't move you off it.</div></div>
+          <div class="read"><div class="read-name">🔄 Rev rate</div><div>From your Bowler page. Shapes how every ball in your bag rolls for you, and whether you're speed- or rev-dominant.</div></div>
+          <div class="read"><div class="read-name">🌀 Roll</div><div>Your tilt and rotation, and how the ball goes through skid → hook → roll. You see it in the <b>exit off the deck</b> and the <b>6-pin</b>: a weak exit means the ball rolled out early; driving through too hard means it was still turning hard.</div></div>
+        </div>
+        <ul>
+          <li><b>Bowler page:</b> the <i>Five Elements: your profile</i> card explains each element for <i>you</i> in plain words.</li>
+          <li><b>End of the night:</b> Save Session (and Scores) shows a grade for each element and <b>one drill</b> for your weakest.</li>
+          <li><b>Coach also watches:</b> lane-by-lane differences ("lane 24 is hooking, 23 isn't"), the lane changing from game to game, and your breakpoint drifting.</li>
+        </ul>
+        <a class="top" href="#top">↑ Back to top</a>
+      </section>
+
       <!-- 9 -->
       <section class="panel" id="end">
         <h2><span class="stepnum">9</span>Between games and saving the night</h2>
@@ -297,7 +316,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=70"></script>
+  <script src="app.js?v=71"></script>
   <script>
     BT.renderNav('guide');
     BT.$('#ver').textContent = 'Bowling Tool ' + BT.APP_VERSION;
