@@ -49,6 +49,10 @@ npm start
 ```
 Then open http://localhost:3000
 
+## Changes in v68-beta5
+- Game Day: oil pattern list now refreshes when you come back to the page, keeps your selection, shows a clear "no patterns yet" message, and has a quick **Add** button.
+- Guide: troubleshooting for missing patterns/houses (Home Screen app vs Safari keep separate data).
+
 ## Changes in v67-beta4
 - Arsenal → Role Planner: pick a bag size (2/3/4/6/9), Coach suggests the bag, then "Use this bag on Game Day?" lets you uncheck balls, name it, and save (or save & jump to Game Day). Option to plan only from balls you added.
 - Game Day pre-selects the bag saved from Arsenal and remembers the last bag you used.

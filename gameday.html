@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=67" />
+  <link rel="stylesheet" href="styles.css?v=68" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -64,9 +64,12 @@
             </div>
             <div>
               <label>Oil Pattern</label>
-              <select id="pattern" class="input"></select>
+              <div style="display:flex;gap:8px;align-items:center">
+                <select id="pattern" class="input" style="flex:1"></select>
+                <button class="btn secondary" id="addPatternBtn" type="button">Add</button>
+              </div>
               <div class="small" id="patternSummary" style="margin-top:6px"></div>
-              <div class="small" style="margin-top:6px">Pulled from Oil → Patterns.</div>
+              <div class="small" id="patternHint" style="margin-top:6px">Pulled from Oil → Patterns.</div>
             </div>
             <div>
               <label>Arsenal set</label>
@@ -231,7 +234,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=67"></script>
+  <script src="app.js?v=68"></script>
   <script>
     BT.renderNav('gameday');
 
@@ -574,8 +577,10 @@ function selectedPills(container) {
 
     function renderHouses() {
       const houses = BT.lsGet(BT.KEYS.HOUSES, []);
+      const keep = el.house.value;
       const opts = ['— Select house (optional for now) —', ...houses];
-      el.house.innerHTML = opts.map((h, idx) => `<option value="${idx===0?'':h}">${h}</option>`).join('');
+      el.house.innerHTML = opts.map((h, idx) => `<option value="${idx===0?'':escapeHtml(h)}">${escapeHtml(h)}</option>`).join('');
+      if (keep && houses.includes(keep)) el.house.value = keep;
     }
 
 
@@ -660,16 +665,28 @@ function selectedPills(container) {
       const audit = last.arsenalAudit?.headline ? `Note: ${last.arsenalAudit.headline}` : '';
       box.textContent = [bestLine, lastLine, audit].filter(Boolean).join(' ');
     }
+    function patternName(p) {
+      if (typeof p === 'string') return p.trim();
+      return String((p && (p.name || p.patternName || p.title)) || '').trim();
+    }
     function renderPatterns() {
-      const patterns = BT.lsGet(BT.KEYS.OIL_PATTERNS, []);
-      el.pattern.innerHTML = ['— Select oil pattern —', ...patterns.map(p => p.name)].map((n,i) => `<option value="${i===0?'':n}">${n}</option>`).join('');
+      const raw = BT.lsGet(BT.KEYS.OIL_PATTERNS, []);
+      const names = (Array.isArray(raw) ? raw : []).map(patternName).filter(Boolean);
+      const keep = el.pattern.value;
+      el.pattern.innerHTML = [names.length ? '— Select oil pattern —' : '— No patterns saved yet —', ...names]
+        .map((n,i) => `<option value="${i===0?'':escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+      if (keep && names.includes(keep)) el.pattern.value = keep;
+      const hint = BT.$('#patternHint');
+      if (hint) hint.innerHTML = names.length
+        ? 'Pulled from Oil → Patterns.'
+        : 'No patterns on this device yet. Tap <b>Add</b>, or save one on <a href="oil.html" style="color:var(--accent)">Oil</a>.';
       updatePatternSummary();
     }
 
     function updatePatternSummary() {
       const name = el.pattern.value;
       if (!name) { el.patternSummary.textContent = ''; return; }
-      const p = BT.lsGet(BT.KEYS.OIL_PATTERNS, []).find(x => x.name === name);
+      const p = (BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || []).find(x => patternName(x) === name);
       if (!p) { el.patternSummary.textContent = ''; return; }
       el.patternSummary.textContent = `${p.center || ''} • ${p.length || '?'}ft • ${p.volume || '?'}mL • ${p.ratio || '?'}${p.notes ? ' • ' + p.notes : ''}`;
     }
@@ -1967,6 +1984,27 @@ function sessionSummary(shots) {
       updateFrameUI();
       autoCoach();
     }
+
+    // Quick-add a pattern without leaving Game Day.
+    BT.$('#addPatternBtn').addEventListener('click', () => {
+      const name = (prompt('Oil pattern name (e.g., House Shot):') || '').trim();
+      if (!name) return;
+      const list = BT.lsGet(BT.KEYS.OIL_PATTERNS, []);
+      const arr = Array.isArray(list) ? list : [];
+      if (!arr.some(p => patternName(p).toLowerCase() === name.toLowerCase())) {
+        arr.unshift({ id: `pat_${Math.random().toString(36).slice(2,10)}`, name, center: el.house.value || '', length: null, volume: null, ratio: '', notes: '', savedAt: Date.now() });
+        BT.lsSet(BT.KEYS.OIL_PATTERNS, arr);
+      }
+      renderPatterns();
+      el.pattern.value = name;
+      updatePatternSummary(); updatePrep();
+    });
+
+    // Re-read houses, patterns and bags when coming back to this page
+    // (e.g. after adding a pattern on Oil and swiping back).
+    function refreshLists() { renderHouses(); renderPatterns(); renderLeagues(); renderSetupBanner(); }
+    window.addEventListener('pageshow', (e) => { if (e.persisted) refreshLists(); });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshLists(); });
 
     // Houses are managed on the Oil page.
 
