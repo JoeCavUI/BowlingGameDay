@@ -49,6 +49,10 @@ npm start
 ```
 Then open http://localhost:3000
 
+## Changes in v74-beta11 — Testing tools
+- Home → **Check for update**: clears cached files, fetches the newest version, reloads, and confirms the version.
+- Home → **Test mode**: separate sandbox (copy of my setup, or empty). Real data is set aside and restored exactly on exit; orange TEST MODE bar on every page; reset test data anytime. Backups made in Test mode are named "TEST".
+
 ## Changes in v73-beta10 — Energy & the Mud
 - Rule of 31 corrected: it estimates the **exit point** off the end of the pattern (e.g., 42 ft ≈ board 11), not the breakpoint.
 - 🏈 **Mud**: over/under with the breakpoint at or inside the exit point = changing direction in the mud. Coach gets the ball to turn in clean friction (further out / smoother ball). Heads-up note when the breakpoint drifts inside the exit board.

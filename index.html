@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Bowling Tool</title>
-  <link rel="stylesheet" href="styles.css?v=73" />
+  <link rel="stylesheet" href="styles.css?v=74" />
 </head>
 <body data-page="home">
   <div class="navlinks"></div>
@@ -54,6 +54,14 @@
       </div>
     </div>
 
+    <div class="panel" id="testTools" style="margin-top:14px">
+      <h2>🛠️ Testing tools</h2>
+      <div class="small" id="updateStatus">You're on <b id="verNow"></b>.</div>
+      <div class="btn-row"><button class="btn secondary" id="updateBtn">Check for update</button></div>
+      <div class="hr-split" style="margin:12px 0"></div>
+      <div id="testModeBox"></div>
+    </div>
+
     <div class="grid-2" style="margin-top:14px">
       <div class="panel">
         <h2>Game Day</h2>
@@ -93,7 +101,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=73"></script>
+  <script src="app.js?v=74"></script>
   <script>
     BT.renderNav('home');
     BT.$('#buildTag').textContent = 'Beta ' + BT.APP_VERSION;
@@ -160,6 +168,51 @@
 
     renderChecklist();
     renderBackupStatus();
+
+    // ---- Testing tools ----
+    BT.$('#verNow').textContent = BT.APP_VERSION;
+    try {
+      const prev = sessionStorage.getItem('bt_prev_version');
+      if (prev) {
+        sessionStorage.removeItem('bt_prev_version');
+        BT.$('#updateStatus').innerHTML = prev !== BT.APP_VERSION
+          ? `✅ Updated from ${prev} to <b>${BT.APP_VERSION}</b>.`
+          : `✅ You're on the latest version (<b>${BT.APP_VERSION}</b>).`;
+      }
+    } catch (_e) {}
+    BT.$('#updateBtn').addEventListener('click', () => { BT.$('#updateBtn').textContent = 'Checking…'; BT.checkForUpdate(); });
+
+    function renderTestMode() {
+      const box = BT.$('#testModeBox');
+      if (BT.isTestMode()) {
+        box.innerHTML = `
+          <div class="setup-banner" style="border-color:#ffc400;background:rgba(255,196,0,0.10)"><b>🧪 Test mode is ON.</b> Anything you log now is test data. Your real data is set aside, untouched.</div>
+          <div class="btn-row">
+            <button class="btn" id="tmExit">Exit Test mode (back to my data)</button>
+            <button class="btn secondary" id="tmResetCopy">Reset to a fresh copy of my setup</button>
+            <button class="btn danger" id="tmResetEmpty">Reset to empty</button>
+          </div>`;
+        BT.$('#tmExit').onclick = () => { BT.exitTestMode(); location.reload(); };
+        BT.$('#tmResetCopy').onclick = () => { if (confirm('Wipe the test data and start again from a copy of your real setup (bowler, balls, bags, houses, patterns, no history)?')) { BT.resetTestData('copy'); location.reload(); } };
+        BT.$('#tmResetEmpty').onclick = () => { if (confirm('Wipe all test data and start from empty?')) { BT.resetTestData('empty'); location.reload(); } };
+      } else {
+        const resume = BT.hasTestData();
+        box.innerHTML = `
+          <div class="small"><b>Test mode</b>: a separate sandbox for trying things out. Your real bowler profile, balls, bags and league history are set aside and come back exactly as they were when you exit.</div>
+          <div class="btn-row">
+            ${resume ? '<button class="btn" id="tmResume">Resume Test mode</button>' : ''}
+            <button class="btn ${resume ? 'secondary' : ''}" id="tmCopy">Test with a copy of my setup</button>
+            <button class="btn secondary" id="tmEmpty">Test from empty</button>
+          </div>
+          <div class="small" style="margin-top:6px">"Copy of my setup" = your bowler page, balls, bags, houses and patterns, but no saved sessions.</div>`;
+        const go = (how) => { try { BT.enterTestMode(how); location.reload(); } catch (e) { alert(e.message || 'Could not start Test mode.'); } };
+        if (resume) BT.$('#tmResume').onclick = () => go('resume');
+        BT.$('#tmCopy').onclick = () => { if (!resume || confirm('Replace your previous test data with a fresh copy of your setup?')) go('copy'); };
+        BT.$('#tmEmpty').onclick = () => { if (!resume || confirm('Replace your previous test data with an empty sandbox?')) go('empty'); };
+      }
+    }
+    renderTestMode();
+    if (location.hash === '#testTools') setTimeout(() => BT.$('#testTools').scrollIntoView({ block: 'start' }), 50);
   </script>
 </body>
 </html>

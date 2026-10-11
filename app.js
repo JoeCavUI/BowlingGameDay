@@ -6,7 +6,7 @@
 
 (function () {
   // Bump this string each build so pages can display it and cache-bust resources.
-  const APP_VERSION = 'v73-beta10';
+  const APP_VERSION = 'v74-beta11';
   const KEYS = {
     CSV_CACHE: 'bt_csv_cache_v1',          // stringified { savedAt, name, rows }
     BOWLER: 'bt_bowler_v1',               // stringified object
@@ -1191,8 +1191,81 @@
     return shape >= 0.55 ? 'SHARP' : 'SMOOTH';
   }
 
+  // --- Test mode: a separate sandbox; real data is set aside untouched and restored on exit ---
+  const MODE_KEY = 'btmeta_mode';           // not a bt_ key, so it's never swapped or backed up
+  const REAL = 'btreal::', TEST = 'bttest::';
+  const SETUP_ONLY_SKIP = ['bt_game_sessions_v1', 'bt_current_session_v1', 'bt_last_backup_v1'];
+  function liveKeys() {
+    const out = [];
+    for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('bt_')) out.push(k); }
+    return out;
+  }
+  function prefixedKeys(p) {
+    const out = [];
+    for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith(p)) out.push(k); }
+    return out;
+  }
+  function isTestMode() { return localStorage.getItem(MODE_KEY) === 'test'; }
+  function hasTestData() { return prefixedKeys(TEST).length > 0; }
+
+  // how: 'resume' (previous test data), 'copy' (copy of my setup, no history), 'empty'
+  function enterTestMode(how) {
+    if (isTestMode()) return true;
+    const live = liveKeys();
+    // 1) Set the real data aside FIRST (copy), verify, then change anything.
+    live.forEach(k => localStorage.setItem(REAL + k, localStorage.getItem(k)));
+    if (prefixedKeys(REAL).length !== live.length) { prefixedKeys(REAL).forEach(k => localStorage.removeItem(k)); throw new Error('Could not set your data aside safely, so nothing was changed.'); }
+    // 2) Build the sandbox
+    if (how === 'resume' && hasTestData()) {
+      live.forEach(k => localStorage.removeItem(k));
+      prefixedKeys(TEST).forEach(k => { localStorage.setItem(k.slice(TEST.length), localStorage.getItem(k)); localStorage.removeItem(k); });
+    } else if (how === 'copy') {
+      SETUP_ONLY_SKIP.forEach(k => localStorage.removeItem(k));
+      prefixedKeys(TEST).forEach(k => localStorage.removeItem(k));
+    } else {
+      live.forEach(k => localStorage.removeItem(k));
+      prefixedKeys(TEST).forEach(k => localStorage.removeItem(k));
+    }
+    localStorage.setItem(MODE_KEY, 'test');
+    return true;
+  }
+  function exitTestMode() {
+    if (!isTestMode()) return true;
+    const real = prefixedKeys(REAL);
+    // Keep the test sandbox for next time
+    prefixedKeys(TEST).forEach(k => localStorage.removeItem(k));
+    liveKeys().forEach(k => { localStorage.setItem(TEST + k, localStorage.getItem(k)); localStorage.removeItem(k); });
+    // Bring the real data back
+    real.forEach(k => { localStorage.setItem(k.slice(REAL.length), localStorage.getItem(k)); localStorage.removeItem(k); });
+    localStorage.setItem(MODE_KEY, 'real');
+    return true;
+  }
+  function resetTestData(how) {
+    if (!isTestMode()) return false;
+    liveKeys().forEach(k => localStorage.removeItem(k));
+    if (how === 'copy') prefixedKeys(REAL).forEach(k => { const live = k.slice(REAL.length); if (!SETUP_ONLY_SKIP.includes(live)) localStorage.setItem(live, localStorage.getItem(k)); });
+    return true;
+  }
+
+  // --- Check for update: drop cached files, ask the service worker for the newest version, reload ---
+  async function checkForUpdate() {
+    try { sessionStorage.setItem('bt_prev_version', APP_VERSION); } catch (_e) {}
+    try {
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg) { await reg.update().catch(() => {}); if (reg.waiting) reg.waiting.postMessage && reg.waiting.postMessage('skipWaiting'); }
+      }
+      if (window.caches) { const keys = await caches.keys(); await Promise.all(keys.map(k => caches.delete(k))); }
+    } catch (_e) {}
+    const u = new URL(location.href); u.searchParams.set('u', Date.now()); u.hash = '';
+    location.replace(u.toString());
+  }
+
   // --- Navbar injection ---
   function renderNav(active) {
+    if (isTestMode() && !document.getElementById('btTestBanner')) {
+      document.body.insertAdjacentHTML('afterbegin', `<div id="btTestBanner" style="position:relative;z-index:30;background:#7a4b00;color:#fff;font-weight:800;font-size:14px;padding:calc(6px + env(safe-area-inset-top)) 14px 6px;display:flex;justify-content:space-between;gap:10px;align-items:center">🧪 TEST MODE: not your real data <a href="index.html#testTools" style="color:#fff;text-decoration:underline">Exit</a></div>`);
+    }
     const nav = $('.navlinks');
     if (!nav) return;
     const items = [
@@ -1232,7 +1305,7 @@
   async function exportBackup() {
     const backup = buildBackup();
     const stamp = new Date().toISOString().slice(0, 10);
-    const name = `bowling-backup-${stamp}.json`;
+    const name = `bowling-${isTestMode() ? 'TEST-' : ''}backup-${stamp}.json`;
     const json = JSON.stringify(backup, null, 1);
     const blob = new Blob([json], { type: 'application/json' });
     let done = false;
@@ -1360,6 +1433,7 @@
     equipmentScoreFromRows,
     equipmentScoreFromSavedSet,
     renderNav,
+    isTestMode, hasTestData, enterTestMode, exitTestMode, resetTestData, checkForUpdate,
     exportBackup,
     importBackupFile,
     lastBackupAt,

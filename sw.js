@@ -1,10 +1,10 @@
 /* Bowling Tool service worker: lets the app open and run with no signal.
    Strategy: try the network first (so testers get updates), but fall back to
    the cached copy after 3 seconds or when offline. Bump CACHE on each release. */
-const CACHE = 'bowling-tool-v73-beta10';
+const CACHE = 'bowling-tool-v74-beta11';
 const SHELL = [
   './', 'index.html', 'bowler.html', 'arsenal.html', 'analyze.html', 'lane.html',
-  'oil.html', 'gameday.html', 'scores.html', 'guide.html', 'styles.css?v=73', 'app.js?v=73', 'coach.js?v=73',
+  'oil.html', 'gameday.html', 'scores.html', 'guide.html', 'styles.css?v=74', 'app.js?v=74', 'coach.js?v=74',
   'databalls.csv', 'manifest.webmanifest',
   'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png'
 ];
@@ -12,6 +12,8 @@ const SHELL = [
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
+
+self.addEventListener('message', (e) => { if (e.data === 'skipWaiting') self.skipWaiting(); });
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(
