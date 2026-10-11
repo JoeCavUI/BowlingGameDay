@@ -280,7 +280,7 @@
     return '';
   }
 
-  function rankMoves(sit, prof, pat, hasBall, tried, angleClass) {
+  function rankMoves(sit, prof, pat, hasBall, tried, angleClass, favor) {
     const base = Object.assign({}, BASE[sit] || BASE.early);
     // Angle only enters the menu when the line's geometry says it's the issue.
     const want = angleWant(sit, angleClass);
@@ -311,6 +311,9 @@
         if (pat.lengthClass === 'long' && pat.volumeClass === 'heavy' && sit === 'late' && kind === 'Equipment') score += 1;
         if (pat.volumeClass === 'light' && sit === 'early' && kind === 'Aim') score += 1;
       }
+      // 🧭 Compass: the ball is wrong -> change the ball; the ball is right -> move your feet, keep the ball.
+      if (favor === 'ball' && kind === 'Equipment') score += 5;
+      if (favor === 'spot') { if (kind === 'Equipment') score -= 9; if (kind === 'Aim' || kind === 'Angle') score += 1; }
       // Already tried this kind for this problem -> push it down
       if (tried && tried.has(kind)) score -= 6;
       out.push({ kind, score, rating });
@@ -366,6 +369,10 @@
         // must actually move in the needed direction
         const dir = (need.hook * (v.hook - cv.hook)) + (need.length * (v.length - cv.length)) + (need.backend * (v.backend - cv.backend));
         if (dir <= 0) continue;
+        // 🧭 Friction timing: the new ball has to read in the direction the lane is asking for.
+        const lt = LANE_TIMING[sit];
+        if (lt === 'early' && v.length <= cv.length + 0.02) continue; // reading too early -> need one that reads later
+        if (lt === 'late' && v.length >= cv.length - 0.02) continue;  // reading too late -> need one that reads earlier
         const fit = coverFit(sit, b.row, ctx);
         if (fit >= 0.15) continue;            // clearly the wrong kind of ball for this problem
         const sc = d + fit;
@@ -380,24 +387,74 @@
       const m = ctx.motion;
       const balls = (ctx.setBalls || []).filter(b => b && b.row);
       if (!m || !balls.length) return '';
-      const t = { hook: 0.55, length: 0.55, backend: 0.5 };
+      const t = { hook: 0.55, length: timingNeed(pat), backend: 0.5 };
       if (pat) {
-        if (pat.lengthClass === 'long') { t.hook += 0.10; t.length -= 0.05; }
-        if (pat.lengthClass === 'short') { t.hook -= 0.10; t.length += 0.10; }
+        if (pat.lengthClass === 'long') t.hook += 0.10;
+        if (pat.lengthClass === 'short') t.hook -= 0.10;
         if (pat.volumeClass === 'heavy') t.hook += 0.08;
-        if (pat.volumeClass === 'light') { t.hook -= 0.08; t.length += 0.05; }
+        if (pat.volumeClass === 'light') t.hook -= 0.08;
         if (pat.flat) t.backend -= 0.08;
       }
       if (prof.dom < -0.3) t.hook += 0.05;
       if (prof.lowRev) t.hook += 0.04;
       let best = null;
       for (const b of balls) {
-        const d = dist3(m.vector(b.row, ctx.bowler), t);
+        const v = m.vector(b.row, ctx.bowler);
+        // 🧭 Friction timing first (does it read when tonight's pattern needs it to?), overall motion second.
+        const d = (pat ? Math.abs(v.length - t.length) * 2 : 0) + dist3(v, t) * (pat ? 0.5 : 1);
         if (!best || d < best.d) best = { name: b.name, d };
       }
       return best ? best.name : '';
     } catch (_e) { return ''; }
   }
+
+  // ---------- 🧭 The compass (Benoit + Pinel) ----------
+  // Every call answers two questions:
+  //   Right ball?  Is the friction timing right? (reads early enough to store energy, late enough to keep it for the pins)
+  //   Right spot?  Are feet + target keeping the breakpoint out of the mud (outside the rule-of-31 exit board)?
+  // Ball timing = the motion model's "length" for THIS bowler (speed, revs, tilt, rotation already in it).
+  // 0 = reads very early, 1 = reads very late.
+  const TIMING_OK = 0.08;
+  function timingNeed(pat) {
+    let t = 0.55;
+    if (pat) {
+      if (pat.lengthClass === 'long') t -= 0.07;
+      if (pat.lengthClass === 'short') t += 0.10;
+      if (pat.volumeClass === 'heavy') t -= 0.06;
+      if (pat.volumeClass === 'light') t += 0.06;
+    }
+    return clamp(t, 0.30, 0.85);
+  }
+  function bagTiming(ctx, pat) {
+    try {
+      const m = ctx.motion;
+      if (!m || !pat) return [];
+      const need = timingNeed(pat);
+      return (ctx.setBalls || []).filter(b => b && b.row).map(b => {
+        const t = m.vector(b.row, ctx.bowler).length;
+        const gap = t - need;
+        const rel = Math.abs(gap) <= TIMING_OK ? 'right' : gap < 0 ? 'early' : 'late';
+        const info = ctx.ballInfo ? ctx.ballInfo(b.row) : {};
+        const lowConf = info && info.known === false;
+        return { name: b.name, t, gap, rel, lowConf };
+      });
+    } catch (_e) { return []; }
+  }
+  const REL_WORD = { right: 'reads about right', early: 'reads early', late: 'reads late' };
+  function bagTimingText(list) {
+    const nm = (b) => b.name + (b.lowConf ? ' (rough estimate: specs missing)' : '');
+    const by = (r) => list.filter(b => b.rel === r).sort((a, b) => a.t - b.t);
+    const E = by('early'), R = by('right'), L = by('late');
+    if (L.length === list.length) return `everything in tonight's bag reads late for you (earliest: ${nm(L[0])})`;
+    if (E.length === list.length) return `everything in tonight's bag reads early for you (latest: ${nm(E[E.length - 1])})`;
+    const parts = [];
+    if (R.length) parts.push(`${R.map(nm).join(', ')} ${R.length > 1 ? 'read' : 'reads'} about right`);
+    if (E.length) parts.push(`${E.map(nm).join(', ')} ${E.length > 1 ? 'read' : 'reads'} early`);
+    if (L.length) parts.push(`${L.map(nm).join(', ')} ${L.length > 1 ? 'read' : 'reads'} late`);
+    return parts.join('; ');
+  }
+  // What the lane is saying about timing, per situation.
+  const LANE_TIMING = { early: 'early', carryWeak: 'early', late: 'late', carryStrong: 'late' };
 
   // Notes that ride along with any verdict
   function sideNotes(res, C, W, prof, pat) {
@@ -738,7 +795,7 @@
     const pat = patternProfile(ctx.pattern);
     const all = (ctx.shots || []).filter(s => s && s.type !== 'gameStart' && !s.isFill);
     const C = all.map(s => classify(s, prof.lefty));
-    const res = { status: 'start', tone: 'info', headline: '', why: '', next: '', notes: [], ballSuggestion: '', read: '', profileLine: '', patternLine: '' };
+    const res = { status: 'start', tone: 'info', headline: '', why: '', next: '', notes: [], ballSuggestion: '', read: '', profileLine: '', patternLine: '', compass: null };
 
     // Profile + pattern summary lines
     const pbits = [prof.label];
@@ -762,12 +819,19 @@
       const lines = [];
       if (pat && pat.length) {
         const ex = exitBoardFor(pat);
-        lines.push(`Rule of 31: on ${pat.length} ft, plan to get the ball off the end of the pattern around board ${ex} (the exit point). Your breakpoint will be further downlane and usually a few boards outside that, in the dry. Turning at or inside board ${ex} means changing direction in the mud.`);
+        lines.push(`🧭 Right spot: on ${pat.length} ft the ball should exit the pattern around board ${ex} (rule of 31). Pick feet and target so your breakpoint lands a few boards outside that, in the dry. Turning at or inside board ${ex} means changing direction in the mud.`);
       }
-      if (sb) lines.push(`Best starting ball in your bag for this pattern: ${sb}.`);
+      const bt = bagTiming(ctx, pat);
+      if (bt.length >= 2) {
+        lines.push(`🧭 Right ball: for you on this pattern, ${bagTimingText(bt)}.${sb ? ` Start with ${sb}.` : ''}`);
+        if (bt.every(b => b.rel === 'late')) lines.push('If it skids past the breakpoint, take a touch of speed off or move a little outside toward the friction before you go hunting for a different ball.');
+        if (bt.every(b => b.rel === 'early')) lines.push('If it hooks early, add a touch of speed or move in toward the oil before you go hunting for a different ball.');
+      }
+      else if (sb) lines.push(`🧭 Right ball: start with ${sb}.`);
+      if (!pat) lines.push('🧭 Pick tonight\'s oil pattern so Coach can check whether your ball and your spot fit the lane.');
       if (pat && pat.volumeClass === 'light') lines.push('Light oil: expect the fronts to dry up early. Watch for high hits by game 2.');
       if (pat && pat.volumeClass === 'heavy') lines.push('Heavy oil: the lane should change slowly. Don\'t chase it early.');
-      if (prof.dom < -0.3) lines.push('As a speed-dominant player, the ball may read late. Favor earlier-reading equipment if it skids.');
+      if (prof.dom < -0.3 && bt.length < 2) lines.push('As a speed-dominant player, the ball may read late. Favor earlier-reading equipment if it skids.');
       // Tonight's bag vs tonight's pattern (only when it matters)
       try {
         const bag = (ctx.setBalls || []).filter(b => b && b.row);
@@ -850,11 +914,56 @@
     const avgRec = recs.length ? Math.round(recs.reduce((a, b) => a + b, 0) / recs.length) : null;
     res.angleLine = avgRec != null ? `About ${avgRec} boards of recovery from breakpoint to pocket (${angleClass === 'direct' ? 'a direct, low-angle line' : angleClass === 'steep' ? 'a big swing, high-angle line' : 'a normal angle'}).` : '';
 
+    // 🧭 Compass state for the current line
+    const bag = bagTiming(ctx, pat);
+    const curT = bag.find(b => b.name === ctx.currentBall) || null;
+    const exitB = exitBoardFor(pat);
+    const bpW = W.filter(c => c.bp != null).map(c => c.bp);
+    const avgBpW = bpW.length ? bpW.reduce((a, b) => a + b, 0) / bpW.length : null;
+    const inMud = exitB != null && avgBpW != null && bpW.length >= 2 && avgBpW >= exitB;
+    const spotOkText = (exitB != null && avgBpW != null && !inMud) ? `breakpoint about board ${Math.round(avgBpW)}, outside the exit point (board ${exitB})` : '';
+    const spotAnswer = inMud ? `Careful: your breakpoint (about board ${Math.round(avgBpW)}) is at or inside the exit point (board ${exitB}), in the mud.`
+      : spotOkText ? `Yes (${spotOkText}).` : 'Not sure yet (no pattern or breakpoint).';
+    const setCompass = (ball, spot, call, line) => {
+      const mk = (v) => v === 'ok' ? '✅' : v === 'warn' ? '⚠️' : (v === 'off' || v === 'mud') ? '❌' : '❔';
+      const CALL = { stay: 'Stay', spot: spot === 'mud' ? 'Get out of the mud first' : 'Move your feet, keep the ball', ball: 'Change the ball, keep your spot', repeat: 'Repeat your shot', watch: 'Keep watching', move: 'Make the move below' };
+      const badge = (call === 'repeat') ? '🧭 Execution first → Repeat your shot'
+        : `🧭 Ball ${mk(ball)} · Spot ${mk(spot)}${spot === 'mud' ? ' (mud)' : ''}${CALL[call] ? ' → ' + CALL[call] : ''}`;
+      res.compass = { ball, spot, call, line, badge };
+    };
+
     const decide = (sit, headline, why, lens) => {
       res.lens = lens || '';
       const ball = suggestBall(sit, ctx, prof);
       const step = (tried.has('Aim') && lastChange >= 0) ? 2 : 1;
-      const ranked = rankMoves(sit, prof, pat, !!ball, tried, angleClass);
+      // 🧭 Which question is the answer: right ball or right spot?
+      const laneSays = LANE_TIMING[sit] || '';
+      const ballState = curT ? curT.rel : 'unknown';
+      let favor = '';
+      if (sit === 'mud') favor = 'spot';
+      else if (sit === 'overunder' && ball) favor = 'ball';                 // spot is fine, shape isn't: smoother ball
+      else if (laneSays && ballState === laneSays && ball) favor = 'ball';
+      else if (laneSays && ballState !== 'unknown') favor = 'spot'; // ball fits, ball isn't the cause, or nothing in the bag fixes it
+      const cur = ctx.currentBall || 'your ball';
+      const est = curT && curT.lowConf ? ' (rough estimate: some ball specs are missing)' : '';
+      if (sit === 'mud') {
+        const ballAlso = laneSays && ballState === laneSays;
+        setCompass(ballAlso ? 'warn' : (ballState === 'unknown' ? '?' : 'ok'), 'mud', 'spot',
+          `🧭 Right spot? No: you're turning in the mud. Move first, then judge the ball.${ballAlso ? ` If it's still ${laneSays} after you're out of the mud, ${cur} is the next thing to change.` : ''}`);
+      } else if (favor === 'ball' && sit !== 'overunder') {
+        setCompass('off', inMud ? 'mud' : 'ok', 'ball', `🧭 Right ball? No. The lane says the ball is reading ${laneSays}, and ${cur} reads ${laneSays === 'early' ? 'earlier' : 'later'} than this pattern needs for you${est}. Right spot? ${spotAnswer} Change the ball${inMud ? ', then check your spot' : ', keep your spot'}.`);
+      } else if (favor === 'spot') {
+        const why = { early: 'the lane is hooking early where you\'re playing', late: 'the lane is holding where you\'re playing', carryWeak: 'on this line the ball is using up its energy before the pins', carryStrong: 'on this line the ball is getting to the pins with too much energy' }[sit];
+        const ballQ = ballState === 'right' ? `Right ball? Yes: ${cur} fits this pattern for you${est}.`
+          : ballState === laneSays ? `Right ball? Partly: ${cur} reads ${laneSays} for you${est}, but nothing in tonight's bag fixes that.`
+          : `Right ball? It isn't the cause: ${cur} reads ${ballState} for you${est}, and the lane is making it act ${laneSays}.`;
+        setCompass(ballState === laneSays ? 'warn' : 'ok', 'off', 'spot', `🧭 ${ballQ} Right spot? No: ${why}. Move your feet and target, keep the ball.`);
+      } else if (sit === 'overunder') {
+        setCompass(ball ? 'off' : '?', inMud ? 'mud' : spotOkText ? 'ok' : '?', ball ? 'ball' : 'spot', `🧭 Right spot? ${spotAnswer} ${ball ? `Right ball? No: the shape is the problem. You want something smoother and more predictable.` : 'The shape is the problem, but nothing in tonight\'s bag is smoother, so give yourself more room with a small move.'}`);
+      } else {
+        setCompass('?', '?', laneSays ? 'move' : '', laneSays ? `🧭 The ball is reading ${laneSays}. ${pat ? 'Coach can\'t tell yet if it\'s the ball or the spot.' : 'Pick tonight\'s pattern so Coach can tell if it\'s the ball or the spot.'}` : '');
+      }
+      const ranked = rankMoves(sit, prof, pat, !!ball, tried, angleClass, favor);
       const first = ranked[0], second = ranked[1];
       const firstText = first ? moveText(first.kind, sit, prof, pat, ball, step, angleClass) : '';
       const secondText = second ? moveText(second.kind, sit, prof, pat, ball, step, angleClass) : '';
@@ -884,12 +993,14 @@
       const drift = C.slice(-5).filter(c => c.speed === last.speed).length;
       res.why = drift >= 3 ? `${drift} of your last 5 shots were ${last.speed} than normal. Your tempo is drifting.` : 'Coach is leaving this shot out of the lane read.';
       res.next = 'Same feet, same target, normal tempo on the next one.';
+      setCompass('?', '?', 'repeat', '🧭 Execution first: a shot you didn\'t throw well can\'t tell you if it\'s the ball or the spot.');
       if (moveVerdict) res.notes.push(moveVerdict);
       return res;
     }
     if (last.execution === 'poor') {
       res.status = 'repeat'; res.tone = 'warn'; res.element = '🎯 Direction';
       res.headline = 'That was an execution miss. Don\'t move. Repeat your shot.';
+      setCompass('?', '?', 'repeat', '🧭 Execution first: a shot you didn\'t throw well can\'t tell you if it\'s the ball or the spot.');
       res.why = last.missSide ? `You missed ${last.missSide} and the lane didn't save it. That tells us about the throw, not the lane.` : 'You marked it as a poor shot, so Coach is ignoring it for the lane read.';
       const poorRun = C.slice(-3).filter(c => c.execution === 'poor').length;
       if (poorRun >= 2) res.next = 'Two poor shots close together: slow your feet, quiet tempo, and hit your mark before changing anything.';
@@ -903,6 +1014,7 @@
       res.status = 'watch'; res.tone = 'info';
       res.headline = `You ${changeDesc}. Give it ${2 - trustedSince.length} more good shot${2 - trustedSince.length === 1 ? '' : 's'} before judging.`;
       res.why = 'One change at a time, and let the ball tell you if it worked.';
+      setCompass('?', '?', 'watch', `🧭 You changed your ${/switched/.test(changeDesc) ? 'ball' : 'spot'}. Two good shots will tell you if it's right.`);
       return res;
     }
 
@@ -912,6 +1024,7 @@
       res.headline = 'Wide window both ways. Stay right where you are.';
       res.why = `You missed outside and it recovered${outsideSaved.strike ? ' for a strike' : ' to the pocket'}, and missed inside and it held${insideSaved.strike ? ' for a strike' : ' in the pocket'}. That's the best look you can have.`;
       res.next = 'Don\'t change a thing until a good shot misses the pocket.';
+      setCompass('ok', 'ok', 'stay', '🧭 Right ball, right spot. This is what you\'re looking for.');
       if (moveVerdict) res.notes.push(moveVerdict);
       return res;
     }
@@ -924,6 +1037,7 @@
       res.headline = 'You\'re striking. Stay put.';
       res.why = `${cnt(W, clean)} pocket strikes in your last ${W.length} good shots on this line.`;
       const bk = W.slice(-3).filter(c => c.hit === 'brooklyn').length;
+      setCompass('ok', 'ok', 'stay', '🧭 Right ball, right spot. Stay.');
       res.next = bk >= 2 ? 'Heads-up: those were Brooklyns. The lane is starting to hook early. Be ready to move deeper.' : 'Keep repeating. Coach will flag the first sign of change.';
       if (moveVerdict) res.notes.push(moveVerdict);
       return res;
@@ -931,7 +1045,6 @@
 
     // ---- 4a. Mud: over/under while the breakpoint is at/inside where the ball exits the pattern ----
     const ouSignals = cnt(W, c => c.overUnder);
-    const exitB = exitBoardFor(pat);
     const mudShots = exitB != null ? W.filter(c => c.bp != null && c.bp >= exitB) : [];
     const isOU = (highs >= 2 && lights >= 2) || ouSignals >= 2;
     if (isOU && mudShots.length >= 2) {
@@ -991,6 +1104,7 @@
       res.headline = outsideSaved ? 'You have room outside. Stay.' : 'You have room inside. Stay.';
       res.why = outsideSaved ? 'A miss outside still recovered to the pocket, so there\'s friction out there to help you.' : 'A miss inside still held to the pocket, so there\'s oil in there to help you.';
       res.next = 'Keep playing this line. Coach will tell you when that room disappears.';
+      setCompass('ok', 'ok', 'stay', `🧭 Right ball, right spot. You have room ${outsideSaved ? 'outside' : 'inside'}.`);
       if (moveVerdict) res.notes.push(moveVerdict);
       return res;
     }
@@ -1001,9 +1115,14 @@
     const unknowns = cnt(W, c => c.execution === 'unknown');
     res.why = `${pockets} of your last ${W.length} ${unknowns >= Math.ceil(W.length / 2) ? '' : 'good '}shots hit the pocket.` + (unknowns >= 3 ? ' Tip: tapping your miss room (No miss / held / recovered) helps Coach trust the read.' : '');
     res.next = 'Coach will call a move when 2 good shots in a row tell the same story.';
+    {
+      const b = curT ? `${ctx.currentBall} ${REL_WORD[curT.rel]} for you on this pattern${curT.lowConf ? ' (rough estimate)' : ''}` : '';
+      const sp = inMud ? `your breakpoint (about board ${Math.round(avgBpW)}) is at or inside the exit point (board ${exitB}), so watch for over/under` : spotOkText ? `${spotOkText}` : '';
+      if (b || sp) setCompass(curT ? (curT.rel === 'right' ? 'ok' : 'warn') : '?', inMud ? 'mud' : sp ? 'ok' : '?', 'watch', `🧭 ${[b && 'Ball: ' + b, sp && 'Spot: ' + sp].filter(Boolean).join('. ')}.`);
+    }
     if (moveVerdict) res.notes.push(moveVerdict);
     return res;
   }
 
-  root.BTCoach = { evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
+  root.BTCoach = { evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
 })(typeof window !== 'undefined' ? window : globalThis);

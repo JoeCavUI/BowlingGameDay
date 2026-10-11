@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Guide</title>
-  <link rel="stylesheet" href="styles.css?v=75" />
+  <link rel="stylesheet" href="styles.css?v=76" />
   <style>
     .guide { max-width: 760px; margin: 0 auto; line-height: 1.55; font-size: 16px; }
     .guide h2 { margin: 0 0 6px; font-size: 21px; }
@@ -205,6 +205,23 @@
         <h2><span class="stepnum">8</span>How Coach works</h2>
         <p><b>Coach updates after every shot.</b> Before your first shot it gives you a starting plan. After that, the top line of the Coach box is always the one thing to do next.</p>
 
+        <h3>🧭 The compass: right ball, right spot</h3>
+        <p>No matter how many things are going on, the game comes down to two ideas: <b>Rick Benoit's</b> "get the friction timing right and stay out of the mud" and <b>Moe Pinel's</b> "put your feet in the right spot and get the right ball in your hand." Every Coach call answers two questions:</p>
+        <div class="reads">
+          <div class="read"><div class="read-name">🎳 Right ball?</div><div>Does the ball read the lane when tonight's pattern needs it to? Early enough to store energy, late enough to still have it at the pins. Coach works this out for <b>you</b> from each ball's cover, surface, core and layout plus your speed, revs, tilt and rotation. No sliders needed.</div></div>
+          <div class="read"><div class="read-name">🎯 Right spot?</div><div>Are your feet and target keeping the breakpoint outside the <b>exit point</b> (rule of 31: pattern length − 31)? Turning at or inside it means changing direction in the mud.</div></div>
+        </div>
+        <p>The top of the Coach box shows the answer as a scoreboard:</p>
+        <ul>
+          <li><b>Ball ✅ · Spot ✅ → Stay.</b> Right ball, right spot.</li>
+          <li><b>Ball ✅ · Spot ❌ → Move your feet, keep the ball.</b> The ball fits; the lane changed where you're playing.</li>
+          <li><b>Ball ❌ · Spot ✅ → Change the ball, keep your spot.</b> The lane is showing the same timing problem the ball has.</li>
+          <li><b>Spot ❌ (mud) → Get out of the mud first.</b> Then judge the ball.</li>
+          <li><b>⚠️</b> means the ball is part of the problem but nothing in tonight's bag fixes it, so the move is your feet. <b>❔</b> means Coach doesn't know yet.</li>
+          <li><b>Execution first → Repeat your shot.</b> A shot you didn't throw well can't tell you anything about the ball or the spot.</li>
+        </ul>
+        <div class="why">Pick tonight's <b>oil pattern</b> and fill in each ball's <b>surface, RG and differential</b>. Without them Coach can still call moves, but it can't tell if it's the ball or the spot. Missing specs are flagged as a "rough estimate".</div>
+
         <h3>What Coach uses, in order</h3>
         <ol>
           <li><b>You:</b> your Bowler page (speed vs. revs, tilt, rotation, hand).</li>
@@ -335,7 +352,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=75"></script>
+  <script src="app.js?v=76"></script>
   <script>
     BT.renderNav('guide');
     BT.$('#ver').textContent = 'Bowling Tool ' + BT.APP_VERSION;

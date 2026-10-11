@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=75" />
+  <link rel="stylesheet" href="styles.css?v=76" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -248,8 +248,8 @@
     </div>
   </div>
 
-  <script src="app.js?v=75"></script>
-  <script src="coach.js?v=75"></script>
+  <script src="app.js?v=76"></script>
+  <script src="coach.js?v=76"></script>
   <script>
     BT.renderNav('gameday');
 
@@ -1651,7 +1651,7 @@ function saveCurrentSessionDraft() {
         setBalls: names.map(n => ({ name: n, row: map.get(n) })).filter(b => b.row),
         currentBall: el.ball ? el.ball.value : '',
         motion: { vector: (r, b) => BT.motionVector(r, b), distance: (a, b) => BT.motionDistance(a, b) },
-        ballInfo: (r) => ({ cover: BT.ballCover(r), grit: BT.surfaceToGrit(BT.ballSurface(r)), asym: /asym/i.test(BT.ballCore(r) || '') }),
+        ballInfo: (r) => ({ cover: BT.ballCover(r), grit: BT.surfaceToGrit(BT.ballSurface(r)), asym: /asym/i.test(BT.ballCore(r) || ''), known: !!(String(BT.ballSurface(r) || '').trim() && BT.ballRG(r) && BT.ballDiff(r)) }),
         matrix: (r) => BT.matrixCellForRow(r),
       };
     }
@@ -1669,8 +1669,10 @@ function saveCurrentSessionDraft() {
       el.coachText.innerHTML = `
         <div style="border-left:4px solid ${border};background:${color};border-radius:0 12px 12px 0;padding:10px 12px">
           ${(r.lens || r.element) ? `<div class="small" style="opacity:1;font-weight:800;letter-spacing:.3px;margin-bottom:4px">${escapeHtml([r.lens, r.element].filter(Boolean).join(' · '))}</div>` : ''}
+          ${r.compass && r.compass.badge ? `<div style="font-weight:800;font-size:15px;margin-bottom:6px;line-height:1.35;color:var(--text)">${escapeHtml(r.compass.badge)}</div>` : ''}
           <div style="font-size:16px;font-weight:800;line-height:1.35;color:var(--text)">${icon} ${escapeHtml(r.headline)}</div>
           ${r.why ? `<div class="small" style="margin-top:6px;opacity:1">${escapeHtml(r.why)}</div>` : ''}
+          ${r.compass && r.compass.line && r.status !== 'start' ? `<div class="small" style="margin-top:6px;opacity:1">${escapeHtml(r.compass.line.replace(/^🧭 /, ''))}</div>` : ''}
           ${r.next ? `<div class="small" style="margin-top:6px"><b>Next:</b> ${escapeHtml(r.next)}</div>` : ''}
           ${notes}
           ${ballBtn}

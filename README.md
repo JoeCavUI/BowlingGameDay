@@ -49,6 +49,13 @@ npm start
 ```
 Then open http://localhost:3000
 
+## Changes in v76-beta13 — 🧭 Coach compass (Benoit + Pinel)
+- Every Coach call now answers two questions: **Right ball?** (is the friction timing right for tonight's pattern, for this bowler) and **Right spot?** (is the breakpoint outside the rule-of-31 exit point, out of the mud). Shown as a scoreboard line: Ball ✅/❌ · Spot ✅/❌ → what to do.
+- Each ball's friction timing is worked out automatically from its specs + the bowler's speed/revs/tilt/rotation (replaces the hidden Friction Timing sliders).
+- The compass decides between "move your feet, keep the ball" and "change the ball, keep your spot". A suggested ball must read in the direction the lane is asking for.
+- Starting plan groups tonight's bag by timing (reads early / about right / late) and picks the starting ball by timing first.
+- Guide: new "The compass" section.
+
 ## Changes in v75-beta12
 - Friction Timing screen hidden from the menu and Home while it's being redesigned (the page still exists at lane.html).
 
