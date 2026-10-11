@@ -49,6 +49,12 @@ npm start
 ```
 Then open http://localhost:3000
 
+## Changes in v80-beta17: 🔁 Coach reviews your moves
+- Every line or ball change (yours or Coach's) is graded: timing (after a missed mark / after only 1 good shot / while striking), direction (followed the miss or not), and result after 3 good shots (worked / didn't help → move further, come back halfway, or go back).
+- Overshoot (hooking early → holding after the move): main call becomes "come back about halfway".
+- 3+ changes in 5 shots: Coach asks you to stay on one line for 2 good shots.
+- Save alert + Scores: "Your moves" summary with a tip for next time.
+
 ## Changes in v79-beta16: line check in two stages
 - Game 1 before any move: **starting line** vs the rule-of-31 exit point, as a mild ⚠️ heads-up (not ❌).
 - After a move or from game 2: **usable line**. The exit point moves by as many boards as the breakpoint has moved since the first shots; checks the slide + target still go through it (slide tolerance ±2).

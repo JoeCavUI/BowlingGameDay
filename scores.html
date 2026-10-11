@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Scores</title>
-  <link rel="stylesheet" href="styles.css?v=79" />
+  <link rel="stylesheet" href="styles.css?v=80" />
 </head>
 <body data-page="scores">
   <div class="navlinks"></div>
@@ -68,8 +68,8 @@
     </div>
   </div>
 
-  <script src="app.js?v=79"></script>
-  <script src="coach.js?v=79"></script>
+  <script src="app.js?v=80"></script>
+  <script src="coach.js?v=80"></script>
   <script>
     BT.renderNav('scores');
 
@@ -356,7 +356,12 @@
               ${rep.elements.map(e => `<div class="small" style="margin-top:6px;opacity:1">${e.icon} <b>${e.key}${e.score != null ? ': ' + e.score + '%' : ''}</b>. ${e.text}</div>`).join('')}
               ${rep.drill ? `<div class="small" style="margin-top:8px;color:var(--accent);opacity:1"><b>Work on ${rep.weakest}:</b> ${rep.drill}</div>` : ''}</div>`;
           } catch (_e) {}
-          return five + `<div class="panel" style="padding:12px;margin-top:10px">
+          let mvp = '';
+          try {
+            const mv = (s.summary && s.summary.moves) || (window.BTCoach && BTCoach.moveSummary ? BTCoach.moveSummary([...(s.shots || [])].sort((a, b) => (a.at || 0) - (b.at || 0)), BT.lsGet(BT.KEYS.BOWLER, {}) || {}) : null);
+            if (mv) mvp = `<div class="panel" style="padding:12px;margin-top:10px"><b>${mv.text}</b>${mv.tip ? `<div class="small" style="margin-top:6px;opacity:1">${mv.tip}</div>` : ''}</div>`;
+          } catch (_e) {}
+          return five + mvp + `<div class="panel" style="padding:12px;margin-top:10px">
             <b>👁️ Eyeball score: ${eb.score} (${eb.label})</b><span class="small">${trend}</span>
             <div class="small" style="margin-top:2px;opacity:.8">Best ball is your eyeball: how much of what matters you actually watched.</div>
             ${row('Hit your mark? (miss room tracked)', p.mark, '')}

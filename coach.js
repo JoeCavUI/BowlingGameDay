@@ -829,6 +829,125 @@
     return F.sort((a, b) => order[a.level] - order[b.level]);
   }
 
+  // ---------- 🔁 Move review: grade the bowler's own moves (timing, direction, result) ----------
+  // Works the same for moves Coach suggested and moves the bowler made on their own.
+  function moveReviews(C, prof) {
+    const own = (v) => (v != null && prof.lefty && v > 20) ? 40 - v : v; // + = deeper in every case
+    const lineKey = (c) => `${c.feet ?? '?'}/${c.arrows ?? '?'}`;
+    const changes = [];
+    for (let i = 1; i < C.length; i++) {
+      const a = C[i - 1], b = C[i];
+      const lineMoved = (a.feet != null && b.feet != null && a.feet !== b.feet) || (a.arrows != null && b.arrows != null && a.arrows !== b.arrows);
+      const ballChanged = !!(a.ball && b.ball && a.ball !== b.ball);
+      if (lineMoved || ballChanged) changes.push({ i, lineMoved, ballChanged });
+    }
+    const good = (c) => (c.strike && c.hit !== 'brooklyn') || c.hit === 'flush'; // clean result
+    const rate = (arr) => arr.length ? arr.filter(good).length / arr.length : null;
+    return changes.map((ch, k) => {
+      const i = ch.i, prev = C[i - 1], cur = C[i];
+      const start = k ? changes[k - 1].i : 0;
+      const end = k + 1 < changes.length ? changes[k + 1].i : C.length;
+      const before = C.slice(start, i).filter(c => c.execution !== 'poor');
+      const after = C.slice(i, end).filter(c => c.execution !== 'poor');
+      const last2 = before.slice(-2);
+      const read = last2.length === 2 && last2.every(c => c.lean > 0) ? 'early' : last2.length === 2 && last2.every(c => c.lean < 0) ? 'late' : '';
+      const dF = (prev.feet != null && cur.feet != null) ? own(cur.feet) - own(prev.feet) : 0;
+      const dA = (prev.arrows != null && cur.arrows != null) ? own(cur.arrows) - own(prev.arrows) : 0;
+      const dir = Math.sign(dF || dA); // +1 deeper, -1 outside
+      const want = read === 'early' ? 1 : read === 'late' ? -1 : 0;
+      const r = {
+        i, from: lineKey(prev), to: lineKey(cur), fromBall: prev.ball, toBall: cur.ball,
+        lineMoved: ch.lineMoved, ballChanged: ch.ballChanged, dF, dA, dir, read,
+        afterPoor: prev.execution === 'poor',
+        whileStriking: prev.execution !== 'poor' && last2.length === 2 && last2.every(c => c.strike && c.hit !== 'brooklyn'),
+        tooSoon: false, wrongDir: false, rightDir: false, result: 'pending', nAfter: after.length, nBefore: before.length,
+      };
+      r.tooSoon = !r.afterPoor && !r.whileStriking && before.length < 2;
+      if (ch.lineMoved && want) { r.wrongDir = dir === -want; r.rightDir = dir === want; }
+      const a4 = after.slice(0, 4), b4 = before.slice(-4);
+      if (a4.length >= 3) {
+        const pa = rate(a4), pb = rate(b4);
+        r.pa = a4.filter(good).length; r.na = a4.length;
+        r.pb = b4.filter(good).length; r.nb = b4.length;
+        if (pa >= 0.75 || (pb != null && pa >= pb + 0.25)) r.result = 'worked';
+        else if (pb != null && pa < pb) r.result = 'didnt';
+        else r.result = 'mixed';
+        const leanA = a4.reduce((x, c) => x + c.lean, 0) / a4.length;
+        r.after = leanA >= 0.5 ? 'early' : leanA <= -0.5 ? 'late' : '';
+      }
+      r.goodCall = !r.afterPoor && !r.tooSoon && !r.whileStriking && !r.wrongDir && r.result !== 'didnt';
+      return r;
+    });
+  }
+  function moveWord(r, prof) {
+    const n = Math.abs(r.dF || r.dA);
+    const way = r.dir > 0 ? prof.deeper : prof.outside;
+    if (r.lineMoved && r.ballChanged) return `moved ${n} ${n === 1 ? 'board' : 'boards'} ${way} and switched to ${r.toBall}`;
+    if (r.ballChanged) return `switched to ${r.toBall}`;
+    return `moved ${n} ${n === 1 ? 'board' : 'boards'} ${way} (${r.from} → ${r.to})`;
+  }
+  function moveNotes(out, C, prof) {
+    const R = moveReviews(C, prof);
+    if (!R.length) return R;
+    const last = R[R.length - 1];
+    const what = moveWord(last, prof);
+    const notes = [];
+    // Timing + direction: right after the move, while the result is still pending
+    if (last.result === 'pending') {
+      if (last.afterPoor) notes.push(`⏱️ You ${what} right after a shot that missed your mark. That shot was the throw, not the lane. If your next good shot is fine, keep the new line; if not, go back to ${last.from}.`);
+      else if (last.whileStriking) notes.push(`⏱️ You ${what} while you were striking. Usually stay until a good shot misses the pocket.`);
+      else if (last.tooSoon) notes.push(`⏱️ You ${what} after only ${last.nBefore === 1 ? 'one good shot' : 'no good shots'} on the old line. Coach waits for 2 good shots that say the same thing before moving.`);
+      if (last.wrongDir) notes.push(`↔️ You moved ${last.dir > 0 ? prof.deeper : prof.outside}, but your last 2 good shots were ${last.read === 'early' ? 'hooking early' : 'holding'}. Following the miss would be ${last.read === 'early' ? prof.deeper : prof.outside}.`);
+      else if (last.rightDir && !last.afterPoor && !last.tooSoon) notes.push(`👍 Good call: your last 2 good shots were ${last.read === 'early' ? 'hooking early' : 'holding'} and you moved ${last.dir > 0 ? prof.deeper : prof.outside}.`);
+    }
+    if (last.result === 'didnt') {
+      const fix = last.lineMoved && last.after && last.after === last.read ? `It's still ${last.after === 'early' ? 'hooking early' : 'holding'}: move further ${last.read === 'early' ? prof.deeper : prof.outside}.`
+        : last.lineMoved && last.after && last.read && last.after !== last.read ? `It flipped to ${last.after === 'early' ? 'hooking early' : 'holding'}: you went too far, so come back about halfway.`
+        : `Go back to ${last.ballChanged && !last.lineMoved ? last.fromBall : last.from}, or try a different kind of change.`;
+      notes.push(`↩️ That change didn't help: you ${what}, and ${last.pa} of ${last.na} good shots were strikes or flush hits since, versus ${last.pb} of ${last.nb} before. ${fix}`);
+      // Overshoot: make "come back halfway" the main call
+      const flipped = last.lineMoved && last.after && last.read && last.after !== last.read;
+      if (flipped && out.status === 'move') {
+        const [f0, a0] = last.from.split('/').map(Number), [f1, a1] = last.to.split('/').map(Number);
+        const half = (x, y) => Number.isFinite(x) && Number.isFinite(y) ? Math.round((x + y) / 2) : '?';
+        out.headline = `You went too far: the ball went from ${last.read === 'early' ? 'hooking early' : 'holding'} to ${last.after === 'early' ? 'hooking early' : 'holding'}. Come back about halfway, to ${half(f0, f1)}/${half(a0, a1)}.`;
+        out.ballSuggestion = ''; out.element = '🎯 Direction'; out.moveKind = 'Aim';
+        if (out.compass) { out.compass.badge = '🧭 Ball ✅ · Spot ❌ → Come back halfway'; }
+      }
+    }
+    // Too many moves
+    const recent = R.filter(r => r.i >= C.length - 5).length;
+    if (recent >= 3) {
+      notes.unshift(`🔁 ${recent} changes in your last 5 shots. Pick one line and let 2 good shots tell you what the lane is doing.`);
+      if (out.status === 'watch') out.headline = `You've changed ${recent} times in your last 5 shots. Stay on this line for 2 good shots before changing anything.`;
+    }
+    out.notes.unshift(...notes);
+    out.moves = R;
+    return R;
+  }
+  function moveSummary(shots, bowler) {
+    const prof = bowlerProfile(bowler);
+    const C = (shots || []).filter(s => s && s.type !== 'gameStart' && !s.isFill).map(s => classify(s, prof.lefty));
+    const R = moveReviews(C, prof);
+    const cnt = (f) => R.filter(f).length;
+    const res = { made: R.length, good: cnt(r => r.goodCall), afterPoor: cnt(r => r.afterPoor), tooSoon: cnt(r => r.tooSoon), whileStriking: cnt(r => r.whileStriking), wrongDir: cnt(r => r.wrongDir), worked: cnt(r => r.result === 'worked'), didnt: cnt(r => r.result === 'didnt') };
+    const bits = [`${res.made} made`];
+    if (res.made) bits.push(`${res.good} good call${res.good === 1 ? '' : 's'}`);
+    if (res.worked) bits.push(`${res.worked} worked`);
+    if (res.didnt) bits.push(`${res.didnt} didn't help`);
+    if (res.afterPoor) bits.push(`${res.afterPoor} right after a poor shot`);
+    if (res.tooSoon) bits.push(`${res.tooSoon} before 2 good shots`);
+    if (res.whileStriking) bits.push(`${res.whileStriking} while striking`);
+    if (res.wrongDir) bits.push(`${res.wrongDir} the wrong way`);
+    res.text = res.made ? `🔁 Your moves: ${bits.join(' · ')}.` : '🔁 Your moves: none tonight.';
+    res.tip = res.afterPoor ? 'Next time: repeat the shot after a missed mark before you move.'
+      : res.tooSoon ? 'Next time: wait for 2 good shots that say the same thing before you move.'
+      : res.wrongDir ? 'Next time: follow the miss. Hooking early, move in; holding, move out.'
+      : res.didnt ? 'When a move doesn\'t help after 3 good shots, go back or move further, don\'t sit on it.'
+      : res.made ? 'Good decisions tonight.' : '';
+    return res;
+  }
+
   // ---------- main ----------
   function evaluate(ctx) {
     const out = evaluateCore(ctx);
@@ -838,6 +957,7 @@
       const C = all.map(s => classify(s, prof.lefty));
       const W = C.filter(c => c.execution !== 'poor').slice(-5);
       if (C.length >= 3) sideNotes(out, C, W, prof, patternProfile(ctx && ctx.pattern));
+      if (C.length >= 2) moveNotes(out, C, prof);
       // 📐 Alignment: is the line going through the exit point? Only speak up before any move,
       // or when the mark is being missed (then it may be alignment, not the throw).
       if (C.length >= 1 && out.status !== 'start' && out.tone !== 'good') {
@@ -1197,5 +1317,5 @@
     return res;
   }
 
-  root.BTCoach = { lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
+  root.BTCoach = { moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
 })(typeof window !== 'undefined' ? window : globalThis);

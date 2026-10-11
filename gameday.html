@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=79" />
+  <link rel="stylesheet" href="styles.css?v=80" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -224,8 +224,8 @@
     </div>
   </div>
 
-  <script src="app.js?v=79"></script>
-  <script src="coach.js?v=79"></script>
+  <script src="app.js?v=80"></script>
+  <script src="coach.js?v=80"></script>
   <script>
     BT.renderNav('gameday');
 
@@ -1945,6 +1945,9 @@ function sessionSummary(shots) {
       let elements = null;
       try { if (window.BTCoach) elements = BTCoach.elementsReport(sessionShots.slice().reverse(), BT.lsGet(BT.KEYS.BOWLER, {}) || {}, coachContext().pattern); } catch (_e) {}
       if (elements) sum.elements = elements;
+      let moves = null;
+      try { if (window.BTCoach && BTCoach.moveSummary) moves = BTCoach.moveSummary(sessionShots.slice().reverse(), BT.lsGet(BT.KEYS.BOWLER, {}) || {}); } catch (_e) {}
+      if (moves) sum.moves = moves;
       const audit = await arsenalAudit(meta, sessionShots);
 
       const payload = {
@@ -1967,7 +1970,8 @@ function sessionSummary(shots) {
         if (p.exit != null) bits.push(`Exit watched ${p.exit}% of pocket hits`);
         if (p.keyPin != null) bits.push(`Key pin seen ${p.keyPin}%`);
         const el5 = elements ? '\n\nFIVE ELEMENTS\n' + elements.elements.map(e => `${e.icon} ${e.key}${e.score != null ? ' ' + e.score + '%' : ''}: ${e.text}`).join('\n') + (elements.drill ? `\n\nWork on ${elements.weakest}: ${elements.drill}` : '') : '';
-        alert(`Saved to Scores.\n\n👁️ Eyeball score: ${eyeball.score} (${eyeball.label})\n${bits.join(' • ')}${el5}\n\nBest ball is your eyeball.`);
+        const mv = moves ? `\n\n${moves.text}${moves.tip ? '\n' + moves.tip : ''}` : '';
+        alert(`Saved to Scores.\n\n👁️ Eyeball score: ${eyeball.score} (${eyeball.label})\n${bits.join(' • ')}${el5}${mv}\n\nBest ball is your eyeball.`);
       } else {
         alert('Saved to Scores.');
       }
