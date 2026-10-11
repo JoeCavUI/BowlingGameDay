@@ -12,34 +12,28 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=76" />
+  <link rel="stylesheet" href="styles.css?v=77" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
   <div class="container">
     <div class="header">
       <h1>Game Day</h1>
-      <div class="small">Fast inputs → coach-style review. “Best ball is your eyeball.” Track what you saw and Coach will interpret the pattern.</div>
+      
     </div>
     <div id="setupBanner" class="setup-banner" style="display:none"></div>
 
-    <div class="grid-3" style="grid-template-columns: 0.9fr 1.2fr 0.9fr; align-items:start">
-      <!-- Column 1: Ball list + environment -->
-      <div>
+    <div class="gd-layout">
+      <!-- Main column: everything the bowler touches during a game, in shot order -->
+      <div class="gd-main">
 
-        <div class="panel">
-          <h2>Ball list (from selected set)</h2>
-          <div class="small" id="setHint">Select an arsenal set in section 1.</div>
-          <div class="hr-split"></div>
-          <div class="list" id="setList" style="max-height:28vh"></div>
-        </div>
-        <div class="panel">
-          <h2>1) Environment + setup</h2>
-          <div class="grid-2">
+        <!-- Tonight's setup: folds to one line once it's filled in -->
+        <details class="panel gd-fold" id="setupFold">
+          <summary><span class="gd-fold-title">Tonight</span> <span id="setupSummary" class="small">Tap to set up</span></summary>
+          <div class="grid-2" style="margin-top:10px">
             <div>
               <label>House</label>
               <select id="house" class="input"></select>
-              <div class="small" style="margin-top:6px">Pulled from Oil → Houses.</div>
             </div>
             <div>
               <label>League</label>
@@ -47,23 +41,20 @@
                 <select id="league" class="input" style="flex:1"></select>
                 <button class="btn secondary" id="addLeagueBtn" type="button">Add</button>
               </div>
-              <div class="small" style="margin-top:6px">Saved list (per house). Used for week-to-week recommendations.</div>
             </div>
-
             <div>
               <label>Lanes / Pair</label>
               <input id="lanes" class="input" placeholder="e.g., 23-24" inputmode="text" />
             </div>
             <div>
-              <label>Starting lane (league)</label>
+              <label>Starting lane</label>
               <select id="startLane" class="input">
                 <option value="left">Start on left lane</option>
                 <option value="right">Start on right lane</option>
               </select>
-              <div class="small" style="margin-top:6px">Some nights you start on the right lane. This keeps lane stats accurate.</div>
             </div>
             <div>
-              <label>Oil Pattern</label>
+              <label>Oil pattern</label>
               <div style="display:flex;gap:8px;align-items:center">
                 <select id="pattern" class="input" style="flex:1"></select>
                 <button class="btn secondary" id="addPatternBtn" type="button">Add</button>
@@ -72,38 +63,15 @@
               <div class="small" id="patternHint" style="margin-top:6px">Pulled from Oil → Patterns.</div>
             </div>
             <div>
-              <label>Arsenal set</label>
+              <label>Bag (arsenal set)</label>
               <select id="set" class="input"></select>
-              <div class="small" style="margin-top:6px">Pulled from Analyze → Saved sets.</div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Column 2: Section 2 & 3 -->
-      <div>
-        <div class="panel">
-          <h2>2) Line + ball</h2>
-          <div class="grid-2">
-            <div>
-              <label>Feet (board)</label>
-              <input id="feet" class="input" type="number" step="1" />
-            </div>
-            <div>
-              <label>Target at arrows (board)</label>
-              <input id="arrows" class="input" type="number" step="1" />
-            </div>
-            <div>
-              <label>Breakpoint (board)</label>
-              <input id="bp" class="input" type="number" step="1" />
             </div>
             <div>
               <label>Pocket board</label>
               <input id="pocketBoard" class="input" type="number" step="0.5" placeholder="17.5" />
-              <div class="small" style="margin-top:6px">Use 17.5 for a right-hander's 1–3 pocket, 22.5 for lefty 1–2.</div>
+              <div class="small" style="margin-top:6px">Leave blank for the standard pocket (17.5 righty, 22.5 lefty).</div>
             </div>
-            <div>
+            <div style="display:none">
               <label>Mode</label>
               <select id="mode" class="input">
                 <option value="stability">Stability Mode (maximize margin)</option>
@@ -111,36 +79,13 @@
                 <option value="control">Control Mode (reduce over/under)</option>
               </select>
             </div>
-            <div style="grid-column:1/-1">
-              <label>Current ball</label>
-              <select id="ball" class="input"></select>
-            </div>
           </div>
-        </div>
-
-        <div class="panel">
-          <h2>3) Quick reads (tap)</h2>
-          <div class="small">Log first shots. Tap pins that remained standing (pin deck), then “Log this shot”. Section 3 resets after every log to prevent confusion.</div>
-          <div class="hr-split"></div>
-
-          <div>
-            <b>Leave / result</b>
-            <div class="small" style="margin-top:6px">Quick buttons for special cases. Otherwise tap the pin deck for the pins left standing.</div>
-            <div id="quickResults" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"></div>
-
-            <div style="margin-top:10px">
-              <div id="pinDeckWrap" style="display:flex;justify-content:center"></div>
-              <div class="small" style="text-align:center;margin-top:6px" id="pinDeckHint">Tap pins to toggle. Selected pins = standing pins.</div>
-            </div>
-            <div class="hr-split"></div>
-
-            <div class="grid-3" style="grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:end;margin-bottom:10px">
+          <details class="gd-subfold" style="margin-top:10px">
+            <summary class="small">Frame & lane (set automatically)</summary>
+            <div class="grid-3" style="grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:end;margin-top:8px">
+              <div><label>Frame</label><input id="frame" class="input" readonly /></div>
               <div>
-                <label>Frame (auto)</label>
-                <input id="frame" class="input" readonly />
-              </div>
-              <div>
-                <label>10th frame fill shot?</label>
+                <label>10th fill shot?</label>
                 <select id="fill" class="input">
                   <option value="auto">Auto</option>
                   <option value="no">No</option>
@@ -148,75 +93,88 @@
                 </select>
               </div>
               <div>
-                <label>Next shot lane (auto)</label>
-                <select id="lanePick" class="input">
-                  <option value="">—</option>
-                </select>
+                <label>Next lane</label>
+                <select id="lanePick" class="input"><option value="">—</option></select>
               </div>
             </div>
-            <div class="small" style="margin-top:-2px;margin-bottom:10px">Fill shots (10th bonus) are excluded from coaching calculations. Next shot lane alternates automatically based on pair + starting lane.</div>
+            <div class="small" style="margin-top:6px">Fill shots (10th-frame bonus balls) are left out of coaching. The lane alternates automatically from your pair + starting lane.</div>
+          </details>
+        </details>
 
-            <b>Observations</b>
-            <div class="small" style="margin-top:6px">Top: shot quality. Bottom: ball/lane reaction.</div>
-            <div id="readsQuality" style="margin-top:6px"></div>
-            <div class="hr-split" style="margin:10px 0"></div>
-            <div class="small" style="margin-top:6px">Miss room (single tap). Use with Pocket + leaves to map the lane. <b>No miss</b> boosts execution score. <b>Didn't track</b> lowers your Brad Angelo “best ball is your eyeball” observation rating for the night.</div>
-            <div id="readsMiss" style="margin-top:6px"></div>
-            <div class="hr-split" style="margin:10px 0"></div>
-            <div id="readsBallObs" style="margin-top:6px"></div>
-            <div class="hr-split" style="margin:10px 0"></div>
-            <div>
-              <label>Pocket</label>
-              <div id="readsPocket" style="margin-top:6px"></div>
+        <!-- Coach: the one thing to do next -->
+        <div class="panel gd-coach" id="coachPanel">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <b>Coach</b>
+            <a href="guide.html#coach" class="small" style="color:var(--accent)">How Coach works →</a>
+          </div>
+          <div class="small" id="coachText" style="margin-top:6px">Log a few shots to get feedback.</div>
+        </div>
+
+        <!-- My line + ball -->
+        <div class="panel">
+          <div class="gd-line">
+            <div class="gd-step"><label>Feet</label>
+              <div class="stepper"><button type="button" class="btn secondary" data-step="feet" data-d="-1" aria-label="Feet minus one">−</button><input id="feet" class="input" type="number" step="1" inputmode="numeric" /><button type="button" class="btn secondary" data-step="feet" data-d="1" aria-label="Feet plus one">+</button></div>
             </div>
-            <div class="hr-split" style="margin:10px 0"></div>
-            <div>
-              <label>Ball exit off deck</label>
-              <div id="readsExit" style="margin-top:6px"></div>
+            <div class="gd-step"><label>Target</label>
+              <div class="stepper"><button type="button" class="btn secondary" data-step="arrows" data-d="-1" aria-label="Target minus one">−</button><input id="arrows" class="input" type="number" step="1" inputmode="numeric" /><button type="button" class="btn secondary" data-step="arrows" data-d="1" aria-label="Target plus one">+</button></div>
             </div>
-            <div class="hr-split" style="margin:10px 0"></div>
-            <div>
-              <label>Speed vs normal</label>
-              <div id="readsSpeed" style="margin-top:6px"></div>
-              <div class="small" style="margin-top:6px">Helps Coach separate “touchy” (tempo drift) from true mismatch.</div>
+            <div class="gd-step"><label>Breakpoint</label>
+              <div class="stepper"><button type="button" class="btn secondary" data-step="bp" data-d="-1" aria-label="Breakpoint minus one">−</button><input id="bp" class="input" type="number" step="1" inputmode="numeric" /><button type="button" class="btn secondary" data-step="bp" data-d="1" aria-label="Breakpoint plus one">+</button></div>
             </div>
           </div>
-
           <div style="margin-top:10px">
-            <label>Notes (optional)</label>
-            <input id="notes" class="input" placeholder="Use notes only for long-term pattern memory." />
+            <label>Ball</label>
+            <select id="ball" class="input"></select>
           </div>
-<div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
-            <button class="btn" id="log">Log this shot</button>
-            <button class="btn secondary" id="coach">Refresh coach review</button>
-            <button class="btn" id="saveSession">Save Session</button>
+        </div>
+
+        <!-- The shot, in the order you see it -->
+        <div class="panel" id="shotPanel">
+          <div class="gd-q"><span class="gd-qnum">1</span><b>Your mark</b></div>
+          <div id="readsMiss" style="margin-top:6px"></div>
+
+          <div class="gd-q" style="margin-top:14px"><span class="gd-qnum">2</span><b>Pocket</b></div>
+          <div id="readsPocket" style="margin-top:6px"></div>
+
+          <div class="gd-q" style="margin-top:14px"><span class="gd-qnum">3</span><b>Pins left</b> <span class="small">(tap nothing for a strike)</span></div>
+          <div id="quickResults" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"></div>
+          <div style="margin-top:10px">
+            <div id="pinDeckWrap" style="display:flex;justify-content:center"></div>
+            <div class="small" style="text-align:center;margin-top:6px" id="pinDeckHint">Tap the pins still standing.</div>
+          </div>
+
+          <details class="gd-subfold" id="moreReads" style="margin-top:12px">
+            <summary><b>More reads</b> <span class="small">(optional: execution, reaction, exit, speed, notes)</span></summary>
+            <div style="margin-top:8px">
+              <label>Execution</label>
+              <div id="readsQuality" style="margin-top:6px"></div>
+              <label style="margin-top:12px;display:block">Ball reaction</label>
+              <div id="readsBallObs" style="margin-top:6px"></div>
+              <label style="margin-top:12px;display:block">Ball exit off the deck</label>
+              <div id="readsExit" style="margin-top:6px"></div>
+              <label style="margin-top:12px;display:block">Speed vs normal</label>
+              <div id="readsSpeed" style="margin-top:6px"></div>
+              <label style="margin-top:12px;display:block">Notes</label>
+              <input id="notes" class="input" placeholder="Only for things worth remembering next week." />
+            </div>
+          </details>
+
+          <button class="btn gd-log" id="log">Log this shot</button>
+        </div>
+
+        <div class="panel">
+          <div class="btn-row" style="margin-top:0">
             <button class="btn secondary" id="nextGame">Start next game</button>
-            <button class="btn danger" id="resetSession">Reset current session</button>
-          </div>
-
-          <div class="hr-split"></div>
-          <div class="panel" style="padding:12px">
-            <b>Coach review</b> <a href="guide.html#coach" class="small" style="color:var(--accent);margin-left:6px">How Coach works →</a>
-            <div class="small" id="coachText" style="margin-top:6px">Log a few shots to get feedback.</div>
-          </div>
-
-          <div class="panel" style="padding:12px;margin-top:12px">
-            <b>Lane geometry table</b>
-            <div class="small" style="margin-top:6px">Simple model: entry demand ≈ launch/outward projection + recovery. This helps find when a ball is stable versus when you are asking it to recover too many boards.</div>
-            <div id="laneGeometry" class="small" style="margin-top:8px">Log a few shots with feet, arrows, breakpoint, and pocket board.</div>
+            <button class="btn" id="saveSession">Save session</button>
+            <button class="btn danger" id="resetSession">Reset session</button>
+            <button class="btn secondary" id="coach" style="display:none">Refresh coach review</button>
           </div>
         </div>
       </div>
 
-      <!-- Column 3: Prep + scoreboard + log -->
-      <div>
-        <div class="panel" id="prepPanel">
-          <h2>Prep recommendation</h2>
-          <div class="small">Based on your last sessions at this house + league + pattern.</div>
-          <div class="hr-split"></div>
-          <div id="prepText" class="small">Select House, League, and Pattern to see suggestions.</div>
-        </div>
-
+      <!-- Side column (below on a phone): history and reference -->
+      <div class="gd-side">
         <div class="panel" id="scoreboardPanel">
           <h2>Lane scoreboard</h2>
           <div class="small">Strikes + pocket/carry by lane for this session.</div>
@@ -225,12 +183,28 @@
         </div>
         <div class="panel">
           <h2>Current session log</h2>
-          <div class="small">This session only. Use “Save Session” to store it in Scores.</div>
+          <div class="small">This session only. Use “Save session” to store it in Scores.</div>
           <div class="hr-split"></div>
           <div class="list" id="logList" style="max-height:80vh"></div>
         </div>
+        <div class="panel" id="prepPanel">
+          <h2>Prep recommendation</h2>
+          <div class="small">Based on your last sessions at this house + league + pattern.</div>
+          <div class="hr-split"></div>
+          <div id="prepText" class="small">Select House, League, and Pattern to see suggestions.</div>
+        </div>
+        <div class="panel">
+          <h2>Tonight's bag</h2>
+          <div class="small" id="setHint">Select a bag in Tonight.</div>
+          <div class="hr-split"></div>
+          <div class="list" id="setList" style="max-height:28vh"></div>
+        </div>
+        <div class="panel">
+          <h2>Lane geometry</h2>
+          <div class="small" style="margin-top:6px">Entry demand ≈ launch/outward projection + recovery. Shows when a ball is stable versus being asked to recover too many boards.</div>
+          <div id="laneGeometry" class="small" style="margin-top:8px">Log a few shots with feet, target and breakpoint.</div>
+        </div>
       </div>
-
     </div>
   </div>
 
@@ -248,8 +222,8 @@
     </div>
   </div>
 
-  <script src="app.js?v=76"></script>
-  <script src="coach.js?v=76"></script>
+  <script src="app.js?v=77"></script>
+  <script src="coach.js?v=77"></script>
   <script>
     BT.renderNav('gameday');
 
@@ -261,21 +235,21 @@
     const ballObs = ['Too early','Too long','Over/under','Carrydown'];
 	    // Miss room (single-select). Saved per shot.
 	    const missObs = [
-	      { val: 'noMiss', label: 'No miss' },
-          { val: 'didntTrack', label: "Didn't track" },
-	      { val: 'rightRecovered', label: 'Miss right recovered' },
-	      { val: 'leftHeld', label: 'Miss left held' },
-	      { val: 'rightMiss', label: 'Miss right' },
-	      { val: 'leftMiss', label: 'Miss left' },
+	      { val: 'noMiss', label: 'Hit target' },
+	      { val: 'rightRecovered', label: 'Missed right, recovered' },
+	      { val: 'leftHeld', label: 'Missed left, held' },
+	      { val: 'rightMiss', label: 'Missed right' },
+	      { val: 'leftMiss', label: 'Missed left' },
+          { val: 'didntTrack', label: "Didn't see" },
 	    ];
     const pocketObs = [
-      { val: 'Unknown', label: 'Unknown' },
       { val: 'Pocket flush', label: 'Flush' },
       { val: 'Pocket light', label: 'Light' },
       { val: 'Pocket high', label: 'High' },
       { val: 'Missed left', label: 'Missed left' },
       { val: 'Missed right', label: 'Missed right' },
       { val: 'Brooklyn', label: 'Brooklyn' },
+      { val: 'Unknown', label: "Didn't see" },
     ];
     const exitObs = [
       { val: "Didn't notice", label: "Didn't notice" },
@@ -284,7 +258,7 @@
       { val: 'Exit straight', label: 'Exit straight' },
     ];
     const speedObs = [
-      { val: 'unknown', label: "Didn't track" },
+      { val: 'unknown', label: "Didn't notice" },
       { val: 'slower', label: 'Slower' },
       { val: 'same', label: 'Same' },
       { val: 'faster', label: 'Faster' },
@@ -469,7 +443,7 @@
       if (!el.pinDeckWrap) return;
       // Simple SVG rack. Tap pins to toggle (selected = standing).
       const svg = `
-        <svg id="pinDeck" width="220" height="170" viewBox="0 0 220 170" style="max-width:100%;height:auto">
+        <svg id="pinDeck" width="300" height="232" viewBox="0 0 220 170" style="width:min(300px,100%);height:auto">
           ${pinCircle(1, 110, 145)}
           ${pinCircle(2, 95, 115)}
           ${pinCircle(3, 125, 115)}
@@ -974,7 +948,7 @@ function isStrike(shot) {
       selectedSetBalls = set ? [...set.balls] : [];
 
       // right panel list
-      el.setHint.textContent = set ? `Set: ${set.name} (${set.balls.length} balls)` : 'Select an arsenal set in section 1.';
+      el.setHint.textContent = set ? `Set: ${set.name} (${set.balls.length} balls)` : 'Select a bag in Tonight.';
       el.setList.innerHTML = selectedSetBalls.map(n => `<div class="list-item" data-pick="${n}" style="cursor:pointer">
         <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
           <div><b>${n}</b></div>
@@ -1073,12 +1047,12 @@ function isStrike(shot) {
         const frameTxt = (typeof s.frame === 'number') ? `F${s.frame}${s.isFill ? ' (fill)' : ''}` : '';
         const missLabel = (m) => {
           if (!m || m === 'na') return '';
-          if (m === 'noMiss') return 'No miss';
+          if (m === 'noMiss') return 'Hit target';
           if (m === 'didntTrack') return "Miss not tracked";
-          if (m === 'rightRecovered') return 'Miss right recovered';
-          if (m === 'leftHeld') return 'Miss left held';
-          if (m === 'rightMiss') return 'Miss right';
-          if (m === 'leftMiss') return 'Miss left';
+          if (m === 'rightRecovered') return 'Missed right, recovered';
+          if (m === 'leftHeld') return 'Missed left, held';
+          if (m === 'rightMiss') return 'Missed right';
+          if (m === 'leftMiss') return 'Missed left';
           return String(m);
         };
         const missTxt = missLabel(s.miss) ? ` • ${missLabel(s.miss)}` : '';
@@ -1541,7 +1515,7 @@ function saveCurrentSessionDraft() {
       const real = (shots || []).filter(s => s && s.type !== 'gameStart' && !s.isFill);
       if (!real.length) return bulletListHtml('Coach review', 'Log a few shots to build the lane map.', [
         'Track miss room, pocket, and ball reaction on the next few shots.',
-        'Use No miss when the shot matched your intent and Did\'t track only when you truly did not see it.'
+        'Use Hit target when the shot matched your intent, and Didn\'t see only when you truly did not see it.'
       ]);
 
       const last = real.slice(-8);
@@ -1666,19 +1640,25 @@ function saveCurrentSessionDraft() {
       const eyeLine = eb ? `<div class="small" style="margin-top:8px;opacity:1">👁️ <b>Eyeball score tonight: ${eb.score}</b> (${escapeHtml(eb.label)})</div>` : '';
       const details = [r.profileLine && `<b>You:</b> ${escapeHtml(r.profileLine)}`, r.patternLine && `<b>Pattern:</b> ${escapeHtml(r.patternLine)}`, r.read && `<b>Lane read this game:</b> ${escapeHtml(r.read)}`, r.angleLine && `<b>📐 Angle:</b> ${escapeHtml(r.angleLine)}`]
         .filter(Boolean).map(x => `<div class="small" style="margin-top:4px">${x}</div>`).join('');
+      let moreOpen = false; try { moreOpen = localStorage.getItem('bt_gd_coach_more_open') === '1'; } catch (_e) {}
+      const nNotes = (r.notes || []).length;
       el.coachText.innerHTML = `
         <div style="border-left:4px solid ${border};background:${color};border-radius:0 12px 12px 0;padding:10px 12px">
           ${(r.lens || r.element) ? `<div class="small" style="opacity:1;font-weight:800;letter-spacing:.3px;margin-bottom:4px">${escapeHtml([r.lens, r.element].filter(Boolean).join(' · '))}</div>` : ''}
           ${r.compass && r.compass.badge ? `<div style="font-weight:800;font-size:15px;margin-bottom:6px;line-height:1.35;color:var(--text)">${escapeHtml(r.compass.badge)}</div>` : ''}
           <div style="font-size:16px;font-weight:800;line-height:1.35;color:var(--text)">${icon} ${escapeHtml(r.headline)}</div>
+          ${ballBtn}
+          <details id="coachMore" ${(moreOpen || r.status === 'start') ? 'open' : ''} style="margin-top:8px"><summary class="small" style="cursor:pointer;opacity:1"><b>Why &amp; what's next</b>${nNotes ? ` · ${nNotes} heads-up${nNotes > 1 ? 's' : ''}` : ''}</summary>
           ${r.why ? `<div class="small" style="margin-top:6px;opacity:1">${escapeHtml(r.why)}</div>` : ''}
           ${r.compass && r.compass.line && r.status !== 'start' ? `<div class="small" style="margin-top:6px;opacity:1">${escapeHtml(r.compass.line.replace(/^🧭 /, ''))}</div>` : ''}
           ${r.next ? `<div class="small" style="margin-top:6px"><b>Next:</b> ${escapeHtml(r.next)}</div>` : ''}
           ${notes}
-          ${ballBtn}
           ${eyeLine}
+          </details>
         </div>
         ${details ? `<details style="margin-top:8px"><summary class="small" style="cursor:pointer">What Coach is using</summary>${details}</details>` : ''}`;
+      const cm = BT.$('#coachMore');
+      if (cm) cm.addEventListener('toggle', () => { try { localStorage.setItem('bt_gd_coach_more_open', cm.open ? '1' : '0'); } catch (_e) {} });
       const b = BT.$('#coachUseBall');
       if (b) b.addEventListener('click', () => {
         const opt = BT.$(`option[value="${CSS.escape(r.ballSuggestion)}"]`, el.ball);
@@ -1823,7 +1803,7 @@ function saveCurrentSessionDraft() {
         shot.noteTags.forEach(t => { if (!shot.obs.includes(t)) shot.obs.push(t); });
       }
 
-if (!shot.ball) return alert('Pick a current ball (select an arsenal set in Environment + setup).');
+if (!shot.ball) return alert('Pick a current ball (open Tonight at the top and pick a bag).');
 
       sessionShots.unshift(shot);
 
@@ -2118,7 +2098,53 @@ function sessionSummary(shots) {
 
     // Houses are managed on the Oil page.
 
-    BT.$('#log').addEventListener('click', logShot);
+    BT.$('#log').addEventListener('click', () => {
+      const before = sessionShots.length;
+      logShot();
+      if (sessionShots.length > before) {
+        const cp = BT.$('#coachPanel');
+        if (cp) setTimeout(() => cp.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+      }
+    });
+
+    // − / + board steppers (no keyboard needed). They fire the same events as typing.
+    BT.$all('button[data-step]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const inp = el[btn.getAttribute('data-step')];
+        if (!inp) return;
+        const d = Number(btn.getAttribute('data-d')) || 0;
+        const cur = inp.value === '' ? (inp === el.bp ? 8 : inp === el.arrows ? 12 : 20) : Number(inp.value);
+        inp.value = String(Math.max(0, Math.min(40, cur + (inp.value === '' ? 0 : d))));
+        inp.dispatchEvent(new Event('input', { bubbles: true }));
+        inp.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    });
+
+    // Tonight: one-line summary; opens itself until the must-haves are set.
+    function updateSetupSummary() {
+      const box = BT.$('#setupSummary'), fold = BT.$('#setupFold');
+      if (!box || !fold) return;
+      const txt = (sel) => (sel && sel.value && sel.selectedIndex >= 0) ? sel.options[sel.selectedIndex].text : '';
+      const parts = [el.house.value && el.house.value, el.lanes.value.trim(), el.pattern.value && txt(el.pattern), el.set.value && el.set.value].filter(Boolean);
+      const missing = [];
+      if (!el.pattern.value) missing.push('oil pattern');
+      if (!el.set.value) missing.push('bag');
+      if (!el.ball.value) missing.push('ball');
+      box.textContent = (parts.length ? parts.join(' · ') : 'Tap to set up') + (missing.length ? `  (needs ${missing.join(', ')})` : '');
+      box.style.color = missing.length ? 'var(--danger)' : '';
+      if (missing.length && !fold.dataset.userClosed) fold.open = true;
+    }
+    BT.$('#setupFold').addEventListener('toggle', (e) => { if (!e.target.open) e.target.dataset.userClosed = '1'; });
+    ['house', 'lanes', 'pattern', 'set', 'ball', 'league'].forEach(k => { if (el[k]) { el[k].addEventListener('change', updateSetupSummary); el[k].addEventListener('input', updateSetupSummary); } });
+    setTimeout(() => { updateSetupSummary(); const f = BT.$('#setupFold'); if (f && !/needs/.test(BT.$('#setupSummary').textContent)) f.open = false; }, 400);
+    window.addEventListener('pageshow', () => setTimeout(updateSetupSummary, 300));
+
+    // More reads: stays open for bowlers who use it.
+    (function () {
+      const mr = BT.$('#moreReads');
+      try { if (localStorage.getItem('bt_gd_more_reads_open') === '1') mr.open = true; } catch (_e) {}
+      mr.addEventListener('toggle', () => { try { localStorage.setItem('bt_gd_more_reads_open', mr.open ? '1' : '0'); } catch (_e) {} });
+    })();
     BT.$('#coach').addEventListener('click', refreshCoach);
     BT.$('#saveSession').addEventListener('click', saveSession);
     BT.$('#nextGame').addEventListener('click', startNextGame);

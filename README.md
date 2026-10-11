@@ -49,6 +49,15 @@ npm start
 ```
 Then open http://localhost:3000
 
+## Changes in v77-beta14: Game Day screen in shot order
+- One column on the phone, top to bottom in the order you use it: **Tonight** (folds to one line once set up; turns red if the pattern/bag/ball is missing) → **Coach** → **your line** (Feet / Target / Breakpoint with − / + buttons, no keyboard) → **the shot** (1 Your mark, 2 Pocket, 3 Pins left) → big **Log this shot**.
+- After Log the screen jumps back to Coach. Coach shows the compass line + the move; the reasons fold under "Why & what's next" (remembers if you keep it open; the starting plan opens itself).
+- Optional reads (execution, reaction, exit, speed, notes) fold under **More reads**; stays open once you open it.
+- Mark labels renamed: **Hit target**, Missed right, recovered, Missed left, held, Missed right, Missed left, Didn't see. Saved data and Coach unchanged.
+- Hidden from the main screen: Mode (unused), Frame / Fill / Next lane (automatic; under Tonight → Frame & lane).
+- Bigger pin deck; scoreboard, session log, prep, bag list and lane geometry moved below.
+- No inputs added or removed.
+
 ## Changes in v76-beta13 — 🧭 Coach compass (Benoit + Pinel)
 - Every Coach call now answers two questions: **Right ball?** (is the friction timing right for tonight's pattern, for this bowler) and **Right spot?** (is the breakpoint outside the rule-of-31 exit point, out of the mud). Shown as a scoreboard line: Ball ✅/❌ · Spot ✅/❌ → what to do.
 - Each ball's friction timing is worked out automatically from its specs + the bowler's speed/revs/tilt/rotation (replaces the hidden Friction Timing sliders).

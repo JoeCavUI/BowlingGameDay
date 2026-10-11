@@ -388,3 +388,28 @@ button, a, select { -webkit-tap-highlight-color:rgba(99,230,210,0.25); }
 .setup-banner{ border:1px dashed rgba(99,230,210,0.55); background:rgba(99,230,210,0.07); border-radius:12px; padding:10px 12px; margin:10px 0; }
 .setup-banner a{ color:var(--accent); font-weight:700; }
 .btn-row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+
+/* ---------- Game Day: shot-order layout (v77) ---------- */
+.gd-layout{ display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:14px; align-items:start; margin-top:12px; }
+.gd-main > .panel, .gd-side > .panel{ margin-top:0; margin-bottom:12px; }
+@media (max-width: 900px){ .gd-layout{ grid-template-columns:minmax(0,1fr); } }
+.gd-main, .gd-side, .gd-main > *, .gd-side > *{ min-width:0; }
+#coachText, #logList, #laneGeometry, #laneScoreboard{ overflow-wrap:anywhere; }
+#laneGeometry, #laneScoreboard, #prepText{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.gd-fold > summary, .gd-subfold > summary{ cursor:pointer; list-style:none; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.gd-fold > summary::-webkit-details-marker, .gd-subfold > summary::-webkit-details-marker{ display:none; }
+.gd-fold > summary::after, .gd-subfold > summary::after{ content:'▸'; margin-left:auto; opacity:.7; }
+.gd-fold[open] > summary::after, .gd-subfold[open] > summary::after{ content:'▾'; }
+.gd-fold-title{ font-weight:800; }
+.gd-coach{ scroll-margin-top:70px; }
+.gd-line{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.gd-step label{ display:block; margin-bottom:4px; }
+.stepper{ display:flex; align-items:stretch; gap:4px; }
+.stepper .btn{ min-width:34px; padding:0 6px; font-size:20px; font-weight:800; line-height:1; }
+.stepper .input{ text-align:center; padding-left:2px; padding-right:2px; min-width:0; flex:1; -moz-appearance:textfield; }
+.stepper .input::-webkit-outer-spin-button, .stepper .input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+.gd-q{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.gd-qnum{ flex:0 0 22px; height:22px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:rgba(99,230,210,0.18); color:var(--accent); font-weight:800; font-size:13px; }
+#shotPanel button[data-pill], #shotPanel button[data-qr]{ min-height:42px; }
+#shotPanel button[data-pill].active, #shotPanel button[data-qr].active{ background:rgba(99,230,210,0.22) !important; border-color:var(--accent) !important; color:var(--text); }
+.gd-log{ width:100%; min-height:52px; font-size:18px; font-weight:800; margin-top:14px; }
