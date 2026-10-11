@@ -49,6 +49,13 @@ npm start
 ```
 Then open http://localhost:3000
 
+## Changes in v78-beta15: 📐 three-point line math
+- Kegel "Math for a Line" worked backwards from the **slide** at the foul line (inside of the slide foot): laydown = target + (target − exit)/3, slide = laydown + laydown offset. Focal point = rule-of-31 exit board.
+- Game Day: the Feet box is now **Slide**; a live 📐 Line ✅/❌ check under the steppers shows where your slide + target send the ball versus the exit point, and the slide the math wants.
+- Coach: starting plan includes the full line; an alignment note before any move; when the mark keeps being missed and the line is off, Coach says fix the slide first (alignment, not execution).
+- Bowler page: new **Laydown offset** setting (default 5).
+- Guide: new three-point line section.
+
 ## Changes in v77-beta14: Game Day screen in shot order
 - One column on the phone, top to bottom in the order you use it: **Tonight** (folds to one line once set up; turns red if the pattern/bag/ball is missing) → **Coach** → **your line** (Feet / Target / Breakpoint with − / + buttons, no keyboard) → **the shot** (1 Your mark, 2 Pocket, 3 Pins left) → big **Log this shot**.
 - After Log the screen jumps back to Coach. Coach shows the compass line + the move; the reasons fold under "Why & what's next" (remembers if you keep it open; the starting plan opens itself).

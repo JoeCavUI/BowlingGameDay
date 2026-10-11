@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Bowler</title>
-  <link rel="stylesheet" href="styles.css?v=77" />
+  <link rel="stylesheet" href="styles.css?v=78" />
 </head>
 <body data-page="bowler">
   <div class="navlinks"></div>
@@ -69,6 +69,11 @@
         <div>
           <label>Axis rotation (deg)</label>
           <input class="input" id="rotation" type="number" step="1" placeholder="e.g., 55" />
+        </div>
+        <div>
+          <label>Laydown offset (boards)</label>
+          <input class="input" id="laydownOffset" type="number" step="1" min="2" max="10" placeholder="5" />
+          <div class="small" style="margin-top:6px">Boards between where your ball lands and the <b>inside of your slide foot</b> at the foul line. Most bowlers are about 5. Used for the three-point line math.</div>
         </div>
       </div>
 
@@ -170,8 +175,8 @@
     </div>
   </div>
 
-  <script src="app.js?v=77"></script>
-  <script src="coach.js?v=77"></script>
+  <script src="app.js?v=78"></script>
+  <script src="coach.js?v=78"></script>
   <script>
     BT.renderNav('bowler');
 
@@ -187,6 +192,7 @@
       pap: BT.$('#pap'),
       tilt: BT.$('#tilt'),
       rotation: BT.$('#rotation'),
+      laydownOffset: BT.$('#laydownOffset'),
       laserLoft: BT.$('#laserLoft'),
       laserAim: BT.$('#laserAim'),
       laserSpeed: BT.$('#laserSpeed'),
@@ -291,6 +297,7 @@
       els.pap.value = data.pap || '';
       els.tilt.value = data.tilt ?? '';
       els.rotation.value = data.rotation ?? '';
+      els.laydownOffset.value = data.laydownOffset ?? '';
       const laser = data.laser || {};
       els.laserLoft.value = String(laser.loft ?? 3);
       els.laserAim.value = String(laser.aim ?? 4);
@@ -321,6 +328,7 @@
         pap: els.pap.value.trim(),
         tilt: els.tilt.value ? Number(els.tilt.value) : null,
         rotation: els.rotation.value ? Number(els.rotation.value) : null,
+        laydownOffset: els.laydownOffset.value ? Number(els.laydownOffset.value) : null,
         laser: {
           loft: Number(els.laserLoft.value || 3),
           aim: Number(els.laserAim.value || 3),

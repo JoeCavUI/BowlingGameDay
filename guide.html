@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Guide</title>
-  <link rel="stylesheet" href="styles.css?v=77" />
+  <link rel="stylesheet" href="styles.css?v=78" />
   <style>
     .guide { max-width: 760px; margin: 0 auto; line-height: 1.55; font-size: 16px; }
     .guide h2 { margin: 0 0 6px; font-size: 21px; }
@@ -163,7 +163,7 @@
           <li><b>Lanes / Pair</b>: type your pair, e.g., <b>23-24</b>, and the <b>Starting lane</b>. The app alternates lanes for you every frame.</li>
           <li><b>Oil pattern</b> and <b>Bag</b>. If either is missing, the Tonight line turns red and says what it needs.</li>
         </ol>
-        <p><b>Your line</b>: <b>Feet</b>, <b>Target</b> and <b>Breakpoint</b> boards, with <span class="k">−</span> / <span class="k">+</span> buttons so you never need the keyboard, plus your <b>Ball</b>. These stay filled in between shots; change them only when you move.</p>
+        <p><b>Your line</b>: <b>Slide</b> (the board under the <b>inside of your slide foot at the foul line</b>, left foot for righties), <b>Target</b> and <b>Breakpoint</b> boards, with <span class="k">−</span> / <span class="k">+</span> buttons so you never need the keyboard, plus your <b>Ball</b>. These stay filled in between shots; change them only when you move.</p>
         <div class="why">If you see a <b>"Before you bowl"</b> banner, a step is missing. Tap the link in it.</div>
         <a class="top" href="#top">↑ Back to top</a>
       </section>
@@ -275,6 +275,19 @@
         </div>
         <h3>Rule of 31: the exit point (not the breakpoint)</h3>
         <p>Pattern length − 31 ≈ the board where the ball should <b>exit the end of the pattern</b>. On a 42 ft pattern that's about board 11. The <b>breakpoint</b> is further downlane and usually a few boards further outside, in the dry. If your breakpoint is <b>at or inside</b> the exit board, the ball is turning in the mud. Enter your <b>breakpoint</b> and pick your <b>oil pattern</b> on Game Day so Coach can check this.</p>
+        <h3 id="line-math">📐 Three-point line: make your line go through the exit point</h3>
+        <p>Game Day checks your line with Kegel's <b>Math for a Line</b>, worked backwards from your slide at the foul line, through your target, to the rule of 31 exit point:</p>
+        <ol>
+          <li><b>Exit point</b> (the focal point) = pattern length − 31. On 38 ft that's board <b>7</b>.</li>
+          <li><b>Target minus exit point</b>: target 10 − 7 = 3.</li>
+          <li><b>Divide by 3</b> = 1.</li>
+          <li><b>Add to your target</b> for the <b>laydown board</b>: 10 + 1 = <b>11</b>.</li>
+          <li><b>Add your laydown offset</b> (usually 5, set on the Bowler page) for the <b>slide board</b>: 11 + 5 = <b>16</b>.</li>
+          <li><b>Slide 16, lay down 11, over 10, out at 7.</b></li>
+        </ol>
+        <p>Under your Slide / Target boxes you'll see either <b>📐 Line ✅</b> (your slide and target send the ball through the exit point) or <b>📐 Line ❌</b> with where it's really headed and the slide the math wants. Each board your slide is off moves the ball about <b>3 boards</b> at the exit point.</p>
+        <div class="why"><b>How Coach uses it:</b> the starting plan gives you the full line for your target. If your line doesn't go through the exit point, Coach tells you before you've made any moves. If you keep missing your mark <i>and</i> the line is off, Coach says to fix your slide first: the misses may be alignment, not your throw. Once you start moving with the lane, Coach stops nagging, because moving off the starting line is the point of a move.</div>
+        <div class="why warn">Like the rule of 31, the ÷3 and +5 are rules of thumb. If your ball consistently lands more or less than 5 boards from the inside of your slide foot, change <b>Laydown offset</b> on the Bowler page.</div>
         <a class="top" href="#top">↑ Back to top</a>
       </section>
 
@@ -351,7 +364,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=77"></script>
+  <script src="app.js?v=78"></script>
   <script>
     BT.renderNav('guide');
     BT.$('#ver').textContent = 'Bowling Tool ' + BT.APP_VERSION;

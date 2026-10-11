@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=77" />
+  <link rel="stylesheet" href="styles.css?v=78" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -113,8 +113,8 @@
         <!-- My line + ball -->
         <div class="panel">
           <div class="gd-line">
-            <div class="gd-step"><label>Feet</label>
-              <div class="stepper"><button type="button" class="btn secondary" data-step="feet" data-d="-1" aria-label="Feet minus one">−</button><input id="feet" class="input" type="number" step="1" inputmode="numeric" /><button type="button" class="btn secondary" data-step="feet" data-d="1" aria-label="Feet plus one">+</button></div>
+            <div class="gd-step"><label>Slide</label>
+              <div class="stepper"><button type="button" class="btn secondary" data-step="feet" data-d="-1" aria-label="Slide minus one">−</button><input id="feet" class="input" type="number" step="1" inputmode="numeric" /><button type="button" class="btn secondary" data-step="feet" data-d="1" aria-label="Slide plus one">+</button></div>
             </div>
             <div class="gd-step"><label>Target</label>
               <div class="stepper"><button type="button" class="btn secondary" data-step="arrows" data-d="-1" aria-label="Target minus one">−</button><input id="arrows" class="input" type="number" step="1" inputmode="numeric" /><button type="button" class="btn secondary" data-step="arrows" data-d="1" aria-label="Target plus one">+</button></div>
@@ -123,6 +123,8 @@
               <div class="stepper"><button type="button" class="btn secondary" data-step="bp" data-d="-1" aria-label="Breakpoint minus one">−</button><input id="bp" class="input" type="number" step="1" inputmode="numeric" /><button type="button" class="btn secondary" data-step="bp" data-d="1" aria-label="Breakpoint plus one">+</button></div>
             </div>
           </div>
+          <div class="small" style="margin-top:6px">Slide = the board under the inside of your slide foot at the foul line.</div>
+          <div id="lineMath" class="gd-linemath" style="display:none"></div>
           <div style="margin-top:10px">
             <label>Ball</label>
             <select id="ball" class="input"></select>
@@ -222,8 +224,8 @@
     </div>
   </div>
 
-  <script src="app.js?v=77"></script>
-  <script src="coach.js?v=77"></script>
+  <script src="app.js?v=78"></script>
+  <script src="coach.js?v=78"></script>
   <script>
     BT.renderNav('gameday');
 
@@ -1624,6 +1626,7 @@ function saveCurrentSessionDraft() {
         pattern: (Array.isArray(pats) ? pats : []).find(p => patternName(p) === el.pattern.value) || null,
         setBalls: names.map(n => ({ name: n, row: map.get(n) })).filter(b => b.row),
         currentBall: el.ball ? el.ball.value : '',
+        line: { feet: el.feet.value, arrows: el.arrows.value },
         motion: { vector: (r, b) => BT.motionVector(r, b), distance: (a, b) => BT.motionDistance(a, b) },
         ballInfo: (r) => ({ cover: BT.ballCover(r), grit: BT.surfaceToGrit(BT.ballSurface(r)), asym: /asym/i.test(BT.ballCore(r) || ''), known: !!(String(BT.ballSurface(r) || '').trim() && BT.ballRG(r) && BT.ballDiff(r)) }),
         matrix: (r) => BT.matrixCellForRow(r),
@@ -2119,6 +2122,29 @@ function sessionSummary(shots) {
         inp.dispatchEvent(new Event('change', { bubbles: true }));
       });
     });
+
+    // 📐 Live three-point line check (Kegel Math for a Line through the rule-of-31 exit point)
+    function updateLineMath() {
+      const box = BT.$('#lineMath');
+      if (!box || !window.BTCoach || !BTCoach.lineCheck) return;
+      const pats = BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || [];
+      const pat = (Array.isArray(pats) ? pats : []).find(p => patternName(p) === el.pattern.value) || null;
+      const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
+      let r = null;
+      try { r = BTCoach.lineCheck({ feet: el.feet.value, arrows: el.arrows.value, pattern: pat, bowler }); } catch (_e) {}
+      if (!pat || pat.length == null || pat.length === '') { box.style.display = ''; box.className = 'gd-linemath'; box.textContent = '📐 Pick an oil pattern with a length to check your line against the exit point.'; return; }
+      if (!r) { box.style.display = 'none'; return; }
+      box.style.display = '';
+      box.className = 'gd-linemath ' + (r.status === 'on' ? 'ok' : r.status ? 'off' : '');
+      box.innerHTML = r.status === 'on'
+        ? `📐 <b>Line ✅</b> slide ${r.yourSlide} → lay down ${r.laydown} → target ${r.target} → exit board ${r.exitBoard}`
+        : r.status
+          ? `📐 <b>Line ❌</b> slide ${r.yourSlide} over target ${r.target} heads to board ${r.passes}, ${r.gap} ${r.status === 'inside' ? 'inside' : 'outside'} the exit point (board ${r.exitBoard}).<br><b>Math: slide ${r.slide}</b> → lay down ${r.laydown} → target ${r.target} → exit ${r.exitBoard}`
+          : `📐 For target ${r.target}: <b>slide ${r.slide}</b> → lay down ${r.laydown} → exit board ${r.exitBoard}`;
+    }
+    ['feet', 'arrows', 'pattern'].forEach(k => { if (el[k]) { el[k].addEventListener('input', updateLineMath); el[k].addEventListener('change', updateLineMath); } });
+    setTimeout(updateLineMath, 450);
+    window.addEventListener('pageshow', () => setTimeout(updateLineMath, 350));
 
     // Tonight: one-line summary; opens itself until the must-haves are set.
     function updateSetupSummary() {
