@@ -49,6 +49,14 @@ npm start
 ```
 Then open http://localhost:3000
 
+## Changes in v72-beta9 — Arsenal check
+- New 🩺 Arsenal check (Arsenal page; scope: all balls / balls I added / any saved bag):
+  - Bowler ↔ ball: weight vs speed at the pins, late-night fatigue, speed/rev dominance vs covers, RG vs rev rate, tilt, LASER vs bag spread.
+  - Bag shape: crowded categories, near-duplicates, step-down gaps, all-same surfaces, no spare ball.
+  - History: bag vs the oil you bowl on, idle balls, a ball underperforming at a house/lane pair, resurfacing due (games counted from Game Day).
+- Per-ball **weight** (default 15 lb) and **Just resurfaced** in the ball tune window; weight on Add a ball.
+- Coach starting plan warns when tonight's bag doesn't fit tonight's pattern. Bowler page links to the check.
+
 ## Changes in v71-beta8 — The Five Elements
 - Every Coach suggestion is tagged with its element: 🎯 Direction, 📐 Angle, ⚡ Speed, 🌀 Rev rate & roll, 🎳 Equipment.
 - **Angle** is now part of Coach: target → breakpoint → pocket recovery. Weak on a direct line → open the angle; too strong on a big swing → tighten it.

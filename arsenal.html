@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Arsenal</title>
-  <link rel="stylesheet" href="styles.css?v=71" />
+  <link rel="stylesheet" href="styles.css?v=72" />
 </head>
 <body data-page="arsenal">
   <div class="navlinks"></div>
@@ -40,6 +40,18 @@
       <div id="matrix" class="grid-2"></div>
     </div>
 
+
+    <div class="panel" id="arsenalCheckPanel">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap">
+        <div>
+          <h2 style="margin:0">🩺 Arsenal check</h2>
+          <div class="small">How your equipment matches <b>your</b> game: your speed, revs and roll, the oil you bowl on, and your history.</div>
+        </div>
+        <select class="input" id="checkScope" style="max-width:260px" aria-label="What to check"></select>
+      </div>
+      <div class="hr-split"></div>
+      <div id="arsenalCheck"></div>
+    </div>
 
     <div class="panel">
       <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap">
@@ -135,6 +147,12 @@
         <div>
           <div class="small dim">PSA (asym diff)</div>
           <input class="input" id="wiPSA" placeholder="0.015 (leave blank if Sym)" />
+        </div>
+        <div>
+          <div class="small dim">Weight</div>
+          <select class="input" id="wiWeight">
+            <option value="">15 lb (default)</option><option value="16">16 lb</option><option value="15">15 lb</option><option value="14">14 lb</option><option value="13">13 lb</option><option value="12">12 lb</option><option value="11">11 lb</option><option value="10">10 lb</option>
+          </select>
         </div>
       
       <div class="hr-split" style="margin-top:14px"></div>
@@ -242,6 +260,18 @@
       </div>
 
       <div class="panel" style="margin-top:14px;padding:12px;background:#111">
+        <div style="font-weight:900">Weight &amp; care</div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px">
+          <label class="small" for="tuneWeight" style="margin:0">Weight</label>
+          <select class="input" id="tuneWeight" style="width:110px">
+            <option value="">15 lb (default)</option><option value="16">16 lb</option><option value="15">15 lb</option><option value="14">14 lb</option><option value="13">13 lb</option><option value="12">12 lb</option><option value="11">11 lb</option><option value="10">10 lb</option>
+          </select>
+          <button class="btn secondary" id="tuneResurfaced" type="button">Just resurfaced</button>
+        </div>
+        <div class="small dim" id="tuneCareInfo" style="margin-top:6px"></div>
+      </div>
+
+      <div class="panel" style="margin-top:14px;padding:12px;background:#111">
         <div style="font-weight:900">Role match preview</div>
         <div class="small dim" style="margin-top:4px">Use this to see which role the current tune is moving toward.</div>
         <div id="tuneRolePreview" style="margin-top:10px"></div>
@@ -256,7 +286,8 @@
     </div>
   </div>
 
-  <script src="app.js?v=71"></script>
+  <script src="app.js?v=72"></script>
+  <script src="coach.js?v=72"></script>
   <script>
     BT.renderNav('arsenal');
 
@@ -586,8 +617,31 @@
       tune.back.value = tw.backend;
       if (tune.autoResult) tune.autoResult.innerHTML = 'Pick a role from the dropdown, then click <b>Auto tune</b>. The app will search common surfaces and light perception nudges for the closest match.';
       setTunePills();
+      renderTuneCare(nm);
       tune.modal.classList.remove('hidden');
     }
+
+    function renderTuneCare(nm) {
+      const care = BT.ballCareFor(nm);
+      const w = BT.$('#tuneWeight'); if (w) w.value = care.weight ? String(care.weight) : '';
+      const info = BT.$('#tuneCareInfo'); if (!info) return;
+      let games = null;
+      try { if (window.BTCoach) games = BTCoach.ballGames(BT.lsGet(BT.KEYS.GAME_SESSIONS, []), nm, care.resurfacedAt); } catch (_e) {}
+      const since = care.resurfacedAt ? ` since ${new Date(care.resurfacedAt).toLocaleDateString()}` : '';
+      info.textContent = games == null ? '' : `About ${games} game${games === 1 ? '' : 's'} logged on this ball${since}. Resurfacing is usually due every 60–100 games.`;
+    }
+    BT.$('#tuneWeight')?.addEventListener('change', () => {
+      if (!tune.currentName) return;
+      const v = BT.$('#tuneWeight').value;
+      BT.setBallCare(tune.currentName, { weight: v ? Number(v) : null });
+      renderArsenalCheck();
+    });
+    BT.$('#tuneResurfaced')?.addEventListener('click', () => {
+      if (!tune.currentName) return;
+      BT.setBallCare(tune.currentName, { resurfacedAt: Date.now() });
+      renderTuneCare(tune.currentName);
+      renderArsenalCheck();
+    });
 
     function closeTune() {
       tune.modal.classList.add('hidden');
@@ -968,7 +1022,61 @@
       renderMatrix(rows);
       renderRolePlanner(rows);
       renderTable(rows);
+      renderArsenalCheck();
     }
+
+    // ---- Arsenal check ----
+    function renderCheckScopes() {
+      const sel = BT.$('#checkScope'); if (!sel) return;
+      const keep = sel.value;
+      const sets = BT.lsGet(BT.KEYS.ARSENAL_SETS, []) || [];
+      const opts = [['all', 'All balls in my list'], ...(customRows.length ? [['mine', 'Only balls I added']] : []), ...sets.map(st => ['set:' + st.name, 'Bag: ' + st.name])];
+      sel.innerHTML = opts.map(([v, t]) => `<option value="${String(v).replace(/"/g, '&quot;')}">${t}</option>`).join('');
+      if (keep && opts.some(o => o[0] === keep)) sel.value = keep;
+      else if (sets.length) sel.value = 'set:' + (BT.lsGet('bt_gameday_preferred_set_v1', '') || sets[0].name);
+      if (!sel.value) sel.value = 'all';
+    }
+    function renderArsenalCheck() {
+      const box = BT.$('#arsenalCheck'); if (!box || !window.BTCoach) return;
+      renderCheckScopes();
+      const scope = (BT.$('#checkScope') && BT.$('#checkScope').value) || 'all';
+      const sets = BT.lsGet(BT.KEYS.ARSENAL_SETS, []) || [];
+      let rows = viewRows().filter(r => !r.__proposed);
+      if (scope === 'mine') rows = rows.filter(r => r.__custom);
+      if (scope.startsWith('set:')) {
+        const st = sets.find(x => 'set:' + x.name === scope);
+        const names = new Set(((st && st.balls) || []).map(x => typeof x === 'string' ? x : x && x.name));
+        rows = rows.filter(r => names.has(BT.ballName(r)));
+      }
+      const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
+      let findings = [];
+      try {
+        findings = BTCoach.arsenalCheck({
+          rows: rows.map(r => ({ name: BT.ballName(r), row: r })),
+          scope: scope.startsWith('set:') ? 'bag' : 'list',
+          bowler,
+          sessions: BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || [],
+          patterns: BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || [],
+          sets,
+          info: (r) => ({ cover: BT.ballCover(r), grit: BT.surfaceToGrit(BT.ballSurface(r)), asym: /asym/i.test(BT.ballCore(r) || ''), rg: BT.ballRG(r), diff: BT.ballDiff(r) }),
+          motion: { vector: (r, b) => BT.motionVector(r, b) },
+          matrix: (r) => BT.matrixCellForRow(r),
+          care: (n) => BT.ballCareFor(n),
+        });
+      } catch (e) { console.error('Arsenal check failed', e); }
+      const esc = (t) => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      const color = { high: 'var(--danger)', med: '#ffc400', low: 'rgba(255,255,255,0.25)' };
+      const noProfile = !(bowler.mphLine || bowler.rpm);
+      box.innerHTML = (noProfile ? `<div class="setup-banner small">Fill in your speed and rev rate on the <a href="bowler.html">Bowler page</a> to unlock the bowler-vs-ball checks.</div>` : '') +
+        (findings.length ? findings.map(f => `
+          <div class="list-item" style="border-left:4px solid ${color[f.level]};margin-bottom:6px;border-radius:0 10px 10px 0;background:rgba(255,255,255,0.03)">
+            <div><b>${f.icon} ${esc(f.title)}</b></div>
+            <div class="small" style="margin-top:4px">${esc(f.detail)}</div>
+            <div class="small" style="margin-top:4px;opacity:1;color:var(--accent)"><b>Try:</b> ${esc(f.fix)}</div>
+          </div>`).join('')
+        : `<div class="list-item small">✅ No mismatches found for ${rows.length} ball${rows.length === 1 ? '' : 's'}. Your equipment fits your game.</div>`);
+    }
+    BT.$('#checkScope')?.addEventListener('change', renderArsenalCheck);
 
     async function init() {
       // Display build version from shared app.js
@@ -1096,6 +1204,8 @@ function saveWhatIfBall() {
 
   customRows.push(row);
   BT.lsSet('bt_custom_balls_v1', customRows);
+  const wiW = (BT.$('#wiWeight') && BT.$('#wiWeight').value) || '';
+  if (wiW) BT.setBallCare(name, { weight: Number(wiW) });
   showWhatIfModal(false);
   clearWhatIfForm();
   applyFilter();

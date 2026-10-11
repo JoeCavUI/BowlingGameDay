@@ -526,6 +526,165 @@
     return { elements: out, weakest: weakest ? weakest.key : '', drill: weakest ? DRILL[weakest.key] : '' };
   }
 
+  // ---------- Arsenal check: bowler ↔ ball, bag shape, history ----------
+  // Games logged on a ball (fractional: share of first balls in each game), optionally since a date.
+  function ballGames(sessions, name, sinceTs) {
+    let g = 0;
+    for (const s of (Array.isArray(sessions) ? sessions : [])) {
+      if (sinceTs && (s.savedAt || 0) < sinceTs) continue;
+      const shots = (s.shots || []).filter(x => x && x.type !== 'gameStart' && !x.isFill);
+      const byGame = {};
+      shots.forEach(x => { const k = x.gameNo || 1; (byGame[k] = byGame[k] || []).push(x); });
+      for (const k of Object.keys(byGame)) {
+        const arr = byGame[k];
+        const mine = arr.filter(x => x.ball === name).length;
+        if (mine) g += mine / arr.length; // a full game with this ball = 1
+      }
+    }
+    return Math.round(g);
+  }
+
+  // ctx: { rows:[{name,row}], bowler, sessions, patterns, sets, info(row)->{cover,grit,asym,rg,diff}, motion, matrix(row)->{strength,shape,strengthScore}, care(name)->{weight,resurfacedAt} }
+  function arsenalCheck(ctx) {
+    const prof = bowlerProfile(ctx.bowler);
+    const balls = (ctx.rows || []).filter(b => b && b.row && !b.row.__proposed);
+    const F = [];
+    const add = (level, icon, title, detail, fix) => F.push({ level, icon, title, detail, fix });
+    if (!balls.length) return F;
+    const info = (b) => ctx.info(b.row);
+    const isPearl = (b) => /pearl/i.test(info(b).cover || '');
+    const isSolid = (b) => /solid/i.test(info(b).cover || '');
+    const isPolished = (b) => (Number(info(b).grit) || 4000) >= 4500;
+    const isSanded = (b) => (Number(info(b).grit) || 4000) <= 3000;
+    const isSpare = (b) => /plastic|poly(ester)?/i.test(info(b).cover || '');
+    const play = balls.filter(b => !isSpare(b));
+    const n = play.length;
+
+    // ---- 1. Bowler ↔ ball ----
+    const known = balls.map(b => ctx.care && ctx.care(b.name).weight).filter(Boolean);
+    const weights = known.length ? known : [15];
+    const usual = weights.slice().sort((a, b) => weights.filter(x => x === b).length - weights.filter(x => x === a).length)[0];
+    const wKnown = known.length > 0;
+    const wTxt = wKnown ? `Your ${usual} lb ball` : 'A 15–16 lb ball';
+    const mphLine = prof.mph;
+    const mphPins = num(ctx.bowler && ctx.bowler.mphPins) ?? (mphLine != null ? Math.round(mphLine * 0.85 * 10) / 10 : null);
+    if (mphPins != null && usual >= 15 && mphPins < 11) {
+      add('high', '⚖️', `${wTxt} may be too heavy for your speed`, `Your ball reaches the pins at about ${mphPins} mph. At that speed extra weight doesn't add carry. It mainly adds effort and fatigue.${wKnown ? '' : ' (Set each ball\'s weight in the Arsenal Matrix for a sharper check.)'}`, `Try a ${usual - 2}–${usual - 1} lb ball. You'll likely gain speed and revs with less effort, and lose very little pin carry. If your current weight feels great, keep it.`);
+    } else if (mphPins != null && wKnown && usual >= 16 && mphPins < 12.5) {
+      add('med', '⚖️', 'Consider a 15 lb ball', `About ${mphPins} mph at the pins with 16 lb equipment.`, 'One pound lighter often adds a little speed and rev rate with no carry loss at your speed.');
+    }
+    // Fatigue: slower taps / weak finishes pile up in the last game of the night
+    const recent = (ctx.sessions || []).slice(0, 6);
+    let tiredNights = 0;
+    for (const s of recent) {
+      const shots = (s.shots || []).filter(x => x && x.type !== 'gameStart' && !x.isFill);
+      const games = [...new Set(shots.map(x => x.gameNo || 1))].sort((a, b) => a - b);
+      if (games.length < 2) continue;
+      const first = shots.filter(x => (x.gameNo || 1) === games[0]), lastG = shots.filter(x => (x.gameNo || 1) === games[games.length - 1]);
+      const tired = (arr) => arr.filter(x => x.speedTrend === 'slower' || x.keyPin === 'weak' || (x.exit === (prof.lefty ? 'Exit left' : 'Exit right'))).length / Math.max(arr.length, 1);
+      if (lastG.length >= 6 && tired(lastG) - tired(first) >= 0.25) tiredNights++;
+    }
+    if (tiredNights >= 2) add('med', '🔋', 'You may be tiring late in the night', `In ${tiredNights} of your last ${recent.length} sessions, "slower" speed taps and weak finishes jumped in the last game.`, usual >= 15 ? 'A ball 1 lb lighter can keep your speed and finish up through game 3. So can a short warm-up routine between games.' : 'A short stretch / warm-up between games helps keep speed and finish up through game 3.');
+
+    if (n >= 3) {
+      const shinyShare = play.filter(b => isPearl(b) || isPolished(b)).length / n;
+      const strongShare = play.filter(b => (ctx.matrix(b.row).strength === 'STRONG') || (isSolid(b) && isSanded(b))).length / n;
+      const hasClean = play.some(b => isPearl(b) || isPolished(b));
+      const hasEarly = play.some(b => isSanded(b) && (isSolid(b) || /hybrid/i.test(info(b).cover || '')));
+      if (prof.dom < -0.3 && shinyShare >= 0.75) add('high', '⚡', 'Speed-dominant, but your bag is mostly shiny', `${Math.round(shinyShare * 100)}% of your balls are pearls or polished. With your speed they'll skid past the friction.`, 'Add (or resurface one ball to) a sanded solid around 1500–2000 grit for an earlier, controllable read.');
+      if (prof.dom > 0.3 && strongShare >= 0.75 && !hasClean) add('high', '🔄', 'Rev-dominant, and every ball is strong', 'Your revs already give you plenty of hook, and nothing in your bag is clean for when the lanes dry up.', 'Add a polished pearl (or polish one ball) for transition and drier lanes.');
+      const rgs = play.map(b => num(info(b).rg)).filter(v => v != null);
+      if (prof.lowRev && rgs.length >= 3 && rgs.filter(v => v >= 2.54).length / rgs.length >= 0.6) add('med', '🔄', 'High-RG cores for a lower-rev game', `Most of your balls have RG 2.54+. High-RG balls are slow to rev up, and with about ${prof.rpm} rpm they can skid too long.`, 'Lower-RG cores (about 2.46–2.50) rev up sooner and help a lower-rev release finish.');
+      if (prof.tilt != null && prof.tilt >= 20 && !hasEarly) add('med', '🌀', 'High tilt and nothing reads early', `${prof.tilt}° of tilt already gives you length, and none of your balls is a sanded solid or hybrid.`, 'Add an earlier-reading sanded ball so you have an answer on heavier oil.');
+      if (prof.laser.Speed <= 2 && prof.laser.Release <= 2) {
+        const strengths = play.map(b => ctx.matrix(b.row).strengthScore).filter(v => v != null);
+        const spread = strengths.length ? Math.max(...strengths) - Math.min(...strengths) : 0;
+        if (spread < 0.3) add('med', '🎯', 'Your bag has to do the adjusting, and it\'s narrow', 'You rated speed and release changes low, so equipment is your main adjustment. Your balls are close together in strength.', 'Spread the bag: one clearly stronger ball and one clearly weaker/cleaner one.');
+      }
+    }
+
+    // ---- 2. Bag shape ----
+    if (n >= 3) {
+      const cells = {};
+      const cap = (w) => w.charAt(0) + w.slice(1).toLowerCase();
+      for (const b of play) { const c = ctx.matrix(b.row); const k = `${cap(c.strength)} / ${cap(c.shape)}`; (cells[k] = cells[k] || []).push(b.name); }
+      const all = ['Strong / Smooth', 'Strong / Sharp', 'Medium / Smooth', 'Medium / Sharp', 'Weak / Smooth', 'Weak / Sharp'];
+      const empty = all.filter(k => !cells[k]);
+      const crowded = Object.entries(cells).sort((a, b) => b[1].length - a[1].length)[0];
+      if (crowded && crowded[1].length >= 3 && crowded[1].length / n >= 0.4) add('med', '🧺', `Crowded: ${crowded[1].length} of ${n} balls are ${crowded[0]}`, `${crowded[1].slice(0, 4).join(', ')}${crowded[1].length > 4 ? ` and ${crowded[1].length - 4} more` : ''}. ${empty.length ? 'Nothing in: ' + empty.join(', ') + '.' : ''}`, empty.length ? `Your next ball (or a resurface) should fill ${empty[0]}.` : 'Consider retiring or changing the surface on one of them.');
+      else if (empty.length >= 3) add('low', '🧺', 'Missing categories', `Nothing in: ${empty.join(', ')}.`, `When you add a ball, aim for ${empty[0]}.`);
+
+      // Near-duplicates
+      const vecs = play.map(b => ({ name: b.name, v: ctx.motion.vector(b.row, ctx.bowler) }));
+      const dups = [];
+      for (let i = 0; i < vecs.length; i++) for (let j = i + 1; j < vecs.length; j++) {
+        const d = Math.sqrt((vecs[i].v.hook - vecs[j].v.hook) ** 2 + (vecs[i].v.length - vecs[j].v.length) ** 2 + (vecs[i].v.backend - vecs[j].v.backend) ** 2);
+        if (d <= 0.06) dups.push([vecs[i].name, vecs[j].name, d]);
+      }
+      dups.sort((a, b) => a[2] - b[2]);
+      if (dups.length) add('low', '👯', `${dups.length} near-duplicate pair${dups.length > 1 ? 's' : ''}`, dups.slice(0, 3).map(d => `${d[0]} ≈ ${d[1]}`).join(' · ') + '. They roll almost the same for you.', 'Change the surface on one ball of each pair to make it a real step up or down.');
+
+      // Step-down gaps
+      const st = play.map(b => ({ name: b.name, s: ctx.matrix(b.row).strengthScore })).filter(x => x.s != null).sort((a, b) => b.s - a.s);
+      for (let i = 1; i < st.length; i++) {
+        if (st[i - 1].s - st[i].s >= 0.22) { add('low', '🪜', 'Big gap in your step-down', `Big jump between ${st[i - 1].name} and ${st[i].name}. Nothing in between for when the lane is transitioning.`, 'A medium-strength ball (or a different surface on one of these) fills the gap.'); break; }
+      }
+
+      // Same surface everywhere
+      const bucket = (b) => isPolished(b) ? 'polish' : (Number(info(b).grit) || 4000) <= 2500 ? 'rough' : 'mid';
+      const buckets = new Set(play.map(bucket));
+      if (n >= 4 && buckets.size === 1) add('low', '🧽', 'Every ball has the same kind of surface', `All ${n} balls are ${[...buckets][0] === 'mid' ? 'around 3000–4000 grit' : [...buckets][0] === 'polish' ? 'polished' : 'rough-sanded'}.`, 'Spreading surfaces (e.g., one at 2000, one at 4000, one polished) gives you more steps without buying anything.');
+    }
+    if (!balls.some(isSpare)) add('med', '🎯', ctx.scope === 'bag' ? 'No spare ball in this bag' : 'No spare ball', ctx.scope === 'bag' ? 'No plastic/polyester ball in this bag.' : 'No plastic/polyester ball in your list.', 'A plastic spare ball goes straight, which makes 10-pins and 7-pins much easier.');
+
+    // ---- 3. Arsenal ↔ where you bowl / history ----
+    const sessions = Array.isArray(ctx.sessions) ? ctx.sessions : [];
+    if (sessions.length >= 3 && n >= 3) {
+      const pats = Object.fromEntries((ctx.patterns || []).map(p => [p.name, patternProfile(p)]));
+      const used = sessions.map(s => pats[s.pattern]).filter(Boolean);
+      if (used.length >= 3) {
+        const light = used.filter(p => p.volumeClass === 'light' || p.lengthClass === 'short').length / used.length;
+        const heavy = used.filter(p => p.volumeClass === 'heavy' || p.lengthClass === 'long').length / used.length;
+        const avgStrength = play.map(b => ctx.matrix(b.row).strengthScore).filter(v => v != null).reduce((a, b, _, A) => a + b / A.length, 0);
+        if (light >= 0.6 && avgStrength >= 0.66) add('med', '🛢️', 'Your bag is built for heavier oil than you bowl on', `${Math.round(light * 100)}% of your logged nights are on short or light patterns, but most of your balls are strong.`, 'Add a cleaner, weaker ball (pearl or polished) for these conditions.');
+        if (heavy >= 0.6 && avgStrength <= 0.45) add('med', '🛢️', 'Your bag is light for the oil you bowl on', `${Math.round(heavy * 100)}% of your logged nights are on long or heavy patterns, but your balls are mostly weaker.`, 'Add a strong, sanded solid for these conditions.');
+      }
+      // Balls in a saved bag that never get thrown
+      const bagBalls = new Set((ctx.sets || []).flatMap(st => (st.balls || []).map(x => typeof x === 'string' ? x : x && x.name)).filter(Boolean));
+      const thrown = new Set(sessions.slice(0, 8).flatMap(s => (s.shots || []).map(x => x.ball)).filter(Boolean));
+      const idle = [...bagBalls].filter(b => !thrown.has(b));
+      if (idle.length && sessions.length >= 4) add('low', '💤', `${idle.length === 1 ? idle[0] + ' hasn\'t' : idle.length + ' bagged balls haven\'t'} been thrown lately`, `${idle.slice(0, 4).join(', ')}: no shots in your last ${Math.min(8, sessions.length)} sessions.`, 'Fine as a backup. If it never comes out, it may be dead weight in the bag.');
+      // Underperforming ball at a house / lane pair
+      const byCtx = {};
+      for (const s of sessions) {
+        const key = `${s.house || '—'}|${s.lanes || '—'}`;
+        for (const x of (s.shots || [])) {
+          if (!x || x.type === 'gameStart' || x.isFill || !x.ball) continue;
+          const c = classify(x, prof.lefty);
+          byCtx[key] = byCtx[key] || {};
+          const r = byCtx[key][x.ball] = byCtx[key][x.ball] || { n: 0, good: 0 };
+          r.n++; if (c.pocketHit || c.strike) r.good++;
+        }
+      }
+      for (const [key, map] of Object.entries(byCtx)) {
+        const list = Object.entries(map).filter(([, r]) => r.n >= 8).map(([b, r]) => ({ b, rate: r.good / r.n, n: r.n }));
+        if (list.length < 2) continue;
+        list.sort((a, b) => a.rate - b.rate);
+        const worst = list[0], others = list.slice(1);
+        const otherRate = others.reduce((a, o) => a + o.rate * o.n, 0) / others.reduce((a, o) => a + o.n, 0);
+        if (otherRate - worst.rate >= 0.2) { const [h, l] = key.split('|'); add('low', '📉', `${worst.b} underperforms at ${h}${l !== '—' ? ' ' + l : ''}`, `Pocket rate ${Math.round(worst.rate * 100)}% vs ${Math.round(otherRate * 100)}% with your other balls (${worst.n} shots).`, 'Start with a different ball there, or check whether it needs a resurface.'); break; }
+      }
+      // Maintenance
+      for (const b of balls) {
+        const care = ctx.care ? ctx.care(b.name) : {};
+        const g = ballGames(sessions, b.name, care.resurfacedAt);
+        if (g >= 60) add(g >= 90 ? 'med' : 'low', '🧰', `${b.name}: about ${g} games${care.resurfacedAt ? ' since resurface' : ' logged'}`, 'Covers lose surface and soak up oil over time, so the ball slowly gets weaker and more unpredictable.', 'Time for a resurface / oil extraction (usually every 60–100 games). Tap the ball in the Arsenal Matrix → "Just resurfaced" to reset the count.');
+      }
+    }
+    const order = { high: 0, med: 1, low: 2 };
+    return F.sort((a, b) => order[a.level] - order[b.level]);
+  }
+
   // ---------- main ----------
   function evaluate(ctx) {
     const out = evaluateCore(ctx);
@@ -576,6 +735,20 @@
       if (pat && pat.volumeClass === 'light') lines.push('Light oil: expect the fronts to dry up early. Watch for high hits by game 2.');
       if (pat && pat.volumeClass === 'heavy') lines.push('Heavy oil: the lane should change slowly. Don\'t chase it early.');
       if (prof.dom < -0.3) lines.push('As a speed-dominant player, the ball may read late. Favor earlier-reading equipment if it skids.');
+      // Tonight's bag vs tonight's pattern (only when it matters)
+      try {
+        const bag = (ctx.setBalls || []).filter(b => b && b.row);
+        if (pat && bag.length >= 2 && ctx.matrix) {
+          const cells = bag.map(b => ctx.matrix(b.row));
+          const info = (b) => ctx.ballInfo ? ctx.ballInfo(b.row) : {};
+          const anySmooth = cells.some(c => c.shape === 'SMOOTH');
+          const allStrong = cells.every(c => c.strength === 'STRONG');
+          const anyStrong = cells.some(c => c.strength === 'STRONG') || bag.some(b => /solid/i.test(info(b).cover || '') && (Number(info(b).grit) || 4000) <= 3000);
+          if (pat.flat && !anySmooth) lines.push('🩺 Heads-up: nothing in tonight\'s bag is smooth, and this pattern is flat. Small misses will be punished. Play straighter and favor your most controllable ball.');
+          if ((pat.volumeClass === 'light' || pat.lengthClass === 'short') && allStrong) lines.push('🩺 Heads-up: everything in tonight\'s bag is strong for a light/short pattern. Expect early hook and start with your cleanest ball.');
+          if ((pat.volumeClass === 'heavy' || pat.lengthClass === 'long') && !anyStrong) lines.push('🩺 Heads-up: nothing strong in tonight\'s bag for a long/heavy pattern. Expect the ball to skid. Slow down a touch and stay inside.');
+        }
+      } catch (_e) {}
       res.headline = C.length ? `Building your read: ${C.length}/3 shots` : 'Starting plan';
       res.why = lines.join(' ') || 'Log your first few shots: mark, pocket and leave matter most.';
       res.next = 'Coach starts calling moves after 3 shots.';
@@ -788,5 +961,5 @@
     return res;
   }
 
-  root.BTCoach = { evaluate, eyeballScore, elementsProfile, elementsReport, _internals: { classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
+  root.BTCoach = { evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
 })(typeof window !== 'undefined' ? window : globalThis);

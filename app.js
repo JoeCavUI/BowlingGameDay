@@ -6,7 +6,7 @@
 
 (function () {
   // Bump this string each build so pages can display it and cache-bust resources.
-  const APP_VERSION = 'v71-beta8';
+  const APP_VERSION = 'v72-beta9';
   const KEYS = {
     CSV_CACHE: 'bt_csv_cache_v1',          // stringified { savedAt, name, rows }
     BOWLER: 'bt_bowler_v1',               // stringified object
@@ -426,6 +426,21 @@
     if (!nm) return;
     const existing = ballTweaksFor(nm);
     setBallTweaks(nm, { hook: existing.hook, length: existing.length, backend: existing.backend, surfaceOverride: '' });
+  }
+
+  // --- Ball care: weight + last resurface (kept apart from the tuning sliders) ---
+  const BALL_CARE_KEY = 'bt_ball_care_v1';
+  function ballCareAll() { const v = lsGet(BALL_CARE_KEY, {}); return (v && typeof v === 'object') ? v : {}; }
+  function ballCareFor(name) {
+    const c = ballCareAll()[String(name || '').trim()] || {};
+    const w = Number(c.weight);
+    return { weight: Number.isFinite(w) && w >= 6 && w <= 16 ? w : null, resurfacedAt: Number(c.resurfacedAt) || 0 };
+  }
+  function setBallCare(name, patch) {
+    const nm = String(name || '').trim(); if (!nm) return;
+    const all = ballCareAll();
+    all[nm] = Object.assign({}, all[nm] || {}, patch || {});
+    lsSet(BALL_CARE_KEY, all);
   }
 
   // Convert foul-line speed to an estimated speed at the pins.
@@ -1329,6 +1344,8 @@
     setBallTweaks,
     clearBallTweaks,
     setBallSurfaceOverride,
+    ballCareFor,
+    setBallCare,
     clearBallSurfaceOverride,
     surfaceToGrit,
     motionVector,

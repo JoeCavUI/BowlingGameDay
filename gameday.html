@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=71" />
+  <link rel="stylesheet" href="styles.css?v=72" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -248,8 +248,8 @@
     </div>
   </div>
 
-  <script src="app.js?v=71"></script>
-  <script src="coach.js?v=71"></script>
+  <script src="app.js?v=72"></script>
+  <script src="coach.js?v=72"></script>
   <script>
     BT.renderNav('gameday');
 
@@ -1652,6 +1652,7 @@ function saveCurrentSessionDraft() {
         currentBall: el.ball ? el.ball.value : '',
         motion: { vector: (r, b) => BT.motionVector(r, b), distance: (a, b) => BT.motionDistance(a, b) },
         ballInfo: (r) => ({ cover: BT.ballCover(r), grit: BT.surfaceToGrit(BT.ballSurface(r)), asym: /asym/i.test(BT.ballCore(r) || '') }),
+        matrix: (r) => BT.matrixCellForRow(r),
       };
     }
 
