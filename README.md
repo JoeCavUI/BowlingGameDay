@@ -49,6 +49,11 @@ npm start
 ```
 Then open http://localhost:3000
 
+## Changes in v79-beta16: line check in two stages
+- Game 1 before any move: **starting line** vs the rule-of-31 exit point, as a mild ⚠️ heads-up (not ❌).
+- After a move or from game 2: **usable line**. The exit point moves by as many boards as the breakpoint has moved since the first shots; checks the slide + target still go through it (slide tolerance ±2).
+- Line notes are heads-ups only; Coach's main call is unchanged.
+
 ## Changes in v78-beta15: 📐 three-point line math
 - Kegel "Math for a Line" worked backwards from the **slide** at the foul line (inside of the slide foot): laydown = target + (target − exit)/3, slide = laydown + laydown offset. Focal point = rule-of-31 exit board.
 - Game Day: the Feet box is now **Slide**; a live 📐 Line ✅/❌ check under the steppers shows where your slide + target send the ball versus the exit point, and the slide the math wants.

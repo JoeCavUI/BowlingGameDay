@@ -210,33 +210,52 @@
   //   laydown = target + (target − focal) / 3      slide = laydown + laydown offset (default 5)
   // Focal point = the rule-of-31 exit board. Reverse: the board a slide/target line passes at the exit
   //   = 4·target − 3·(slide − offset). Each board the slide is off moves the exit by 3 boards.
-  function lineMath(slide, arrows, pat, prof) {
-    const E = exitBoardFor(pat);
-    arrows = num(arrows); slide = num(slide);
-    if (E == null || arrows == null) return null;
-    const off = prof.laydownOffset;
+  // phase 'start' = game 1 before any move: focal point = rule-of-31 exit board (a fresh-pattern estimate). Mild heads-up.
+  // phase 'later' = after a move or from game 2: the exit point SHOULD move with the lane. It moves by the same
+  //   number of boards your breakpoint has moved since your first shots (bp0). The question becomes "is your line
+  //   still going through where the ball should leave the oil now?" — a usable line.
+  function lineMath(slide, arrows, pat, prof, phase, bp, bp0) {
+    arrows = num(arrows); slide = num(slide); bp = num(bp); bp0 = num(bp0);
+    if (arrows == null) return null;
     const mirror = prof.lefty && arrows > 20; // lefty counting boards from the right gutter
     const own = (v) => mirror ? 40 - v : v;
+    const later = phase === 'later';
+    const E31 = exitBoardFor(pat);
+    let focal = null, basis = '';
+    if (!later && E31 != null) { focal = E31; basis = 'rule31'; }
+    else if (later && E31 != null && bp != null && bp0 != null) { focal = clamp(E31 + (own(bp) - own(bp0)), 2, 25); basis = 'moved'; }
+    if (focal == null) return null;
+    const off = prof.laydownOffset;
     const a = own(arrows);
-    const lay = a + (a - E) / 3;
+    const lay = a + (a - focal) / 3;
     const mSlide = lay + off;
-    const r = { exitBoard: own(E), target: arrows, laydown: Math.round(own(lay)), slide: Math.round(own(mSlide)), offset: off, status: '' };
+    const r = { phase: later ? 'later' : 'start', basis, target: arrows, focal: Math.round(own(focal)), exitBoard: E31 == null ? null : own(E31),
+      bp, bp0, shift: (basis === 'moved') ? Math.round(own(bp) - own(bp0)) : 0, laydown: Math.round(own(lay)), slide: Math.round(own(mSlide)), offset: off, status: '' };
     if (slide != null) {
       const sl = own(slide);
       const pass = 4 * a - 3 * (sl - off);
       r.yourSlide = slide;
       r.passes = Math.round(own(pass));
-      r.gap = Math.round(Math.abs(pass - E));
-      r.status = Math.abs(sl - mSlide) <= 1 ? 'on' : pass > E ? 'inside' : 'outside';
+      r.gap = Math.round(Math.abs(pass - focal));
+      const tol = later ? 2 : 1; // later games: more leeway
+      r.status = Math.abs(sl - mSlide) <= tol ? 'on' : pass > focal ? 'inside' : 'outside';
     }
     return r;
   }
   function lineText(r) {
     if (!r) return '';
-    const math = `slide ${r.slide} → lay down ${r.laydown} → target ${r.target} → exit board ${r.exitBoard}`;
-    if (!r.status) return `📐 Your line through the exit point: ${math}.`;
-    if (r.status === 'on') return `📐 Your line checks out: ${math}. ✅ Slide ${r.yourSlide} puts the ball through the exit point.`;
-    return `📐 Your line is off: from slide ${r.yourSlide} over target ${r.target}, the ball heads to about board ${r.passes} at the end of the oil, ${r.gap} board${r.gap === 1 ? '' : 's'} ${r.status === 'inside' ? 'inside the exit point (in the mud)' : 'outside the exit point (toward the dry)'}. For target ${r.target}, finish your slide on ${r.slide} (lay down ${r.laydown}).`;
+    const math = `slide ${r.slide} → lay down ${r.laydown} → target ${r.target} → board ${r.focal}`;
+    if (r.basis === 'rule31') {
+      if (!r.status) return `📐 Starting line through the rule-of-31 exit point: ${math}.`;
+      if (r.status === 'on') return `📐 ✅ Starting line checks out: ${math} (the rule-of-31 exit point).`;
+      return `📐 ⚠️ Starting-line heads-up: from slide ${r.yourSlide} over target ${r.target}, the ball heads ${r.passes >= 1 && r.passes <= 39 ? `to about board ${r.passes}` : 'off the edge of the lane'} by the end of the oil, ${r.gap} board${r.gap === 1 ? '' : 's'} ${r.status === 'inside' ? 'inside' : 'outside'} the rule-of-31 exit point (board ${r.focal}) for a fresh pattern. To start through it with target ${r.target}, slide ${r.slide} (lay down ${r.laydown}).`;
+    }
+    // later games: the exit point has moved with the breakpoint
+    const mv = r.shift === 0 ? 'Your breakpoint hasn\'t moved, so the exit point is still about board ' + r.focal
+      : `Your breakpoint has moved ${Math.abs(r.shift)} board${Math.abs(r.shift) === 1 ? '' : 's'} ${r.shift > 0 ? 'in' : 'out'} since your first shots (${r.bp0} → ${r.bp}), so the exit point has moved too: about board ${r.focal} now (it was ${r.exitBoard})`;
+    if (!r.status) return `📐 ${mv}. For target ${r.target}: ${math}.`;
+    if (r.status === 'on') return `📐 ✅ Usable line: slide ${r.yourSlide} over target ${r.target} goes through about board ${r.focal}. ${mv}.`;
+    return `📐 ⚠️ Usable-line heads-up: from slide ${r.yourSlide} over target ${r.target} the ball heads ${r.passes >= 1 && r.passes <= 39 ? `to about board ${r.passes}` : 'off the edge of the lane'} by the end of the oil. ${mv}. For target ${r.target}, slide ${r.slide} (lay down ${r.laydown}) goes through it.`;
   }
 
   // ---------- move menu ----------
@@ -824,12 +843,14 @@
       if (C.length >= 1 && out.status !== 'start' && out.tone !== 'good') {
         const pat2 = patternProfile(ctx && ctx.pattern);
         const lastL = [...C].reverse().find(c => c.feet != null && c.arrows != null);
-        const lm = lastL ? lineMath(lastL.feet, lastL.arrows, pat2, prof) : null;
+        const moved = C.some((c, i) => i > 0 && (c.feet !== C[i - 1].feet || c.arrows !== C[i - 1].arrows));
+        const phase = (moved || (lastL && lastL.gameNo > 1)) ? 'later' : 'start';
+        const first = C.find(c => c.bp != null);
+        const lm = lastL ? lineMath(lastL.feet, lastL.arrows, pat2, prof, phase, lastL.bp, first ? first.bp : null) : null;
         if (lm && lm.status && lm.status !== 'on') {
-          const moved = C.some((c, i) => i > 0 && (c.feet !== C[i - 1].feet || c.arrows !== C[i - 1].arrows));
           const recent = C.slice(-4);
           const markMiss = recent.filter(c => c.missSide && !c.saved).length;
-          if (markMiss >= 2 && out.status === 'repeat') out.next = `${markMiss} misses at the mark, and your line doesn't line up through the exit point. Finish your slide on ${lm.slide} for target ${lm.target} (lay down ${lm.laydown}) before changing anything else.`;
+          if (markMiss >= 2 && out.status === 'repeat') out.next = `${markMiss} misses at the mark, and your slide and target don't line up${lm.basis === 'rule31' ? ' through the exit point' : ' with where the ball should leave the oil now'}. Try finishing your slide on ${lm.slide} for target ${lm.target} (lay down ${lm.laydown}) before changing anything else.`;
           if (markMiss >= 2) out.notes.unshift(`📐 Before blaming your throw: ${markMiss} of your last ${recent.length} missed the mark, and the line itself doesn't line up. ${lineText(lm).replace(/^📐 /, '')}`);
           else if (!moved) out.notes.push(lineText(lm));
         }
@@ -871,7 +892,7 @@
         const ex = exitBoardFor(pat);
         lines.push(`🧭 Right spot: on ${pat.length} ft the ball should exit the pattern around board ${ex} (rule of 31). Pick feet and target so your breakpoint lands a few boards outside that, in the dry. Turning at or inside board ${ex} means changing direction in the mud.`);
       }
-      const lm0 = ctx.line ? lineMath(ctx.line.feet, ctx.line.arrows, pat, prof) : null;
+      const lm0 = ctx.line ? lineMath(ctx.line.feet, ctx.line.arrows, pat, prof, 'start', ctx.line.bp) : null;
       if (lm0) lines.push(lineText(lm0));
       const bt = bagTiming(ctx, pat);
       if (bt.length >= 2) {
@@ -1176,5 +1197,5 @@
     return res;
   }
 
-  root.BTCoach = { lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler)), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
+  root.BTCoach = { lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
 })(typeof window !== 'undefined' ? window : globalThis);

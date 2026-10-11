@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Guide</title>
-  <link rel="stylesheet" href="styles.css?v=78" />
+  <link rel="stylesheet" href="styles.css?v=79" />
   <style>
     .guide { max-width: 760px; margin: 0 auto; line-height: 1.55; font-size: 16px; }
     .guide h2 { margin: 0 0 6px; font-size: 21px; }
@@ -285,8 +285,13 @@
           <li><b>Add your laydown offset</b> (usually 5, set on the Bowler page) for the <b>slide board</b>: 11 + 5 = <b>16</b>.</li>
           <li><b>Slide 16, lay down 11, over 10, out at 7.</b></li>
         </ol>
-        <p>Under your Slide / Target boxes you'll see either <b>📐 Line ✅</b> (your slide and target send the ball through the exit point) or <b>📐 Line ❌</b> with where it's really headed and the slide the math wants. Each board your slide is off moves the ball about <b>3 boards</b> at the exit point.</p>
-        <div class="why"><b>How Coach uses it:</b> the starting plan gives you the full line for your target. If your line doesn't go through the exit point, Coach tells you before you've made any moves. If you keep missing your mark <i>and</i> the line is off, Coach says to fix your slide first: the misses may be alignment, not your throw. Once you start moving with the lane, Coach stops nagging, because moving off the starting line is the point of a move.</div>
+        <p>Under your Slide / Target boxes, Game Day checks your line in two stages:</p>
+        <ul>
+          <li><b>Game 1, before you've moved: starting line.</b> Does your slide and target send the ball through the <b>rule-of-31 exit point</b>? <b>✅ Starting line checks out</b>, or a mild <b>⚠️ heads-up</b> with the slide the math wants. It's a starting point for a fresh pattern, not a rule.</li>
+          <li><b>After a move, or from game 2: usable line.</b> As the lane changes, the place the ball should leave the oil moves too. Coach moves the exit point by the same number of boards <b>your breakpoint</b> has moved since your first shots (breakpoint 8 → 11 means exit point 10 → 13), then checks that your slide and target still go through it: <b>✅ Usable line</b> or <b>⚠️ Usable-line heads-up</b>. Log your breakpoint so Coach can follow it.</li>
+        </ul>
+        <p>Each board your slide is off moves the ball about <b>3 boards</b> at the end of the oil, so small slide changes matter.</p>
+        <div class="why"><b>How Coach uses it:</b> the starting plan gives you the full starting line for your target. A starting-line heads-up appears before you've made any moves. If you keep missing your mark <i>and</i> the line doesn't line up, Coach says to fix your slide first: the misses may be alignment, not your throw. These are heads-ups, never the main call.</div>
         <div class="why warn">Like the rule of 31, the ÷3 and +5 are rules of thumb. If your ball consistently lands more or less than 5 boards from the inside of your slide foot, change <b>Laydown offset</b> on the Bowler page.</div>
         <a class="top" href="#top">↑ Back to top</a>
       </section>
@@ -364,7 +369,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=78"></script>
+  <script src="app.js?v=79"></script>
   <script>
     BT.renderNav('guide');
     BT.$('#ver').textContent = 'Bowling Tool ' + BT.APP_VERSION;

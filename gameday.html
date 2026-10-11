@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=78" />
+  <link rel="stylesheet" href="styles.css?v=79" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -224,8 +224,8 @@
     </div>
   </div>
 
-  <script src="app.js?v=78"></script>
-  <script src="coach.js?v=78"></script>
+  <script src="app.js?v=79"></script>
+  <script src="coach.js?v=79"></script>
   <script>
     BT.renderNav('gameday');
 
@@ -1626,7 +1626,7 @@ function saveCurrentSessionDraft() {
         pattern: (Array.isArray(pats) ? pats : []).find(p => patternName(p) === el.pattern.value) || null,
         setBalls: names.map(n => ({ name: n, row: map.get(n) })).filter(b => b.row),
         currentBall: el.ball ? el.ball.value : '',
-        line: { feet: el.feet.value, arrows: el.arrows.value },
+        line: { feet: el.feet.value, arrows: el.arrows.value, bp: el.bp.value },
         motion: { vector: (r, b) => BT.motionVector(r, b), distance: (a, b) => BT.motionDistance(a, b) },
         ballInfo: (r) => ({ cover: BT.ballCover(r), grit: BT.surfaceToGrit(BT.ballSurface(r)), asym: /asym/i.test(BT.ballCore(r) || ''), known: !!(String(BT.ballSurface(r) || '').trim() && BT.ballRG(r) && BT.ballDiff(r)) }),
         matrix: (r) => BT.matrixCellForRow(r),
@@ -2104,6 +2104,7 @@ function sessionSummary(shots) {
     BT.$('#log').addEventListener('click', () => {
       const before = sessionShots.length;
       logShot();
+      updateLineMath();
       if (sessionShots.length > before) {
         const cp = BT.$('#coachPanel');
         if (cp) setTimeout(() => cp.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
@@ -2130,20 +2131,24 @@ function sessionSummary(shots) {
       const pats = BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || [];
       const pat = (Array.isArray(pats) ? pats : []).find(p => patternName(p) === el.pattern.value) || null;
       const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
+      // Starting line = game 1 and no move yet (current line equals every logged line). After that, only "usable".
+      const shots = sessionShots.filter(x => x && x.type !== 'gameStart');
+      const same = (x) => String(x.feet ?? '') === String(el.feet.value) && String(x.arrows ?? '') === String(el.arrows.value);
+      const phase = (currentGameNumber() > 1 || shots.some(x => !same(x))) ? 'later' : 'start';
       let r = null;
-      try { r = BTCoach.lineCheck({ feet: el.feet.value, arrows: el.arrows.value, pattern: pat, bowler }); } catch (_e) {}
-      if (!pat || pat.length == null || pat.length === '') { box.style.display = ''; box.className = 'gd-linemath'; box.textContent = '📐 Pick an oil pattern with a length to check your line against the exit point.'; return; }
-      if (!r) { box.style.display = 'none'; return; }
+      const firstBp = (shots.slice().reverse().find(x => x.bp != null && x.bp !== '') || {}).bp; // sessionShots is newest-first
+      try { r = BTCoach.lineCheck({ feet: el.feet.value, arrows: el.arrows.value, bp: el.bp.value, bp0: firstBp, pattern: pat, bowler, phase }); } catch (_e) {}
+      if (phase === 'start' && (!pat || pat.length == null || pat.length === '')) { box.style.display = ''; box.className = 'gd-linemath'; box.textContent = '📐 Pick an oil pattern with a length to check your starting line against the exit point.'; return; }
+      if (!r) { if (phase === 'later') { box.style.display = ''; box.className = 'gd-linemath'; box.textContent = '📐 Log your breakpoint on each shot so Coach can follow how far the exit point has moved.'; } else box.style.display = 'none'; return; }
       box.style.display = '';
       box.className = 'gd-linemath ' + (r.status === 'on' ? 'ok' : r.status ? 'off' : '');
-      box.innerHTML = r.status === 'on'
-        ? `📐 <b>Line ✅</b> slide ${r.yourSlide} → lay down ${r.laydown} → target ${r.target} → exit board ${r.exitBoard}`
-        : r.status
-          ? `📐 <b>Line ❌</b> slide ${r.yourSlide} over target ${r.target} heads to board ${r.passes}, ${r.gap} ${r.status === 'inside' ? 'inside' : 'outside'} the exit point (board ${r.exitBoard}).<br><b>Math: slide ${r.slide}</b> → lay down ${r.laydown} → target ${r.target} → exit ${r.exitBoard}`
-          : `📐 For target ${r.target}: <b>slide ${r.slide}</b> → lay down ${r.laydown} → exit board ${r.exitBoard}`;
+      const t = BTCoach.lineText(r).replace(/^📐 /, '');
+      box.innerHTML = '📐 ' + escapeHtml(t)
+        .replace(/^(✅ Starting line checks out:|✅ Usable line:|⚠️ Starting-line heads-up:|⚠️ Usable-line heads-up:|Starting line through the rule-of-31 exit point:)/, '<b>$1</b>');
     }
-    ['feet', 'arrows', 'pattern'].forEach(k => { if (el[k]) { el[k].addEventListener('input', updateLineMath); el[k].addEventListener('change', updateLineMath); } });
+    ['feet', 'arrows', 'bp', 'pattern'].forEach(k => { if (el[k]) { el[k].addEventListener('input', updateLineMath); el[k].addEventListener('change', updateLineMath); } });
     setTimeout(updateLineMath, 450);
+    BT.$('#nextGame').addEventListener('click', () => setTimeout(updateLineMath, 200));
     window.addEventListener('pageshow', () => setTimeout(updateLineMath, 350));
 
     // Tonight: one-line summary; opens itself until the must-haves are set.
