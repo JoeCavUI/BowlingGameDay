@@ -49,6 +49,11 @@ npm start
 ```
 Then open http://localhost:3000
 
+## Planned for the next version (minor changes)
+- Game Day → Tonight: remove the **Pocket board** box. Always use the standard pocket automatically (17.5 righty; 22.5 for lefties counting from the right gutter).
+- Bowler page: put **LASER** in order: Loft, Aim, Speed, **Equipment, Release** (Release currently shows before Equipment).
+- (Add findings from the first live league test here.)
+
 ## Changes in v80-beta17: 🔁 Coach reviews your moves
 - Every line or ball change (yours or Coach's) is graded: timing (after a missed mark / after only 1 good shot / while striking), direction (followed the miss or not), and result after 3 good shots (worked / didn't help → move further, come back halfway, or go back).
 - Overshoot (hooking early → holding after the move): main call becomes "come back about halfway".
