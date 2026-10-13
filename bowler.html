@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Bowler</title>
-  <link rel="stylesheet" href="styles.css?v=80" />
+  <link rel="stylesheet" href="styles.css?v=81" />
 </head>
 <body data-page="bowler">
   <div class="navlinks"></div>
@@ -119,6 +119,11 @@
             </select>
           </div>
           <div>
+            <label>Equipment adjustment ability</label>
+            <input class="input" id="laserEquipment" value="App-managed" readonly />
+            <div class="small" style="margin-top:6px;color:#cbd5e1">Coach will handle ball-change suggestions from your selected set.</div>
+          </div>
+          <div>
             <label>Release adjustment ability (1–5)</label>
             <select class="input" id="laserRelease">
               <option value="1">1 — Avoid it</option>
@@ -127,11 +132,6 @@
               <option value="4">4 — Comfortable</option>
               <option value="5">5 — Strength</option>
             </select>
-          </div>
-          <div>
-            <label>Equipment adjustment ability</label>
-            <input class="input" id="laserEquipment" value="App-managed" readonly />
-            <div class="small" style="margin-top:6px;color:#cbd5e1">Coach will handle ball-change suggestions from your selected set.</div>
           </div>
           <div>
             <label>Current LASER comfort summary</label>
@@ -175,8 +175,8 @@
     </div>
   </div>
 
-  <script src="app.js?v=80"></script>
-  <script src="coach.js?v=80"></script>
+  <script src="app.js?v=81"></script>
+  <script src="coach.js?v=81"></script>
   <script>
     BT.renderNav('bowler');
 
@@ -246,7 +246,7 @@
 
         if (!Array.isArray(rows) || !rows.length) {
           els.equipScore.value = '';
-          els.equipNote.textContent = 'Load databalls.csv (Arsenal/Analyze) to generate this overview.';
+          els.equipNote.textContent = 'Load databalls.csv (Arsenal/Bag) to generate this overview.';
           return;
         }
 

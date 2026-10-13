@@ -645,7 +645,7 @@
     const sp = C.filter(c => c.speed && c.speed !== 'unknown');
     const same = sp.filter(c => c.speed === 'same').length;
     const spCaused = C.filter(c => c.speedCaused).length;
-    out.push({ key: 'Speed', icon: '⚡', score: pct(same, sp.length), text: sp.length ? `Normal speed on ${same} of ${sp.length} tracked shots.${spCaused ? ` ${spCaused} miss${spCaused > 1 ? 'es were' : ' was'} from speed, not the lane.` : ''}` : 'Tap "Speed vs normal" to grade speed.' });
+    out.push({ key: 'Speed', icon: '⚡', score: pct(same, sp.length), text: sp.length ? `Normal speed on ${same} of ${sp.length} tracked shots.${spCaused ? ` ${spCaused} miss${spCaused > 1 ? 'es were' : ' was'} from speed, not the lane.` : ''}` : 'Not tracked. That\'s fine at houses with no speed display; otherwise tap "Speed vs normal" (by feel) in More reads.' });
     // Rev rate & roll: how the ball finished on pocket hits
     const ph = C.filter(c => c.pocketHit && (c.finish || c.strike));
     const fin = ph.filter(c => c.strike || c.finish === 'good').length;

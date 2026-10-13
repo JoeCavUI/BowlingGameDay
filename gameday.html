@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=80" />
+  <link rel="stylesheet" href="styles.css?v=81" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -63,14 +63,10 @@
               <div class="small" id="patternHint" style="margin-top:6px">Pulled from Oil → Patterns.</div>
             </div>
             <div>
-              <label>Bag (arsenal set)</label>
+              <label>Bag</label>
               <select id="set" class="input"></select>
             </div>
-            <div>
-              <label>Pocket board</label>
-              <input id="pocketBoard" class="input" type="number" step="0.5" placeholder="17.5" />
-              <div class="small" style="margin-top:6px">Leave blank for the standard pocket (17.5 righty, 22.5 lefty).</div>
-            </div>
+            <input id="pocketBoard" type="hidden" value="" />
             <div style="display:none">
               <label>Mode</label>
               <select id="mode" class="input">
@@ -133,6 +129,8 @@
 
         <!-- The shot, in the order you see it -->
         <div class="panel" id="shotPanel">
+          <div class="gd-frameline" id="frameLine">Game 1 · Frame 1</div>
+          <div id="gameFlow"></div>
           <div class="gd-q"><span class="gd-qnum">1</span><b>Your mark</b></div>
           <div id="readsMiss" style="margin-top:6px"></div>
 
@@ -147,7 +145,7 @@
           </div>
 
           <details class="gd-subfold" id="moreReads" style="margin-top:12px">
-            <summary><b>More reads</b> <span class="small">(optional: execution, reaction, exit, speed, notes)</span></summary>
+            <summary><span class="gd-qnum">4</span><b>More reads</b> <span class="small">(optional: execution, reaction, exit, speed, notes)</span></summary>
             <div style="margin-top:8px">
               <label>Execution</label>
               <div id="readsQuality" style="margin-top:6px"></div>
@@ -155,7 +153,7 @@
               <div id="readsBallObs" style="margin-top:6px"></div>
               <label style="margin-top:12px;display:block">Ball exit off the deck</label>
               <div id="readsExit" style="margin-top:6px"></div>
-              <label style="margin-top:12px;display:block">Speed vs normal</label>
+              <label style="margin-top:12px;display:block">Speed vs normal <span class="small">(by feel; skip it if the house has no speed display)</span></label>
               <div id="readsSpeed" style="margin-top:6px"></div>
               <label style="margin-top:12px;display:block">Notes</label>
               <input id="notes" class="input" placeholder="Only for things worth remembering next week." />
@@ -185,7 +183,7 @@
         </div>
         <div class="panel">
           <h2>Current session log</h2>
-          <div class="small">This session only. Use “Save session” to store it in Scores.</div>
+          <div class="small">Tap any shot to fix it or delete it. “Save session” stores the night in Scores.</div>
           <div class="hr-split"></div>
           <div class="list" id="logList" style="max-height:80vh"></div>
         </div>
@@ -210,6 +208,29 @@
     </div>
   </div>
 
+  <div id="gdToast" class="gd-toast hidden" role="status"></div>
+
+  <!-- Edit a logged shot -->
+  <div id="editShotModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card" style="max-width:460px;max-height:88vh;overflow:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:18px;font-weight:900" id="editShotTitle">Edit shot</div><button class="btn secondary" id="editShotClose" type="button">Close</button></div>
+      <label style="margin-top:10px;display:block">Your mark</label><div id="esMiss" class="es-pills"></div>
+      <label style="margin-top:10px;display:block">Pocket</label><div id="esPocket" class="es-pills"></div>
+      <label style="margin-top:10px;display:block">Pins left</label><div id="esTag" class="es-pills"></div>
+      <input id="esPins" class="input" placeholder="Pins standing, e.g. 4-9 (blank = strike)" style="margin-top:6px" />
+      <div class="gd-line" style="margin-top:10px">
+        <div><label>Slide</label><input id="esFeet" class="input" type="number" inputmode="numeric" /></div>
+        <div><label>Target</label><input id="esArrows" class="input" type="number" inputmode="numeric" /></div>
+        <div><label>Breakpoint</label><input id="esBp" class="input" type="number" inputmode="numeric" /></div>
+      </div>
+      <label style="margin-top:10px;display:block">Ball</label><select id="esBall" class="input"></select>
+      <div class="btn-row" style="margin-top:14px">
+        <button class="btn" id="editShotSave" type="button">Save changes</button>
+        <button class="btn danger" id="editShotDelete" type="button">Delete shot</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Key-pin pop-up: 6-pin (righty) / 4-pin (lefty) on a single corner-pin pocket leave -->
   <div id="keyPinModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
     <div class="modal-card" style="max-width:420px">
@@ -224,8 +245,8 @@
     </div>
   </div>
 
-  <script src="app.js?v=80"></script>
-  <script src="coach.js?v=80"></script>
+  <script src="app.js?v=81"></script>
+  <script src="coach.js?v=81"></script>
   <script>
     BT.renderNav('gameday');
 
@@ -361,9 +382,34 @@
       });
     }
 
+    // Tonight (house, league, lanes, pattern, bag) is remembered: you're at one house on one pair for the night,
+    // and an iPhone may reload the app any time you switch away.
+    const TONIGHT_KEY = 'bt_gameday_tonight_v1';
+    function saveTonight() {
+      BT.lsSet(TONIGHT_KEY, { house: el.house.value || '', league: el.league.value || '', lanes: el.lanes.value.trim(), startLane: el.startLane.value || 'left', pattern: el.pattern.value || '', set: el.set.value || '', savedAt: Date.now() });
+    }
+    function restoreTonight() {
+      const t = BT.lsGet(TONIGHT_KEY, null);
+      if (!t) return;
+      const has = (sel, v) => v && Array.from(sel.options).some(o => o.value === v);
+      if (has(el.house, t.house)) { el.house.value = t.house; try { renderLeagues(); } catch (_e) {} }
+      if (has(el.league, t.league)) el.league.value = t.league;
+      if (t.lanes) { el.lanes.value = t.lanes; try { updateLanePick(); } catch (_e) {} }
+      if (t.startLane) el.startLane.value = t.startLane;
+      if (has(el.pattern, t.pattern)) { el.pattern.value = t.pattern; try { updatePatternSummary(); } catch (_e) {} }
+      if (has(el.set, t.set) && el.set.value !== t.set) { el.set.value = t.set; try { loadSetToUI(); } catch (_e) {} }
+      try { updatePrep(); } catch (_e) {}
+      // A new night (12+ hours later, nothing logged yet): open Tonight so you can confirm lanes etc.
+      window.__tonightStale = !sessionShots.length && (Date.now() - (t.savedAt || 0) > 12 * 3600 * 1000);
+    }
+    ['house', 'league', 'lanes', 'startLane', 'pattern', 'set'].forEach(k => {
+      const x = document.getElementById(k === 'set' ? 'set' : k);
+      if (x) { x.addEventListener('change', () => setTimeout(saveTonight, 0)); x.addEventListener('input', () => setTimeout(saveTonight, 0)); }
+    });
+
     function restoreLastLineDraft() {
       // Prefer the most recent logged shot if present; otherwise use the saved draft.
-      const lastShot = sessionShots && sessionShots.length ? sessionShots[0] : null;
+      const lastShot = (sessionShots || []).find(x => x && x.type !== 'gameStart') || null;
       const d = lastShot ? {
         feet: lastShot.feet,
         arrows: lastShot.arrows,
@@ -377,7 +423,6 @@
       if (Number.isFinite(d.feet)) el.feet.value = d.feet;
       if (Number.isFinite(d.arrows)) el.arrows.value = d.arrows;
       if (Number.isFinite(d.bp)) el.bp.value = d.bp;
-      if (el.pocketBoard && Number.isFinite(d.pocketBoard)) el.pocketBoard.value = d.pocketBoard;
       if (d.mode) el.mode.value = d.mode;
       // ball may not exist yet until set is loaded; save so loadSetToUI can apply it.
       if (d.ball) {
@@ -445,7 +490,7 @@
       if (!el.pinDeckWrap) return;
       // Simple SVG rack. Tap pins to toggle (selected = standing).
       const svg = `
-        <svg id="pinDeck" width="300" height="232" viewBox="0 0 220 170" style="width:min(300px,100%);height:auto">
+        <svg id="pinDeck" width="260" height="260" viewBox="44 34 132 132" style="width:min(260px,82%);height:auto">
           ${pinCircle(1, 110, 145)}
           ${pinCircle(2, 95, 115)}
           ${pinCircle(3, 125, 115)}
@@ -773,6 +818,7 @@ function selectedPills(container) {
         if (info.defaultFill) el.fill.value = 'yes';
         else if (el.fill.value === 'yes') el.fill.value = 'no';
       }
+      try { renderGameFlow(); } catch (_e) {}
     }
 
     function resetSection3AfterLog() {
@@ -1059,8 +1105,8 @@ function isStrike(shot) {
         };
         const missTxt = missLabel(s.miss) ? ` • ${missLabel(s.miss)}` : '';
 
-        return `<div class="list-item">
-          <div class="small">${dt}${gameTxt || frameTxt ? ' • ' : ''}${[gameTxt, frameTxt].filter(Boolean).join(' ')}</div>
+        return `<div class="list-item gd-shot" data-shot="${s.id}" role="button" tabindex="0">
+          <div class="small">✏️ ${dt}${gameTxt || frameTxt ? ' • ' : ''}${[gameTxt, frameTxt].filter(Boolean).join(' ')}</div>
           <div><b>${s.ball || 'Ball?'}</b> • ${reads}</div>
           <div class="small">Line: ${s.feet}/${s.arrows}/${s.bp}${Number.isFinite(Number(s.pocketBoard)) ? '/' + s.pocketBoard : ''}${laneTxt} • Pocket: ${s.pocket} • Exit: ${s.exit}${missTxt}</div>
           ${s.notes ? `<div class="small">Notes: ${s.notes}</div>` : ''}
@@ -1996,7 +2042,7 @@ function sessionSummary(shots) {
       const st = BT.setupStatus();
       const missing = [];
       if (!st.houses) missing.push('<a href="oil.html">add your house on Oil</a>');
-      if (!st.sets) missing.push('<a href="analyze.html">save a ball set on Analyze</a>');
+      if (!st.sets) missing.push('<a href="analyze.html">pack a bag on the Bag page</a>');
       if (!missing.length) { box.style.display = 'none'; return; }
       box.innerHTML = `<b>Before you bowl:</b> ${missing.join(' and ')}. Then come back here to log shots.`;
       box.style.display = '';
@@ -2074,6 +2120,7 @@ function sessionSummary(shots) {
       el.ball.addEventListener('change', saveLastLineDraft);
 
       loadCurrentSessionDraft();
+      restoreTonight();
       restoreLastLineDraft();
       renderLog();
       renderLaneGeometry();
@@ -2105,9 +2152,62 @@ function sessionSummary(shots) {
 
     // Houses are managed on the Oil page.
 
+    // ---------- Game flow: 10th frame, fill balls, automatic next game ----------
+    function isStrikeShot(x) { const L = (x && x.leaves) || []; return L.includes('Strike') || L.includes('Brooklyn') || x.leaveTag === 'Strike' || x.leaveTag === 'Brooklyn'; }
+    function gameState() {
+      const g = currentGameShotsChron();
+      const nf = g.filter(x => !x.isFill), fills = g.filter(x => x.isFill);
+      if (nf.length < 10) return { phase: nf.length === 9 ? 'tenth' : 'play', frame: nf.length + 1 };
+      const tenth = nf[9];
+      if (tenth.noFill) return { phase: 'done', frame: 10 };
+      if (isStrikeShot(tenth)) {
+        const need = fills.length === 0 || (fills.length === 1 && isStrikeShot(fills[0]));
+        return need ? { phase: 'fill', fillNo: fills.length + 1, frame: 10 } : { phase: 'done', frame: 10 };
+      }
+      if (tenth.tenthSpare === true) return fills.length ? { phase: 'done', frame: 10 } : { phase: 'fill', fillNo: 1, spare: true, frame: 10 };
+      if (tenth.tenthSpare === false) return { phase: 'done', frame: 10 };
+      return { phase: 'askSpare', tenth, frame: 10 };
+    }
+    function toast(msg) {
+      const t = BT.$('#gdToast'); if (!t) return;
+      t.textContent = msg; t.classList.remove('hidden');
+      clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add('hidden'), 3500);
+    }
+    function renderGameFlow() {
+      const box = BT.$('#gameFlow'), line = BT.$('#frameLine'); if (!box || !line) return;
+      const st = gameState(), g = currentGameNumber();
+      line.textContent = st.phase === 'fill' ? `Game ${g} · 10th frame · fill ball ${st.fillNo}` : st.phase === 'done' || st.phase === 'askSpare' ? `Game ${g} · 10th frame` : `Game ${g} · Frame ${st.frame}`;
+      let h = '';
+      if (st.phase === 'tenth') h = `<div class="gd-flow warn">🔟 <b>10th frame.</b> After this ball, a strike gets fill balls; otherwise the app asks if you made the spare and starts the next game for you.</div>`;
+      else if (st.phase === 'fill') h = `<div class="gd-flow">🔟 <b>Fill ball ${st.fillNo}.</b> Log it like any shot (it's left out of the lane read).${st.spare ? '' : ''} <button class="btn secondary" type="button" id="flowSkipFill" style="margin-left:6px">No fill ball → end game</button></div>`;
+      else if (st.phase === 'askSpare') h = `<div class="gd-flow warn">🔟 <b>Did you make the spare?</b><div class="btn-row"><button class="btn" type="button" id="flowSpareYes">Made it → log my fill ball</button><button class="btn secondary" type="button" id="flowSpareNo">Missed → end game ${g}</button></div></div>`;
+      else if (st.phase === 'done') h = `<div class="gd-flow ok">✅ <b>Game ${g} is done.</b><div class="btn-row"><button class="btn" type="button" id="flowSave">Save the night</button><button class="btn secondary" type="button" id="flowNext">Bowl game ${g + 1}</button></div></div>`;
+      box.innerHTML = h;
+      const tenthShot = () => currentGameShotsChron().filter(x => !x.isFill)[9];
+      const on = (id, fn) => { const b = BT.$('#' + id); if (b) b.addEventListener('click', fn); };
+      on('flowSpareYes', () => { const t = tenthShot(); if (t) { t.tenthSpare = true; saveCurrentSessionDraft(); } updateFrameUI(); renderGameFlow(); });
+      on('flowSpareNo', () => { const t = tenthShot(); if (t) { t.tenthSpare = false; saveCurrentSessionDraft(); } afterGameFlow(true); });
+      on('flowSkipFill', () => { const t = tenthShot(); if (t) { t.tenthSpare = false; t.noFill = true; saveCurrentSessionDraft(); } afterGameFlow(true); });
+      on('flowSave', () => BT.$('#saveSession').click());
+      on('flowNext', () => { startNextGame(); toast(`Game ${currentGameNumber()} started.`); renderGameFlow(); updateLineMath(); });
+    }
+    // After a game ends: games 1 and 2 roll straight into the next game; after game 3+ we ask (league nights are 3 games).
+    function afterGameFlow(fromButton) {
+      const st = gameState();
+      if (st.phase !== 'done' && !(fromButton && st.phase === 'fill')) { renderGameFlow(); return; }
+      const g = currentGameNumber();
+      if (g < 3) { startNextGame(); toast(`Game ${g} done. Game ${g + 1} started: same house, lanes and pattern.`); updateLineMath(); }
+      else toast(`Game ${g} done.`);
+      renderGameFlow();
+    }
+
     BT.$('#log').addEventListener('click', () => {
+      // Logging after a finished game (e.g. game 4) starts the next game automatically.
+      if (gameState().phase === 'done') { startNextGame(); }
+      const sf = BT.$('#setupFold'); if (sf && sessionShots.length === 0) sf.open = false;
       const before = sessionShots.length;
       logShot();
+      if (sessionShots.length > before) afterGameFlow(false);
       updateLineMath();
       if (sessionShots.length > before) {
         const cp = BT.$('#coachPanel');
@@ -2171,7 +2271,13 @@ function sessionSummary(shots) {
     }
     BT.$('#setupFold').addEventListener('toggle', (e) => { if (!e.target.open) e.target.dataset.userClosed = '1'; });
     ['house', 'lanes', 'pattern', 'set', 'ball', 'league'].forEach(k => { if (el[k]) { el[k].addEventListener('change', updateSetupSummary); el[k].addEventListener('input', updateSetupSummary); } });
-    setTimeout(() => { updateSetupSummary(); const f = BT.$('#setupFold'); if (f && !/needs/.test(BT.$('#setupSummary').textContent)) f.open = false; }, 400);
+    setTimeout(() => {
+      updateSetupSummary();
+      const f = BT.$('#setupFold'); if (!f) return;
+      const missing = /needs/.test(BT.$('#setupSummary').textContent);
+      f.open = missing || !!window.__tonightStale;
+      if (window.__tonightStale && !missing) { const b = BT.$('#setupSummary'); b.textContent += '  (new night? check your lanes)'; }
+    }, 400);
     window.addEventListener('pageshow', () => setTimeout(updateSetupSummary, 300));
 
     // More reads: stays open for bowlers who use it.
@@ -2184,6 +2290,61 @@ function sessionSummary(shots) {
     BT.$('#saveSession').addEventListener('click', saveSession);
     BT.$('#nextGame').addEventListener('click', startNextGame);
     BT.$('#resetSession').addEventListener('click', resetSession);
+
+    // ---------- Edit a logged shot (tap it in the session log) ----------
+    let editingId = null;
+    function esPills(box, items, current) {
+      box.innerHTML = items.map(o => `<button type="button" class="btn secondary${o.val === current ? ' active' : ''}" data-v="${escapeHtml(o.val)}">${escapeHtml(o.label)}</button>`).join('');
+      BT.$all('button', box).forEach(b => b.addEventListener('click', () => {
+        const was = b.classList.contains('active');
+        BT.$all('button', box).forEach(x => x.classList.remove('active'));
+        if (!was) b.classList.add('active');
+        if (box.id === 'esTag' && !was) { const v = b.getAttribute('data-v'); BT.$('#esPins').value = (v === 'Flat 10' || v === 'Ringing 10') ? '10' : ''; }
+      }));
+    }
+    const esVal = (box) => { const b = BT.$('button.active', box); return b ? b.getAttribute('data-v') : ''; };
+    function openEditShot(id) {
+      const shot = sessionShots.find(x => x && x.id === id);
+      if (!shot || shot.type === 'gameStart') return;
+      editingId = id;
+      BT.$('#editShotTitle').textContent = `Edit shot · Game ${shot.gameNo || 1}, frame ${shot.frame || '?'}${shot.isFill ? ' (fill)' : ''}`;
+      esPills(BT.$('#esMiss'), missObs, shot.miss || '');
+      esPills(BT.$('#esPocket'), pocketObs.map(o => o), shot.pocket || '');
+      esPills(BT.$('#esTag'), quickResults.map(t => ({ val: t, label: t })), shot.leaveTag || ((shot.leavePins || []).length ? '' : 'Strike'));
+      BT.$('#esPins').value = (shot.leavePins || []).join('-');
+      BT.$('#esFeet').value = shot.feet ?? ''; BT.$('#esArrows').value = shot.arrows ?? ''; BT.$('#esBp').value = shot.bp ?? '';
+      const balls = Array.from(el.ball.options).map(o => o.value).filter(Boolean);
+      if (shot.ball && !balls.includes(shot.ball)) balls.unshift(shot.ball);
+      BT.$('#esBall').innerHTML = balls.map(b => `<option value="${escapeHtml(b)}"${b === shot.ball ? ' selected' : ''}>${escapeHtml(b)}</option>`).join('');
+      BT.$('#editShotModal').classList.remove('hidden');
+    }
+    function closeEditShot() { editingId = null; BT.$('#editShotModal').classList.add('hidden'); }
+    function afterShotEdit() { saveCurrentSessionDraft(); renderLog(); renderLaneGeometry(); try { renderScoreboard(); } catch (_e) {} updateFrameUI(); autoCoach(); updateLineMath(); }
+    BT.$('#editShotClose').addEventListener('click', closeEditShot);
+    BT.$('#esPins').addEventListener('input', () => { if (BT.$('#esPins').value.trim()) BT.$all('#esTag button').forEach(b => { const v = b.getAttribute('data-v'); if (v === 'Strike' || v === 'Brooklyn') b.classList.remove('active'); }); });
+    BT.$('#editShotModal').addEventListener('click', (e) => { if (e.target.id === 'editShotModal') closeEditShot(); });
+    BT.$('#editShotSave').addEventListener('click', () => {
+      const shot = sessionShots.find(x => x && x.id === editingId); if (!shot) return closeEditShot();
+      const miss = esVal(BT.$('#esMiss')); if (miss) shot.miss = miss;
+      const pocket = esVal(BT.$('#esPocket')); if (pocket) shot.pocket = pocket;
+      let tag = esVal(BT.$('#esTag'));
+      const pins = BT.$('#esPins').value.split(/[^0-9]+/).map(Number).filter(n => n >= 1 && n <= 10);
+      if (pins.length && (tag === 'Strike' || tag === 'Brooklyn')) tag = ''; // typed pins win over a strike tag
+      shot.leavePins = (tag === 'Strike' || tag === 'Brooklyn') ? [] : [...new Set(pins)].sort((a, b) => a - b);
+      shot.leaveTag = tag === 'Strike' ? '' : tag;
+      shot.leaves = shot.leaveTag ? [shot.leaveTag] : !shot.leavePins.length ? ['Strike'] : [shot.leavePins.join('-')];
+      const n = (id) => { const v = BT.$('#' + id).value; return v === '' ? null : Number(v); };
+      shot.feet = n('esFeet'); shot.arrows = n('esArrows'); shot.bp = n('esBp');
+      shot.ball = BT.$('#esBall').value || shot.ball;
+      shot.editedAt = Date.now();
+      closeEditShot(); afterShotEdit(); toast('Shot updated. Coach re-read the lane.');
+    });
+    BT.$('#editShotDelete').addEventListener('click', () => {
+      if (!confirm('Delete this shot?')) return;
+      sessionShots = sessionShots.filter(x => !(x && x.id === editingId));
+      closeEditShot(); afterShotEdit(); toast('Shot deleted.');
+    });
+    el.logList.addEventListener('click', (e) => { const it = e.target.closest('[data-shot]'); if (it) openEditShot(it.getAttribute('data-shot')); });
 
     init();
   </script>

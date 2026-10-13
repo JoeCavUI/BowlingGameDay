@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Bowling Tool</title>
-  <link rel="stylesheet" href="styles.css?v=80" />
+  <link rel="stylesheet" href="styles.css?v=81" />
 </head>
 <body data-page="home">
   <div class="navlinks"></div>
@@ -84,9 +84,9 @@
         <div style="margin-top:10px"><a class="btn" href="arsenal.html">Open Arsenal</a></div>
       </div>
       <div class="panel">
-        <h2>Analyze</h2>
-        <div class="small">Build / save an arsenal set, tournament bag helper.</div>
-        <div style="margin-top:10px"><a class="btn" href="analyze.html">Open Analyze</a></div>
+        <h2>Bag</h2>
+        <div class="small">Pack the balls you're bringing tonight.</div>
+        <div style="margin-top:10px"><a class="btn" href="analyze.html">Open Bag</a></div>
       </div>
       <div class="panel">
         <h2>Oil</h2>
@@ -96,7 +96,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=80"></script>
+  <script src="app.js?v=81"></script>
   <script>
     BT.renderNav('home');
     BT.$('#buildTag').textContent = 'Beta ' + BT.APP_VERSION;
@@ -111,7 +111,7 @@
         { done: s.bowler, title: 'Enter your bowler info', sub: 'Speed, rev rate, PAP, tilt, rotation.', href: 'bowler.html', link: 'Bowler' },
         { done: s.houses && s.patterns, title: 'Add your bowling house and an oil pattern', sub: s.houses && !s.patterns ? 'House added. Now add a pattern.' : 'Example: your league house + its house shot.', href: 'oil.html', link: 'Oil' },
         { done: s.customBalls > 0, optional: true, title: 'Add your own balls', sub: 'Tap “+ Add a ball” and use “Save to Arsenal”. A starter list of 35 balls is already loaded.', href: 'arsenal.html', link: 'Arsenal' },
-        { done: s.sets, title: 'Save a ball set (the balls in your bag tonight)', sub: 'Pick balls, name the set, save it.', href: 'analyze.html', link: 'Analyze' },
+        { done: s.sets, title: 'Pack your bag (the balls you bring tonight)', sub: 'Tap the balls, name the bag, save it.', href: 'analyze.html', link: 'Bag' },
         { done: s.sessions > 0, title: 'Bowl! Log shots on Game Day and save the session', sub: s.sessions ? `${s.sessions} session${s.sessions === 1 ? '' : 's'} saved.` : 'Saved sessions show up in Scores.', href: 'gameday.html', link: 'Game Day' },
       ];
       BT.$('#checklist').innerHTML = steps.map((st, i) => `

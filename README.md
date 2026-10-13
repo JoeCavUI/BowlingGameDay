@@ -49,10 +49,15 @@ npm start
 ```
 Then open http://localhost:3000
 
-## Planned for the next version (minor changes)
-- Game Day → Tonight: remove the **Pocket board** box. Always use the standard pocket automatically (17.5 righty; 22.5 for lefties counting from the right gutter).
-- Bowler page: put **LASER** in order: Loft, Aim, Speed, **Equipment, Release** (Release currently shows before Equipment).
-- (Add findings from the first live league test here.)
+## Changes in v81-beta18: fixes from live test 1
+- **Analyze is now "Bag"**: pick the balls you're bringing (✓ In bag, tap again to remove; your own balls first), name it, save. It becomes tonight's bag on Game Day. Gaps/overlaps moved into an optional "Check this bag". Arsenal page explains "every ball you own" with + Add a ball and "Pack my bag →" up top. CSV controls moved into an "advanced" fold on both pages.
+- **Tonight is remembered** (house, league, lanes, pattern, bag) across games and app reloads; folds away once you start bowling. On a new night it opens once to check lanes. (Bug: these were not restored when the iPhone reloaded the app.)
+- **10th frame + automatic games**: Game · Frame shown on top; 🔟 banner on the 10th; fill balls after a strike; "Did you make the spare?" otherwise; next game starts automatically (asks after game 3: Save the night / Bowl game 4).
+- **Editable shots**: tap any shot in the session log to change mark, pocket, pins, line or ball, or delete it.
+- More reads now numbered ④. Pin deck tightened (bigger pins, no empty gap).
+- Removed the Pocket board box (standard pocket used automatically).
+- Bowler page LASER in order: Loft, Aim, Speed, Equipment, Release.
+- Houses with no speed display: Speed vs normal is "by feel, skip if no display"; night report no longer nags about it.
 
 ## Changes in v80-beta17: 🔁 Coach reviews your moves
 - Every line or ball change (yours or Coach's) is graded: timing (after a missed mark / after only 1 good shot / while striking), direction (followed the miss or not), and result after 3 good shots (worked / didn't help → move further, come back halfway, or go back).
