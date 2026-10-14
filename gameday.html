@@ -138,7 +138,7 @@
           <div id="readsPocket" style="margin-top:6px"></div>
 
           <div class="gd-q" style="margin-top:14px"><span class="gd-qnum">3</span><b>Pins left</b> <span class="small">(tap nothing for a strike)</span></div>
-          <div id="quickResults" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"></div>
+          <div id="quickResults" class="qr-row" style="margin-top:8px"></div>
           <div style="margin-top:10px">
             <div id="pinDeckWrap" style="display:flex;justify-content:center"></div>
             <div class="small" style="text-align:center;margin-top:6px" id="pinDeckHint">Tap the pins still standing.</div>
@@ -455,7 +455,7 @@
     
     function renderQuickResults() {
       if (!el.quickResults) return;
-      el.quickResults.innerHTML = quickResults.map(t => `<button class="btn secondary" data-qr="${t}" style="padding:8px 10px;border-radius:999px">${t}</button>`).join('');
+      el.quickResults.innerHTML = quickResults.map(t => `<button class="btn secondary" data-qr="${t}">${t}</button>`).join('');
       BT.$all('button[data-qr]', el.quickResults).forEach(b => {
         b.addEventListener('click', () => {
           const tag = b.getAttribute('data-qr');

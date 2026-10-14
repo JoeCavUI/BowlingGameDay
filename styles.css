@@ -469,3 +469,7 @@ button, a, select { -webkit-tap-highlight-color:rgba(99,230,210,0.25); }
 .hq-table th:first-child, .hq-table td:first-child{ text-align:left; white-space:normal; }
 .hq-table td.good{ color:var(--accent); font-weight:800; } .hq-table td.bad{ color:var(--danger); font-weight:800; }
 .hq-ballrow{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; align-items:center; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.06); }
+/* Quick result buttons: all four on one line on a phone */
+.qr-row{ display:flex; gap:6px; flex-wrap:nowrap; }
+.qr-row .btn{ flex:1 1 0; min-width:0; padding:8px 2px; border-radius:999px; font-size:14px; white-space:nowrap; letter-spacing:-0.2px; }
+@media (max-width: 360px){ .qr-row{ gap:4px; } .qr-row .btn{ font-size:12px; padding:8px 1px; letter-spacing:-0.3px; } }
