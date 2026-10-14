@@ -12,7 +12,15 @@
   const LIGHT_R = ['10', '6-10', '1-2-4-10', '1-2-4-7', '2-4-5-8', '2-8', '1-2-10', '1-2-4-7-10'];
   const HIGH_R = ['4', '4-9', '4-6', '4-6-7-10', '4-6-10', '4-7-10', '4-6-7', '8-10', '4-10', '4-7-9'];
   const mirrorLeave = (k) => k.split('-').map(Number).map(p => MIRROR[p]).sort((a, b) => a - b).join('-');
-  const pairKey = (s) => String(s || '').trim().replace(/\s*(?:[\/&,]|and)\s*|\s+/gi, '-').replace(/[^0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  // "13-14", "13 & 14", "13/14" → "13-14". The iPhone number pad has no dash, so "1314" → "13-14" (split where the
+  // second lane = first + 1) and a single lane "13" or "14" → its pair "13-14".
+  const pairKey = (s) => {
+    const k = String(s || '').trim().replace(/\s*(?:[\/&,.]|and)\s*|\s+/gi, '-').replace(/[^0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    if (!/^\d+$/.test(k)) return k;
+    for (let i = 1; i < k.length; i++) { const a = Number(k.slice(0, i)), b = Number(k.slice(i)); if (k[i] !== '0' && b === a + 1) return `${a}-${b}`; }
+    const n = Number(k); if (k.length <= 3 && n > 0) return n % 2 ? `${n}-${n + 1}` : `${n - 1}-${n}`;
+    return k;
+  };
   const fmtDate = (d) => { if (!d) return ''; const [y, m, dd] = d.split('-').map(Number); return `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][m - 1]} ${dd}, ${y}`; };
   const BT = () => root.BT, H = () => root.BTHistory;
 
