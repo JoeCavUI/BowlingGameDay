@@ -478,3 +478,33 @@ button, a, select { -webkit-tap-highlight-color:rgba(99,230,210,0.25); }
 .gd-rl{ font-size:13px; color:var(--muted, #9aa3b2); margin:10px 0 4px; }
 .gd-r1{ display:flex; gap:6px; }
 .gd-r1 .btn{ flex:1 1 auto; min-width:0; margin:0; min-height:42px; padding:6px 6px !important; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-radius:999px; }
+
+/* Game Plan page */
+.pl-row{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px; margin-top:10px; }
+.pl-row > div{ min-width:0; }
+.pl-sheet{ line-height:1.45; }
+.pl-head{ border-bottom:1px solid rgba(255,255,255,0.12); padding-bottom:10px; margin-bottom:6px; }
+.pl-title{ font-size:20px; font-weight:800; }
+.pl-sub{ color:var(--muted); font-size:13px; margin-top:2px; }
+.pl-empty{ margin:10px 0; padding:10px; border-radius:10px; background:rgba(255,200,80,0.10); font-size:14px; }
+.pl-sec{ margin-top:14px; break-inside:avoid; page-break-inside:avoid; }
+.pl-sec h3{ margin:0 0 6px; font-size:15px; text-transform:uppercase; letter-spacing:0.04em; color:var(--accent); display:flex; gap:8px; align-items:center; }
+.pl-sec ul{ margin:0; padding-left:18px; }
+.pl-sec li{ margin:4px 0; font-size:14.5px; }
+.pl-foot{ margin-top:16px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.12); color:var(--muted); font-size:12px; }
+
+@media print{
+  @page{ margin:14mm 12mm; }
+  html, body{ background:#fff !important; color:#000 !important; }
+  .navlinks, .no-print, #btTestBanner{ display:none !important; }
+  .container{ padding:0 !important; max-width:none !important; }
+  .panel.pl-sheet{ background:#fff !important; border:none !important; box-shadow:none !important; padding:0 !important; color:#000 !important; }
+  .pl-title{ font-size:20pt; color:#000; }
+  .pl-sub, .pl-foot{ color:#444 !important; }
+  .pl-head, .pl-foot{ border-color:#bbb !important; }
+  .pl-sec h3{ color:#0b6b5f !important; font-size:12pt; }
+  .pl-sec li{ font-size:11pt; color:#000; }
+  .pl-empty{ background:#fff4d6 !important; color:#000; }
+}
+
+.gd-planlink{ display:block; text-align:right; font-size:13px; color:var(--accent); margin:0 2px 6px; text-decoration:none; }

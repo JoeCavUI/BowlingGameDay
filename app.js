@@ -1293,6 +1293,7 @@
       { key: 'arsenal', label: 'Arsenal', href: 'arsenal.html' },
       { key: 'analyze', label: 'Bag', href: 'analyze.html' },
       { key: 'oil', label: 'Oil', href: 'oil.html' },
+      { key: 'plan', label: 'Plan', href: 'plan.html' },
       { key: 'gameday', label: 'Game Day', href: 'gameday.html' },
       { key: 'scores', label: 'Scores', href: 'scores.html' },
       { key: 'guide', label: 'Guide', href: 'guide.html' },

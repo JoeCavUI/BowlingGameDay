@@ -63,6 +63,7 @@ Then open http://localhost:3000
 - Rule (unchanged logic, now in the Guide): hit your mark with normal speed and release → where the ball goes is the lane; missed your mark → it's you, even if Good execution is tapped.
 - ④ More reads: each group on one line with short labels (Execution: Good/OK/Poor · Reaction: Early/Long/Over/under/Carrydown · Exit: Left/Straight/Right · Speed: Slower/Same/Faster). "Didn't notice" buttons removed: skip it, or tap again to clear. Saved values unchanged, so older shots read the same.
 - Quick result buttons on one line.
+- **📋 Game Plan page (new):** type where you're bowling (+ lanes, bag, pattern, league or tournament) and Coach builds tonight's plan from PinPal history, Game Day nights, arsenal and bag: where you stand, what the lanes are telling you (leave signatures here vs everywhere), first ball + backup (record here, recent form blended in), starting line (last Game Day line, PinPal "X over Y" notes, rule of 31), if/then, spares, lanes, focus. Save as PDF (print sheet) or share as text. Linked from Home, the nav and Game Day. Guide section added.
 
 ## Changes in v83-beta20: 📚 PinPal history
 - **Import a PinPal backup** (.pinpal) on Scores → History. Built-in read-only SQLite reader (no server, no library): games, frame-by-frame pins left after each ball, ball per frame (mid-game changes), house, league, pattern, date; lanes and starting lane parsed from night notes ("Lanes 23s & 24"); "X over Y" lines kept. Verified on a real backup: 1,869 games, recomputed scores match PinPal on 1,855 of 1,856 completed games.

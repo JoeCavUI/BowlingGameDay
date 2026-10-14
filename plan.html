@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1116" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Bowling" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <title>Game Plan</title>
+  <link rel="stylesheet" href="styles.css?v=84" />
+</head>
+<body data-page="plan">
+  <div class="navlinks"></div>
+  <div class="container">
+    <div class="header no-print">
+      <h1>📋 Game Plan</h1>
+      <div class="small">Tell Coach where you're bowling. It builds tonight's plan from your PinPal history, Game Day nights, arsenal and bag.</div>
+    </div>
+
+    <div class="panel no-print" id="planForm">
+      <label for="pHouse">Where are you bowling?</label>
+      <input id="pHouse" class="input" list="pHouseList" placeholder="e.g. Imperial" autocomplete="off" />
+      <datalist id="pHouseList"></datalist>
+      <div class="pl-row">
+        <div><label for="pLanes">Lanes <span class="small">(optional)</span></label><input id="pLanes" class="input" placeholder="e.g. 61-62" inputmode="numeric" /></div>
+        <div><label for="pEvent">Event</label><select id="pEvent" class="input"><option value="league">League night</option><option value="tournament">Tournament</option></select></div>
+      </div>
+      <div class="pl-row">
+        <div><label for="pSet">Bag <span class="small">(optional)</span></label><select id="pSet" class="input"></select></div>
+        <div><label for="pPat">Pattern <span class="small">(optional)</span></label><select id="pPat" class="input"></select></div>
+      </div>
+      <button class="btn" id="pBuild" style="width:100%;margin-top:12px">Build my game plan</button>
+      <div class="small" id="pStatus" style="margin-top:8px"></div>
+    </div>
+
+    <div id="planOut"></div>
+
+    <div class="panel no-print" id="planActions" style="display:none">
+      <div class="btn-row" style="margin-top:0">
+        <button class="btn" id="pPdf">📄 Save as PDF</button>
+        <button class="btn secondary" id="pShare">Share text</button>
+        <a class="btn secondary" href="gameday.html">Go to Game Day →</a>
+      </div>
+      <div class="small" style="margin-top:8px">On iPhone: <b>Save as PDF</b> opens the print screen. Tap the share icon at the top, then <b>Save to Files</b> (or pinch out on the preview first).</div>
+    </div>
+  </div>
+
+  <script src="app.js?v=84"></script>
+  <script src="pinpal.js?v=84"></script>
+  <script src="history.js?v=84"></script>
+  <script src="plan.js?v=84"></script>
+  <script>
+  (function () {
+    BT.renderNav('plan');
+    const $ = (q) => document.querySelector(q);
+    const esc = (t) => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const LAST = 'bt_plan_last_v1';
+    let plan = null;
+
+    async function init() {
+      try { await BT.ensureCSVLoaded(); } catch (_e) {}
+      $('#pHouseList').innerHTML = BTPlan.houseOptions().map(h => `<option value="${esc(h.name)}">${h.n ? h.n + ' games' : ''}</option>`).join('');
+      const sets = BTPlan.sets();
+      $('#pSet').innerHTML = `<option value="">${sets.length ? 'Whole arsenal' : 'No saved bags yet'}</option>` + sets.map(s => `<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('');
+      const pats = BTPlan.patterns();
+      $('#pPat').innerHTML = `<option value="">${pats.length ? 'House shot / not sure' : 'No saved patterns'}</option>` + pats.map(p => `<option value="${esc(p.name)}">${esc(p.name)}${p.length ? ` (${p.length} ft)` : ''}</option>`).join('');
+      // Start from the last plan, or from Game Day's "Tonight".
+      const last = BT.lsGet(LAST, null) || {};
+      const tonight = BT.lsGet('bt_gameday_tonight_v1', null) || {};
+      $('#pHouse').value = last.house || tonight.house || '';
+      $('#pLanes').value = last.lanes || '';
+      if (last.event) $('#pEvent').value = last.event;
+      const setPick = last.setName || tonight.set || BT.lsGet('bt_gameday_preferred_set_v1', '');
+      if (setPick && sets.some(s => s.name === setPick)) $('#pSet').value = setPick;
+      if (last.patternName && pats.some(p => p.name === last.patternName)) $('#pPat').value = last.patternName;
+      if (!(window.BTHistory && BTHistory.has())) $('#pStatus').innerHTML = 'Tip: import your PinPal history (<a href="scores.html" style="color:var(--accent)">Scores → History</a>) so Coach can plan from years of games.';
+    }
+
+    function render(p) {
+      const today = new Date().toISOString().slice(0, 10);
+      const head = `<div class="pl-head"><div class="pl-title">${esc(p.title)}</div><div class="pl-sub">${p.sub.map(esc).join(' · ')}</div></div>`;
+      const empty = p.empty ? `<div class="pl-empty">${p.empty}</div>` : '';
+      const secs = p.sections.map(s => `<section class="pl-sec"><h3><span class="pl-ic">${s.icon}</span>${esc(s.h)}</h3>${s.lead ? `<p>${s.lead}</p>` : ''}<ul>${s.items.map(i => `<li>${i}</li>`).join('')}</ul></section>`).join('');
+      const foot = `<div class="pl-foot">${p.basedOn && p.basedOn.length ? 'Based on ' + p.basedOn.map(esc).join(', ') + '. ' : ''}Built by Coach, ${today}.</div>`;
+      $('#planOut').innerHTML = `<div class="panel pl-sheet">${head}${empty}${secs}${foot}</div>`;
+      $('#planActions').style.display = '';
+    }
+
+    function buildNow() {
+      const opts = { house: $('#pHouse').value.trim(), lanes: $('#pLanes').value.trim(), event: $('#pEvent').value, setName: $('#pSet').value, patternName: $('#pPat').value };
+      if (!opts.house) { $('#pStatus').textContent = 'Type or pick where you\'re bowling.'; $('#pHouse').focus(); return; }
+      try { plan = BTPlan.build(opts); } catch (e) { console.error(e); $('#pStatus').textContent = 'Could not build the plan: ' + (e && e.message ? e.message : e); return; }
+      BT.lsSet(LAST, opts);
+      $('#pStatus').textContent = '';
+      render(plan);
+      document.title = `${plan.title} (${new Date().toISOString().slice(0, 10)})`;
+      $('#planOut').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    $('#pBuild').addEventListener('click', buildNow);
+    $('#pHouse').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); buildNow(); } });
+    $('#pPdf').addEventListener('click', () => { try { window.print(); } catch (_e) { alert('Printing isn\'t available here. Use Share text instead.'); } });
+    $('#pShare').addEventListener('click', async () => {
+      if (!plan) return;
+      const text = BTPlan.toText(plan);
+      try { if (navigator.share) { await navigator.share({ title: plan.title, text }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+      try { await navigator.clipboard.writeText(text); alert('Game plan copied. Paste it into Notes or a message.'); } catch (_e) { alert(text); }
+    });
+    init();
+  })();
+  </script>
+</body>
+</html>
