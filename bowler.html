@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Bowler</title>
-  <link rel="stylesheet" href="styles.css?v=81" />
+  <link rel="stylesheet" href="styles.css?v=82" />
 </head>
 <body data-page="bowler">
   <div class="navlinks"></div>
@@ -54,9 +54,9 @@
           <div class="small">Calculated from foul-line speed + rev rate.</div>
         </div>
         <div>
-          <label>Arsenal coverage (overall)</label>
+          <label>Arsenal coverage</label>
           <input class="input" id="equipScore" placeholder="auto" readonly />
-          <div class="small" id="equipNote">Auto-generated from your full arsenal (databalls.csv) using the Arsenal Matrix + Coach roles.</div>
+          <div class="small" id="equipNote">How many of Chris Barnes&#39;s six ball boxes your active arsenal covers.</div>
         </div>
         <div>
           <label>PAP (inches)</label>
@@ -175,8 +175,9 @@
     </div>
   </div>
 
-  <script src="app.js?v=81"></script>
-  <script src="coach.js?v=81"></script>
+  <script src="app.js?v=82"></script>
+  <script src="coach.js?v=82"></script>
+  <script src="chart.js?v=82"></script>
   <script>
     BT.renderNav('bowler');
 
@@ -237,53 +238,24 @@
     }
 
     async function recalcArsenalOverview() {
-      // Overall arsenal coverage (not “best 6-ball set”).
-      // Uses full databalls.csv inventory + bowler-adjusted motion vectors.
+      // Barnes chart coverage of your ACTIVE arsenal (retired balls left out). Details live on the Arsenal page.
       try {
         const bowler = BT.lsGet(BT.KEYS.BOWLER, {});
         const payload = await BT.ensureCSVLoaded();
-        const rows = payload?.rows || [];
-
-        if (!Array.isArray(rows) || !rows.length) {
+        const rows = BT.activeOnly((payload && payload.rows) || []);
+        if (!rows.length || !window.BTChart) {
           els.equipScore.value = '';
-          els.equipNote.textContent = 'Load databalls.csv (Arsenal/Bag) to generate this overview.';
+          els.equipNote.innerHTML = 'No balls yet. Add them on <a href="arsenal.html">Arsenal</a>.';
           return;
         }
-
-        // Matrix coverage across ALL balls.
-        const bucketKeys = [
-          'STRONG|SMOOTH','STRONG|SHARP',
-          'MEDIUM|SMOOTH','MEDIUM|SHARP',
-          'WEAK|SMOOTH','WEAK|SHARP',
-        ];
-        const counts = Object.fromEntries(bucketKeys.map(k => [k, 0]));
-        for (const r of rows) {
-          const nm = BT.ballName(r);
-          if (!nm) continue;
-          const est = BT.estimateStrengthShape(r);
-          const sb = BT.strengthBucket(est.strength);
-          const sh = BT.shapeBucket(est.shape);
-          const key = `${sb}|${sh}`;
-          if (counts[key] != null) counts[key] += 1;
-        }
-        const filled = bucketKeys.filter(k => counts[k] > 0).length;
-        const missingBuckets = bucketKeys.filter(k => counts[k] === 0)
-          .map(k => k.replace('|', ' + ').toLowerCase());
-
-        // Coach role coverage across ALL balls.
-        const roleOut = BT.equipmentScoreFromRows(rows, bowler);
-
-        els.equipScore.value = `Matrix ${filled}/6 • Roles ${roleOut.covered}/${roleOut.totalRoles}`;
-
-        const notes = [];
-        if (missingBuckets.length) notes.push(`Missing matrix cells: ${missingBuckets.join(', ')}.`);
-        else notes.push('All 6 matrix cells are covered by your full arsenal.');
-        if (roleOut?.notes?.length) notes.push(roleOut.notes.join(' '));
-        els.equipNote.textContent = notes.join(' ');
+        const an = BTChart.analyze(BTChart.place(rows, bowler));
+        els.equipScore.value = `${an.covered.length} of 6 Barnes boxes${an.urethane ? ' + urethane' : ''}`;
+        const missing = an.empty.map(k => BTChart.label(k));
+        els.equipNote.innerHTML = (missing.length ? `Missing: ${missing.join(', ')}. ` : 'Every box has at least one ball. ') + `<a href="arsenal.html#barnesPanel">See your Barnes chart →</a>`;
       } catch (e) {
         console.error(e);
         els.equipScore.value = '';
-        els.equipNote.textContent = 'Could not compute arsenal overview. (Is databalls.csv available?)';
+        els.equipNote.textContent = 'Could not compute arsenal coverage.';
       }
     }
 

@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Guide</title>
-  <link rel="stylesheet" href="styles.css?v=81" />
+  <link rel="stylesheet" href="styles.css?v=82" />
   <style>
     .guide { max-width: 760px; margin: 0 auto; line-height: 1.55; font-size: 16px; }
     .guide h2 { margin: 0 0 6px; font-size: 21px; }
@@ -117,7 +117,11 @@
       <!-- 4 -->
       <section class="panel" id="balls">
         <h2><span class="stepnum">4</span>Add your balls</h2>
-        <p>Tap <span class="k">Arsenal</span>. A starter list of balls is already loaded. If yours are on it, skip to step 5.</p>
+        <p>Tap <span class="k">Arsenal</span>. Two ways to add your balls:</p>
+        <ul>
+          <li><b>Upload your ball spreadsheet</b> (fastest): save it as <b>CSV</b> from Excel or Numbers and tap <span class="k">Upload ball spreadsheet</span>. Not sure of the columns? Tap <b>Download a blank template</b>. The app needs at least <b>Ball Name</b> and <b>Cover</b>; Brand, Core, Surface, RG, Diff, PSA and layout make it smarter.</li>
+          <li><b>One at a time</b>:</li>
+        </ul>
         <ol>
           <li>Tap <span class="k">+ Add a ball</span>.</li>
           <li>Enter <b>Brand</b>, <b>Ball name</b>, <b>Cover</b> and <b>Core</b> (required), plus <b>Surface</b> (e.g., 2000, 4000, Polish), <b>RG</b>, <b>Diff</b> and <b>PSA</b> if you have them. Specs are on the manufacturer's website.</li>
@@ -125,6 +129,16 @@
           <li>Tap <span class="k">Save to Arsenal</span>.</li>
         </ol>
         <div class="why"><b>Save to Arsenal</b> = a ball you own. You can bag it and bowl with it.<br><b>Add what-if ball</b> = a ball you're thinking about buying. It shows as a dashed tag for comparison only.</div>
+        <h3>🎳 Your Barnes chart</h3>
+        <p>Chris Barnes sorts bowling balls into <b>six boxes</b>: Strong, Medium or Weak, each <b>Smooth</b> or <b>Sharp</b>. ZVL Bowling adds a seventh row for <b>Urethane</b>. Inside each row, balls go from <b>Early</b> (reads the lane sooner) to <b>Late</b>. The Arsenal page draws this chart for <b>your</b> balls, and the Early → Late position is worked out for <b>your</b> speed, revs, tilt and rotation, so a speed player's chart looks different from a cranker's.</p>
+        <ul>
+          <li><b>Coverage:</b> "6 of 6 boxes covered" means at least one active ball in every box. The Bowler page shows the same number.</li>
+          <li><b>Gaps, steps and ideas</b> under the chart: empty boxes (with what to look for), crowded boxes, near-duplicates, big steps in hook, and whole boxes that read early or late for you.</li>
+          <li><b>💡 Resurface before you buy:</b> if sanding or polishing a ball you own would fill an empty box (without opening a new hole), the app says so. A resurface costs far less than a new ball.</li>
+          <li><b>Tap a ball</b> to tune it. <b>📈 On your Barnes chart</b> shows where it sits now and where a different surface would move it.</li>
+          <li><b>🛒 Before you buy:</b> in <span class="k">+ Add a ball</span>, enter the specs and tap <b>Preview review</b>. The app tells you whether it fills an empty box, duplicates a ball you own, or fills a big step. Tap <b>Add what-if ball</b> to see it on the chart as a dashed circle.</li>
+          <li><b>Retire a ball:</b> tap it, then <span class="k">Retire this ball</span>. It leaves your chart, bags and Coach (history and Scores stay). If it was your only ball in a box, the app tells you what to look for to replace it. Tick <b>show retired</b> to see them, and tap one to bring it back.</li>
+        </ul>
         <p><b>🩺 Arsenal check</b> (top of the Arsenal page): Coach compares your equipment to <i>your</i> game. It checks ball weight vs. your speed at the pins, signs you're tiring late in the night, speed- or rev-dominance vs. your covers, RG vs. your rev rate, tilt, and how narrow your bag is for what you rated on LASER. It also flags crowded categories, near-duplicate balls, gaps in your step-down, surfaces that are all the same, a missing spare ball, a bag that doesn't fit the oil you bowl on, balls you never throw, a ball that underperforms at a house, and resurfacing that's due. Pick <b>All balls</b>, <b>Only balls I added</b>, or one of your <b>bags</b> at the top.</p>
         <p><b>Weight &amp; care:</b> tap a ball in the Arsenal Matrix to set its <b>weight</b> (default 15 lb) and tap <b>Just resurfaced</b> after a resurface. Coach counts games on each ball from Game Day and tells you when resurfacing is due (usually every 60–100 games).</p>
         <p><b>Tuning:</b> tap any ball in the <b>Arsenal Matrix</b> to open its sliders. If a ball hooks more or less for you than the numbers suggest, nudge <b>Hook</b>, <b>Length</b> or <b>Backend</b>. If you've resurfaced it, change <b>Surface</b>. Coach uses your adjusted version.</p>
@@ -388,7 +402,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=81"></script>
+  <script src="app.js?v=82"></script>
   <script>
     BT.renderNav('guide');
     BT.$('#ver').textContent = 'Bowling Tool ' + BT.APP_VERSION;

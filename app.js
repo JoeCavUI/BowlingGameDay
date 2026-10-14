@@ -6,7 +6,7 @@
 
 (function () {
   // Bump this string each build so pages can display it and cache-bust resources.
-  const APP_VERSION = 'v81-beta18';
+  const APP_VERSION = 'v82-beta19';
   const KEYS = {
     CSV_CACHE: 'bt_csv_cache_v1',          // stringified { savedAt, name, rows }
     BOWLER: 'bt_bowler_v1',               // stringified object
@@ -231,8 +231,16 @@
     return Object.assign({}, p || { name: 'my balls', savedAt: Date.now() }, { rows });
   }
 
-  // Try cache first; if empty, try fetching local databalls.csv
+  // Your ball list: whatever you uploaded (or the sample you chose to load). New installs start EMPTY:
+  // each bowler uploads their own spreadsheet or adds balls by hand. (Before v82 every install auto-loaded
+  // databalls.csv, which is the app owner's own arsenal.)
   async function ensureCSVLoadedRaw() {
+    const cached = lsGet(KEYS.CSV_CACHE, null);
+    if (cached && Array.isArray(cached.rows) && cached.rows.length) return cached;
+    return null;
+  }
+  // "Try the sample arsenal": loads databalls.csv on purpose.
+  async function loadSampleArsenal() {
     const cached = lsGet(KEYS.CSV_CACHE, null);
     if (cached && Array.isArray(cached.rows) && cached.rows.length) return cached;
     // Try fetch first (works when served over http(s)).
@@ -250,6 +258,15 @@
       } catch (_e2) {}
       return null;
     }
+  }
+
+  // Retired balls stay in your history but leave your active arsenal (chart, bags, Coach).
+  function isRetired(nameOrRow) { const n = typeof nameOrRow === 'string' ? nameOrRow : ballName(nameOrRow); return ballCareFor(n).retired === true; }
+  function activeOnly(rows) { return (rows || []).filter(r => !isRetired(r)); }
+  // A blank spreadsheet with the columns the app reads, plus one example row.
+  function arsenalTemplateCSV() {
+    return 'Brand,Ball Name,Cover,Core,Surface,RG,Diff,PSA,Pin Location,PAP,Drill Angle,Val,Total Angle\n' +
+      'Storm,Example Ball,Solid,Sym,2000,2.48,0.050,,Up,4.5,50,30,80\n';
   }
 
   // --- Data helpers ---
@@ -434,7 +451,7 @@
   function ballCareFor(name) {
     const c = ballCareAll()[String(name || '').trim()] || {};
     const w = Number(c.weight);
-    return { weight: Number.isFinite(w) && w >= 6 && w <= 16 ? w : null, resurfacedAt: Number(c.resurfacedAt) || 0 };
+    return { weight: Number.isFinite(w) && w >= 6 && w <= 16 ? w : null, resurfacedAt: Number(c.resurfacedAt) || 0, retired: c.retired === true, retiredAt: Number(c.retiredAt) || 0 };
   }
   function setBallCare(name, patch) {
     const nm = String(name || '').trim(); if (!nm) return;
@@ -1183,7 +1200,9 @@
 
   function strengthBucket(strength) {
     if (strength >= 0.72) return 'STRONG';
-    if (strength >= 0.46) return 'MEDIUM';
+    // Weak line raised from 0.46 → 0.56 (v82): entry-level balls (diff ≈ 0.030, e.g. Hustle Camo, Level, Typhoon) were landing in Medium,
+    // which left both Weak boxes of the Barnes chart permanently empty.
+    if (strength >= 0.56) return 'MEDIUM';
     return 'WEAK';
   }
 
@@ -1362,6 +1381,7 @@
       patterns: arr(KEYS.OIL_PATTERNS).length > 0,
       sets: sets.length > 0,
       customBalls: customBalls().length,
+      ballList: ((lsGet(KEYS.CSV_CACHE, null) || {}).rows || []).length,
       sessions: arr(KEYS.GAME_SESSIONS).length,
     };
   }
@@ -1388,7 +1408,7 @@
     lsGet, lsSet,
     getLeagues, addLeague, getLeagueById,
     parseCSV,
-    ensureCSVLoaded,
+    ensureCSVLoaded, loadSampleArsenal, isRetired, activeOnly, arsenalTemplateCSV,
     customBalls,
     withCustomBalls,
     loadCSVFromUpload,

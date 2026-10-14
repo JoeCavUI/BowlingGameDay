@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Bag</title>
-  <link rel="stylesheet" href="styles.css?v=81" />
+  <link rel="stylesheet" href="styles.css?v=82" />
 </head>
 <body data-page="analyze">
   <div class="navlinks"></div>
@@ -69,14 +69,14 @@
     <details class="panel gd-fold" style="margin-top:12px">
       <summary><span class="small">Ball list file (advanced)</span> <span class="small" id="csvStatus">CSV: not loaded</span></summary>
       <div class="btn-row">
-        <button class="btn secondary" id="reloadAuto">Reload starter ball list</button>
+        <button class="btn secondary" id="reloadAuto">Load the sample arsenal (35 balls)</button>
         <input id="csvFile" type="file" accept=".csv,text/csv" />
         <button class="btn secondary" id="loadFile">Load CSV</button>
       </div>
     </details>
   </div>
 
-  <script src="app.js?v=81"></script>
+  <script src="app.js?v=82"></script>
   <script>
     BT.renderNav('analyze');
     document.title = 'Bag';
@@ -769,7 +769,8 @@ roles.push({ id:'urethane', label:'Urethane / short (optional)', ok: hasUrethane
 
     function renderBallList() {
       const mine = new Set((BT.customBalls ? BT.customBalls() : []).map(b => BT.ballName(b)));
-      const rows = filteredRows.slice().sort((a, b) => (mine.has(BT.ballName(b)) ? 1 : 0) - (mine.has(BT.ballName(a)) ? 1 : 0));
+      const retiredN = filteredRows.filter(r => BT.isRetired(r)).length;
+      const rows = filteredRows.filter(r => !BT.isRetired(r)).sort((a, b) => (mine.has(BT.ballName(b)) ? 1 : 0) - (mine.has(BT.ballName(a)) ? 1 : 0));
       el.ballList.innerHTML = rows.map(r => {
         const nm = BT.ballName(r);
         const on = currentSelection.includes(nm);
@@ -782,7 +783,7 @@ roles.push({ id:'urethane', label:'Urethane / short (optional)', ok: hasUrethane
             <div class="bag-check">${on ? '✓ In bag' : '+ Add'}</div>
           </div>
         </div>`;
-      }).join('') || `<div class="list-item small">No balls match your search.</div>`;
+      }).join('') + (retiredN ? `<div class="list-item small" style="opacity:.7">${retiredN} retired ball${retiredN === 1 ? '' : 's'} hidden (bring them back on Arsenal → tap the ball).</div>` : '') || `<div class="list-item small">No balls yet. Add them on <a href="arsenal.html">Arsenal</a>.</div>`;
 
       BT.$all('[data-add]', el.ballList).forEach(div => {
         div.addEventListener('click', () => {
@@ -825,6 +826,8 @@ roles.push({ id:'urethane', label:'Urethane / short (optional)', ok: hasUrethane
     }
 
     BT.$('#reloadAuto').addEventListener('click', async () => {
+      const had = (BT.lsGet(BT.KEYS.CSV_CACHE, null) || {}).rows;
+      if (had && had.length && !confirm(`Replace your current ball list (${had.length} balls) with the sample arsenal? Balls you added by hand stay.`)) return;
       try {
         const res = await fetch('databalls.csv', { cache: 'no-store' });
         if (!res.ok) throw new Error('Fetch failed');
@@ -835,7 +838,7 @@ roles.push({ id:'urethane', label:'Urethane / short (optional)', ok: hasUrethane
         setStatus();
         applyFilter();
       } catch (e) {
-        alert('Could not load the starter ball list. Check your connection and try again.');
+        alert('Could not load the sample arsenal. Check your connection and try again.');
         console.error(e);
       }
     });

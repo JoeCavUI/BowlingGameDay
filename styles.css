@@ -433,3 +433,22 @@ button, a, select { -webkit-tap-highlight-color:rgba(99,230,210,0.25); }
 .bag-pick .bag-check{ font-weight:800; white-space:nowrap; opacity:.8; }
 .bag-pick.on{ background:rgba(99,230,210,0.12); border-color:rgba(99,230,210,0.55); }
 .bag-pick.on .bag-check{ color:var(--accent); opacity:1; }
+
+/* Barnes chart (v82) */
+.chart-sum{ font-size:16px; }
+.chart-axis{ display:flex; justify-content:space-between; font-size:12px; font-weight:800; opacity:.8; margin:4px 0 6px; padding-left:2px; }
+.crow{ padding:8px 0 10px; border-top:1px solid rgba(255,255,255,0.08); }
+.crow.empty .crow-head b{ color:var(--danger); }
+.crow-head{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:4px; }
+.ctrack{ position:relative; background:linear-gradient(90deg, rgba(99,230,210,0.10), rgba(255,255,255,0.03) 50%, rgba(122,167,255,0.10)); border-radius:10px; border:1px solid rgba(255,255,255,0.08); }
+.cdot{ position:absolute; width:20px; height:20px; border-radius:50%; padding:0; font-size:11px; font-weight:800; line-height:18px; text-align:center; color:#0f1116; border:1px solid rgba(0,0,0,.35); cursor:pointer; min-height:0; }
+.cdot.cv-s{ background:#6b5ce7; color:#fff; } .cdot.cv-h{ background:#e7a35c; } .cdot.cv-p{ background:#63e6d2; } .cdot.cv-o{ background:#cfd3dc; }
+.cdot.ghost{ background:transparent !important; color:var(--text); border:2px dashed #7aa7ff; }
+.cdot.retired{ opacity:.35; }
+.cchips{ display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+.cchip{ font-size:12px; padding:3px 8px 3px 4px; border-radius:999px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:var(--text); cursor:pointer; min-height:0; }
+.cchip .cn{ display:inline-block; min-width:16px; height:16px; line-height:16px; border-radius:50%; background:rgba(255,255,255,0.18); text-align:center; font-weight:800; margin-right:4px; font-size:10px; }
+.cchip.ghost{ border:1px dashed #7aa7ff; } .cchip.retired{ opacity:.45; text-decoration:line-through; }
+.chart-key{ display:flex; flex-wrap:wrap; gap:4px 10px; align-items:center; margin-bottom:6px; opacity:.9; }
+.chart-key .kd{ display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:3px; vertical-align:-1px; }
+.chart-key .kd.cv-s{ background:#6b5ce7; } .chart-key .kd.cv-h{ background:#e7a35c; } .chart-key .kd.cv-p{ background:#63e6d2; } .chart-key .kd.cv-o{ background:#cfd3dc; } .chart-key .kd.ghost{ border:2px dashed #7aa7ff; }

@@ -49,6 +49,25 @@ npm start
 ```
 Then open http://localhost:3000
 
+## Roadmap (ideas agreed, not built yet; checked at every update round)
+- **Wear drift:** after ~60 games since a resurface, a ball's chart position drifts weaker/later; resurfacing snaps it back.
+- **Self-correcting chart:** Game Day reads (Too early / Too long, breakpoints) nudge each ball's chart position toward how it actually rolls for you. Needs a few nights of data.
+- **Tonight's overlay:** on Game Day / Bag, show the band tonight's pattern needs on the chart with your bag highlighted; Coach ball changes drawn as moves on the chart.
+- **What's worked where:** color each ball by its results by house and pattern (carry %, strike %). Needs a few nights of data.
+- **Pro-shop sheet:** one printable page with every ball, specs, layout, surface, games since resurface, chart position, gaps and the suggested next move.
+- Spare shots + full game score (discussed; input change).
+- Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
+
+## Changes in v82-beta19: 🎳 Barnes chart
+- **Your Barnes chart** on Arsenal: Chris Barnes's six boxes (Strong/Medium/Weak × Smooth/Sharp) + Urethane (ZVL) + spare row; each ball placed Early → Late **for your release**. Numbered dots + names, color by cover, dashed what-if balls, scope = whole arsenal or a bag.
+- **Gaps, steps and ideas:** empty boxes with what to look for, crowded boxes, near-duplicates, big hook steps, boxes that all read early/late, no urethane (info).
+- **Resurface before you buy:** suggests sanding/polishing a ball you own when it fills an empty box without opening a new hole. Tune shows where any surface would move a ball; saving a tune that moves a ball tells you (and flags a new gap or duplicate).
+- **Before you buy:** what-if preview gives a verdict (fills an empty box / duplicates X / fills a step / lands in Y).
+- **Retire a ball:** leaves chart, bags, Bag page and Game Day (history kept); shows the gap it leaves and the replacement spec; un-retire anytime.
+- **Coverage fixed:** Bowler page now shows "x of 6 Barnes boxes" (was "Matrix 5/6 • Roles 0/6"). Weak line recalibrated (strength < 0.56) so entry-level balls land in Weak. Role Planner explains why speed-dominant/lower-rev players see more Gaps.
+- **New installs start with an empty ball list:** upload a ball spreadsheet (CSV, with a blank template) or add balls one at a time; "Try the sample arsenal (35 balls)" loads databalls.csv on purpose. Existing phones keep their ball list.
+- Wording: removed "starter list" (the 35 balls are the owner's arsenal).
+
 ## Changes in v81-beta18: fixes from live test 1
 - **Analyze is now "Bag"**: pick the balls you're bringing (✓ In bag, tap again to remove; your own balls first), name it, save. It becomes tonight's bag on Game Day. Gaps/overlaps moved into an optional "Check this bag". Arsenal page explains "every ball you own" with + Add a ball and "Pack my bag →" up top. CSV controls moved into an "advanced" fold on both pages.
 - **Tonight is remembered** (house, league, lanes, pattern, bag) across games and app reloads; folds away once you start bowling. On a new night it opens once to check lanes. (Bug: these were not restored when the iPhone reloaded the app.)

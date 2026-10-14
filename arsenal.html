@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Arsenal</title>
-  <link rel="stylesheet" href="styles.css?v=81" />
+  <link rel="stylesheet" href="styles.css?v=82" />
 </head>
 <body data-page="arsenal">
   <div class="navlinks"></div>
@@ -22,9 +22,11 @@
     </div>
     <div class="panel setup-banner" style="margin-top:0">
       <b>Your arsenal = every ball you own.</b>
-      <div class="small" style="margin-top:4px;opacity:1"><span class="gd-qnum" style="display:inline-flex;margin-right:4px">1</span> Add your balls here with <b>+ Add a ball → Save to Arsenal</b> (a starter list of popular balls is already loaded).<br>
+      <div class="small" style="margin-top:4px;opacity:1"><span class="gd-qnum" style="display:inline-flex;margin-right:4px">1</span> Add your balls: <b>upload your ball spreadsheet</b> (CSV) or tap <b>+ Add a ball → Save to Arsenal</b> one at a time.<br>
       <span class="gd-qnum" style="display:inline-flex;margin:6px 4px 0 0">2</span> Then pack tonight's bag on <a href="analyze.html"><b>Bag →</b></a>, or let Coach pick one in <a href="#rolePlannerPanel"><b>Role Planner</b></a> below.</div>
-      <div class="btn-row"><button class="btn" id="addWhatIf">+ Add a ball</button><a class="btn secondary" href="analyze.html">Pack my bag →</a></div>
+      <div class="btn-row"><button class="btn" id="addWhatIf">+ Add a ball</button><button class="btn secondary" id="uploadSheet" type="button">Upload ball spreadsheet</button><a class="btn secondary" href="analyze.html">Pack my bag →</a></div>
+      <input id="sheetFile" type="file" accept=".csv,text/csv" style="display:none" />
+      <div class="small" style="margin-top:6px;opacity:1">Spreadsheet in Excel or Numbers? Save/export it as <b>CSV</b> first. <a href="#" id="downloadTemplate">Download a blank template</a>.</div>
     </div>
 
     <div class="panel" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
@@ -32,12 +34,26 @@
       <button class="btn secondary" id="clearFilter">Clear</button>
     </div>
 
-    <div class="panel">
-      <h2>Arsenal Matrix</h2>
-      <div class="small">Uses your CSV to estimate Strength and Shape → groups balls into Strong/Medium/Weak × Smooth/Sharp. The matrix reflects your current filter.</div>
-      <div class="hr-split"></div>
-      <div id="matrix" class="grid-2"></div>
+    <div class="panel" id="barnesPanel">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap">
+        <div>
+          <h2 style="margin:0">🎳 Your Barnes chart</h2>
+          <div class="small">Chris Barnes's six boxes (plus urethane). Each ball sits <b>Early → Late</b> for <b>your</b> release<span id="chartWho"></span>. Tap a ball to tune it, resurface it, or retire it.</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select class="input" id="chartScope" style="max-width:220px" aria-label="Which balls"></select>
+          <label class="small" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="chartShowRetired" style="width:auto" /> show retired</label>
+        </div>
+      </div>
+      <div id="chartSummary" style="margin-top:10px"></div>
+      <div id="barnesChart" style="margin-top:8px"></div>
+      <div id="chartFindings" style="margin-top:12px"></div>
     </div>
+
+    <details class="panel gd-fold">
+      <summary><span class="gd-fold-title">Matrix list view</span> <span class="small">(the same six boxes as a list)</span></summary>
+      <div id="matrix" class="grid-2" style="margin-top:10px"></div>
+    </details>
 
 
     <div class="panel" id="arsenalCheckPanel">
@@ -74,6 +90,7 @@
         </div>
       </div>
       <div class="hr-split"></div>
+      <div class="setup-banner small" style="margin:0 0 10px">Roles compare how each ball rolls <b>for you</b> against fixed motion targets. With lower revs or more speed, every ball plays later and weaker, so you'll see more <b>Gap</b>s here even with a full bag. The <b>Barnes chart</b> above shows the same thing: your balls shift to the right (later).</div>
       <div class="small dim" style="margin-bottom:10px">These roles now use a <b>two-layer fit</b>: your 6-box matrix family anchors what the ball naturally is, then the bowler-specific motion model checks how it rolls for <i>you</i>. That keeps results from overreacting to tuning alone. “Early / Control” means stronger and smoother. “Shape / Corner” means stronger with more downlane pop. A low % does not mean the ball is bad—only that it is farther from that specific role target. <b>Covered</b> means a strong fit, <b>Close</b> means usable, and <b>Gap</b> means the bag still lacks that motion.</div>
       <div id="rolePlanner"></div>
       <div id="roleSuggestion" style="margin-top:12px"></div>
@@ -88,7 +105,7 @@
     <details class="panel gd-fold">
       <summary><span class="small">Ball list file (advanced)</span> <span class="small" id="csvStatus">CSV: not loaded</span> <span class="small dim" id="buildStamp"></span></summary>
       <div class="btn-row">
-        <button class="btn secondary" id="reloadAuto">Reload starter ball list</button>
+        <button class="btn secondary" id="reloadAuto">Load the sample arsenal (35 balls)</button>
         <input id="csvFile" type="file" accept=".csv,text/csv" />
         <button class="btn secondary" id="loadFile">Load CSV</button>
       </div>
@@ -274,8 +291,14 @@
             <option value="">15 lb (default)</option><option value="16">16 lb</option><option value="15">15 lb</option><option value="14">14 lb</option><option value="13">13 lb</option><option value="12">12 lb</option><option value="11">11 lb</option><option value="10">10 lb</option>
           </select>
           <button class="btn secondary" id="tuneResurfaced" type="button">Just resurfaced</button>
+          <button class="btn danger" id="tuneRetire" type="button">Retire this ball</button>
         </div>
         <div class="small dim" id="tuneCareInfo" style="margin-top:6px"></div>
+      </div>
+
+      <div class="panel" style="margin-top:14px;padding:12px;background:#111">
+        <div style="font-weight:900">📈 On your Barnes chart</div>
+        <div id="tuneChartPreview" class="small" style="margin-top:6px;opacity:1"></div>
       </div>
 
       <div class="panel" style="margin-top:14px;padding:12px;background:#111">
@@ -293,8 +316,9 @@
     </div>
   </div>
 
-  <script src="app.js?v=81"></script>
-  <script src="coach.js?v=81"></script>
+  <script src="app.js?v=82"></script>
+  <script src="coach.js?v=82"></script>
+  <script src="chart.js?v=82"></script>
   <script>
     BT.renderNav('arsenal');
 
@@ -318,8 +342,12 @@
     let customRows = BT.lsGet('bt_custom_balls_v1', []);
     if (!Array.isArray(customRows)) customRows = [];
 
-    function viewRows() {
+    function viewRowsAll() {
       return allRows.concat(customRows).concat(proposedRows);
+    }
+    // Active arsenal: retired balls are left out of the matrix, planner, check and bag suggestions.
+    function viewRows() {
+      return viewRowsAll().filter(r => r.__proposed || !BT.isRetired(r));
     }
 
     function setStatus() {
@@ -608,6 +636,7 @@
             ? 'Shinier surfaces usually create more push and faster response downlane.'
             : 'Middle surfaces often live in benchmark / readable territory.');
       renderTunePreview();
+      try { renderTuneChartPreview(); } catch (_e) {}
     }
 
     function openTune(ballName) {
@@ -630,6 +659,7 @@
 
     function renderTuneCare(nm) {
       const care = BT.ballCareFor(nm);
+      const rb = BT.$('#tuneRetire'); if (rb) { rb.textContent = care.retired ? 'Bring back (un-retire)' : 'Retire this ball'; rb.className = care.retired ? 'btn secondary' : 'btn danger'; }
       const w = BT.$('#tuneWeight'); if (w) w.value = care.weight ? String(care.weight) : '';
       const info = BT.$('#tuneCareInfo'); if (!info) return;
       let games = null;
@@ -648,6 +678,26 @@
       BT.setBallCare(tune.currentName, { resurfacedAt: Date.now() });
       renderTuneCare(tune.currentName);
       renderArsenalCheck();
+    });
+
+    BT.$('#tuneRetire')?.addEventListener('click', () => {
+      const nm = tune.currentName; if (!nm) return;
+      const care = BT.ballCareFor(nm);
+      if (care.retired) {
+        BT.setBallCare(nm, { retired: false, retiredAt: 0 });
+        renderTuneCare(nm); applyFilter();
+        return alert(`${nm} is back in your active arsenal.`);
+      }
+      const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
+      const before = BTChart.analyze(BTChart.place(viewRows().filter(r => !r.__proposed), bowler));
+      const me = BTChart.place([rowByName(nm)], bowler)[0];
+      const others = (before.byRow[me.rowKey] || []).filter(b => b.name !== nm);
+      const msg = others.length
+        ? `Retire ${nm}?\n\n${BTChart.label(me.rowKey)} is still covered by ${others.map(b => b.name).slice(0, 3).join(', ')}${others.length > 3 ? '…' : ''}, so no gap opens.`
+        : `Retire ${nm}?\n\nIt's your only ball in ${BTChart.label(me.rowKey)}, so that box will be empty.\n\nTo replace it, look for: ${BTChart.SPEC[me.rowKey] || 'a ball with similar specs'}.`;
+      if (!confirm(msg + '\n\nIt stays in your history and Scores, but leaves your chart, bags and Coach.')) return;
+      BT.setBallCare(nm, { retired: true, retiredAt: Date.now() });
+      renderTuneCare(nm); applyFilter(); closeTune();
     });
 
     function closeTune() {
@@ -745,6 +795,21 @@
     });
     tune.save.addEventListener('click', () => {
       if (!tune.currentName) return;
+      const bowlerRC = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
+      const rowRC = rowByName(tune.currentName);
+      const beforeRC = rowRC && window.BTChart ? BTChart.place([rowRC], bowlerRC)[0] : null;
+      const savedName = tune.currentName;
+      setTimeout(() => {
+        try {
+          const r2 = rowByName(savedName); if (!beforeRC || !r2) return;
+          const after = BTChart.place([r2], bowlerRC)[0];
+          if (after.rowKey !== beforeRC.rowKey) {
+            const an = BTChart.analyze(BTChart.place(viewRows().filter(r => !r.__proposed), bowlerRC));
+            const dup = an.dups.find(d => d.a === savedName || d.b === savedName);
+            alert(`${savedName} moved from ${BTChart.label(beforeRC.rowKey)} to ${BTChart.label(after.rowKey)}.` + (an.empty.includes(beforeRC.rowKey) ? `\n⚠️ ${BTChart.label(beforeRC.rowKey)} is now empty.` : '') + (dup ? `\n🔁 It now plays almost the same as ${dup.a === savedName ? dup.b : dup.a}.` : ''));
+          }
+        } catch (_e) {}
+      }, 80);
       BT.setBallTweaks(tune.currentName, {
         hook: Number(tune.hook.value),
         length: Number(tune.len.value),
@@ -1028,8 +1093,119 @@
       const rows = viewRows().filter(r => matchesFilter(r, q));
       renderMatrix(rows);
       renderRolePlanner(rows);
-      renderTable(rows);
+      renderTable(viewRowsAll().filter(r => matchesFilter(r, q)));
       renderArsenalCheck();
+      renderChart();
+    }
+
+    // ---------- 🎳 Barnes chart ----------
+    const escH = (t) => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    function chartScopeRows() {
+      const sel = BT.$('#chartScope'); const scope = sel ? sel.value : 'all';
+      const showRet = BT.$('#chartShowRetired') && BT.$('#chartShowRetired').checked;
+      let rows = viewRowsAll().filter(r => showRet || r.__proposed || !BT.isRetired(r));
+      if (scope.startsWith('set:')) {
+        const st = (BT.lsGet(BT.KEYS.ARSENAL_SETS, []) || []).find(x => 'set:' + x.name === scope);
+        const names = new Set(((st && st.balls) || []).map(x => typeof x === 'string' ? x : x && x.name));
+        rows = rows.filter(r => names.has(BT.ballName(r)) || r.__proposed);
+      }
+      return rows;
+    }
+    function renderChartScopes() {
+      const sel = BT.$('#chartScope'); if (!sel) return;
+      const keep = sel.value;
+      const sets = BT.lsGet(BT.KEYS.ARSENAL_SETS, []) || [];
+      sel.innerHTML = [['all', 'My whole arsenal'], ...sets.map(st => ['set:' + st.name, 'Bag: ' + st.name])].map(([v, t]) => `<option value="${escH(v)}">${escH(t)}</option>`).join('');
+      if (keep && Array.from(sel.options).some(o => o.value === keep)) sel.value = keep;
+    }
+    function renderChart() {
+      const box = BT.$('#barnesChart'); if (!box || !window.BTChart) return;
+      renderChartScopes();
+      const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
+      const who = BT.$('#chartWho');
+      if (who) who.textContent = (bowler.mphLine || bowler.rpm) ? ` (${[bowler.mphLine && bowler.mphLine + ' mph', bowler.rpm && bowler.rpm + ' rpm'].filter(Boolean).join(', ')})` : ' (enter your speed and revs on the Bowler page to personalize it)';
+      const rows = chartScopeRows();
+      const sum = BT.$('#chartSummary'), fnd = BT.$('#chartFindings');
+      if (!rows.filter(r => !r.__proposed).length) {
+        box.innerHTML = `<div class="setup-banner"><b>No balls yet.</b><div class="small" style="margin-top:4px;opacity:1">Upload your ball spreadsheet or tap <b>+ Add a ball</b> above.</div>
+          <div class="btn-row"><button class="btn secondary" type="button" id="loadSample">Try the sample arsenal (35 balls)</button></div></div>`;
+        if (sum) sum.innerHTML = ''; if (fnd) fnd.innerHTML = '';
+        const ls = BT.$('#loadSample'); if (ls) ls.addEventListener('click', async () => { const p = await BT.loadSampleArsenal(); if (p && p.rows) { allRows = p.rows; setStatus(); applyFilter(); } else alert('Could not load the sample arsenal. Check your connection.'); });
+        return;
+      }
+      const balls = BTChart.place(rows, bowler);
+      const an = BTChart.analyze(balls);
+      // Summary
+      const retiredN = viewRowsAll().filter(r => !r.__proposed && BT.isRetired(r)).length;
+      if (sum) sum.innerHTML = `<div class="chart-sum"><b>${an.covered.length} of 6 boxes covered</b>${an.urethane ? ' + urethane' : ''} · ${an.active} active ball${an.active === 1 ? '' : 's'}${retiredN ? ` · ${retiredN} retired` : ''}</div>`;
+      // Rows
+      const allRowsDef = BTChart.ROWS.concat([{ key: 'SPARE', label: 'Spare (plastic)', job: 'Straight at corner pins.', optional: true }]);
+      box.innerHTML = `<div class="chart-key small"><span class="kd cv-s"></span>solid <span class="kd cv-h"></span>hybrid <span class="kd cv-p"></span>pearl <span class="kd cv-o"></span>other <span class="kd ghost"></span>thinking of buying</div><div class="chart-axis"><span>Early</span><span>reads the lane →</span><span>Late</span></div>` + allRowsDef.map(r => {
+        const L = balls.filter(b => b.rowKey === r.key).sort((a, b) => a.timing - b.timing);
+        if (r.key === 'SPARE' && !L.length) return '';
+        // stack colliding dots into lanes
+        const lanes = [];
+        L.forEach((b, i) => { b.n = i + 1; let li = lanes.findIndex(x => b.x - x >= 7); if (li < 0) { li = lanes.length < 4 ? lanes.length : lanes.length - 1; if (li === lanes.length) lanes.push(-99); } lanes[li] = b.x; b.lane = li; });
+        const h = Math.max(1, lanes.length) * 22 + 6;
+        const dots = L.map(b => `<button type="button" class="cdot ${b.proposed ? 'ghost' : ''} ${b.retired ? 'retired' : ''} cv-${/solid/i.test(b.cover) ? 's' : /pearl/i.test(b.cover) ? 'p' : /hybrid/i.test(b.cover) ? 'h' : 'o'}" style="left:calc(${b.x}% - 10px);top:${3 + b.lane * 22}px" data-cball="${escH(b.name)}" title="${escH(b.name)}">${b.n}</button>`).join('');
+        const chips = L.map(b => `<button type="button" class="cchip ${b.proposed ? 'ghost' : ''} ${b.retired ? 'retired' : ''}" data-cball="${escH(b.name)}"><span class="cn">${b.n}</span>${escH(b.name)}${b.proposed ? ' (what-if)' : b.retired ? ' (retired)' : ''}</button>`).join('');
+        const empty = !L.filter(b => !b.proposed && !b.retired).length;
+        return `<div class="crow ${empty ? 'empty' : ''}">
+          <div class="crow-head"><b>${r.label}</b> <span class="small">${L.filter(b => !b.proposed && !b.retired).length || (r.optional ? 'none' : 'empty')}</span></div>
+          <div class="ctrack" style="height:${h}px">${dots}</div>
+          ${chips ? `<div class="cchips">${chips}</div>` : `<div class="small" style="opacity:.75">${r.optional ? '' : '❌ Empty. '}${escH(r.job)}</div>`}
+        </div>`;
+      }).join('');
+      BT.$all('[data-cball]', box).forEach(x => x.addEventListener('click', () => {
+        const nm = x.getAttribute('data-cball');
+        const row = viewRowsAll().find(r => BT.ballName(r) === nm);
+        if (row && row.__proposed) return; // what-if balls: edit them in the ball list
+        openTune(nm);
+      }));
+      // Findings
+      if (!fnd) return;
+      const items = [];
+      const lab = BTChart.label;
+      an.empty.forEach(k => items.push({ lvl: 'high', t: `❌ Nothing in ${lab(k)}`, d: `${(BTChart.ROWS.find(r => r.key === k) || {}).job || ''} Look for: ${BTChart.SPEC[k]}.` }));
+      const ideas = BTChart.resurfaceIdeas(balls, an, bowler);
+      ideas.forEach(i => items.push({ lvl: 'good', t: `💡 Resurface before you buy: ${i.ball}`, d: `Taking ${i.ball} from ${i.fromSurface} to ${i.toSurface} moves it from ${i.fromBox} into your empty ${i.toBox} box (${i.timing} for you), and ${i.why}. A resurface costs a lot less than a new ball.` }));
+      for (const r of BTChart.ROWS) { const n = an.byRow[r.key].length; if (n >= 6) items.push({ lvl: 'med', t: `📦 ${n} balls in ${r.label}`, d: `That box is crowded. If you're shopping, look at the other boxes first.` }); }
+      an.dups.slice(0, 5).forEach(dp => items.push({ lvl: 'med', t: `🔁 ${dp.a} and ${dp.b} play almost the same for you`, d: `Same box (${dp.box}) and about the same timing. Fine if one is a backup or has a very different layout on purpose; otherwise don't bag both.` }));
+      if (an.dups.length > 5) items.push({ lvl: 'low', t: `🔁 ${an.dups.length - 5} more near-duplicate pair${an.dups.length - 5 === 1 ? '' : 's'}`, d: 'Tap balls on the chart to compare them.' });
+      an.steps.forEach(st => items.push({ lvl: 'med', t: `🪜 Big step from ${st.from} down to ${st.to}`, d: `There's a gap in hook between them. A ball in between helps when the lanes change.` }));
+      an.lopsided.forEach(o => items.push({ lvl: 'low', t: `⏱️ Everything in ${o.box} reads ${o.side} for you`, d: o.side === 'late' ? 'A rougher surface on one of them would give you an earlier option in that box.' : 'A shinier surface on one of them would give you a later option in that box.' }));
+      if (an.allLate) items.push({ lvl: 'med', t: '⏱️ Most of your arsenal reads late for you', d: 'Common for speed-dominant or lower-rev players. Rougher surfaces (1000–2000) move balls earlier.' });
+      if (an.allEarly) items.push({ lvl: 'med', t: '⏱️ Most of your arsenal reads early for you', d: 'Common for high-rev players. Shinier surfaces or pearls move balls later.' });
+      if (!an.urethane) items.push({ lvl: 'low', t: 'ℹ️ No urethane ball', d: `Optional. Handy on short, flat or very dry lanes. Look for: ${BTChart.SPEC.URETHANE}.` });
+      // Before-you-buy verdicts for what-if balls
+      balls.filter(b => b.proposed).forEach(b => items.unshift({ lvl: 'buy', t: `🛒 Thinking about ${b.name}?`, d: BTChart.buyVerdict(b, balls, an).text }));
+      const col = { high: 'var(--danger)', med: '#ffc400', low: 'rgba(255,255,255,0.25)', good: 'var(--accent)', buy: '#7aa7ff' };
+      fnd.innerHTML = `<b>Gaps, steps and ideas</b>` + (items.length ? items.map(f => `<div class="list-item" style="border-left:4px solid ${col[f.lvl]};margin-top:6px;border-radius:0 10px 10px 0;background:rgba(255,255,255,0.03)"><div><b>${escH(f.t)}</b></div><div class="small" style="margin-top:4px;opacity:1">${escH(f.d)}</div></div>`).join('') : '<div class="list-item small">✅ No gaps or duplicates found.</div>');
+    }
+    BT.$('#chartScope')?.addEventListener('change', renderChart);
+    BT.$('#chartShowRetired')?.addEventListener('change', renderChart);
+
+    // Chart preview inside Tune: where does this ball sit now, and where would the selected surface put it?
+    function renderTuneChartPreview() {
+      const out = BT.$('#tuneChartPreview'); if (!out || !window.BTChart || !tune.currentName) return;
+      const row = rowByName(tune.currentName); if (!row) { out.textContent = ''; return; }
+      const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
+      const now = BTChart.place([row], bowler)[0];
+      const surf = surfacePresetByIndex(tune.surface.value).surface;
+      const sim = BTChart.withSurface(row, surf, bowler);
+      const curS = BT.ballSurface(row);
+      const same = String(BT.surfaceToGrit(curS)) === String(BT.surfaceToGrit(surf));
+      let txt = `Now: <b>${BTChart.label(now.rowKey)}</b>, reads <b>${BTChart.timingWord(now.timing)}</b> for you (surface ${escH(curS || '?')}).`;
+      if (!same) {
+        const moved = sim.rowKey !== now.rowKey;
+        const an = BTChart.analyze(BTChart.place(viewRows().filter(r => !r.__proposed), bowler));
+        const leavesEmpty = moved && an.byRow[now.rowKey] && an.byRow[now.rowKey].filter(b => b.name !== tune.currentName).length === 0;
+        const fills = moved && an.empty.includes(sim.rowKey);
+        txt += `<br>At <b>${escH(surf)}</b>: ${moved ? `moves to <b>${BTChart.label(sim.rowKey)}</b>` : 'stays in the same box'}, reads <b>${BTChart.timingWord(sim.timing)}</b>${sim.timing < now.timing - 0.02 ? ' (earlier)' : sim.timing > now.timing + 0.02 ? ' (later)' : ''}.`;
+        if (fills) txt += ` ✅ That fills your empty ${BTChart.label(sim.rowKey)} box.`;
+        if (leavesEmpty) txt += ` ⚠️ It would leave ${BTChart.label(now.rowKey)} empty.`;
+      }
+      out.innerHTML = txt;
     }
 
     // ---- Arsenal check ----
@@ -1099,12 +1275,13 @@
         applyFilter();
       } else {
         allRows = [];
-        renderMatrix([]);
-        renderTable([]);
+        applyFilter();
       }
     }
 
     BT.$('#reloadAuto').addEventListener('click', async () => {
+      const had = (BT.lsGet(BT.KEYS.CSV_CACHE, null) || {}).rows;
+      if (had && had.length && !confirm(`Replace your current ball list (${had.length} balls) with the sample arsenal? Balls you added by hand stay.`)) return;
       try {
         const payload = await (async () => {
           const res = await fetch('databalls.csv', { cache: 'no-store' });
@@ -1119,7 +1296,7 @@
         setStatus();
         applyFilter();
       } catch (e) {
-        alert('Could not load the starter ball list. Check your connection and try again.');
+        alert('Could not load the sample arsenal. Check your connection and try again.');
         console.error(e);
       }
     });
@@ -1134,6 +1311,27 @@
       allRows = payload.rows;
       setStatus();
       applyFilter();
+    });
+
+    BT.$('#uploadSheet')?.addEventListener('click', () => BT.$('#sheetFile').click());
+    BT.$('#sheetFile')?.addEventListener('change', async (ev) => {
+      const f = ev.target.files && ev.target.files[0]; ev.target.value = '';
+      if (!f) return;
+      const had = (BT.lsGet(BT.KEYS.CSV_CACHE, null) || {}).rows;
+      if (had && had.length && !confirm(`Replace your current ball list (${had.length} balls) with ${f.name}? Balls you added by hand stay.`)) return;
+      try {
+        const payload = await BT.loadCSVFromUpload(f);
+        const n = (payload.rows || []).filter(r => BT.ballName(r)).length;
+        if (!n) { alert('No balls found. The spreadsheet needs a "Ball Name" column (download the template to see the columns).'); return; }
+        allRows = payload.rows; setStatus(); applyFilter();
+        alert(`Loaded ${n} balls from ${f.name}.`);
+      } catch (e) { alert('Could not read that file. Save it as CSV and try again.'); }
+    });
+    BT.$('#downloadTemplate')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const blob = new Blob([BT.arsenalTemplateCSV()], { type: 'text/csv' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'my-bowling-balls-template.csv';
+      document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
     });
 
     el.filter.addEventListener('input', applyFilter);
@@ -1367,7 +1565,14 @@ function previewWhatIf() {
   const layout = layoutFromForm();
   const out = buildWhatIfReview(tmpRow, layout);
   const box = BT.$('#wiReviewBox');
-  if (box) box.innerHTML = out.review;
+  let verdict = '';
+  try {
+    const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
+    const own = BTChart.place(viewRows().filter(r => !r.__proposed), bowler);
+    const cand = BTChart.place([Object.assign({}, tmpRow, layout || {}, { __proposed: true })], bowler)[0];
+    verdict = `<div class="setup-banner" style="margin-top:10px"><b>🛒 Before you buy</b><div class="small" style="margin-top:4px;opacity:1">${BTChart.buyVerdict(cand, own, BTChart.analyze(own)).text}</div></div>`;
+  } catch (_e) {}
+  if (box) box.innerHTML = out.review + verdict;
 }
 
 function removeRowByName(name, type) {
