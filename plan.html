@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Plan</title>
-  <link rel="stylesheet" href="styles.css?v=85" />
+  <link rel="stylesheet" href="styles.css?v=86" />
 </head>
 <body data-page="plan">
   <div class="navlinks"></div>
@@ -34,6 +34,10 @@
         <div><label for="pSet">Bag <span class="small">(optional)</span></label><select id="pSet" class="input"></select></div>
         <div><label for="pPat">Pattern <span class="small">(optional)</span></label><select id="pPat" class="input"></select></div>
       </div>
+      <div class="pl-row">
+        <div><label for="pCount">How many balls?</label><select id="pCount" class="input"><option value="0">Don't recommend a bag</option><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option></select></div>
+        <div class="small" style="align-self:end;padding-bottom:6px">Coach picks them from your arsenal for this house and pair.</div>
+      </div>
       <button class="btn" id="pBuild" style="width:100%;margin-top:12px">Build my game plan</button>
       <div class="small" id="pStatus" style="margin-top:8px"></div>
     </div>
@@ -50,10 +54,11 @@
     </div>
   </div>
 
-  <script src="app.js?v=85"></script>
-  <script src="pinpal.js?v=85"></script>
-  <script src="history.js?v=85"></script>
-  <script src="plan.js?v=85"></script>
+  <script src="app.js?v=86"></script>
+  <script src="pinpal.js?v=86"></script>
+  <script src="history.js?v=86"></script>
+  <script src="chart.js?v=86"></script>
+  <script src="plan.js?v=86"></script>
   <script>
   (function () {
     BT.renderNav('plan');
@@ -75,6 +80,7 @@
       $('#pHouse').value = last.house || tonight.house || '';
       $('#pLanes').value = last.lanes || '';
       if (last.event) $('#pEvent').value = last.event;
+      if (last.count != null) $('#pCount').value = String(last.count);
       const setPick = last.setName || tonight.set || BT.lsGet('bt_gameday_preferred_set_v1', '');
       if (setPick && sets.some(s => s.name === setPick)) $('#pSet').value = setPick;
       if (last.patternName && pats.some(p => p.name === last.patternName)) $('#pPat').value = last.patternName;
@@ -92,7 +98,7 @@
     }
 
     function buildNow() {
-      const opts = { house: $('#pHouse').value.trim(), lanes: $('#pLanes').value.trim(), event: $('#pEvent').value, setName: $('#pSet').value, patternName: $('#pPat').value };
+      const opts = { house: $('#pHouse').value.trim(), lanes: $('#pLanes').value.trim(), event: $('#pEvent').value, setName: $('#pSet').value, patternName: $('#pPat').value, count: Number($('#pCount').value) };
       if (!opts.house) { $('#pStatus').textContent = 'Type or pick where you\'re bowling.'; $('#pHouse').focus(); return; }
       try { plan = BTPlan.build(opts); } catch (e) { console.error(e); $('#pStatus').textContent = 'Could not build the plan: ' + (e && e.message ? e.message : e); return; }
       BT.lsSet(LAST, opts);
@@ -103,6 +109,7 @@
     }
 
     $('#pBuild').addEventListener('click', buildNow);
+    $('#pEvent').addEventListener('change', () => { if ($('#pEvent').value === 'tournament' && Number($('#pCount').value) < 6) $('#pCount').value = '6'; });
     $('#pHouse').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); buildNow(); } });
     $('#pPdf').addEventListener('click', () => { try { window.print(); } catch (_e) { alert('Printing isn\'t available here. Use Share text instead.'); } });
     $('#pShare').addEventListener('click', async () => {

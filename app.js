@@ -6,7 +6,7 @@
 
 (function () {
   // Bump this string each build so pages can display it and cache-bust resources.
-  const APP_VERSION = 'v85-beta22';
+  const APP_VERSION = 'v86-beta23';
   const KEYS = {
     CSV_CACHE: 'bt_csv_cache_v1',          // stringified { savedAt, name, rows }
     BOWLER: 'bt_bowler_v1',               // stringified object
@@ -161,7 +161,10 @@
     if (row.some(c => String(c).trim() !== '')) rows.push(row);
     if (rows.length < 2) return [];
 
-    const header = rows[0].map(h => String(h || '').trim());
+    const header0 = rows[0].map(h => String(h || '').trim());
+    // Duplicate headers (VLS "PAP, PSA, Val" then Dual Angle "PAP, Val" then core "PSA"): the LAST copy keeps the
+    // plain name (what the motion model reads); earlier copies are kept as "PAP#1", "PSA#1", "Val#1".
+    const header = header0.map((h, i) => (h && header0.indexOf(h, i + 1) !== -1) ? `${h}#${header0.slice(0, i + 1).filter(x => x === h).length}` : h);
     const out = [];
     for (let r = 1; r < rows.length; r++) {
       const obj = {};
@@ -1441,6 +1444,7 @@
     clearBallSurfaceOverride,
     surfaceToGrit,
     motionVector,
+    getField,
     motionDistance,
     computeIndices,
     classifySession,

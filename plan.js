@@ -29,6 +29,97 @@
   function arsenalNames() {
     try { const c = BT().lsGet(BT().KEYS.CSV_CACHE, null); return BT().withCustomBalls((c && c.rows) || []).map(r => BT().ballName(r)).filter(Boolean); } catch (_e) { return []; }
   }
+  function arsenalRows() {
+    try { const c = BT().lsGet(BT().KEYS.CSV_CACHE, null); return BT().withCustomBalls((c && c.rows) || []).filter(r => BT().ballName(r) && !BT().isRetired(r)); } catch (_e) { return []; }
+  }
+  // Ball traits used to look for patterns: cover family, core, layout type, Barnes box.
+  function traitsOf(row, b) {
+    const cov = String(BT().ballCover(row) || '').toLowerCase();
+    const cover = /ure/.test(cov) ? 'Urethane' : /pearl/.test(cov) ? 'Pearl' : /hybrid/.test(cov) ? 'Hybrid' : /solid/.test(cov) ? 'Solid' : '';
+    const coreS = String(BT().getField(row, ['Core'], '') || '').toLowerCase();
+    const core = /asym/.test(coreS) ? 'Asymmetric' : /sym/.test(coreS) ? 'Symmetric' : '';
+    const v = BT().motionVector(row, b);
+    const layout = { short: 'Short pin', long: 'Long pin', control: 'Pin down', benchmark: 'Benchmark' }[v.layoutType] || '';
+    let box = '', x = null;
+    try { const p = root.BTChart.place([row], b)[0]; box = root.BTChart.label(p.rowKey); x = p.x; } catch (_e) {}
+    return { cover, core, layout, box, x, v };
+  }
+
+  // Recommended bag for this house / pair: how have your covers, cores and layouts done here, then pick N balls
+  // that score well AND cover different timings (Early → Late), so there's a ball to start with and one to move to.
+  function recommendBag(ctx) {
+    const { hist, G, lanes, S, b, count, lean, today } = ctx;
+    const rows = arsenalRows(); if (!rows.length) return null;
+    const names = rows.map(r => BT().ballName(r));
+    const map = hist.ballMap(names);
+    const byName = {}; rows.forEach(r => { byName[BT().ballName(r)] = { row: r, t: traitsOf(r, b) }; });
+    const pairG = lanes ? G.filter(g => g.lanes === lanes) : [];
+    const K = 8, MIN_OWN = 3, TR = ['cover', 'core', 'layout', 'box'];
+    const LBL = { cover: 'Cover', core: 'Core', layout: 'Layout', box: 'Barnes box' };
+    const tag = (gs) => gs.map(g => { const ar = map[hist.mainBall(g)]; return ar && byName[ar] ? { g, ar, t: byName[ar].t } : null; }).filter(Boolean);
+    // Trait patterns: average by cover / core / layout / box, pulled toward the overall average for small groups.
+    function patterns(gs) {
+      const tg = tag(gs), base = gs.length ? hist.summary(gs).avg : null, eff = {}, lines = [];
+      if (tg.length < 12 || base == null) return { tg, base, eff, lines };
+      for (const tr of TR) {
+        const m = {}; tg.forEach(x => { const k = x.t[tr]; if (k) (m[k] = m[k] || []).push(x.g); });
+        const groups = Object.entries(m).filter(([, x]) => x.length >= 6).map(([k, x]) => { const s = hist.summary(x); return { k, n: x.length, avg: s.avg, strike: s.strike, eff: (s.avg - base) * x.length / (x.length + K) }; }).sort((p, q) => q.avg - p.avg);
+        eff[tr] = {}; groups.forEach(gp => { eff[tr][gp.k] = gp; });
+        if (groups.length >= 2 && groups[0].avg - groups[groups.length - 1].avg >= 5) lines.push(`<b>${LBL[tr]}:</b> ${groups.map(gp => `${esc(gp.k)} ${gp.avg} (${gp.n} games, ${gp.strike}% strikes)`).join(' · ')}.`);
+      }
+      return { tg, base, eff, lines };
+    }
+    const H = patterns(G), P = pairG.length >= 12 ? patterns(pairG) : null;
+    const items = [];
+    const pairNote = lanes ? (P && P.tg.length >= 12 ? '' : ` Lanes ${lanes.replace('-', ' & ')} have ${pairG.length} game${pairG.length === 1 ? '' : 's'}${pairG.length ? ` (${tag(pairG).length} with balls in your arsenal)` : ''}, so patterns come from the whole house and the pair only adjusts them.`) : '';
+    items.push(`${H.tg.length} of ${G.length} games here were thrown with balls matched to your arsenal.${pairNote}`);
+    if (P && P.lines.length) { items.push(`On lanes ${lanes.replace('-', ' & ')}:`); P.lines.forEach(l => items.push(l)); }
+    if (H.lines.length) { if (P && P.lines.length) items.push('Across the house:'); H.lines.forEach(l => items.push(l)); }
+    if (!H.lines.length && !(P && P.lines.length)) items.push(H.tg.length >= 12 ? 'No strong cover, core or layout pattern here: your results are about the same across them.' : 'Not enough games with your current balls here to read cover / core / layout patterns yet. Matching more names under Scores → History → Ball names helps.');
+    // Score: what the traits predict at the house (+ pair where it has data), blended with the ball's own record.
+    const yrCut = new Date(Date.parse(today) - 365 * 864e5).toISOString().slice(0, 10);
+    const predict = (pt, t) => { if (!pt || pt.base == null) return null; const e = TR.map(tr => pt.eff[tr] && pt.eff[tr][t[tr]] ? pt.eff[tr][t[tr]].eff : null).filter(x => x != null); return { v: pt.base + (e.length ? e.reduce((a, x) => a + x, 0) / e.length : 0), k: e.length }; };
+    const scored = names.map(n => {
+      const t = byName[n].t, pps = Object.keys(map).filter(p => map[p] === n);
+      const ph = predict(H, t); const pred = ph ? ph.v : (S ? S.avg : 0);
+      const own = G.filter(g => pps.includes(hist.mainBall(g))), os = own.length >= MIN_OWN ? hist.summary(own) : null;
+      const rec = own.filter(g => g.d >= yrCut), rs = rec.length >= MIN_OWN && rec.length < own.length ? hist.summary(rec) : null;
+      let score = pred;
+      if (os) { const sh = (os.avg * os.n + pred * K) / (os.n + K); score = rs ? (sh + (rs.avg * rs.n + pred * K) / (rs.n + K)) / 2 : sh; }
+      // Pair adjustment: how this ball (or its traits) did on the pair compared with the pair's own average.
+      let pAdj = 0, po = null;
+      if (pairG.length >= 6) {
+        const pbase = hist.summary(pairG).avg, mine = pairG.filter(g => pps.includes(hist.mainBall(g)));
+        if (mine.length >= MIN_OWN) { po = hist.summary(mine); pAdj += (po.avg - pbase) * mine.length / (mine.length + K) * 0.6; }
+        const pp = P ? predict(P, t) : null; if (pp && pp.k) pAdj += (pp.v - P.base) * 0.4;
+      }
+      return { n, t, os, rs, po, pred, predK: ph ? ph.k : 0, score: score + pAdj };
+    }).sort((p, q) => q.score - p.score);
+    if (!scored.length) return null;
+    // Pick: the best ball first, then alternate sides of it (what the lanes need first), each at least 10 points
+    // apart on the Early → Late scale from everything picked, so every ball has its own job.
+    const picked = [scored[0]], x0 = scored[0].t.x ?? 50;
+    const order = lean === 1 ? ['earlier', 'later'] : ['later', 'earlier'];
+    while (picked.length < Math.min(count, scored.length)) {
+      const want = order[(picked.length - 1) % 2];
+      const ok = scored.filter(s => !picked.includes(s) && s.t.x != null && Math.min(...picked.map(p => Math.abs((p.t.x ?? 50) - s.t.x))) >= 10);
+      const side = ok.filter(s => want === 'earlier' ? s.t.x < x0 : s.t.x > x0);
+      const pool = side.length ? side : ok; if (!pool.length) break;
+      pool.sort((p, q) => (q.score + (picked.some(z => z.t.box === q.t.box) ? 0 : 2)) - (p.score + (picked.some(z => z.t.box === p.t.box) ? 0 : 2)));
+      picked.push(pool[0]);
+    }
+    const first = picked[0];
+    const ordered = picked.slice().sort((p, q) => (p.t.x ?? 50) - (q.t.x ?? 50));
+    const role = (p) => p === first ? 'Start with' : (p.t.x ?? 50) < x0 ? 'Earlier / more ball' : 'Later / cleaner (transition)';
+    const gm = (n) => `${n} game${n === 1 ? '' : 's'}`;
+    const why = (p) => [p.os ? `${p.os.avg} over ${gm(p.os.n)} here${p.rs ? ` (${p.rs.avg} in the last 12 months)` : ''}` : `${p.predK ? `its cover / core / layout average about ${Math.round(p.pred)} here` : 'no record here yet'}`, p.po ? `${p.po.avg} over ${gm(p.po.n)} on this pair` : ''].filter(Boolean).join('; ');
+    items.push('<b>The bag (Early → Late):</b>');
+    ordered.forEach(p => items.push(`<b>${role(p)}: ${esc(p.n)}</b> · ${[p.t.cover, p.t.core && p.t.core + ' core', p.t.layout, p.t.box].filter(Boolean).map(esc).join(', ')}. ${why(p)}.`));
+    if (picked.length < count) items.push(`Only ${picked.length} of your balls read far enough apart to be worth bringing; more would overlap.`);
+    items.push('Plus your spare ball.');
+    return { items, picked: ordered.map(p => p.n), first: first.n };
+  }
+
   function sets() { try { return BT().lsGet(BT().KEYS.ARSENAL_SETS, []) || []; } catch (_e) { return []; } }
   function setBalls(name) {
     const s = sets().find(x => x.name === name); if (!s || !Array.isArray(s.balls)) return [];
@@ -179,6 +270,14 @@
       }
       sec('🎳', 'Ball', items);
     } else if (bag.length) sec('🎳', 'Ball', [`Tonight's bag: ${bag.map(esc).join(', ')}. No history here yet to rank them; start with the ball that matches the pattern length and adjust from your first reads.`]);
+
+    // ---- Recommended bag (count balls) for this house / pair
+    if (opts.count && G.length >= MIN_HOUSE && hist) {
+      try {
+        const rb = recommendBag({ hist, G, lanes, S, b, count: Math.max(1, Math.min(6, Number(opts.count) || 3)), lean, today });
+        if (rb) { sec('🎒', `Your ${Math.max(1, Math.min(6, Number(opts.count) || 3))}-ball bag for ${lanes ? 'lanes ' + lanes.replace('-', ' & ') : 'this house'}`, rb.items); out.recBag = rb.picked; }
+      } catch (e) { console.error(e); }
+    }
 
     // ---- Starting line
     {

@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Arsenal</title>
-  <link rel="stylesheet" href="styles.css?v=85" />
+  <link rel="stylesheet" href="styles.css?v=86" />
 </head>
 <body data-page="arsenal">
   <div class="navlinks"></div>
@@ -224,15 +224,18 @@
     <div class="modal-card" style="max-width:720px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
         <div>
-          <div style="font-size:18px;font-weight:900">Ball perception sliders</div>
-          <div class="small dim">Adjust how <b>you</b> see this ball. These nudges affect the Arsenal Matrix, Bag and Coach calculations.</div>
+          <div style="font-size:18px;font-weight:900">Ball details</div>
+          <div class="small dim">Specs and layout first; your adjustment sliders are below.</div>
         </div>
         <button class="btn secondary" id="tuneClose">Close</button>
       </div>
       <div class="hr-split"></div>
 
       <div style="font-weight:900;font-size:16px" id="tuneTitle">(ball)</div>
-      <div class="small dim" style="margin-top:4px">-10 = less, +10 = more. These are gentle nudges (not a full override).</div>
+      <div id="tuneSpecs" class="ball-specs"></div>
+      <div class="hr-split"></div>
+      <div style="font-weight:900;font-size:15px">Your adjustment sliders</div>
+      <div class="small dim" style="margin-top:4px">Adjust how <b>you</b> see this ball. -10 = less, +10 = more. Gentle nudges (not a full override) that affect the Matrix, Bag and Coach.</div>
 
       <div style="margin-top:14px;display:grid;gap:14px">
         <div>
@@ -316,11 +319,11 @@
     </div>
   </div>
 
-  <script src="app.js?v=85"></script>
-  <script src="coach.js?v=85"></script>
-  <script src="chart.js?v=85"></script>
-  <script src="pinpal.js?v=85"></script>
-  <script src="history.js?v=85"></script>
+  <script src="app.js?v=86"></script>
+  <script src="coach.js?v=86"></script>
+  <script src="chart.js?v=86"></script>
+  <script src="pinpal.js?v=86"></script>
+  <script src="history.js?v=86"></script>
   <script>
     BT.renderNav('arsenal');
 
@@ -655,8 +658,44 @@
       tune.back.value = tw.backend;
       if (tune.autoResult) tune.autoResult.innerHTML = 'Pick a role from the dropdown, then click <b>Auto tune</b>. The app will search common surfaces and light perception nudges for the closest match.';
       setTunePills();
+      try { renderTuneSpecs(nm, row); } catch (e) { console.error(e); }
       renderTuneCare(nm);
       tune.modal.classList.remove('hidden');
+    }
+
+    // Ball details: the specs and layout, first thing you see when you open a ball.
+    function renderTuneSpecs(nm, row) {
+      const box = BT.$('#tuneSpecs'); if (!box) return;
+      if (!row) { box.innerHTML = '<div class="small dim">No spec sheet for this ball.</div>'; return; }
+      const esc = (t) => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      const g = (names) => { const v = BT.getField(row, names, ''); return String(v == null ? '' : v).trim(); };
+      const num = (v) => { const n = Number(String(v).replace(/[^0-9.\-]/g, '')); return String(v).trim() && Number.isFinite(n) ? n : null; };
+      const inch = (v) => { const n = num(v); return n == null ? '—' : `${n.toFixed(2)}″`; };
+      const deg = (v) => { const n = num(v); return n == null ? '—' : `${Math.round(n)}°`; };
+      const plain = (v, d = 3) => { const n = num(v); return n == null ? (String(v).trim() || '—') : String(+n.toFixed(d)); };
+      const core = g(['Core']); const sym = /sym/i.test(core) && !/asym/i.test(core);
+      const tw = BT.ballTweaksFor(nm);
+      const surf = tw.surfaceOverride ? `${tw.surfaceOverride} (your change; spec ${BT.ballSurface(row) || '—'})` : (BT.ballSurface(row) || '—');
+      const psa = g(['PSA']);
+      const vPin = g(['PAP#1']) || g(['PAP']), vPsa = g(['PSA#1']), vBuf = g(['Val#1']);
+      const drill = g(['Drill Angle', 'DrillAngle']), pin2 = g(['PAP']), valA = g(['Val']), tot = g(['Total Angle', 'TotalAngle']);
+      const kind = { short: 'Short pin', long: 'Long pin', control: 'Pin down (control)', benchmark: 'Benchmark' }[BT.motionVector(row, BT.lsGet(BT.KEYS.BOWLER, {}) || {}).layoutType] || '—';
+      let chart = '';
+      try { const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {}; const p = BTChart.place([row], bowler)[0]; if (p) chart = `${BTChart.label(p.rowKey)}, ${BTChart.timingWord(p.timing)} for you`; } catch (_e) {}
+      const cell = (l, v, wide) => `<div class="bs-cell${wide ? ' bs-wide' : ''}"><div class="bs-l">${l}</div><div class="bs-v">${v}</div></div>`;
+      box.innerHTML = `
+        <div class="small dim" style="margin:2px 0 8px">${[g(['Brand']), g(['Cover']), core ? (sym ? 'Symmetric core' : /asym/i.test(core) ? 'Asymmetric core' : core) : ''].filter(Boolean).map(esc).join(' · ')}</div>
+        <div class="bs-grid">
+          ${cell('Core', esc(core || '—'))}${cell('RG', plain(g(['RG'])))}${cell('Differential', plain(g(['Diff', 'Differential'])))}
+          ${cell('Intermediate diff', sym || !num(psa) ? '— (symmetric)' : plain(psa))}${cell('Cover', esc(g(['Cover']) || '—'))}${cell('Surface', esc(surf))}
+        </div>
+        <div class="bs-h">Layout</div>
+        <div class="bs-grid">
+          ${cell('VLS (pin-to-PAP × PSA-to-PAP × pin buffer)', `${inch(vPin)} × ${inch(vPsa)} × ${inch(vBuf)}`, true)}${cell('Dual angle (drill × pin-to-PAP × VAL)', `${deg(drill)} × ${inch(pin2)} × ${deg(valA)}`, true)}
+          ${cell('Total angle', deg(tot))}${cell('Layout type', esc(kind))}${cell('Pin', esc(g(['Pin Location', 'PinLocation']) || '—'))}
+        </div>
+        ${vPsa ? '' : '<div class="small dim" style="margin-top:6px">Re-upload your ball spreadsheet to see the full VLS numbers.</div>'}
+        ${chart ? `<div class="small" style="margin-top:6px">📊 Barnes chart: <b>${esc(chart)}</b></div>` : ''}`;
     }
 
     function renderTuneCare(nm) {

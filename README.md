@@ -58,6 +58,12 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v86-beta23: 🎒 bag recommendation + ball details
+- **Game Plan → "How many balls?" (1–6):** Coach recommends a bag for that house and pair. It first reads your patterns there: averages by cover (solid / pearl / hybrid / urethane), core (sym / asym), layout (short / benchmark / long pin) and Barnes box, for games thrown with balls matched to your arsenal (small groups pulled toward the average). Each ball is scored on its own record there (3+ games, recent form blended in) plus what its traits predict; the pair adjusts the house read when it has games. Picks start with the best ball, then alternate earlier and later (what the lanes need first), each at least 10 points apart on the Early→Late scale, so every ball has a job. Tournament defaults to 6.
+- **Arsenal → tap a ball = Ball details first:** core, RG, differential, intermediate diff, cover, surface, VLS (pin-to-PAP × PSA-to-PAP × pin buffer), dual angle (drill × pin-to-PAP × VAL), total angle, layout type, pin, and Barnes box. Adjustment sliders below.
+- CSV: duplicate headers (VLS vs Dual Angle "PAP / PSA / Val") are all kept now ("PAP#1" etc.); the motion model reads the same columns as before.
+- Arsenal data: layouts re-expressed against the new PAP (5.182 over, 0.293 up).
+
 ## Changes in v85-beta22
 - Game Plan: lanes can be typed on the iPhone number pad. "1314" reads as lanes 13 & 14, and a single lane ("13" or "14") reads as its pair.
 
