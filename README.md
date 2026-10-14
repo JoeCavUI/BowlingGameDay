@@ -58,7 +58,7 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
-## Queued for the next publish (on the `next` branch)
+## Changes in v84-beta21: 📋 Game Plan + clearer Game Day labels
 - Game Day ① **Your mark** buttons say what they mean: Hit my mark · Right of mark, recovered · Left of mark, held · Right of mark · Left of mark. ② Pocket uses Left of pocket / Right of pocket, so the two "missed left" buttons can't be confused.
 - Rule (unchanged logic, now in the Guide): hit your mark with normal speed and release → where the ball goes is the lane; missed your mark → it's you, even if Good execution is tapped.
 - ④ More reads: each group on one line with short labels (Execution: Good/OK/Poor · Reaction: Early/Long/Over/under/Carrydown · Exit: Left/Straight/Right · Speed: Slower/Same/Faster). "Didn't notice" buttons removed: skip it, or tap again to clear. Saved values unchanged, so older shots read the same.

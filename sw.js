@@ -1,10 +1,10 @@
 /* Bowling Tool service worker: lets the app open and run with no signal.
    Strategy: try the network first (so testers get updates), but fall back to
    the cached copy after 3 seconds or when offline. Bump CACHE on each release. */
-const CACHE = 'bowling-tool-v83-beta20';
+const CACHE = 'bowling-tool-v84-beta21';
 const SHELL = [
   './', 'index.html', 'bowler.html', 'arsenal.html', 'analyze.html', 'lane.html',
-  'oil.html', 'gameday.html', 'plan.html', 'scores.html', 'guide.html', 'styles.css?v=83', 'app.js?v=83', 'coach.js?v=83', 'chart.js?v=83', 'pinpal.js?v=83', 'history.js?v=83', 'plan.js?v=84',
+  'oil.html', 'gameday.html', 'plan.html', 'scores.html', 'guide.html', 'styles.css?v=84', 'app.js?v=84', 'coach.js?v=84', 'chart.js?v=84', 'pinpal.js?v=84', 'history.js?v=84', 'plan.js?v=84',
   'databalls.csv', 'manifest.webmanifest',
   'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png'
 ];
