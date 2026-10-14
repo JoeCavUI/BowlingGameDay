@@ -3,11 +3,11 @@
 2,900 Global,Reality Check #2,Up,Hybrid,Asym,,5.291,6.302,1.253,,82,5.291,18,100,,2.49,0.052,0.018,4000
 3,Motiv,Venom Blue Coral,Up,Hybrid,Asym,,5.506,3.063,2.766,,42,5.506,41,83,,2.47,0.036,0.013,4000
 4,Storm,Absolute,Up,Hybrid,Asym,,5.283,5.012,2.276,,68,5.283,35,103,,2.48,0.05,0.021,4000
-5,Brunswick,Crown Victory,Up,Hybrid,Sym,,5.817,5.360,2.855,,75,5.817,42,117,,2.54,0.045,N/A,Compound
-6,Storm,HyRoad #1,Up,Hybrid,Sym,,6.117,5.343,3.073,,76,6.117,44,120,,2.57,0.046,N/A,3000
-7,Storm,HyRoad #2,Up,Hybrid,Sym,,6.094,5.279,3.333,,76,6.094,48,124,,2.57,0.046,N/A,4000
-8,Storm,All Road,Up,Hybrid,Sym,,5.258,5.327,2.666,,74,5.258,41,115,,2.57,0.046,N/A,4000
-9,Storm,All Road SP,Short,Hybrid,Sym,,2.707,4.718,2.270,,58,2.707,76,134,,2.57,0.046,N/A,4000
+5,Brunswick,Crown Victory,Up,Hybrid,Sym,,5.817,N/A,2.855,,75,5.817,42,117,,2.54,0.045,N/A,Compound
+6,Storm,HyRoad #1,Up,Hybrid,Sym,,6.117,N/A,3.073,,76,6.117,44,120,,2.57,0.046,N/A,3000
+7,Storm,HyRoad #2,Up,Hybrid,Sym,,6.094,N/A,3.333,,76,6.094,48,124,,2.57,0.046,N/A,4000
+8,Storm,All Road,Up,Hybrid,Sym,,5.258,N/A,2.666,,74,5.258,41,115,,2.57,0.046,N/A,4000
+9,Storm,All Road SP,Short,Hybrid,Sym,,2.707,N/A,2.270,,58,2.707,76,134,,2.57,0.046,N/A,4000
 10,Storm,Code Black,Up,Pearl,Asym,,4.672,3.696,1.570,,43,4.672,25,68,,2.5,0.058,0.02,Compound
 11,Storm,Dark Code,Up,Pearl,Asym,,5.459,3.401,2.513,,46,5.459,38,84,,2.5,0.058,0.02,1500 Polish
 12,Storm,Infinite Physix,Up,Pearl,Asym,,3.413,4.542,1.557,,49,3.413,33,82,,2.48,0.053,0.017,4000
@@ -20,17 +20,17 @@
 19,Roto Grip,Exotic Gem #1,Up,Pearl,Asym,,4.794,3.986,1.815,,49,4.794,29,78,,2.47,0.053,0.016,Polish
 20,Roto Grip,Exotic Gem #2,Down,Pearl,Asym,,4.419,5.119,3.849,,77,4.419,74,151,,2.47,0.053,0.016,Polish
 21,Motiv,Evoke Hysteria,Up,Pearl,Asym,,6.711,4.787,3.499,,69,6.711,48,117,,2.48,0.05,0.015,4000
-22,900 Global,Zen Gold Label,Up,Pearl,Sym,,6.043,5.589,2.062,,75,6.043,29,104,,2.49,0.051,N/A,Polish
-23,Storm,Typhoon,Up,Pearl,Sym,,5.858,5.068,4.156,,75,5.858,61,136,,2.53,0.042,N/A,Polish
-24,900 Global,Zen 25,Up,Pearl,Sym,,6.025,5.455,2.573,,75,6.025,37,112,,2.48,0.053,N/A,4000
-25,900 Global,Ember,Up,Pearl,Sym,,6.297,5.683,1.780,,76,6.297,25,101,,2.49,0.044,N/A,Polish
-26,Storm,HyRoad 40,Short,Pearl,Sym,,2.833,4.703,2.663,,63,2.833,90,153,,2.57,0.046,N/A,Polish
+22,900 Global,Zen Gold Label,Up,Pearl,Sym,,6.043,N/A,2.062,,75,6.043,29,104,,2.49,0.051,N/A,Polish
+23,Storm,Typhoon,Up,Pearl,Sym,,5.858,N/A,4.156,,75,5.858,61,136,,2.53,0.042,N/A,Polish
+24,900 Global,Zen 25,Up,Pearl,Sym,,6.025,N/A,2.573,,75,6.025,37,112,,2.48,0.053,N/A,4000
+25,900 Global,Ember,Up,Pearl,Sym,,6.297,N/A,1.780,,76,6.297,25,101,,2.49,0.044,N/A,Polish
+26,Storm,HyRoad 40,Short,Pearl,Sym,,2.833,N/A,2.663,,63,2.833,90,153,,2.57,0.046,N/A,Polish
 27,Storm,Ion Pro,Down,Solid,Asym,,5.290,3.041,4.260,,46,5.290,68,114,,2.47,0.035,0.014,5000
-28,900 Global,Zen Master #1,Up,Solid,Sym,,4.672,5.575,1.506,,72,4.672,24,96,,2.49,0.051,N/A,4000
-29,900 Global,Zen Master #2,Up,Solid,Sym,,6.162,5.538,2.302,,76,6.162,33,109,,2.49,0.051,N/A,4000
-30,Storm,Phaze 2,Up,Solid,Sym,,6.031,5.489,2.445,,75,6.031,35,110,,2.48,0.051,N/A,4000
-31,Storm,Level,Up,Solid,Sym,,5.753,5.350,2.864,,75,5.753,42,117,,2.59,0.027,N/A,4000
-32,Motiv,Venom Shock #1,Up,Solid,Sym,,5.871,5.337,2.977,,75,5.871,43,118,,2.48,0.034,N/A,4000
-33,Motiv,Venom Shock #2,Up,Solid,Sym,,6.245,5.361,3.056,,76,6.245,43,119,,2.48,0.034,N/A,4000
-34,Roto Grip,Hustle Camo,Up,Solid,Sym,,5.516,5.375,2.635,,75,5.516,39,114,,2.53,0.03,N/A,4000
-35,Storm,ProMotion,Up,Solid,Sym,,5.753,5.350,2.864,,75,5.753,42,117,,2.52,0.049,N/A,4000
+28,900 Global,Zen Master #1,Up,Solid,Sym,,4.672,N/A,1.506,,72,4.672,24,96,,2.49,0.051,N/A,4000
+29,900 Global,Zen Master #2,Up,Solid,Sym,,6.162,N/A,2.302,,76,6.162,33,109,,2.49,0.051,N/A,4000
+30,Storm,Phaze 2,Up,Solid,Sym,,6.031,N/A,2.445,,75,6.031,35,110,,2.48,0.051,N/A,4000
+31,Storm,Level,Up,Solid,Sym,,5.753,N/A,2.864,,75,5.753,42,117,,2.59,0.027,N/A,4000
+32,Motiv,Venom Shock #1,Up,Solid,Sym,,5.871,N/A,2.977,,75,5.871,43,118,,2.48,0.034,N/A,4000
+33,Motiv,Venom Shock #2,Up,Solid,Sym,,6.245,N/A,3.056,,76,6.245,43,119,,2.48,0.034,N/A,4000
+34,Roto Grip,Hustle Camo,Up,Solid,Sym,,5.516,N/A,2.635,,75,5.516,39,114,,2.53,0.03,N/A,4000
+35,Storm,ProMotion,Up,Solid,Sym,,5.753,N/A,2.864,,75,5.753,42,117,,2.52,0.049,N/A,4000
