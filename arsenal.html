@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Arsenal</title>
-  <link rel="stylesheet" href="styles.css?v=82" />
+  <link rel="stylesheet" href="styles.css?v=83" />
 </head>
 <body data-page="arsenal">
   <div class="navlinks"></div>
@@ -316,11 +316,11 @@
     </div>
   </div>
 
-  <script src="app.js?v=82"></script>
-  <script src="coach.js?v=82"></script>
-  <script src="chart.js?v=82"></script>
-  <script src="pinpal.js?v=82"></script>
-  <script src="history.js?v=82"></script>
+  <script src="app.js?v=83"></script>
+  <script src="coach.js?v=83"></script>
+  <script src="chart.js?v=83"></script>
+  <script src="pinpal.js?v=83"></script>
+  <script src="history.js?v=83"></script>
   <script>
     BT.renderNav('arsenal');
 
@@ -667,7 +667,7 @@
       let games = null;
       try { if (window.BTCoach) games = BTCoach.ballGames(BT.lsGet(BT.KEYS.GAME_SESSIONS, []), nm, care.resurfacedAt); } catch (_e) {}
       const since = care.resurfacedAt ? ` since ${new Date(care.resurfacedAt).toLocaleDateString()}` : '';
-      info.textContent = games == null ? '' : `About ${games} game${games === 1 ? '' : 's'} logged on this ball${since}. Resurfacing is usually due every 60–100 games.`;
+      info.textContent = games == null ? '' : games === 0 ? `No Game Day games logged on this ball${since} yet.` : `About ${games} game${games === 1 ? '' : 's'} logged on this ball${since}. Resurfacing is usually due every 60–100 games.`;
       try {
         if (window.BTHistory && BTHistory.has()) {
           const rec = BTHistory.ballRecord(nm, viewRowsAll().map(r => BT.ballName(r)));

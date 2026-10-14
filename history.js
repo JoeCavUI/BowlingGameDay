@@ -130,7 +130,8 @@
       const L = G.filter(g => g.lanes === opts.lanes);
       if (L.length >= 6) {
         const s = summary(L);
-        out.lines.push(`🛣️ On lanes ${opts.lanes}: ${L.length} games, ${s.avg} average (${s.avg >= all.avg ? '+' : ''}${Math.round(s.avg - all.avg)} vs your ${house} average).`);
+        const dd = Math.round(s.avg - all.avg);
+        out.lines.push(`🛣️ On lanes ${opts.lanes}: ${L.length} games, ${s.avg} average (${Math.abs(dd) < 3 ? `about the same as your ${house} average` : `${dd > 0 ? '+' : ''}${dd} vs your ${house} average`}).`);
         const byStart = groupBy(L, 'start', 3);
         if (byStart.length === 2) { const [a, b] = byStart.sort((x, y) => y.avg - x.avg); if (a.avg - b.avg >= 6) out.lines.push(`   Starting on ${a.key}: ${a.avg} vs starting on ${b.key}: ${b.avg}.`); }
       }

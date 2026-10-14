@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Guide</title>
-  <link rel="stylesheet" href="styles.css?v=82" />
+  <link rel="stylesheet" href="styles.css?v=83" />
   <style>
     .guide { max-width: 760px; margin: 0 auto; line-height: 1.55; font-size: 16px; }
     .guide h2 { margin: 0 0 6px; font-size: 21px; }
@@ -329,6 +329,20 @@
         <a class="top" href="#top">↑ Back to top</a>
       </section>
 
+      <section class="panel" id="history">
+        <h2>📚 Your PinPal history</h2>
+        <p>If you track games in <b>PinPal</b>, bring them in once and Coach knows your whole history.</p>
+        <ol>
+          <li>In PinPal, make a <b>backup</b> and save the <b>.pinpal</b> file to your phone's Files (or AirDrop / email it to yourself).</li>
+          <li>Open <span class="k">Scores</span> → <b>📚 History</b> → <span class="k">Import PinPal backup</span> and pick the file. Re-import a newer backup anytime to bring it up to date.</li>
+        </ol>
+        <p><b>Quick questions</b> (one tap): My houses · Game 1 · 2 · 3 · Lane pairs · Starting lane · Best balls · Year by year · Leagues · Spare leaves. Narrow anything with the <b>House, Lanes, Ball, Year and Game #</b> filters, and pick what to <b>break it down by</b>.</p>
+        <p><b>Ball names:</b> PinPal's names are matched to your arsenal automatically when they agree. Open <b>Ball names</b> to match the rest (e.g. "Zen Master" → "Zen Master #1"). Retired or sold balls can stay unmatched; their games still count.</p>
+        <div class="why"><b>How Coach uses it:</b> when you set up Game Day, the starting plan adds what history says about <b>tonight's house, lanes and bag</b>: your average there, lanes and starting-lane differences, your best balls there, how tonight's bag has done there, and the single-pin spare costing you the most. If your game 2 or 3 usually drops off at that house, Coach warns you as that game starts. Tap a ball on the Arsenal page to see its PinPal record.</div>
+        <div class="why warn">PinPal knows <b>what happened</b> (scores, strikes, spares, pins left), not <b>why</b> (your mark, pocket, ball reaction). Game Day tells Coach the why. Your history stays on your phone and is included in backups.</div>
+        <a class="top" href="#top">↑ Back to top</a>
+      </section>
+
       <!-- 9 -->
       <section class="panel" id="end">
         <h2><span class="stepnum">9</span>Between games and saving the night</h2>
@@ -402,7 +416,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=82"></script>
+  <script src="app.js?v=83"></script>
   <script>
     BT.renderNav('guide');
     BT.$('#ver').textContent = 'Bowling Tool ' + BT.APP_VERSION;

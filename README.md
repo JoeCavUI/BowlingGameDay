@@ -55,8 +55,15 @@ Then open http://localhost:3000
 - **Tonight's overlay:** on Game Day / Bag, show the band tonight's pattern needs on the chart with your bag highlighted; Coach ball changes drawn as moves on the chart.
 - **What's worked where:** color each ball by its results by house and pattern (carry %, strike %). Needs a few nights of data.
 - **Pro-shop sheet:** one printable page with every ball, specs, layout, surface, games since resurface, chart position, gaps and the suggested next move.
-- Spare shots + full game score (discussed; input change).
+- Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
+
+## Changes in v83-beta20: 📚 PinPal history
+- **Import a PinPal backup** (.pinpal) on Scores → History. Built-in read-only SQLite reader (no server, no library): games, frame-by-frame pins left after each ball, ball per frame (mid-game changes), house, league, pattern, date; lanes and starting lane parsed from night notes ("Lanes 23s & 24"); "X over Y" lines kept. Verified on a real backup: 1,869 games, recomputed scores match PinPal on 1,855 of 1,856 completed games.
+- **Quick questions + filters**: houses, game 1·2·3, lane pairs, starting lane, best balls, year, league, spare leaves; filter by house / lanes / ball / year / game #. Tiles: games, average, high, 200+ %, strike %, spare %, single-pin %, opens/game.
+- **Ball names** matched to the arsenal automatically when they agree; the rest mapped once by the user.
+- **Coach**: Game Day starting plan adds history for tonight's house, lanes and bag (average, lane/start-lane split, best balls there, bag record there, costliest single-pin spare); warns at the start of game 2/3 when that game usually drops off at the house. Arsenal tune shows each ball's PinPal record.
+- Game Day quick result buttons (Strike / Brooklyn / Flat 10 / Ringing 10) fit on one line.
 
 ## Changes in v82-beta19: 🎳 Barnes chart
 - **Your Barnes chart** on Arsenal: Chris Barnes's six boxes (Strong/Medium/Weak × Smooth/Sharp) + Urethane (ZVL) + spare row; each ball placed Early → Late **for your release**. Numbered dots + names, color by cover, dashed what-if balls, scope = whole arsenal or a bag.

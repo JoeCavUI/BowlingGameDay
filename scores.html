@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Scores</title>
-  <link rel="stylesheet" href="styles.css?v=82" />
+  <link rel="stylesheet" href="styles.css?v=83" />
 </head>
 <body data-page="scores">
   <div class="navlinks"></div>
@@ -108,10 +108,10 @@
     </div>
   </div>
 
-  <script src="app.js?v=82"></script>
-  <script src="coach.js?v=82"></script>
-  <script src="pinpal.js?v=82"></script>
-  <script src="history.js?v=82"></script>
+  <script src="app.js?v=83"></script>
+  <script src="coach.js?v=83"></script>
+  <script src="pinpal.js?v=83"></script>
+  <script src="history.js?v=83"></script>
   <script>
     BT.renderNav('scores');
 
@@ -540,7 +540,8 @@
     }
     const min = group === 'ball' ? 6 : group === 'lanes' ? 6 : 3;
     let rows = BTHistory.groupBy(G, group, min);
-    rows.sort(group === 'gn' || group === 'year' || group === 'start' ? (a, b) => a.key.localeCompare(b.key, undefined, { numeric: true }) : (a, b) => b.avg - a.avg);
+    rows.sort(group === 'gn' || group === 'year' || group === 'start' ? (a, b) => a.key.localeCompare(b.key, undefined, { numeric: true })
+      : (group === 'house' || group === 'league') ? (a, b) => b.n - a.n : (a, b) => b.avg - a.avg);
     const best = rows.length ? Math.max(...rows.map(r => r.avg)) : 0;
     $('#histTable').innerHTML = rows.length ? `<table class="hq-table"><tr><th>${BTHistory.DIMS[group].label}</th><th>Games</th><th>Avg</th><th>High</th><th>Strike</th><th>Spare</th><th>1-pin</th></tr>${rows.map(r => `<tr><td>${esc(r.key)}</td><td>${r.n}</td><td class="${r.avg === best ? 'good' : ''}">${r.avg}</td><td>${r.high}</td><td>${r.strike}%</td><td>${r.spare}%</td><td>${r.single ?? '—'}%</td></tr>`).join('')}</table><div class="small" style="margin-top:4px;opacity:.75">Groups with fewer than ${min} games are hidden. "Ball" = the ball thrown in the most frames of that game.</div>` : '<div class="small">Not enough games to break down.</div>';
   }
