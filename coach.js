@@ -958,6 +958,14 @@
       const W = C.filter(c => c.execution !== 'poor').slice(-5);
       if (C.length >= 3) sideNotes(out, C, W, prof, patternProfile(ctx && ctx.pattern));
       if (C.length >= 2) moveNotes(out, C, prof);
+      // 📚 History: entering a game where you usually drop off at this house
+      const hist = ctx && ctx.history;
+      if (hist && hist.byGame && C.length) {
+        const gNow = C[C.length - 1].gameNo || 1;
+        const inGame = C.filter(c => c.gameNo === gNow).length;
+        const g1 = hist.byGame[1], gN = hist.byGame[gNow];
+        if (gNow >= 2 && inGame <= 2 && g1 != null && gN != null && gN - g1 <= -6) out.notes.unshift(`📚 History: at ${hist.house} your game ${gNow} averages ${Math.round(g1 - gN)} pins below game 1 (${gN} vs ${g1}). The lanes usually change here by now: watch the first good shots closely and don't wait to move.`);
+      }
       // 📐 Alignment: is the line going through the exit point? Only speak up before any move,
       // or when the mark is being missed (then it may be alignment, not the throw).
       if (C.length >= 1 && out.status !== 'start' && out.tone !== 'good') {
@@ -1022,6 +1030,8 @@
       }
       else if (sb) lines.push(`🧭 Right ball: start with ${sb}.`);
       if (!pat) lines.push('🧭 Pick tonight\'s oil pattern so Coach can check whether your ball and your spot fit the lane.');
+      // 📚 What your PinPal history says about this house, these lanes and this bag
+      if (ctx.history && ctx.history.lines && ctx.history.lines.length) lines.push(...ctx.history.lines.slice(0, 6));
       if (pat && pat.volumeClass === 'light') lines.push('Light oil: expect the fronts to dry up early. Watch for high hits by game 2.');
       if (pat && pat.volumeClass === 'heavy') lines.push('Heavy oil: the lane should change slowly. Don\'t chase it early.');
       if (prof.dom < -0.3 && bt.length < 2) lines.push('As a speed-dominant player, the ball may read late. Favor earlier-reading equipment if it skids.');

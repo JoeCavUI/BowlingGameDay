@@ -319,6 +319,8 @@
   <script src="app.js?v=82"></script>
   <script src="coach.js?v=82"></script>
   <script src="chart.js?v=82"></script>
+  <script src="pinpal.js?v=82"></script>
+  <script src="history.js?v=82"></script>
   <script>
     BT.renderNav('arsenal');
 
@@ -666,6 +668,12 @@
       try { if (window.BTCoach) games = BTCoach.ballGames(BT.lsGet(BT.KEYS.GAME_SESSIONS, []), nm, care.resurfacedAt); } catch (_e) {}
       const since = care.resurfacedAt ? ` since ${new Date(care.resurfacedAt).toLocaleDateString()}` : '';
       info.textContent = games == null ? '' : `About ${games} game${games === 1 ? '' : 's'} logged on this ball${since}. Resurfacing is usually due every 60–100 games.`;
+      try {
+        if (window.BTHistory && BTHistory.has()) {
+          const rec = BTHistory.ballRecord(nm, viewRowsAll().map(r => BT.ballName(r)));
+          if (rec && rec.n) info.textContent += ` 📚 PinPal: ${rec.n} games, ${rec.avg} average, ${rec.strike}% strikes${rec.bestHouse ? `; best at ${rec.bestHouse}` : ''}.`;
+        }
+      } catch (_e) {}
     }
     BT.$('#tuneWeight')?.addEventListener('change', () => {
       if (!tune.currentName) return;

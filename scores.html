@@ -19,7 +19,47 @@
   <div class="container">
     <div class="header">
       <h1>Scores / History</h1>
-      <div class="small">Sessions saved from Game Day.</div>
+      <div class="small">Game Day sessions, plus your imported PinPal history.</div>
+    </div>
+
+    <div class="panel" id="histPanel">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap">
+        <div>
+          <h2 style="margin:0">📚 History</h2>
+          <div class="small" id="histStatus">Import your PinPal backup to see years of games here. Coach uses it too.</div>
+        </div>
+        <div class="btn-row" style="margin-top:0">
+          <button class="btn" id="histImport" type="button">Import PinPal backup</button>
+          <button class="btn danger" id="histRemove" type="button" style="display:none">Remove history</button>
+        </div>
+        <input id="histFile" type="file" accept=".pinpal,application/octet-stream,*/*" style="display:none" />
+      </div>
+      <div id="histBody" style="display:none">
+        <div class="hq-chips" id="histQuick">
+          <button type="button" data-q="house">My houses</button>
+          <button type="button" data-q="gn">Game 1 · 2 · 3</button>
+          <button type="button" data-q="lanes">Lane pairs</button>
+          <button type="button" data-q="start">Starting lane</button>
+          <button type="button" data-q="ball">Best balls</button>
+          <button type="button" data-q="year">Year by year</button>
+          <button type="button" data-q="league">Leagues</button>
+          <button type="button" data-q="leaves">Spare leaves</button>
+        </div>
+        <div class="hq-filters">
+          <label>House<select class="input" id="hfHouse"></select></label>
+          <label>Lanes<select class="input" id="hfLanes"></select></label>
+          <label>Ball<select class="input" id="hfBall"></select></label>
+          <label>Year<select class="input" id="hfYear"></select></label>
+          <label>Game #<select class="input" id="hfGn"><option value="">Any</option><option>1</option><option>2</option><option>3</option></select></label>
+          <label>Break down by<select class="input" id="hfGroup"></select></label>
+        </div>
+        <div id="histTiles" class="hq-tiles"></div>
+        <div id="histTable" style="overflow-x:auto"></div>
+        <details class="gd-subfold" style="margin-top:12px" id="histBallsFold">
+          <summary><b>Ball names</b> <span class="small">(match PinPal names to your arsenal so Coach can use them)</span></summary>
+          <div id="histBalls" style="margin-top:8px"></div>
+        </details>
+      </div>
     </div>
 
     <div class="panel" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
@@ -70,6 +110,8 @@
 
   <script src="app.js?v=82"></script>
   <script src="coach.js?v=82"></script>
+  <script src="pinpal.js?v=82"></script>
+  <script src="history.js?v=82"></script>
   <script>
     BT.renderNav('scores');
 
@@ -456,5 +498,86 @@
 
     refresh();
   </script>
+<script>
+(function () {
+  const $ = (q) => document.querySelector(q);
+  const esc = (t) => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  let group = 'house';
+  async function arsenalNames() { try { const p = await BT.ensureCSVLoaded(); return ((p && p.rows) || []).map(r => BT.ballName(r)).filter(Boolean); } catch (_e) { return []; } }
+  function opts(sel, vals, keep, anyLabel) { sel.innerHTML = `<option value="">${anyLabel || 'Any'}</option>` + vals.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join(''); if (keep && vals.includes(keep)) sel.value = keep; }
+  function filters() { return { house: $('#hfHouse').value, lanes: $('#hfLanes').value, ball: $('#hfBall').value, year: $('#hfYear').value, gn: $('#hfGn').value }; }
+  function fillFilters() {
+    const h = BTHistory.load(); const done = h.games.filter(g => g.done);
+    const count = (arr) => { const m = {}; arr.forEach(x => { if (x) m[x] = (m[x] || 0) + 1; }); return Object.entries(m).sort((a, b) => b[1] - a[1]).map(e => e[0]); };
+    opts($('#hfHouse'), count(done.map(g => g.h)), $('#hfHouse').value);
+    const hs = $('#hfHouse').value;
+    opts($('#hfLanes'), count(done.filter(g => !hs || g.h === hs).map(g => g.lanes)), $('#hfLanes').value);
+    opts($('#hfBall'), count(done.flatMap(g => BTHistory.ballUsed(g, h))), $('#hfBall').value);
+    opts($('#hfYear'), [...new Set(done.map(g => g.d.slice(0, 4)))].sort().reverse(), $('#hfYear').value);
+    const gsel = $('#hfGroup'); const keep = gsel.value || group;
+    gsel.innerHTML = Object.entries(BTHistory.DIMS).map(([k, d]) => `<option value="${k}">${d.label}</option>`).join('') + '<option value="leaves">Spare leaves</option>';
+    gsel.value = keep;
+  }
+  function render() {
+    const h = BTHistory.load();
+    const on = !!(h && h.games && h.games.length);
+    $('#histBody').style.display = on ? '' : 'none';
+    $('#histRemove').style.display = on ? '' : 'none';
+    $('#histImport').textContent = on ? 'Re-import (newer backup)' : 'Import PinPal backup';
+    if (!on) { $('#histStatus').textContent = 'Import your PinPal backup to see years of games here. Coach uses it too.'; return; }
+    const done = h.games.filter(g => g.done);
+    $('#histStatus').textContent = `${done.length} games from PinPal, ${done[0] ? done[0].d : ''} to ${done[done.length - 1] ? done[done.length - 1].d : ''}. Imported ${new Date(h.importedAt).toLocaleDateString()}.`;
+    fillFilters();
+    const G = BTHistory.filter(filters());
+    const s = BTHistory.summary(G);
+    const tile = (v, l) => `<div class="hq-tile"><div class="v">${v ?? '—'}</div><div class="l">${l}</div></div>`;
+    $('#histTiles').innerHTML = s.n ? [tile(s.n, 'games'), tile(s.avg, 'average'), tile(s.high, 'high'), tile(s.p200 + '%', '200+ games'), tile(s.strike + '%', 'strikes'), tile(s.spare + '%', 'spares'), tile(s.single + '%', 'single-pin spares'), tile(s.opens, 'opens / game')].join('') : '<div class="small">No games match these filters.</div>';
+    group = $('#hfGroup').value || group;
+    if (group === 'leaves') {
+      const L = BTHistory.leaves(G, 15);
+      $('#histTable').innerHTML = L.length ? `<table class="hq-table"><tr><th>Leave</th><th>Times</th><th>Made</th><th>%</th></tr>${L.map(l => `<tr><td>${esc(l.leave)}</td><td>${l.n}</td><td>${l.made}</td><td class="${l.pct < 70 ? 'bad' : ''}">${l.pct}%</td></tr>`).join('')}</table>` : '';
+      return;
+    }
+    const min = group === 'ball' ? 6 : group === 'lanes' ? 6 : 3;
+    let rows = BTHistory.groupBy(G, group, min);
+    rows.sort(group === 'gn' || group === 'year' || group === 'start' ? (a, b) => a.key.localeCompare(b.key, undefined, { numeric: true }) : (a, b) => b.avg - a.avg);
+    const best = rows.length ? Math.max(...rows.map(r => r.avg)) : 0;
+    $('#histTable').innerHTML = rows.length ? `<table class="hq-table"><tr><th>${BTHistory.DIMS[group].label}</th><th>Games</th><th>Avg</th><th>High</th><th>Strike</th><th>Spare</th><th>1-pin</th></tr>${rows.map(r => `<tr><td>${esc(r.key)}</td><td>${r.n}</td><td class="${r.avg === best ? 'good' : ''}">${r.avg}</td><td>${r.high}</td><td>${r.strike}%</td><td>${r.spare}%</td><td>${r.single ?? '—'}%</td></tr>`).join('')}</table><div class="small" style="margin-top:4px;opacity:.75">Groups with fewer than ${min} games are hidden. "Ball" = the ball thrown in the most frames of that game.</div>` : '<div class="small">Not enough games to break down.</div>';
+  }
+  async function renderBalls() {
+    const h = BTHistory.load(); if (!h) return;
+    const names = await arsenalNames();
+    const map = BTHistory.ballMap(names);
+    const used = {}; h.games.filter(g => g.done).forEach(g => { const b = BTHistory.mainBall(g, h); if (b) used[b] = (used[b] || 0) + 1; });
+    const list = Object.entries(used).filter(e => e[1] >= 3).sort((a, b) => b[1] - a[1]);
+    const opt = (cur) => `<option value="">— not in my arsenal —</option>` + names.map(n => `<option value="${esc(n)}"${n === cur ? ' selected' : ''}>${esc(n)}</option>`).join('');
+    $('#histBalls').innerHTML = `<div class="small" style="margin-bottom:6px">Matched automatically where the names agree. Retired or sold balls can stay "not in my arsenal"; their history still counts.</div>` +
+      list.map(([pp, n]) => `<div class="hq-ballrow"><div><b>${esc(pp)}</b> <span class="small">${n} games</span></div><select class="input" data-pp="${esc(pp)}">${opt(map[pp])}</select></div>`).join('');
+    document.querySelectorAll('#histBalls select[data-pp]').forEach(sel => sel.addEventListener('change', () => BTHistory.setBallMap(sel.getAttribute('data-pp'), sel.value)));
+  }
+  $('#histImport').addEventListener('click', () => $('#histFile').click());
+  $('#histFile').addEventListener('change', async (ev) => {
+    const f = ev.target.files && ev.target.files[0]; ev.target.value = '';
+    if (!f) return;
+    try {
+      const H = BTPinPal.parse(await f.arrayBuffer());
+      try { BTHistory.save(H); } catch (e) { alert('Not enough room on this phone to store the history.'); return; }
+      const done = H.games.filter(g => g.done).length;
+      alert(`Imported ${done} games from PinPal (${H.counts.houses} houses, ${H.counts.leagues} leagues). Coach will use them from now on.`);
+      render(); renderBalls();
+    } catch (e) { alert('Could not read that file: ' + (e && e.message ? e.message : e)); }
+  });
+  $('#histRemove').addEventListener('click', () => { if (!confirm('Remove the imported PinPal history from this phone? (Your PinPal app is not affected.)')) return; BTHistory.clear(); render(); });
+  document.querySelectorAll('#histQuick [data-q]').forEach(b => b.addEventListener('click', () => {
+    const q = b.getAttribute('data-q');
+    $('#hfGroup').value = q; group = q;
+    if (q === 'house' || q === 'year' || q === 'league') { $('#hfHouse').value = q === 'house' ? '' : $('#hfHouse').value; }
+    document.querySelectorAll('#histQuick [data-q]').forEach(x => x.classList.toggle('on', x === b));
+    render();
+  }));
+  ['#hfHouse', '#hfLanes', '#hfBall', '#hfYear', '#hfGn', '#hfGroup'].forEach(id => $(id).addEventListener('change', () => { if (id === '#hfHouse') $('#hfLanes').value = ''; render(); }));
+  render(); renderBalls();
+})();
+</script>
 </body>
 </html>

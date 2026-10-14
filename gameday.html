@@ -247,6 +247,8 @@
 
   <script src="app.js?v=82"></script>
   <script src="coach.js?v=82"></script>
+  <script src="pinpal.js?v=82"></script>
+  <script src="history.js?v=82"></script>
   <script>
     BT.renderNav('gameday');
 
@@ -1661,6 +1663,24 @@ function saveCurrentSessionDraft() {
     let lastCoachRead = null;   // lane read at the previous auto review
     let lastCoachBall = '';     // ball suggestion at the previous auto review
     // ===== Coach v2 (coach.js): profile → LASER → oil pattern → bag → shot reads =====
+    // 📚 PinPal history for tonight's house / lanes / bag (cached until one of them changes)
+    let _histKey = '', _hist = null;
+    function historyFor() {
+      if (!window.BTHistory || !BTHistory.has()) return null;
+      const setObj = (BT.lsGet(BT.KEYS.ARSENAL_SETS, []) || []).find(x => x.name === el.set.value) || null;
+      const bag = setBallNames(setObj);
+      const key = [el.house.value, el.lanes.value, bag.join(',')].join('|');
+      if (key === _histKey) return _hist;
+      _histKey = key;
+      try {
+        const cache = BT.lsGet(BT.KEYS.CSV_CACHE, null);
+        const arsenal = BT.withCustomBalls((cache && cache.rows) || []).map(r => BT.ballName(r)).filter(Boolean);
+        const lanes = (el.lanes.value || '').replace(/\s*[\/&,]\s*|\s+/g, '-').replace(/-+/g, '-');
+        _hist = BTHistory.insights({ house: el.house.value, lanes, arsenal, bag });
+      } catch (e) { console.error(e); _hist = null; }
+      return _hist;
+    }
+
     function coachContext() {
       const chron = sessionShots.slice().reverse();
       const sets = BT.lsGet(BT.KEYS.ARSENAL_SETS, []);
@@ -1675,6 +1695,7 @@ function saveCurrentSessionDraft() {
         setBalls: names.map(n => ({ name: n, row: map.get(n) })).filter(b => b.row),
         currentBall: el.ball ? el.ball.value : '',
         line: { feet: el.feet.value, arrows: el.arrows.value, bp: el.bp.value },
+        history: historyFor(),
         motion: { vector: (r, b) => BT.motionVector(r, b), distance: (a, b) => BT.motionDistance(a, b) },
         ballInfo: (r) => ({ cover: BT.ballCover(r), grit: BT.surfaceToGrit(BT.ballSurface(r)), asym: /asym/i.test(BT.ballCore(r) || ''), known: !!(String(BT.ballSurface(r) || '').trim() && BT.ballRG(r) && BT.ballDiff(r)) }),
         matrix: (r) => BT.matrixCellForRow(r),
