@@ -147,15 +147,16 @@
           <details class="gd-subfold" id="moreReads" style="margin-top:12px">
             <summary><span class="gd-qnum">4</span><b>More reads</b> <span class="small">(optional: execution, reaction, exit, speed, notes)</span></summary>
             <div style="margin-top:8px">
-              <label>Execution</label>
-              <div id="readsQuality" style="margin-top:6px"></div>
-              <label style="margin-top:12px;display:block">Ball reaction</label>
-              <div id="readsBallObs" style="margin-top:6px"></div>
-              <label style="margin-top:12px;display:block">Ball exit off the deck</label>
-              <div id="readsExit" style="margin-top:6px"></div>
-              <label style="margin-top:12px;display:block">Speed vs normal <span class="small">(by feel; skip it if the house has no speed display)</span></label>
-              <div id="readsSpeed" style="margin-top:6px"></div>
-              <label style="margin-top:12px;display:block">Notes</label>
+              <div class="small" style="margin-bottom:6px">Skip any you didn't notice. Tap again to clear.</div>
+              <div class="gd-rl">Execution</div>
+              <div id="readsQuality" class="gd-r1"></div>
+              <div class="gd-rl">Ball reaction</div>
+              <div id="readsBallObs" class="gd-r1"></div>
+              <div class="gd-rl">Exit off the deck</div>
+              <div id="readsExit" class="gd-r1"></div>
+              <div class="gd-rl">Speed vs normal <span class="small">(by feel)</span></div>
+              <div id="readsSpeed" class="gd-r1"></div>
+              <label style="margin-top:10px;display:block">Notes</label>
               <input id="notes" class="input" placeholder="Only for things worth remembering next week." />
             </div>
           </details>
@@ -256,34 +257,33 @@
     const quickResults = ['Strike','Brooklyn','Flat 10','Ringing 10'];
 
     // Observations split: shot quality vs ball reaction
-    const qualityObs = ['Good execution','OK execution','Poor execution'];
-    const ballObs = ['Too early','Too long','Over/under','Carrydown'];
+    // Values stay the same as older shots; only the button labels are short.
+    const qualityObs = [{ val: 'Good execution', label: 'Good' }, { val: 'OK execution', label: 'OK' }, { val: 'Poor execution', label: 'Poor' }];
+    const ballObs = [{ val: 'Too early', label: 'Early' }, { val: 'Too long', label: 'Long' }, { val: 'Over/under', label: 'Over/under' }, { val: 'Carrydown', label: 'Carrydown' }];
 	    // Miss room (single-select). Saved per shot.
 	    const missObs = [
-	      { val: 'noMiss', label: 'Hit target' },
-	      { val: 'rightRecovered', label: 'Missed right, recovered' },
-	      { val: 'leftHeld', label: 'Missed left, held' },
-	      { val: 'rightMiss', label: 'Missed right' },
-	      { val: 'leftMiss', label: 'Missed left' },
+	      { val: 'noMiss', label: 'Hit my mark' },
+	      { val: 'rightRecovered', label: 'Right of mark, recovered' },
+	      { val: 'leftHeld', label: 'Left of mark, held' },
+	      { val: 'rightMiss', label: 'Right of mark' },
+	      { val: 'leftMiss', label: 'Left of mark' },
           { val: 'didntTrack', label: "Didn't see" },
 	    ];
     const pocketObs = [
       { val: 'Pocket flush', label: 'Flush' },
       { val: 'Pocket light', label: 'Light' },
       { val: 'Pocket high', label: 'High' },
-      { val: 'Missed left', label: 'Missed left' },
-      { val: 'Missed right', label: 'Missed right' },
+      { val: 'Missed left', label: 'Left of pocket' },
+      { val: 'Missed right', label: 'Right of pocket' },
       { val: 'Brooklyn', label: 'Brooklyn' },
       { val: 'Unknown', label: "Didn't see" },
     ];
     const exitObs = [
-      { val: "Didn't notice", label: "Didn't notice" },
-      { val: 'Exit left', label: 'Exit left' },
-      { val: 'Exit right', label: 'Exit right' },
-      { val: 'Exit straight', label: 'Exit straight' },
+      { val: 'Exit left', label: 'Left' },
+      { val: 'Exit straight', label: 'Straight' },
+      { val: 'Exit right', label: 'Right' },
     ];
     const speedObs = [
-      { val: 'unknown', label: "Didn't notice" },
       { val: 'slower', label: 'Slower' },
       { val: 'same', label: 'Same' },
       { val: 'faster', label: 'Faster' },
@@ -2078,9 +2078,9 @@ function sessionSummary(shots) {
 
       renderQuickResults();
       renderPinDeck();
-      pillButtons(el.readsQuality, qualityObs);
+      pillButtonsCustom(el.readsQuality, qualityObs);
 	      pillButtonsCustom(el.readsMiss, missObs);
-      pillButtons(el.readsBallObs, ballObs);
+      pillButtonsCustom(el.readsBallObs, ballObs);
       pillButtonsCustom(el.readsPocket, pocketObs);
       pillButtonsCustom(el.readsExit, exitObs);
       pillButtonsCustom(el.readsSpeed, speedObs);

@@ -58,6 +58,12 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Queued for the next publish (on the `next` branch)
+- Game Day ① **Your mark** buttons say what they mean: Hit my mark · Right of mark, recovered · Left of mark, held · Right of mark · Left of mark. ② Pocket uses Left of pocket / Right of pocket, so the two "missed left" buttons can't be confused.
+- Rule (unchanged logic, now in the Guide): hit your mark with normal speed and release → where the ball goes is the lane; missed your mark → it's you, even if Good execution is tapped.
+- ④ More reads: each group on one line with short labels (Execution: Good/OK/Poor · Reaction: Early/Long/Over/under/Carrydown · Exit: Left/Straight/Right · Speed: Slower/Same/Faster). "Didn't notice" buttons removed: skip it, or tap again to clear. Saved values unchanged, so older shots read the same.
+- Quick result buttons on one line.
+
 ## Changes in v83-beta20: 📚 PinPal history
 - **Import a PinPal backup** (.pinpal) on Scores → History. Built-in read-only SQLite reader (no server, no library): games, frame-by-frame pins left after each ball, ball per frame (mid-game changes), house, league, pattern, date; lanes and starting lane parsed from night notes ("Lanes 23s & 24"); "X over Y" lines kept. Verified on a real backup: 1,869 games, recomputed scores match PinPal on 1,855 of 1,856 completed games.
 - **Quick questions + filters**: houses, game 1·2·3, lane pairs, starting lane, best balls, year, league, spare leaves; filter by house / lanes / ball / year / game #. Tiles: games, average, high, 200+ %, strike %, spare %, single-pin %, opens/game.

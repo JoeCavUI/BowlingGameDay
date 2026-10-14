@@ -1316,7 +1316,7 @@
     res.status = 'watch'; res.tone = 'info';
     res.headline = 'No clear pattern yet. Stay and keep tracking.';
     const unknowns = cnt(W, c => c.execution === 'unknown');
-    res.why = `${pockets} of your last ${W.length} ${unknowns >= Math.ceil(W.length / 2) ? '' : 'good '}shots hit the pocket.` + (unknowns >= 3 ? ' Tip: tapping your mark (Hit target / held / recovered) helps Coach trust the read.' : '');
+    res.why = `${pockets} of your last ${W.length} ${unknowns >= Math.ceil(W.length / 2) ? '' : 'good '}shots hit the pocket.` + (unknowns >= 3 ? ' Tip: tapping your mark (Hit my mark / held / recovered) helps Coach trust the read.' : '');
     res.next = 'Coach will call a move when 2 good shots in a row tell the same story.';
     {
       const b = curT ? `${ctx.currentBall} ${REL_WORD[curT.rel]} for you on this pattern${curT.lowConf ? ' (rough estimate)' : ''}` : '';
