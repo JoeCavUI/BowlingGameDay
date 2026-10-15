@@ -520,3 +520,20 @@ button, a, select { -webkit-tap-highlight-color:rgba(99,230,210,0.25); }
 .be-grid{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; }
 .be-f{ min-width:0; }
 .be-f label{ font-size:12px; color:var(--muted); }
+
+/* Compare balls */
+.cmp-bar{ position:fixed; left:12px; right:12px; bottom:calc(12px + env(safe-area-inset-bottom)); z-index:40; display:flex; gap:10px; align-items:center; background:var(--panel); border:1px solid var(--accent); border-radius:14px; padding:8px 10px; box-shadow:0 6px 24px rgba(0,0,0,.45); }
+.cmp-bar .small{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cmp-bar.hidden{ display:none; }
+.cmp-btn.on{ border-color:var(--accent); color:var(--accent); }
+.cmp-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+table.cmp{ border-collapse:collapse; width:100%; min-width:360px; font-size:13.5px; }
+table.cmp th, table.cmp td{ padding:6px 8px; border-bottom:1px solid rgba(255,255,255,.08); text-align:left; vertical-align:top; }
+table.cmp th{ font-weight:800; position:sticky; top:0; background:var(--panel); }
+table.cmp td:first-child, table.cmp th:first-child{ position:sticky; left:0; background:var(--panel); color:var(--muted); font-size:12px; min-width:92px; }
+table.cmp tr.cmp-sec td{ color:var(--accent); font-weight:800; text-transform:uppercase; font-size:11.5px; letter-spacing:.04em; padding-top:12px; }
+table.cmp tr.cmp-diff td:not(:first-child){ background:rgba(99,230,210,.07); }
+table.cmp{ table-layout:fixed; min-width:0; font-size:12.5px; }
+table.cmp th, table.cmp td{ padding:5px 5px; overflow-wrap:anywhere; }
+table.cmp th{ text-transform:none; letter-spacing:0; font-size:13px; color:var(--text, #e8ecf6); }
+table.cmp td:first-child, table.cmp th:first-child{ width:84px; min-width:0; font-size:11.5px; }

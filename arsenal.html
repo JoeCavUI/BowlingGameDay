@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Arsenal</title>
-  <link rel="stylesheet" href="styles.css?v=89" />
+  <link rel="stylesheet" href="styles.css?v=90" />
 </head>
 <body data-page="arsenal">
   <div class="navlinks"></div>
@@ -225,6 +225,19 @@
     </div>
   </div>
 
+  <!-- Compare up to three balls side by side -->
+  <div id="cmpBar" class="cmp-bar hidden"><button class="btn" id="cmpOpen" type="button">⚖️ Compare</button><span class="small" id="cmpNames"></span><button class="btn secondary" id="cmpClear" type="button">Clear</button></div>
+  <div id="cmpModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card" style="max-width:860px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div><div style="font-size:18px;font-weight:900">Compare balls</div><div class="small dim">Specs, layout, how each rolls for you, and your record.</div></div>
+        <button class="btn secondary" id="cmpClose" type="button">Close</button>
+      </div>
+      <div class="hr-split"></div>
+      <div id="cmpTable" class="cmp-wrap"></div>
+    </div>
+  </div>
+
   <!-- Perception tuning modal -->
   <div id="tuneModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
     <div class="modal-card" style="max-width:720px">
@@ -237,7 +250,7 @@
       </div>
       <div class="hr-split"></div>
 
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div style="font-weight:900;font-size:16px;min-width:0" id="tuneTitle">(ball)</div><button class="btn secondary" type="button" id="tuneEdit" style="padding:6px 12px;flex:none">✏️ Edit</button></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div style="font-weight:900;font-size:16px;min-width:0" id="tuneTitle">(ball)</div><div style="display:flex;gap:6px;flex:none"><button class="btn secondary" type="button" id="tuneCompare" style="padding:6px 10px">⚖️</button><button class="btn secondary" type="button" id="tuneEdit" style="padding:6px 12px">✏️ Edit</button></div></div>
       <div id="tuneSpecs" class="ball-specs"></div>
       <div class="hr-split"></div>
       <div style="font-weight:900;font-size:15px">Your adjustment sliders</div>
@@ -326,11 +339,11 @@
     </div>
   </div>
 
-  <script src="app.js?v=89"></script>
-  <script src="coach.js?v=89"></script>
-  <script src="chart.js?v=89"></script>
-  <script src="pinpal.js?v=89"></script>
-  <script src="history.js?v=89"></script>
+  <script src="app.js?v=90"></script>
+  <script src="coach.js?v=90"></script>
+  <script src="chart.js?v=90"></script>
+  <script src="pinpal.js?v=90"></script>
+  <script src="history.js?v=90"></script>
   <script>
     BT.renderNav('arsenal');
 
@@ -348,6 +361,7 @@
     let recommendedNames = [];
     let roleSelections = {};
     let lastPlannerFilter = '';
+    let compareSet = []; // balls picked for side-by-side compare (max 3)
     let proposedRows = BT.lsGet('bt_proposed_balls_v1', []);
     if (!Array.isArray(proposedRows)) proposedRows = [];
 
@@ -476,12 +490,14 @@
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
               <button class="btn secondary" data-tune="${nm}">Tune</button>
+              <button class="btn secondary cmp-btn${compareSet.includes(nm) ? ' on' : ''}" data-compare="${nm}" title="Compare">⚖️${compareSet.includes(nm) ? ' ✓' : ''}</button>
                             ${((r.__proposed || r.__custom) ? `<button class="btn secondary" data-remove="${nm}" data-remove-type="${r.__proposed ? 'proposed' : 'custom'}">Remove</button>` : "")}
             </div>
           </div>
         </div>`;
       }).join('');
 
+            BT.$all('button[data-compare]', el.table).forEach(btn => btn.addEventListener('click', () => toggleCompare(btn.getAttribute('data-compare') || '')));
             BT.$all('button[data-tune]', el.table).forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -700,9 +716,69 @@
       if (tune.autoResult) tune.autoResult.innerHTML = 'Pick a role from the dropdown, then click <b>Auto tune</b>. The app will search common surfaces and light perception nudges for the closest match.';
       setTunePills();
       try { renderTuneSpecs(nm, row); } catch (e) { console.error(e); }
+      try { const tb = BT.$('#tuneCompare'); if (tb) tb.textContent = compareSet.includes(nm) ? '⚖️ ✓' : '⚖️'; } catch (_e) {}
       renderTuneCare(nm);
       tune.modal.classList.remove('hidden');
     }
+
+    // ---- Compare (up to 3 balls) ----
+    function toggleCompare(nm) {
+      nm = String(nm || '').trim(); if (!nm) return;
+      if (compareSet.includes(nm)) compareSet = compareSet.filter(x => x !== nm);
+      else { compareSet.push(nm); if (compareSet.length > 3) compareSet.shift(); }
+      renderCompareBar(); applyFilter();
+      const tb = BT.$('#tuneCompare'); if (tb && tune.currentName) tb.textContent = compareSet.includes(tune.currentName) ? '⚖️ ✓' : '⚖️';
+    }
+    function renderCompareBar() {
+      const bar = BT.$('#cmpBar'); if (!bar) return;
+      compareSet = compareSet.filter(n => viewRowsAll().some(r => BT.ballName(r) === n));
+      bar.classList.toggle('hidden', !compareSet.length);
+      BT.$('#cmpNames').textContent = compareSet.length === 1 ? `${compareSet[0]}: pick 1–2 more` : compareSet.join(' · ');
+      BT.$('#cmpOpen').disabled = compareSet.length < 2;
+    }
+    function renderCompare() {
+      const esc = (t) => String(t ?? '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+      const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
+      const rows = compareSet.map(n => viewRowsAll().find(r => BT.ballName(r) === n)).filter(Boolean);
+      const g = (r, names) => String(BT.getField(r, names, '') ?? '').trim();
+      const num = (v) => { const n = Number(String(v).replace(/[^0-9.\-]/g, '')); return /\d/.test(String(v)) && Number.isFinite(n) ? n : null; };
+      const inch = (v) => { const n = num(v); return n == null ? '—' : `${n.toFixed(2)}″`; };
+      const deg = (v) => { const n = num(v); return n == null ? '—' : `${Math.round(n)}°`; };
+      const pl = (v) => { const n = num(v); return n == null ? (String(v).trim() || '—') : String(+n.toFixed(3)); };
+      let hist = null; try { if (window.BTHistory && BTHistory.has()) hist = viewRowsAll().map(r => BT.ballName(r)); } catch (_e) {}
+      const info = rows.map(r => {
+        const nm = BT.ballName(r), v = BT.motionVector(r, bowler); let p = null; try { p = BTChart.place([r], bowler)[0]; } catch (_e) {}
+        const core = g(r, ['Core']); const sym = /sym/i.test(core) && !/asym/i.test(core);
+        let rec = null; try { if (hist) rec = BTHistory.ballRecord(nm, hist); } catch (_e) {}
+        const care = BT.ballCareFor(nm), tw = BT.ballTweaksFor(nm);
+        const bags = (BT.lsGet(BT.KEYS.ARSENAL_SETS, []) || []).filter(s => (s.balls || []).some(b => (typeof b === 'string' ? b : b && b.name) === nm)).map(s => s.name);
+        return { nm, r, v, p, sym, rec, care, tw, bags };
+      });
+      const rowsDef = [
+        ['Specs'],
+        ['Brand', x => esc(g(x.r, ['Brand']) || '—')], ['Cover', x => esc(g(x.r, ['Cover']) || '—')], ['Core', x => esc(g(x.r, ['Core']) || '—')],
+        ['RG', x => pl(g(x.r, ['RG']))], ['Differential', x => pl(g(x.r, ['Diff', 'Differential']))], ['Intermediate diff', x => x.sym || num(g(x.r, ['PSA'])) == null ? '—' : pl(g(x.r, ['PSA']))],
+        ['Surface', x => esc(x.tw.surfaceOverride ? `${x.tw.surfaceOverride} (yours)` : (BT.ballSurface(x.r) || '—'))],
+        ['Layout'],
+        ['Pin-to-PAP', x => inch(g(x.r, ['PAP#1']) || g(x.r, ['PAP']))], ['PSA-to-PAP', x => inch(g(x.r, ['PSA#1']))], ['Pin buffer', x => inch(g(x.r, ['Val#1']))],
+        ['Drill angle', x => deg(g(x.r, ['Drill Angle']))], ['VAL angle', x => deg(g(x.r, ['Val']))], ['Total angle', x => deg(g(x.r, ['Total Angle']))],
+        ['Layout type', x => ({ short: 'Short pin', long: 'Long pin', control: 'Pin down', benchmark: 'Benchmark' }[x.v.layoutType] || '—')], ['Pin', x => esc(g(x.r, ['Pin Location']) || '—')],
+        ['For you (on paper)'],
+        ['Barnes box', x => x.p ? esc(BTChart.label(x.p.rowKey)) : '—'], ['Early → Late', x => x.p ? `${Math.round(x.p.x)} · ${esc(BTChart.timingWord(x.p.timing))}` : '—'],
+        ['Hook', x => Math.round(x.v.hook * 100)], ['Length', x => Math.round(x.v.length * 100)], ['Backend', x => Math.round(x.v.backend * 100)],
+        ['Your record'],
+        ['PinPal games', x => x.rec && x.rec.n ? `${x.rec.n} · ${x.rec.avg} avg` : '—'], ['Strikes', x => x.rec && x.rec.n ? `${x.rec.strike}%` : '—'], ['Best house', x => x.rec && x.rec.bestHouse ? esc(x.rec.bestHouse) : '—'],
+        ['Status', x => [x.care.retired ? 'Retired' : 'Active', x.care.weight ? `${x.care.weight} lb` : '', x.r.__proposed ? 'What-if' : ''].filter(Boolean).join(' · ')],
+        ['In bags', x => x.bags.length ? esc(x.bags.join(', ')) : '—'],
+      ];
+      const head = `<tr><th></th>${info.map(x => `<th>${esc(x.nm)}</th>`).join('')}</tr>`;
+      const body = rowsDef.map(d => d.length === 1 ? `<tr class="cmp-sec"><td colspan="${info.length + 1}">${d[0]}</td></tr>` : (() => { const vals = info.map(x => String(d[1](x))); const diff = new Set(vals).size > 1; return `<tr${diff ? ' class="cmp-diff"' : ''}><td>${d[0]}</td>${vals.map(v => `<td>${v}</td>`).join('')}</tr>`; })()).join('');
+      BT.$('#cmpTable').innerHTML = `<table class="cmp"><thead>${head}</thead><tbody>${body}</tbody></table><div class="small dim" style="margin-top:6px">Rows where the balls differ are highlighted. "For you" numbers are on paper (specs, layout, your speed and revs), not how they've rolled.</div>`;
+    }
+    BT.$('#cmpOpen')?.addEventListener('click', () => { if (compareSet.length < 2) return; renderCompare(); BT.$('#cmpModal').classList.remove('hidden'); });
+    BT.$('#cmpClose')?.addEventListener('click', () => BT.$('#cmpModal').classList.add('hidden'));
+    BT.$('#cmpClear')?.addEventListener('click', () => { compareSet = []; renderCompareBar(); applyFilter(); });
+    BT.$('#tuneCompare')?.addEventListener('click', () => toggleCompare(tune.currentName));
 
     // Ball details: the specs and layout, first thing you see when you open a ball.
     function renderTuneSpecs(nm, row) {
@@ -710,7 +786,7 @@
       if (!row) { const e0 = BT.$('#tuneEdit'); if (e0) e0.style.display = 'none'; box.innerHTML = '<div class="small dim">No spec sheet for this ball.</div>'; return; }
       const esc = (t) => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
       const g = (names) => { const v = BT.getField(row, names, ''); return String(v == null ? '' : v).trim(); };
-      const num = (v) => { const n = Number(String(v).replace(/[^0-9.\-]/g, '')); return String(v).trim() && Number.isFinite(n) ? n : null; };
+      const num = (v) => { const n = Number(String(v).replace(/[^0-9.\-]/g, '')); return /\d/.test(String(v)) && Number.isFinite(n) ? n : null; };
       const inch = (v) => { const n = num(v); return n == null ? '—' : `${n.toFixed(2)}″`; };
       const deg = (v) => { const n = num(v); return n == null ? '—' : `${Math.round(n)}°`; };
       const plain = (v, d = 3) => { const n = num(v); return n == null ? (String(v).trim() || '—') : String(+n.toFixed(d)); };
@@ -1327,9 +1403,14 @@
       an.dups.slice(0, 5).forEach(dp => items.push({ lvl: 'med', t: `🔁 ${dp.a} and ${dp.b} play almost the same for you`, d: `Same box (${dp.box}) and about the same timing. Fine if one is a backup or has a very different layout on purpose; otherwise don't bag both.` }));
       if (an.dups.length > 5) items.push({ lvl: 'low', t: `🔁 ${an.dups.length - 5} more near-duplicate pair${an.dups.length - 5 === 1 ? '' : 's'}`, d: 'Tap balls on the chart to compare them.' });
       an.steps.forEach(st => items.push({ lvl: 'med', t: `🪜 Big step from ${st.from} down to ${st.to}`, d: `There's a gap in hook between them. A ball in between helps when the lanes change.` }));
-      an.lopsided.forEach(o => items.push({ lvl: 'low', t: `⏱️ Everything in ${o.box} reads ${o.side} for you`, d: o.side === 'late' ? 'A rougher surface on one of them would give you an earlier option in that box.' : 'A shinier surface on one of them would give you a later option in that box.' }));
-      if (an.allLate) items.push({ lvl: 'med', t: '⏱️ Most of your arsenal reads late for you', d: 'Common for speed-dominant or lower-rev players. Rougher surfaces (1000–2000) move balls earlier.' });
-      if (an.allEarly) items.push({ lvl: 'med', t: '⏱️ Most of your arsenal reads early for you', d: 'Common for high-rev players. Shinier surfaces or pearls move balls later.' });
+      // These timing notes are ON PAPER (specs + layout measured from your PAP + your speed/revs), not how the balls
+      // have actually rolled. When Game Day reads say otherwise, say so and trust the lanes.
+      const seen = (() => { let e = 0, l = 0; try { (BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || []).forEach(s => (s.shots || []).forEach(x => { if (!x || x.type === 'gameStart') return; const o = Array.isArray(x.obs) ? x.obs : []; if (o.includes('Too early') || /high|Missed left/i.test(x.pocket || '')) e++; else if (o.includes('Too long') || /light|Missed right/i.test(x.pocket || '')) l++; })); } catch (_e) {} return { e, l, says: e + l >= 10 ? (e >= l * 1.3 ? 'early' : l >= e * 1.3 ? 'late' : 'mixed') : '' }; })();
+      an.lopsided.forEach(o => items.push({ lvl: 'low', t: `⏱️ On paper, everything in ${o.box} rates ${o.side} for you`, d: (seen.says && seen.says !== o.side) ? `Your Game Day reads don't agree (${seen.e} early, ${seen.l} long), so don't change surfaces on the rating alone.` : o.side === 'late' ? 'If one of them actually rolls late on the lanes, a rougher surface would give you an earlier option in that box.' : 'If one of them actually reads early on the lanes, a shinier surface would give you a later option in that box.' }));
+      if (an.allLate) items.push({ lvl: 'med', t: '⏱️ On paper, most of your arsenal rates late for you', d: seen.says === 'early'
+        ? `But on the lanes your Game Day reads say early (${seen.e} early / high vs ${seen.l} long / light). Trust the lanes. The rating comes from specs and the layouts measured from your PAP, so if your PAP has moved, ask your driller whether the layouts still suit you before adding surface.`
+        : 'This comes from specs and layouts measured from your PAP, plus your speed and revs, not from how the balls have actually rolled. If they read early on the lanes, trust your eyes and tap Early in Game Day so Coach can tell the difference. If your PAP has moved, the layouts may play differently than they were drilled to.' });
+      if (an.allEarly) items.push({ lvl: 'med', t: '⏱️ On paper, most of your arsenal rates early for you', d: seen.says === 'late' ? `But your Game Day reads say long (${seen.l} long vs ${seen.e} early). Trust the lanes.` : 'From specs and layouts, not from how they rolled. If they actually go long on the lanes, tap Long in Game Day so Coach can tell.' });
       if (!an.urethane) items.push({ lvl: 'low', t: 'ℹ️ No urethane ball', d: `Optional. Handy on short, flat or very dry lanes. Look for: ${BTChart.SPEC.URETHANE}.` });
       // Before-you-buy verdicts for what-if balls
       balls.filter(b => b.proposed).forEach(b => items.unshift({ lvl: 'buy', t: `🛒 Thinking about ${b.name}?`, d: BTChart.buyVerdict(b, balls, an).text }));
