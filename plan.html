@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Plan</title>
-  <link rel="stylesheet" href="styles.css?v=96" />
+  <link rel="stylesheet" href="styles.css?v=97" />
 </head>
 <body data-page="plan">
   <div class="navlinks"></div>
@@ -47,6 +47,7 @@
     <div class="panel no-print" id="planActions" style="display:none">
       <div class="btn-row" style="margin-top:0">
         <button class="btn" id="pPdf">📄 Save as PDF</button>
+        <button class="btn secondary" id="pSpeak" type="button">🔊 Read aloud</button>
         <button class="btn secondary" id="pShare">Share text</button>
         <a class="btn secondary" href="gameday.html">Go to Game Day →</a>
       </div>
@@ -54,11 +55,11 @@
     </div>
   </div>
 
-  <script src="app.js?v=96"></script>
-  <script src="pinpal.js?v=96"></script>
-  <script src="history.js?v=96"></script>
-  <script src="chart.js?v=96"></script>
-  <script src="plan.js?v=96"></script>
+  <script src="app.js?v=97"></script>
+  <script src="pinpal.js?v=97"></script>
+  <script src="history.js?v=97"></script>
+  <script src="chart.js?v=97"></script>
+  <script src="plan.js?v=97"></script>
   <script>
   (function () {
     BT.renderNav('plan');
@@ -118,6 +119,7 @@
       try { if (navigator.share) { await navigator.share({ title: plan.title, text }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
       try { await navigator.clipboard.writeText(text); alert('Game plan copied. Paste it into Notes or a message.'); } catch (_e) { alert(text); }
     });
+    BT.wireReadAloud($('#pSpeak'), () => plan ? BTPlan.toText(plan).replace(/^Based on[\s\S]*$/m, '') : '');
     init();
   })();
   </script>

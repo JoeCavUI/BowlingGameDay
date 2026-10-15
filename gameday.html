@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=96" />
+  <link rel="stylesheet" href="styles.css?v=97" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -102,7 +102,7 @@
         <div class="panel gd-coach" id="coachPanel">
           <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
             <b>Coach</b>
-            <a href="guide.html#coach" class="small" style="color:var(--accent)">How Coach works →</a>
+            <span style="display:flex;gap:10px;align-items:baseline"><button type="button" class="btn secondary" id="coachSpeak" style="padding:4px 10px;font-size:13px">🔊 Read aloud</button><a href="guide.html#coach" class="small" style="color:var(--accent)">How Coach works →</a></span>
           </div>
           <div class="small" id="coachText" style="margin-top:6px">Log a few shots to get feedback.</div>
         </div>
@@ -247,14 +247,15 @@
     </div>
   </div>
 
-  <script src="app.js?v=96"></script>
-  <script src="coach.js?v=96"></script>
-  <script src="pinpal.js?v=96"></script>
-  <script src="history.js?v=96"></script>
-  <script src="chart.js?v=96"></script>
-  <script src="plan.js?v=96"></script>
+  <script src="app.js?v=97"></script>
+  <script src="coach.js?v=97"></script>
+  <script src="pinpal.js?v=97"></script>
+  <script src="history.js?v=97"></script>
+  <script src="chart.js?v=97"></script>
+  <script src="plan.js?v=97"></script>
   <script>
     BT.renderNav('gameday');
+    BT.wireReadAloud(document.getElementById('coachSpeak'), () => ((document.getElementById('coachText') || {}).innerText || '').split('\n').filter(l => !/^(Why & what's next|What Coach is using)/i.test(l.trim())).join('\n'));
 
     // Quick result buttons (pin deck handles everything else)
     const quickResults = ['Strike','Brooklyn','Flat 10','Ringing 10'];

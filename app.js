@@ -6,7 +6,7 @@
 
 (function () {
   // Bump this string each build so pages can display it and cache-bust resources.
-  const APP_VERSION = 'v96-beta33';
+  const APP_VERSION = 'v97-beta34';
   const KEYS = {
     CSV_CACHE: 'bt_csv_cache_v1',          // stringified { savedAt, name, rows }
     BOWLER: 'bt_bowler_v1',               // stringified object
@@ -1424,6 +1424,50 @@
     location.replace(u.toString());
   }
 
+  // --- Read aloud (iPhone / browser speech) ---
+  // Speaks text sentence by sentence (iOS cuts off long utterances). Cleans symbols so it sounds natural.
+  function speechText(t) {
+    return String(t || '')
+      .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F2FF}️‍]/gu, ' ')
+      .replace(/(\d+)\s*&\s*(\d+)/g, '$1 and $2').replace(/&/g, ' and ')
+      .replace(/→/g, ' to ').replace(/←/g, ' ').replace(/[·•|]/g, ', ').replace(/−/g, ' minus ')
+      .replace(/(\d)\s*%/g, '$1 percent').replace(/(\d)\s*ft\b/g, '$1 feet').replace(/(\d)\s*[″"]/g, '$1 inches').replace(/(\d)°/g, '$1 degrees')
+      .replace(/\bG(\d)\b/g, 'game $1').replace(/\bvs\b\.?/g, 'versus').replace(/\be\.g\./g, 'for example')
+      .replace(/×/g, ' by ').replace(/\s*\n+\s*/g, '. ').replace(/\s{2,}/g, ' ').replace(/\s+,/g, ',').replace(/([.:;!?])\s*,\s*/g, '$1 ').replace(/^,\s*/, '').replace(/,\s*,/g, ',').replace(/\.\s*\./g, '.').trim();
+  }
+  let _speaking = false;
+  function canSpeak() { return typeof window !== 'undefined' && 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined'; }
+  function stopSpeaking() { try { window.speechSynthesis.cancel(); } catch (_e) {} _speaking = false; }
+  function speak(text, onEnd) {
+    if (!canSpeak()) { alert('Read aloud isn\'t available in this browser.'); return false; }
+    stopSpeaking();
+    const parts = speechText(text).split(/(?<=[.!?;])\s+/).map(s => s.trim()).filter(s => /[a-z0-9]/i.test(s));
+    if (!parts.length) return false;
+    _speaking = true;
+    const voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
+    const voice = voices.find(v => /en[-_]US/i.test(v.lang) && /Samantha|Siri|Alex|Aaron|Nicky/i.test(v.name)) || voices.find(v => /^en/i.test(v.lang)) || null;
+    parts.forEach((s, i) => {
+      const u = new SpeechSynthesisUtterance(s);
+      if (voice) u.voice = voice; u.lang = (voice && voice.lang) || 'en-US'; u.rate = 1.0;
+      if (i === parts.length - 1) u.onend = () => { _speaking = false; if (onEnd) onEnd(); };
+      window.speechSynthesis.speak(u);
+    });
+    return true;
+  }
+  function isSpeaking() { return _speaking; }
+  // Wire a button that toggles reading the text getText() returns.
+  function wireReadAloud(btn, getText) {
+    if (!btn) return;
+    if (!canSpeak()) { btn.style.display = 'none'; return; }
+    const idle = btn.textContent;
+    btn.addEventListener('click', () => {
+      if (isSpeaking()) { stopSpeaking(); btn.textContent = idle; return; }
+      const ok = speak(getText(), () => { btn.textContent = idle; });
+      if (ok) btn.textContent = '⏹ Stop';
+    });
+    window.addEventListener('pagehide', stopSpeaking);
+  }
+
   // --- Navbar injection ---
   function renderNav(active) {
     if (isTestMode() && !document.getElementById('btTestBanner')) {
@@ -1602,6 +1646,7 @@
     equipmentScoreFromRows,
     equipmentScoreFromSavedSet,
     renderNav,
+    speak, stopSpeaking, isSpeaking, wireReadAloud, speechText,
     isTestMode, hasTestData, enterTestMode, exitTestMode, resetTestData, checkForUpdate,
     exportBackup,
     importBackupFile,

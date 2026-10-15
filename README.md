@@ -58,6 +58,10 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v97-beta34: 🔊 read aloud
+- **Game Plan → 🔊 Read aloud** reads the whole plan (tap again to stop). **Game Day → Coach → 🔊 Read aloud** reads what Coach is showing (the pregame starting plan, or the current advice).
+- Uses the phone's built-in voice, sentence by sentence; symbols are spoken naturally ("13 & 14" → "13 and 14", "%" → "percent", "43 ft" → "43 feet", "5.46″" → "5.46 inches", "G1" → "game 1"; emoji skipped). Hidden if the browser can't speak.
+
 ## Changes in v96-beta33: one bag answer everywhere
 - **Game Plan, Arsenal "Suggest my bag" and Game Day Coach now give the same pick** for the same house, lanes, league, pattern and bag (shared `BTPlan.forContext`).
 - **Arsenal → Role Planner → Suggest my bag** asks where you're bowling (house, lanes, league, pattern; prefilled from Game Day's Tonight / your last plan; picking a league fills its house). With history for that house it suggests the Game Plan's bag (start ball, earlier ball, later ball, with the reasons); with none it falls back to the motion roles and says so. More than 6 balls: extra slots add motion separation. "Use this bag on Game Day?" names the bag for the house and pair.
