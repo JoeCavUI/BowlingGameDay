@@ -6,7 +6,7 @@
 
 (function () {
   // Bump this string each build so pages can display it and cache-bust resources.
-  const APP_VERSION = 'v91-beta28';
+  const APP_VERSION = 'v92-beta29';
   const KEYS = {
     CSV_CACHE: 'bt_csv_cache_v1',          // stringified { savedAt, name, rows }
     BOWLER: 'bt_bowler_v1',               // stringified object
@@ -1211,22 +1211,23 @@
   }
 
   // Pin-to-PAP drives the layout effect on a smooth curve (no cliffs):
-  //  · short (< 3″): earlier, smoother, less backend
-  //  · benchmark (3–4½″): neutral
-  //  · long (4½–5½″): more length and the most angular backend, peaking around 5″
+  //  · short (< 3″): less flare, earlier and smoother
+  //  · high flare (~3⅜–4¼″): the core's maximum-flare position, the most total hook, strong but arcing
+  //  · long (4¼–5½″): more length and the most angular backend, peaking around 5″
   //  · very long (past ~5½–6″): flare drops off, so the ball smooths out again (still long through the front)
   // "Pin down" (control) keeps its own effect. With no number, the Pin Location label is used.
   const PIN_CURVE = [ // [inches, hook, length, backend, shape, asym]
-    [2.0, -0.05, -0.10, -0.15, -0.15, -0.04],
-    [2.75, -0.04, -0.08, -0.12, -0.12, -0.03],
-    [3.375, 0.00, -0.04, -0.05, -0.06, -0.01],
-    [4.0, 0.02, 0.00, 0.00, 0.00, 0.00],
-    [4.5, 0.03, 0.05, 0.08, 0.10, 0.015],
-    [5.0, 0.03, 0.09, 0.14, 0.19, 0.03],
-    [5.4, 0.02, 0.10, 0.12, 0.15, 0.03],
-    [5.9, 0.00, 0.09, 0.05, 0.04, 0.02],
-    [6.5, -0.03, 0.07, -0.03, -0.06, 0.00],
-    [7.0, -0.05, 0.05, -0.08, -0.12, -0.01],
+    [2.0, -0.06, -0.10, -0.14, -0.15, -0.04],
+    [2.75, -0.02, -0.07, -0.08, -0.10, -0.02],
+    [3.375, 0.07, -0.03, 0.04, -0.01, 0.01],
+    [3.75, 0.08, -0.01, 0.06, 0.02, 0.02],
+    [4.25, 0.06, 0.03, 0.08, 0.07, 0.02],
+    [4.75, 0.04, 0.07, 0.12, 0.15, 0.03],
+    [5.1, 0.02, 0.09, 0.14, 0.19, 0.03],
+    [5.5, 0.00, 0.10, 0.11, 0.14, 0.03],
+    [5.9, -0.02, 0.09, 0.05, 0.04, 0.02],
+    [6.5, -0.04, 0.07, -0.03, -0.06, 0.00],
+    [7.0, -0.06, 0.05, -0.08, -0.12, -0.01],
   ];
   function pinCurve(d) {
     const P = PIN_CURVE; const x = clamp(d, P[0][0], P[P.length - 1][0]);
@@ -1239,7 +1240,7 @@
     const pinLoc = ballPinLocation(row).toLowerCase();
     const pin = ballPAP(row);
     if (pinLoc.includes('down')) return 'control';
-    if (Number.isFinite(pin)) return pin < 3.0 ? 'short' : pin <= 4.5 ? 'benchmark' : pin <= 5.6 ? 'long' : 'xlong';
+    if (Number.isFinite(pin)) return pin < 3.0 ? 'short' : pin <= 4.25 ? 'flare' : pin <= 5.6 ? 'long' : 'xlong';
     if (pinLoc.includes('short')) return 'short';
     return 'benchmark';
   }

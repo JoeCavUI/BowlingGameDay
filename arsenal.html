@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Arsenal</title>
-  <link rel="stylesheet" href="styles.css?v=91" />
+  <link rel="stylesheet" href="styles.css?v=92" />
 </head>
 <body data-page="arsenal">
   <div class="navlinks"></div>
@@ -339,11 +339,11 @@
     </div>
   </div>
 
-  <script src="app.js?v=91"></script>
-  <script src="coach.js?v=91"></script>
-  <script src="chart.js?v=91"></script>
-  <script src="pinpal.js?v=91"></script>
-  <script src="history.js?v=91"></script>
+  <script src="app.js?v=92"></script>
+  <script src="coach.js?v=92"></script>
+  <script src="chart.js?v=92"></script>
+  <script src="pinpal.js?v=92"></script>
+  <script src="history.js?v=92"></script>
   <script>
     BT.renderNav('arsenal');
 
@@ -762,7 +762,7 @@
         ['Layout'],
         ['Pin-to-PAP', x => inch(g(x.r, ['PAP#1']) || g(x.r, ['PAP']))], ['PSA-to-PAP', x => inch(g(x.r, ['PSA#1']))], ['Pin buffer', x => inch(g(x.r, ['Val#1']))],
         ['Drill angle', x => deg(g(x.r, ['Drill Angle']))], ['VAL angle', x => deg(g(x.r, ['Val']))], ['Total angle', x => deg(g(x.r, ['Total Angle']))],
-        ['Layout type', x => ({ short: 'Short pin', long: 'Long pin', xlong: 'Very long pin', control: 'Pin down', benchmark: 'Benchmark' }[x.v.layoutType] || '—')], ['Pin', x => esc(g(x.r, ['Pin Location']) || '—')],
+        ['Layout type', x => ({ short: 'Short pin', long: 'Long pin', xlong: 'Very long pin', flare: 'High flare', control: 'Pin down', benchmark: 'Benchmark' }[x.v.layoutType] || '—')], ['Pin', x => esc(g(x.r, ['Pin Location']) || '—')],
         ['For you (on paper)'],
         ['Barnes box', x => x.p ? esc(BTChart.label(x.p.rowKey)) : '—'], ['Early → Late', x => x.p ? `${Math.round(x.p.x)} · ${esc(BTChart.timingWord(x.p.timing))}` : '—'],
         ['Hook', x => Math.round(x.v.hook * 100)], ['Length', x => Math.round(x.v.length * 100)], ['Backend', x => Math.round(x.v.backend * 100)],
@@ -796,7 +796,7 @@
       const psa = g(['PSA']);
       const vPin = g(['PAP#1']) || g(['PAP']), vPsa = g(['PSA#1']), vBuf = g(['Val#1']);
       const drill = g(['Drill Angle', 'DrillAngle']), pin2 = g(['PAP']), valA = g(['Val']), tot = g(['Total Angle', 'TotalAngle']);
-      const kind = { short: 'Short pin', long: 'Long pin', xlong: 'Very long pin', control: 'Pin down (control)', benchmark: 'Benchmark' }[BT.motionVector(row, BT.lsGet(BT.KEYS.BOWLER, {}) || {}).layoutType] || '—';
+      const kind = { short: 'Short pin', long: 'Long pin', xlong: 'Very long pin', flare: 'High flare', control: 'Pin down (control)', benchmark: 'Benchmark' }[BT.motionVector(row, BT.lsGet(BT.KEYS.BOWLER, {}) || {}).layoutType] || '—';
       let chart = '';
       try { const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {}; const p = BTChart.place([row], bowler)[0]; if (p) chart = `${BTChart.label(p.rowKey)}, ${BTChart.timingWord(p.timing)} for you`; } catch (_e) {}
       const cell = (l, v, wide) => `<div class="bs-cell${wide ? ' bs-wide' : ''}"><div class="bs-l">${l}</div><div class="bs-v">${v}</div></div>`;

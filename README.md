@@ -58,6 +58,10 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v92-beta29: high-flare pin position
+- Pin-to-PAP around **3⅜–4¼″ is now "High flare"** (the core's maximum-flare position): the most total hook, strong but arcing, peaking near 3¾″. It was wrongly treated as neutral "benchmark". Short (< 3″) is lower flare and smoother; long (4¼–5½″) is the most angular, peaking near 5″; very long (past ~5½–6″) smooths out again.
+- With the new PAP: Physix Blackout and Infinite Physix (≈3.3–3.4″) → Strong / Sharp; Code Black → Strong / Sharp; HyRoad 40 → Medium / Smooth.
+
 ## Changes in v91-beta28: pin distance on a smooth curve
 - **No more 4.75″ cliff.** Pin-to-PAP now changes a ball's motion gradually: short (< 3″) earlier and smoother; benchmark (3–4½″) neutral; long (4½–5½″) more length and the most angular backend, peaking near 5″; **very long (past ~5½–6″) smooths out again** as flare drops off, while staying long through the front. "Pin down" keeps its control effect; with no number, the Pin Location label is used.
 - New layout type **"Very long pin"** in Ball details, Compare, Game Plan and lane-condition patterns.

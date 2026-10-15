@@ -159,7 +159,7 @@
     const B = root.BT; if (!B || !row) return null;
     const cov = String(B.ballCover(row) || '').toLowerCase();
     const coreS = String(B.getField(row, ['Core'], '') || '').toLowerCase();
-    let layout = ''; try { layout = { short: 'Short pin', long: 'Long pin', xlong: 'Very long pin', control: 'Pin down', benchmark: 'Benchmark' }[B.motionVector(row, bowler || {}).layoutType] || ''; } catch (_e) {}
+    let layout = ''; try { layout = { short: 'Short pin', long: 'Long pin', xlong: 'Very long pin', flare: 'High flare', control: 'Pin down', benchmark: 'Benchmark' }[B.motionVector(row, bowler || {}).layoutType] || ''; } catch (_e) {}
     return {
       cover: /ure/.test(cov) ? 'Urethane' : /pearl/.test(cov) ? 'Pearl' : /hybrid/.test(cov) ? 'Hybrid' : /solid/.test(cov) ? 'Solid' : '',
       core: /asym/.test(coreS) ? 'Asym' : /sym/.test(coreS) ? 'Sym' : '',
