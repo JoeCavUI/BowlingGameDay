@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=88" />
+  <link rel="stylesheet" href="styles.css?v=89" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -247,10 +247,10 @@
     </div>
   </div>
 
-  <script src="app.js?v=88"></script>
-  <script src="coach.js?v=88"></script>
-  <script src="pinpal.js?v=88"></script>
-  <script src="history.js?v=88"></script>
+  <script src="app.js?v=89"></script>
+  <script src="coach.js?v=89"></script>
+  <script src="pinpal.js?v=89"></script>
+  <script src="history.js?v=89"></script>
   <script>
     BT.renderNav('gameday');
 
@@ -1677,7 +1677,8 @@ function saveCurrentSessionDraft() {
         const cache = BT.lsGet(BT.KEYS.CSV_CACHE, null);
         const arsenal = BT.withCustomBalls((cache && cache.rows) || []).map(r => BT.ballName(r)).filter(Boolean);
         const lanes = (el.lanes.value || '').replace(/\s*[\/&,]\s*|\s+/g, '-').replace(/-+/g, '-');
-        _hist = BTHistory.insights({ house: el.house.value, lanes, arsenal, bag });
+        const rowsAll = BT.withCustomBalls((cache && cache.rows) || []);
+        _hist = BTHistory.insights({ house: el.house.value, lanes, arsenal, bag, rows: rowsAll, bowler: BT.lsGet(BT.KEYS.BOWLER, {}) || {}, sessions: BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || [] });
       } catch (e) { console.error(e); _hist = null; }
       return _hist;
     }

@@ -6,7 +6,7 @@
 
 (function () {
   // Bump this string each build so pages can display it and cache-bust resources.
-  const APP_VERSION = 'v88-beta25';
+  const APP_VERSION = 'v89-beta26';
   const KEYS = {
     CSV_CACHE: 'bt_csv_cache_v1',          // stringified { savedAt, name, rows }
     BOWLER: 'bt_bowler_v1',               // stringified object
@@ -263,6 +263,40 @@
   }
 
   // Retired balls stay in your history but leave your active arsenal (chart, bags, Coach).
+  // Inches: "4.5", "4 1/2", "4-1/2", "4 1/2\"" → 4.5 ; blank → null ; junk → NaN
+  function parseInches(s) {
+    const t = String(s == null ? '' : s).trim().replace(/["″]/g, '');
+    if (!t) return null;
+    const m = t.match(/^(\d+(?:\.\d+)?)?[\s-]*(?:(\d+)\/(\d+))?$/);
+    if (m && (m[1] || m[2])) return +((Number(m[1] || 0) + (m[2] ? Number(m[2]) / Number(m[3]) : 0)).toFixed(3));
+    return NaN;
+  }
+  // Layout → the same columns the spreadsheet uses (VLS "PAP#1/PSA#1/Val#1" + dual-angle "PAP/Val/Drill Angle/Total Angle").
+  function layoutColumns(L) {
+    const out = {}; L = L || {};
+    if (Number.isFinite(L.pinToPAP)) { out['PAP#1'] = String(L.pinToPAP); out['PAP'] = String(L.pinToPAP); }
+    if (Number.isFinite(L.psaToPAP)) out['PSA#1'] = String(L.psaToPAP);
+    if (Number.isFinite(L.pinBuffer)) out['Val#1'] = String(L.pinBuffer);
+    if (Number.isFinite(L.drill)) out['Drill Angle'] = String(L.drill);
+    if (Number.isFinite(L.val)) out['Val'] = String(L.val);
+    if (Number.isFinite(L.drill) && Number.isFinite(L.val)) out['Total Angle'] = String(L.drill + L.val);
+    return out;
+  }
+  // Balls added before v89 kept their layout in a hidden "__layout" note: move it into the real columns once.
+  function migrateLayouts(key) {
+    const arr = lsGet(key, []); if (!Array.isArray(arr)) return;
+    let ch = false;
+    arr.forEach(r => {
+      if (!r || !r.__layout || r.__layoutMigrated) return;
+      let L = {}; try { L = JSON.parse(r.__layout) || {}; } catch (_e) {}
+      const cols = layoutColumns(L);
+      Object.entries(cols).forEach(([k, v]) => { const cur = getField(r, [k], ''); if (!String(cur ?? '').trim()) r[k] = v; });
+      r.__layoutMigrated = '1'; ch = true;
+    });
+    if (ch) lsSet(key, arr);
+  }
+  try { migrateLayouts(CUSTOM_BALLS_KEY); migrateLayouts('bt_proposed_balls_v1'); } catch (_e) {}
+
   // ---- Edit a ball (name, specs, layout) on the phone ----
   // patch keys: name, brand, cover, core, rg, diff, psa (intermediate diff), surface, pin (pin location),
   //             vlsPin, vlsPsa, vlsBuf (VLS inches), drill, val (dual-angle degrees). Total angle = drill + val.
@@ -286,8 +320,10 @@
     const customs = customBalls();
     const allNames = withCustomBalls(csvRows).map(r => ballName(r).toLowerCase());
     if (newName.toLowerCase() !== old.toLowerCase() && allNames.includes(newName.toLowerCase())) return { ok: false, msg: `You already have a ball named "${newName}".` };
+    const proposed = lsGet('bt_proposed_balls_v1', []) || [];
     let row = csvRows.find(r => ballName(r) === old), where = 'csv';
     if (!row) { row = customs.find(r => ballName(r) === old); where = 'custom'; }
+    if (!row) { row = proposed.find(r => ballName(r) === old); where = 'proposed'; }
     if (!row) return { ok: false, msg: 'Could not find that ball.' };
     const p = Object.assign({}, patch);
     if (p.vlsPin != null) p.dualPin = p.vlsPin;            // one pin-to-PAP, written to both layout blocks
@@ -296,7 +332,8 @@
     for (const [k, names] of Object.entries(EDIT_FIELDS)) if (p[k] != null && k !== 'name') setFieldOn(row, names, String(p[k]).trim());
     if (newName !== old) setFieldOn(row, EDIT_FIELDS.name, newName);
     if (where === 'csv') lsSet(KEYS.CSV_CACHE, Object.assign({}, cache, { rows: csvRows, editedAt: Date.now() }));
-    else lsSet(CUSTOM_BALLS_KEY, customs);
+    else if (where === 'custom') lsSet(CUSTOM_BALLS_KEY, customs);
+    else lsSet('bt_proposed_balls_v1', proposed);
     if (newName !== old) renameEverywhere(old, newName, withCustomBalls(csvRows).map(r => ballName(r)));
     return { ok: true, name: newName, renamed: newName !== old };
   }
@@ -1527,6 +1564,8 @@
     motionVector,
     getField,
     editBall,
+    parseInches,
+    layoutColumns,
     deleteBall,
     motionDistance,
     computeIndices,

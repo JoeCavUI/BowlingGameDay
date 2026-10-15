@@ -147,8 +147,82 @@
     // Single-pin spares: the most costly one (tries × misses) if it's below 80%.
     const lv = leaves(G, 60).filter(l => l.n >= 15 && !l.leave.includes('-')).map(l => ({ ...l, missed: l.n - l.made })).sort((a, b) => b.missed - a.missed)[0];
     if (lv && lv.pct < 80) { out.spare = lv; out.lines.push(`🎯 Spare to practice: the ${lv.leave}-pin. You've made ${lv.pct}% here (${lv.made} of ${lv.n}); missing about ${Math.round(lv.missed / G.length * 3 * 10) / 10} per 3-game night costs you roughly ${Math.round(lv.missed / G.length * 3 * 10)} pins a night.`); }
+    try { if (opts.rows) { out.cond = byCondition({ house, rows: opts.rows, bowler: opts.bowler, sessions: opts.sessions }); } } catch (_e) {}
     return out;
   }
+  // ---------- Lane conditions: what works for you when the lanes are fresh, transitioning, or burning ----------
+  // Fresh = game 1 (freshest oil of the night). Transition = games 2–3. Burn = Game Day games where your reads
+  // said the ball was hooking early / high (PinPal alone can't see burn). Looks at cover, core, layout, surface and
+  // the balls themselves, at this house when there's enough, otherwise across all houses.
+  const surfClass = (s) => { const t = String(s || '').toLowerCase(); if (/polish/.test(t)) return 'Polished'; const n = parseFloat(t); if (Number.isFinite(n)) return n >= 3000 ? '3000–4000 grit' : 'Sanded ≤2000'; if (/compound/.test(t)) return 'Compound'; return ''; };
+  function traitOf(row, bowler) {
+    const B = root.BT; if (!B || !row) return null;
+    const cov = String(B.ballCover(row) || '').toLowerCase();
+    const coreS = String(B.getField(row, ['Core'], '') || '').toLowerCase();
+    let layout = ''; try { layout = { short: 'Short pin', long: 'Long pin', control: 'Pin down', benchmark: 'Benchmark' }[B.motionVector(row, bowler || {}).layoutType] || ''; } catch (_e) {}
+    return {
+      cover: /ure/.test(cov) ? 'Urethane' : /pearl/.test(cov) ? 'Pearl' : /hybrid/.test(cov) ? 'Hybrid' : /solid/.test(cov) ? 'Solid' : '',
+      core: /asym/.test(coreS) ? 'Asym' : /sym/.test(coreS) ? 'Sym' : '',
+      layout, surface: surfClass(B.ballSurface(row)),
+    };
+  }
+  function byCondition(opts) {
+    opts = opts || {};
+    const h = load(); if (!h || !root.BT) return null;
+    const rows = (opts.rows || []).filter(r => root.BT.ballName(r) && !root.BT.isRetired(r));
+    if (!rows.length) return null;
+    const byName = {}; rows.forEach(r => { byName[root.BT.ballName(r)] = { row: r, t: traitOf(r, opts.bowler) }; });
+    const map = ballMap(rows.map(r => root.BT.ballName(r)));
+    const house = opts.house ? matchHouse(opts.house) : '';
+    const K = 6;
+    const LBL = { cover: 'Cover', core: 'Core', layout: 'Layout', surface: 'Surface' };
+    function analyze(games) {
+      const tg = games.map(g => { const ar = map[mainBall(g, h)]; return ar && byName[ar] ? { g, ar, t: byName[ar].t } : null; }).filter(Boolean);
+      if (tg.length < 15) return null;
+      const base = summary(tg.map(x => x.g)).avg;
+      const traits = [];
+      for (const tr of ['cover', 'core', 'layout', 'surface']) {
+        const m = {}; tg.forEach(x => { const k = x.t && x.t[tr]; if (k) (m[k] = m[k] || []).push(x.g); });
+        const gr = Object.entries(m).filter(([, gs]) => gs.length >= 6).map(([k, gs]) => { const s = summary(gs); return { k, n: gs.length, avg: s.avg, strike: s.strike }; }).sort((a, b) => b.avg - a.avg);
+        if (gr.length >= 2 && gr[0].avg - gr[gr.length - 1].avg >= 5) traits.push({ tr, label: LBL[tr], groups: gr });
+      }
+      const bm = {}; tg.forEach(x => { (bm[x.ar] = bm[x.ar] || []).push(x.g); });
+      const balls = Object.entries(bm).filter(([, gs]) => gs.length >= 5).map(([n, gs]) => { const s = summary(gs); return { n, games: gs.length, avg: s.avg, strike: s.strike, score: (s.avg * gs.length + base * K) / (gs.length + K) }; }).sort((a, b) => b.score - a.score).slice(0, 3);
+      return { n: tg.length, base, traits, balls };
+    }
+    const all = filter({});
+    const pick = (fn) => { const hg = house ? all.filter(g => g.h === house && fn(g)) : []; const a = analyze(hg); if (a) return { scope: house, ...a }; const b = analyze(all.filter(fn)); return b ? { scope: 'all houses', ...b } : null; };
+    const out = { house, fresh: pick(g => g.gn === 1), transition: pick(g => g.gn === 2 || g.gn === 3), burn: null };
+    // Burn from Game Day: games where 40%+ of tracked shots read early / high. Rated by strikes and pocket hits.
+    try {
+      const sess = (opts.sessions || []).filter(s => !house || matchHouse(s.house) === house || !s.house);
+      const games = [];
+      sess.forEach(s => { const by = {}; (s.shots || []).filter(x => x && x.type !== 'gameStart' && !x.isFill).forEach(x => { (by[x.gameNo || 1] = by[x.gameNo || 1] || []).push(x); }); Object.values(by).forEach(arr => games.push(arr)); });
+      const isEarly = (x) => (Array.isArray(x.obs) && x.obs.includes('Too early')) || /high|Missed left/i.test(x.pocket || '');
+      const isRead = (x) => isEarly(x) || (Array.isArray(x.obs) && x.obs.includes('Too long')) || /light|flush|Missed right/i.test(x.pocket || '');
+      const burnShots = games.filter(arr => { const r = arr.filter(isRead); return r.length >= 6 && r.filter(isEarly).length / r.length >= 0.4; }).flat();
+      if (burnShots.length >= 12) {
+        const strike = (x) => (x.leaves || []).includes('Strike') || x.leaveTag === 'Strike';
+        const bm = {}; burnShots.forEach(x => { if (x.ball) (bm[x.ball] = bm[x.ball] || []).push(x); });
+        const balls = Object.entries(bm).filter(([, a]) => a.length >= 6).map(([n, a]) => ({ n, shots: a.length, strike: Math.round(100 * a.filter(strike).length / a.length), early: Math.round(100 * a.filter(isEarly).length / a.length) })).sort((a, b) => (b.strike - b.early / 2) - (a.strike - a.early / 2)).slice(0, 3);
+        out.burn = { shots: burnShots.length, balls };
+      }
+    } catch (_e) {}
+    return out;
+  }
+  // One line per condition, for Coach and the Game Plan.
+  function conditionLines(bc) {
+    if (!bc) return [];
+    const t = (a) => a.traits.slice(0, 2).map(x => `${x.groups[0].k.toLowerCase()} ${x.groups[0].avg} vs ${x.groups[x.groups.length - 1].k.toLowerCase()} ${x.groups[x.groups.length - 1].avg}`).join('; ');
+    const b = (a) => a.balls.map(x => `${x.n} ${x.avg} (${x.games})`).join(', ');
+    const L = [];
+    if (bc.fresh) L.push(`🧪 <b>Fresh (game 1)</b>${bc.fresh.scope !== bc.house ? ' across all houses' : ''}: ${[t(bc.fresh), bc.fresh.balls.length ? 'Best: ' + b(bc.fresh) : ''].filter(Boolean).join('. ')}.`);
+    if (bc.transition) L.push(`🔄 <b>Transition (games 2–3)</b>${bc.transition.scope !== bc.house ? ' across all houses' : ''}: ${[t(bc.transition), bc.transition.balls.length ? 'Best: ' + b(bc.transition) : ''].filter(Boolean).join('. ')}.`);
+    if (bc.burn && bc.burn.balls.length) L.push(`🔥 <b>Burn (Game Day games reading early)</b>: ${bc.burn.balls.map(x => `${x.n} ${x.strike}% strikes, ${x.early}% early (${x.shots} shots)`).join(', ')}.`);
+    else L.push('🔥 <b>Burn</b>: not enough Game Day games yet. When the ball reads early, tap <b>Early</b> (or High / Left of pocket) and Coach will learn what gets you through it.');
+    return L;
+  }
+
   // One ball's record (arsenal name) across history.
   function ballRecord(arsenalName, arsenal) {
     const h = load(); if (!h) return null;
@@ -162,5 +236,5 @@
     return { names: pps, ...s, bestHouse: best ? `${best.key} (${best.avg}, ${best.n} games)` : '' };
   }
 
-  root.BTHistory = { KEY, load, save, clear, has, filter, summary, groupBy, leaves, DIMS, ballUsed, mainBall, ballMap, setBallMap, insights, matchHouse, ballRecord, norm };
+  root.BTHistory = { KEY, load, save, clear, has, filter, summary, groupBy, leaves, DIMS, ballUsed, mainBall, ballMap, setBallMap, insights, matchHouse, ballRecord, norm, byCondition, conditionLines };
 })(typeof window !== 'undefined' ? window : globalThis);

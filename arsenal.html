@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Arsenal</title>
-  <link rel="stylesheet" href="styles.css?v=88" />
+  <link rel="stylesheet" href="styles.css?v=89" />
 </head>
 <body data-page="arsenal">
   <div class="navlinks"></div>
@@ -91,7 +91,7 @@
       </div>
       <div class="hr-split"></div>
       <div class="setup-banner small" style="margin:0 0 10px">Roles compare how each ball rolls <b>for you</b> against fixed motion targets. With lower revs or more speed, every ball plays later and weaker, so you'll see more <b>Gap</b>s here even with a full bag. The <b>Barnes chart</b> above shows the same thing: your balls shift to the right (later).</div>
-      <div class="small dim" style="margin-bottom:10px">These roles now use a <b>two-layer fit</b>: your 6-box matrix family anchors what the ball naturally is, then the bowler-specific motion model checks how it rolls for <i>you</i>. That keeps results from overreacting to tuning alone. “Early / Control” means stronger and smoother. “Shape / Corner” means stronger with more downlane pop. A low % does not mean the ball is bad—only that it is farther from that specific role target. <b>Covered</b> means a strong fit, <b>Close</b> means usable, and <b>Gap</b> means the bag still lacks that motion.</div>
+      <div class="small dim" style="margin-bottom:10px">Each role's target is set <b>inside your own range</b> (your speed, revs and arsenal): "Early / Control" means the earliest, smoothest motion <i>you</i> can throw, "Burn / Friction" your cleanest and latest. The % is how close a ball comes to that job for you. “Early / Control” means stronger and smoother. “Shape / Corner” means stronger with more downlane pop. A low % does not mean the ball is bad—only that it is farther from that specific role target. <b>Covered</b> means a strong fit, <b>Close</b> means usable, and <b>Gap</b> means the bag still lacks that motion.</div>
       <div id="rolePlanner"></div>
       <div id="roleSuggestion" style="margin-top:12px"></div>
     </div>
@@ -196,6 +196,12 @@
           <div class="small dim">Pin buffer</div>
           <input class="input" id="wiPinBuffer" placeholder="e.g., 2.0" />
         </div>
+      </div>
+      <div class="small dim" style="margin-top:8px">Dual angle (optional, degrees)</div>
+      <div class="grid-3" style="gap:10px;margin-top:6px">
+        <div><div class="small dim">Drill angle</div><input class="input" id="wiDrill" inputmode="decimal" placeholder="e.g., 50" /></div>
+        <div><div class="small dim">VAL angle</div><input class="input" id="wiValAngle" inputmode="decimal" placeholder="e.g., 40" /></div>
+        <div class="small dim" style="align-self:end">Inches can be 4.5 or 4 1/2.</div>
       </div>
 
       <div class="hr-split" style="margin-top:14px"></div>
@@ -320,11 +326,11 @@
     </div>
   </div>
 
-  <script src="app.js?v=88"></script>
-  <script src="coach.js?v=88"></script>
-  <script src="chart.js?v=88"></script>
-  <script src="pinpal.js?v=88"></script>
-  <script src="history.js?v=88"></script>
+  <script src="app.js?v=89"></script>
+  <script src="coach.js?v=89"></script>
+  <script src="chart.js?v=89"></script>
+  <script src="pinpal.js?v=89"></script>
+  <script src="history.js?v=89"></script>
   <script>
     BT.renderNav('arsenal');
 
@@ -577,9 +583,43 @@
       return ROLE_DEFS.find(r => r.id === roleId) || ROLE_DEFS[0] || null;
     }
 
+    // Role targets are set INSIDE the bowler's own range: the generic targets assume a higher-rev bowler, so for a
+    // speed-dominant player every ball looked like a gap. "Early / Control" = the earliest, smoothest motion YOU
+    // can throw with what you own; "Burn / Friction" = your cleanest, latest. Real gaps still show (nothing near).
+    const GEN = (() => { const g = {}; ['hook', 'length', 'backend'].forEach(k => { const v = ROLE_DEFS.map(r => r.target[k]); g[k] = [Math.min(...v), Math.max(...v)]; }); return g; })();
+    let _rangeKey = '', _range = null;
+    function personalRange() {
+      const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
+      const rows = viewRowsAll().filter(r => !r.__proposed && !BT.isRetired(r));
+      const key = rows.map(r => BT.ballName(r)).join('|') + JSON.stringify(bowler) + JSON.stringify(BT.ballTweaksAll ? BT.ballTweaksAll() : {});
+      if (key === _rangeKey && _range) return _range;
+      const V = rows.map(r => BT.motionVector(r, bowler));
+      _rangeKey = key; _range = null;
+      if (V.length >= 4) { _range = {}; ['hook', 'length', 'backend'].forEach(k => { const v = V.map(x => x[k]).sort((a, b) => a - b); _range[k] = [v[0], v[v.length - 1]]; }); }
+      return _range;
+    }
+    function personalRole(role) {
+      const R = personalRange(); if (!R || !role) return role;
+      const t = {}; ['hook', 'length', 'backend'].forEach(k => { const [g0, g1] = GEN[k], [r0, r1] = R[k]; const f = g1 > g0 ? (role.target[k] - g0) / (g1 - g0) : 0.5; t[k] = r0 + (0.1 + 0.8 * f) * Math.max(0.05, r1 - r0); });
+      return Object.assign({}, role, { target: t, genericTarget: role.target });
+    }
     function safeScoreRole(role, row, vec) {
       if (!role || !row || !vec) return Infinity;
-      return BT.scoreEquipmentRole ? BT.scoreEquipmentRole(role, row, vec) : BT.motionDistance(role.target, vec);
+      const pr = personalRole(role);
+      return BT.scoreEquipmentRole ? BT.scoreEquipmentRole(pr, row, vec) : BT.motionDistance(pr.target, vec);
+    }
+    // Control check: a ball that's clean through the front (length in your top third) AND smooth at the back
+    // (backend in your bottom half): the one for early-friction nights, when the left has opened up.
+    function controlCheckHTML() {
+      const R = personalRange(); if (!R) return '';
+      const esc = (t) => String(t ?? '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+      const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
+      const rows = viewRowsAll().filter(r => !r.__proposed && !BT.isRetired(r));
+      const L = (v) => (v - R.length[0]) / Math.max(0.01, R.length[1] - R.length[0]), B = (v) => (v - R.backend[0]) / Math.max(0.01, R.backend[1] - R.backend[0]);
+      const c = rows.map(r => { const v = BT.motionVector(r, bowler); return { n: BT.ballName(r), l: L(v.length), b: B(v.backend), s: BT.ballSurface(r) }; }).filter(x => x.l >= 0.6 && x.b <= 0.5).sort((x, y) => (y.l - y.b) - (x.l - x.b));
+      return `<div class="list-item" style="margin-bottom:10px;border-color:rgba(99,230,210,.35)"><b>🛡️ Control check: early-friction nights</b>
+        <div class="small dim" style="margin-top:4px">When the ball picks up early (the left has opened up), you want a ball that gets <b>through the front</b> without burning up and stays <b>smooth at the back</b> instead of snapping off the dry.</div>
+        <div class="small" style="margin-top:6px">${c.length ? `Your best for that: <b>${c.slice(0, 3).map(x => esc(x.n)).join(', ')}</b>.` : '<b>❌ Gap:</b> none of your balls is both clean through the front and smooth at the back for you. That\'s the ball to talk to your pro shop about (a smoother-responding ball, or more surface on a clean ball\'s cover so it reads more evenly).'}</div></div>`;
     }
 
     function vectorWithManualTune(row, opts = {}) {
@@ -695,7 +735,7 @@
           ${cell('VLS (pin-to-PAP × PSA-to-PAP × pin buffer)', `${inch(vPin)} × ${inch(vPsa)} × ${inch(vBuf)}`, true)}${cell('Dual angle (drill × pin-to-PAP × VAL)', `${deg(drill)} × ${inch(pin2)} × ${deg(valA)}`, true)}
           ${cell('Total angle', deg(tot))}${cell('Layout type', esc(kind))}${cell('Pin', esc(g(['Pin Location', 'PinLocation']) || '—'))}
         </div>
-        ${vPsa ? '' : '<div class="small dim" style="margin-top:6px">Re-upload your ball spreadsheet to see the full VLS numbers.</div>'}
+        ${g(['PAP#1']) || !g(['PAP']) ? '' : '<div class="small dim" style="margin-top:6px">Only pin-to-PAP is on file. Tap ✏️ Edit to add PSA-to-PAP and pin buffer.</div>'}
         ${chart ? `<div class="small" style="margin-top:6px">📊 Barnes chart: <b>${esc(chart)}</b></div>` : ''}`;
       const eb = BT.$('#tuneEdit'); if (eb) { eb.style.display = ''; eb.onclick = () => { eb.style.display = 'none'; renderTuneEdit(nm, row); }; }
     }
@@ -741,6 +781,7 @@
         const cache = BT.lsGet(BT.KEYS.CSV_CACHE, null);
         allRows = ((cache && cache.rows) || []).filter(x => !x.__custom);
         customRows = BT.lsGet('bt_custom_balls_v1', []); if (!Array.isArray(customRows)) customRows = [];
+        try { const pr = BT.lsGet('bt_proposed_balls_v1', []); if (Array.isArray(pr)) proposedRows = pr; } catch (_e) {}
         setStatus(); applyFilter(); try { renderArsenalCheck(); } catch (_e) {}
         openTune(r.name);
         const m = BT.$('#tuneSpecs'); if (m) m.insertAdjacentHTML('afterbegin', `<div class="small" style="color:var(--accent);margin-bottom:6px">✓ Saved${r.renamed ? `: renamed from ${esc(nm)}` : ''}.</div>`);
@@ -1024,7 +1065,8 @@
         return;
       }
       const sig = rowsSignature(rows);
-      el.rolePlanner.innerHTML = out.map(({ role, ranked }) => {
+      el.rolePlanner.innerHTML = controlCheckHTML() + out.map(({ role: role0, ranked }) => {
+        const role = personalRole(role0);
         const best = ranked[0];
         const tunedKey = `${sig}__${role.id}`;
         const bestTuned = plannerTuneSummaryCache.get(tunedKey) || null;
@@ -1056,7 +1098,7 @@
               <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${picks}</div>
               ${tuneLine}
             </div>
-            <div class="small dim" style="max-width:280px;text-align:right">Target motion: H ${Math.round(role.target.hook*100)} • L ${Math.round(role.target.length*100)} • B ${Math.round(role.target.backend*100)}</div>
+            <div class="small dim" style="max-width:280px;text-align:right">Target for you: H ${Math.round(role.target.hook*100)} • L ${Math.round(role.target.length*100)} • B ${Math.round(role.target.backend*100)}</div>
           </div>
         </div>`;
       }).join('');
@@ -1510,11 +1552,12 @@ function saveWhatIfBall() {
     'PSA': psa ? String(parseFloat(psa)) : '',
   };
 
+  const prob = layoutFormProblem(); if (prob) { alert(prob); return; }
   const layout = layoutFromForm();
   const out = buildWhatIfReview(tmpRow, layout);
 
-  const row = Object.assign({}, tmpRow, {
-    '__custom': '1',
+  const row = Object.assign({}, tmpRow, BT.layoutColumns(layout), {
+    '__custom': '1', '__layoutMigrated': '1',
     '__layout': JSON.stringify(layout || {}),
     '__review': out?.review || '',
   });
@@ -1536,15 +1579,24 @@ function numOrNull(v) {
 }
 
 function layoutFromForm() {
+  const inch = (id) => { const v = BT.parseInches(BT.$(id)?.value); return Number.isFinite(v) ? v : null; };
   return {
-    pinToPAP: numOrNull(BT.$('#wiPinToPAP')?.value),
-    psaToPAP: numOrNull(BT.$('#wiPSAToPAP')?.value),
-    pinBuffer: numOrNull(BT.$('#wiPinBuffer')?.value),
+    pinToPAP: inch('#wiPinToPAP'),
+    psaToPAP: inch('#wiPSAToPAP'),
+    pinBuffer: inch('#wiPinBuffer'),
+    drill: numOrNull(BT.$('#wiDrill')?.value),
+    val: numOrNull(BT.$('#wiValAngle')?.value),
   };
+}
+// Typed something that isn't a number in a layout box? Say so instead of silently dropping it.
+function layoutFormProblem() {
+  const bad = [['#wiPinToPAP', 'Pin to PAP'], ['#wiPSAToPAP', 'PSA to PAP'], ['#wiPinBuffer', 'Pin buffer']].filter(([id]) => Number.isNaN(BT.parseInches(BT.$(id)?.value))).map(x => x[1]);
+  [['#wiDrill', 'Drill angle'], ['#wiValAngle', 'VAL angle']].forEach(([id, l]) => { const v = String(BT.$(id)?.value || '').trim(); if (v && !Number.isFinite(parseFloat(v))) bad.push(l); });
+  return bad.length ? `Check ${bad.join(', ')}: use a number like 4.5 or 4 1/2.` : '';
 }
 
 function clearWhatIfForm() {
-  ['#wiBrand','#wiName','#wiCover','#wiCore','#wiSurface','#wiRG','#wiDiff','#wiPSA','#wiPinToPAP','#wiPSAToPAP','#wiPinBuffer'].forEach(sel => {
+  ['#wiBrand','#wiName','#wiCover','#wiCore','#wiSurface','#wiRG','#wiDiff','#wiPSA','#wiPinToPAP','#wiPSAToPAP','#wiPinBuffer','#wiDrill','#wiValAngle'].forEach(sel => {
     const el = BT.$(sel);
     if (!el) return;
     if (el.tagName === 'SELECT') el.value = '';
@@ -1730,6 +1782,8 @@ function removeRowByName(name, type) {
         'PSA': psa ? String(parseFloat(psa)) : '',
         '__proposed': '1',
       };
+      { const prob = layoutFormProblem(); if (prob) { alert(prob); return; } }
+      Object.assign(row, BT.layoutColumns(layoutFromForm()), { '__layoutMigrated': '1' });
 
       proposedRows.push(row);
       BT.lsSet('bt_proposed_balls_v1', proposedRows);

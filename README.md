@@ -58,6 +58,12 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v89-beta26: reading early vs weak, lane conditions, roles scaled to you
+- **Fix: Add a ball → Save to Arsenal now saves the layout** (pin-to-PAP, PSA-to-PAP, pin buffer; new optional drill / VAL angles; "4 1/2" accepted) into the real layout columns, so ratings, the Barnes chart, Ball details and Edit all see it. Balls added earlier get their layout back automatically. Edit also works on what-if balls.
+- **Game Plan, "What the lanes are telling you":** weak-hit leaves no longer automatically mean "more ball". Weak AND high leaves rising together (this season vs before, or here vs everywhere) = the ball reads early and burns up → start smoother and more controlled, change balls before chasing left (players inside you may have opened the left). Weak alone is called ambiguous unless Game Day reads (Early / Long, High / Light) say which. If/then and Focus follow the same read.
+- **By lane condition (Game Plan + Coach):** fresh (game 1) and transition (games 2–3) compare your cover, core, layout and surface results and name your best balls, at the house or across all houses when there aren't enough games; burn comes from Game Day games where reads say early/high. Coach adds the fresh line to the starting plan and the transition picks as game 2 starts.
+- **Role Planner scaled to you:** role targets sit inside your own hook / length / backend range (they were set for a higher-rev bowler, so everything looked like a gap). New **🛡️ Control check** for early-friction nights: balls that are clean through the front and smooth at the back, or a clear gap.
+
 ## Changes in v88-beta25: 🗑 delete a ball
 - **Arsenal → tap a ball → 🗑 Delete** (next to Retire). Removes one entry: a double-entered ball deletes one copy and the other keeps its sliders, bags and history. A hand-added copy goes first.
 - When the last copy is deleted it also comes out of saved bags, sliders, care and PinPal matches; Game Day shots thrown with it stay in history. The confirm explains Retire (ball you no longer throw) vs Delete (a mistake).

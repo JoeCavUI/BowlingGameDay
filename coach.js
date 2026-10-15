@@ -964,6 +964,8 @@
         const gNow = C[C.length - 1].gameNo || 1;
         const inGame = C.filter(c => c.gameNo === gNow).length;
         const g1 = hist.byGame[1], gN = hist.byGame[gNow];
+        // 🔄 Entering game 2: what has worked for you here once the lanes start to change
+        try { const t = hist.cond && hist.cond.transition; if (gNow === 2 && inGame <= 2 && t && t.balls && t.balls.length) out.notes.push(`🔄 Transition: in games 2–3${t.scope !== hist.cond.house ? ' (all houses)' : ' here'} your best have been ${t.balls.map(x => `${x.n} ${x.avg}`).join(', ')}. When it starts reading early, switch to a smoother ball before you chase it left.`); } catch (_e) {}
         if (gNow >= 2 && inGame <= 2 && g1 != null && gN != null && gN - g1 <= -6) out.notes.unshift(`📚 History: at ${hist.house} your game ${gNow} averages ${Math.round(g1 - gN)} pins below game 1 (${gN} vs ${g1}). The lanes usually change here by now: watch the first good shots closely and don't wait to move.`);
       }
       // 📐 Alignment: is the line going through the exit point? Only speak up before any move,
@@ -1032,6 +1034,8 @@
       if (!pat) lines.push('🧭 Pick tonight\'s oil pattern so Coach can check whether your ball and your spot fit the lane.');
       // 📚 What your PinPal history says about this house, these lanes and this bag
       if (ctx.history && ctx.history.lines && ctx.history.lines.length) lines.push(...ctx.history.lines.slice(0, 6));
+      // 🧪 What has worked for you here on fresh lanes (game 1)
+      try { const f = ctx.history && ctx.history.cond && ctx.history.cond.fresh; if (f && f.balls && f.balls.length) lines.push(`🧪 Fresh lanes (game 1)${f.scope !== ctx.history.cond.house ? ', all houses' : ' here'}: your best have been ${f.balls.map(x => `${x.n} ${x.avg}`).join(', ')}.`); } catch (_e) {}
       if (pat && pat.volumeClass === 'light') lines.push('Light oil: expect the fronts to dry up early. Watch for high hits by game 2.');
       if (pat && pat.volumeClass === 'heavy') lines.push('Heavy oil: the lane should change slowly. Don\'t chase it early.');
       if (prof.dom < -0.3 && bt.length < 2) lines.push('As a speed-dominant player, the ball may read late. Favor earlier-reading equipment if it skids.');
