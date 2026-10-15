@@ -499,13 +499,13 @@
     const nm = (b) => b.name + (b.lowConf ? ' (rough estimate: specs missing)' : '');
     const by = (r) => list.filter(b => b.rel === r).sort((a, b) => a.t - b.t);
     const E = by('early'), R = by('right'), L = by('late');
-    if (L.length === list.length) return `everything in tonight's bag reads late for you (earliest: ${nm(L[0])})`;
-    if (E.length === list.length) return `everything in tonight's bag reads early for you (latest: ${nm(E[E.length - 1])})`;
+    if (L.length === list.length) return `on paper, everything in tonight's bag rates late for you (earliest: ${nm(L[0])}); trust what you see in practice`;
+    if (E.length === list.length) return `on paper, everything in tonight's bag rates early for you (latest: ${nm(E[E.length - 1])}); trust what you see in practice`;
     const parts = [];
     if (R.length) parts.push(`${R.map(nm).join(', ')} ${R.length > 1 ? 'read' : 'reads'} about right`);
     if (E.length) parts.push(`${E.map(nm).join(', ')} ${E.length > 1 ? 'read' : 'reads'} early`);
     if (L.length) parts.push(`${L.map(nm).join(', ')} ${L.length > 1 ? 'read' : 'reads'} late`);
-    return parts.join('; ');
+    return 'on paper, ' + parts.join('; ');
   }
   // What the lane is saying about timing, per situation.
   const LANE_TIMING = { early: 'early', carryWeak: 'early', late: 'late', carryStrong: 'late' };
@@ -1016,7 +1016,9 @@
     const trustedAll = C.filter(c => c.execution !== 'poor');
     if (C.length < 3) {
       res.status = 'start';
-      const sb = startingBall(ctx, prof, pat);
+      // Same first ball as tonight's Game Plan when it's in the bag (history-based pick); else the motion pick.
+      const planPick = ctx.plan && ctx.plan.firstBall && (ctx.setBalls || []).some(b => b.name === ctx.plan.firstBall) ? ctx.plan.firstBall : '';
+      const sb = planPick || startingBall(ctx, prof, pat);
       const lines = [];
       if (pat && pat.length) {
         const ex = exitBoardFor(pat);
@@ -1031,6 +1033,8 @@
         if (bt.every(b => b.rel === 'early')) lines.push('If it hooks early, add a touch of speed or move in toward the oil before you go hunting for a different ball.');
       }
       else if (sb) lines.push(`🧭 Right ball: start with ${sb}.`);
+      if (planPick) lines.push(`📋 Same as your Game Plan: ${planPick} is the first-ball pick for ${ctx.plan.house || 'this house'} (your record there, weighted for sample size and recent form). Confirm it in practice.`);
+      else if (ctx.plan && ctx.plan.firstBall && (ctx.setBalls || []).length) lines.push(`📋 Your Game Plan's first pick for ${ctx.plan.house || 'this house'} is ${ctx.plan.firstBall}, but it isn't in tonight's bag.`);
       if (!pat) lines.push('🧭 Pick tonight\'s oil pattern so Coach can check whether your ball and your spot fit the lane.');
       // 📚 What your PinPal history says about this house, these lanes and this bag
       if (ctx.history && ctx.history.lines && ctx.history.lines.length) lines.push(...ctx.history.lines.slice(0, 6));

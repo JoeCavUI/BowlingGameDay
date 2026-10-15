@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Arsenal</title>
-  <link rel="stylesheet" href="styles.css?v=95" />
+  <link rel="stylesheet" href="styles.css?v=96" />
 </head>
 <body data-page="arsenal">
   <div class="navlinks"></div>
@@ -75,6 +75,17 @@
           <div class="small">Shows the best matches for each coach role from the balls currently visible on this page. Use the filter first if you want to plan from a subset.</div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <div style="width:100%">
+            <div class="small" style="margin-bottom:4px"><b>Where are you bowling?</b> Coach picks the same bag as your Game Plan and Game Day for this house, lanes, league and pattern.</div>
+            <div class="pl-row" style="margin-top:0">
+              <div><label class="small" for="ctxHouse">House</label><input class="input" id="ctxHouse" list="ctxHouseList" placeholder="e.g. Shelby" autocomplete="off" /><datalist id="ctxHouseList"></datalist></div>
+              <div><label class="small" for="ctxLanes">Lanes</label><input class="input" id="ctxLanes" inputmode="numeric" placeholder="1314 = 13 & 14" /></div>
+            </div>
+            <div class="pl-row">
+              <div><label class="small" for="ctxLeague">League</label><select class="input" id="ctxLeague"></select></div>
+              <div><label class="small" for="ctxPattern">Pattern</label><select class="input" id="ctxPattern"></select></div>
+            </div>
+          </div>
           <label class="small" for="plannerCount"><b>How many balls in your bag?</b></label>
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
             <button class="btn secondary" data-bagsize="2">2</button>
@@ -90,7 +101,7 @@
         </div>
       </div>
       <div class="hr-split"></div>
-      <div class="setup-banner small" style="margin:0 0 10px">Roles compare how each ball rolls <b>for you</b> against fixed motion targets. With lower revs or more speed, every ball plays later and weaker, so you'll see more <b>Gap</b>s here even with a full bag. The <b>Barnes chart</b> above shows the same thing: your balls shift to the right (later).</div>
+      <div class="setup-banner small" style="margin:0 0 10px"><b>Suggest my bag</b> uses the same pick as your Game Plan and Game Day Coach: your record at that house and pair (weighted for sample size and recent form), your cover / core / layout patterns there, and balls spread from earlier to later. With no history for the house, it falls back to the motion roles below.</div>
       <div class="small dim" style="margin-bottom:10px">Each role's target is set <b>inside your own range</b> (your speed, revs and arsenal): "Early / Control" means the earliest, smoothest motion <i>you</i> can throw, "Burn / Friction" your cleanest and latest. The % is how close a ball comes to that job for you. “Early / Control” means stronger and smoother. “Shape / Corner” means stronger with more downlane pop. A low % does not mean the ball is bad—only that it is farther from that specific role target. <b>Covered</b> means a strong fit, <b>Close</b> means usable, and <b>Gap</b> means the bag still lacks that motion.</div>
       <div id="rolePlanner"></div>
       <div id="roleSuggestion" style="margin-top:12px"></div>
@@ -339,11 +350,12 @@
     </div>
   </div>
 
-  <script src="app.js?v=95"></script>
-  <script src="coach.js?v=95"></script>
-  <script src="chart.js?v=95"></script>
-  <script src="pinpal.js?v=95"></script>
-  <script src="history.js?v=95"></script>
+  <script src="app.js?v=96"></script>
+  <script src="coach.js?v=96"></script>
+  <script src="chart.js?v=96"></script>
+  <script src="pinpal.js?v=96"></script>
+  <script src="history.js?v=96"></script>
+  <script src="plan.js?v=96"></script>
   <script>
     BT.renderNav('arsenal');
 
@@ -1588,10 +1600,69 @@
       const mineOnly = !!(BT.$('#plannerMineOnly') && BT.$('#plannerMineOnly').checked);
       return viewRows().filter(r => matchesFilter(r, el.filter.value.trim())).filter(r => !mineOnly || r.__custom);
     }
+    // ---- Where you're bowling (shared with Game Plan / Game Day) ----
+    function ctxInit() {
+      try {
+        const esc = (t) => String(t ?? '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+        if (window.BTPlan) BT.$('#ctxHouseList').innerHTML = BTPlan.houseOptions().map(h => `<option value="${esc(h.name)}">${h.n ? h.n + ' games' : ''}</option>`).join('');
+        const lg = BT.getLeagues ? BT.getLeagues() : [];
+        BT.$('#ctxLeague').innerHTML = '<option value="">—</option>' + lg.map(l => `<option value="${esc(l.id)}">${esc(l.name)}${l.houseId ? ' · ' + esc(l.houseId) : ''}</option>`).join('');
+        const pats = BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || [];
+        BT.$('#ctxPattern').innerHTML = '<option value="">House shot / not sure</option>' + pats.map(p => `<option value="${esc(p.name)}">${esc(p.name)}${p.length ? ` (${p.length} ft)` : ''}</option>`).join('');
+        const last = BT.lsGet('bt_plan_last_v1', null) || {}, tn = BT.lsGet('bt_gameday_tonight_v1', null) || {};
+        BT.$('#ctxHouse').value = tn.house || last.house || '';
+        BT.$('#ctxLanes').value = tn.lanes || last.lanes || '';
+        if (tn.league && lg.some(l => l.id === tn.league)) BT.$('#ctxLeague').value = tn.league;
+        const pn = tn.pattern || last.patternName || ''; if (pn && pats.some(p => p.name === pn)) BT.$('#ctxPattern').value = pn;
+        BT.$('#ctxLeague').addEventListener('change', () => { const l = lg.find(x => x.id === BT.$('#ctxLeague').value); if (l && l.houseId) BT.$('#ctxHouse').value = l.houseId; });
+      } catch (e) { console.error(e); }
+    }
+    ctxInit();
+    function ctxValue() {
+      const lgId = BT.$('#ctxLeague') ? BT.$('#ctxLeague').value : '';
+      const lg = lgId && BT.getLeagueById ? BT.getLeagueById(lgId) : null;
+      return { house: (BT.$('#ctxHouse')?.value || '').trim(), lanes: (BT.$('#ctxLanes')?.value || '').trim(), league: lg ? lg.name : '', patternName: BT.$('#ctxPattern')?.value || '' };
+    }
+    // Same bag as the Game Plan for this house / lanes / league / pattern. Returns true when it could.
+    function suggestFromPlan(rows, n) {
+      const cx = ctxValue(); if (!cx.house || !window.BTPlan || !window.BTHistory || !BTHistory.has()) return false;
+      const res = BTPlan.forContext(Object.assign({}, cx, { count: Math.min(6, n) }));
+      if (!res || !res.recBag || !res.recBag.length) return false;
+      const esc = (t) => String(t ?? '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+      const byName = {}; rows.forEach(r => { byName[BT.ballName(r)] = r; });
+      const chosen = res.recBag.filter(nm => byName[nm]).map(nm => ({ name: nm, row: byName[nm] }));
+      const roleMap = {}; chosen.forEach(ch => { roleMap[ch.name] = [res.recRoles && res.recRoles[ch.name] ? res.recRoles[ch.name] : 'Game Plan pick']; });
+      // More than 6 asked for: fill with the balls that add the most motion separation.
+      const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
+      const all = rows.map(r => ({ row: r, name: BT.ballName(r), vec: BT.motionVector(r, bowler) })).filter(b => b.name);
+      const used = new Set(chosen.map(x => x.name));
+      while (chosen.length < n) {
+        let best = null;
+        for (const cand of all) { if (used.has(cand.name)) continue; let d = Infinity; for (const cur of chosen) d = Math.min(d, BT.motionDistance(cand.vec, BT.motionVector(cur.row, bowler))); if (!best || d > best.d) best = { ...cand, d }; }
+        if (!best) break; used.add(best.name); chosen.push(best); roleMap[best.name] = ['Extra: adds motion separation'];
+      }
+      recommendedNames = chosen.map(x => x.name); roleSelections = roleMap;
+      lastSuggestion = { count: chosen.length, chosen: chosen.map(x => ({ name: x.name, roles: roleMap[x.name] || [], whatIf: !!(x.row && x.row.__proposed) })) };
+      const sec = (res.sections || []).find(s => /bag for/i.test(s.h));
+      const ball = (res.sections || []).find(s => s.h === 'Ball');
+      const why = [...(ball ? ball.items.slice(0, 1) : []), ...(sec ? sec.items.filter(t => !/^<b>(Start with|Earlier|Later)/.test(t) && !/The bag \(Early/.test(t) && !/Plus your spare/.test(t)).slice(0, 4) : [])];
+      const where = [res.house, res.sub && res.sub[0] && /^Lanes/.test(res.sub[0]) ? res.sub[0] : '', cx.league, cx.patternName].filter(Boolean).map(esc).join(' · ');
+      const body = chosen.map((x, i) => `<div class="list-item" style="margin-bottom:8px"><b>${i + 1}. ${esc(x.name)}</b><div class="small dim">${esc((roleMap[x.name] || []).join(' • '))}</div></div>`).join('');
+      el.roleSuggestion.innerHTML = `<div class="panel" style="padding:12px;background:#111"><div style="font-weight:900">${chosen.length}-ball bag: ${where}</div><div class="small dim" style="margin-top:4px">Same pick as your Game Plan and Game Day for this house and pair.</div><ul class="small" style="margin:8px 0 0;padding-left:18px">${why.map(t => `<li>${t}</li>`).join('')}</ul><div style="margin-top:10px">${body}</div>${renderSaveBagBox(chosen.length)}</div>`;
+      const bn = BT.$('#bagName'); if (bn) bn.value = `${res.house.replace(/ Lanes?$/i, '')}${res.sub && /^Lanes/.test(res.sub[0] || '') ? ' ' + res.sub[0].replace('Lanes ', '') : ''} bag`;
+      wireSaveBagBox();
+      try { BT.lsSet('bt_plan_last_v1', Object.assign(BT.lsGet('bt_plan_last_v1', {}) || {}, cx, { count: Math.min(6, n) })); } catch (_e) {}
+      return true;
+    }
+
     function runPlanner(n) {
       const rows = plannerRows();
       if (!rows.length) { alert('No balls to pick from. Add your balls with "+ Add a ball", or untick "Only balls I added".'); return; }
-      buildSuggestedSet(rows, n);
+      if (!suggestFromPlan(rows, n)) {
+        buildSuggestedSet(rows, n);
+        const cx = ctxValue();
+        if (el.roleSuggestion && cx.house) el.roleSuggestion.insertAdjacentHTML('afterbegin', '<div class="small dim" style="margin-bottom:6px">No history for that house yet, so this bag comes from the motion roles.</div>');
+      }
       applyFilter();
       const box = BT.$('#saveBagBox'); if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }

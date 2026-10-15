@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=95" />
+  <link rel="stylesheet" href="styles.css?v=96" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -247,10 +247,12 @@
     </div>
   </div>
 
-  <script src="app.js?v=95"></script>
-  <script src="coach.js?v=95"></script>
-  <script src="pinpal.js?v=95"></script>
-  <script src="history.js?v=95"></script>
+  <script src="app.js?v=96"></script>
+  <script src="coach.js?v=96"></script>
+  <script src="pinpal.js?v=96"></script>
+  <script src="history.js?v=96"></script>
+  <script src="chart.js?v=96"></script>
+  <script src="plan.js?v=96"></script>
   <script>
     BT.renderNav('gameday');
 
@@ -1683,6 +1685,15 @@ function saveCurrentSessionDraft() {
       return _hist;
     }
 
+    // Tonight's Game Plan (same house, lanes, league, pattern and bag): Coach opens with the same pick.
+    function planFor() {
+      try {
+        if (!window.BTPlan || !el.house.value) return null;
+        const p = BTPlan.forContext({ house: el.house.value, lanes: el.lanes.value, league: leagueNameById(el.league.value || ''), setName: el.set.value, patternName: el.pattern.value, count: 0 });
+        return p && p.firstBall ? { firstBall: p.firstBall, lean: p.lean, house: p.house } : null;
+      } catch (_e) { return null; }
+    }
+
     function coachContext() {
       const chron = sessionShots.slice().reverse();
       const sets = BT.lsGet(BT.KEYS.ARSENAL_SETS, []);
@@ -1698,6 +1709,7 @@ function saveCurrentSessionDraft() {
         currentBall: el.ball ? el.ball.value : '',
         line: { feet: el.feet.value, arrows: el.arrows.value, bp: el.bp.value },
         history: historyFor(),
+        plan: planFor(),
         motion: { vector: (r, b) => BT.motionVector(r, b), distance: (a, b) => BT.motionDistance(a, b) },
         ballInfo: (r) => ({ cover: BT.ballCover(r), grit: BT.surfaceToGrit(BT.ballSurface(r)), asym: /asym/i.test(BT.ballCore(r) || ''), known: !!(String(BT.ballSurface(r) || '').trim() && BT.ballRG(r) && BT.ballDiff(r)) }),
         matrix: (r) => BT.matrixCellForRow(r),

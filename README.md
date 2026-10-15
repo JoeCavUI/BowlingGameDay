@@ -58,6 +58,13 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v96-beta33: one bag answer everywhere
+- **Game Plan, Arsenal "Suggest my bag" and Game Day Coach now give the same pick** for the same house, lanes, league, pattern and bag (shared `BTPlan.forContext`).
+- **Arsenal → Role Planner → Suggest my bag** asks where you're bowling (house, lanes, league, pattern; prefilled from Game Day's Tonight / your last plan; picking a league fills its house). With history for that house it suggests the Game Plan's bag (start ball, earlier ball, later ball, with the reasons); with none it falls back to the motion roles and says so. More than 6 balls: extra slots add motion separation. "Use this bag on Game Day?" names the bag for the house and pair.
+- **Game Day Coach** opens with the Game Plan's first ball when it's in tonight's bag ("📋 Same as your Game Plan…"), or says the plan's pick isn't in the bag.
+- League now picks the matching PinPal league for "This season" in the Game Plan.
+- Coach's bag-timing line says **"on paper"** and "trust what you see in practice".
+
 ## Changes in v95-beta32: Game Plan corrections (from the Shelby 13 & 14 review)
 - Weak + high leaves rising together is presented as a **possibility** (early read and lost energy) alongside launch direction, speed / release changes and over/under lanes; leaves can't show where skid ends and roll begins. Suggestions are "worth testing in practice", with alignment checked first.
 - First ball is "Top pick on **sample-weighted** record" (more games and recent form outweigh a high average on a few games), with a note that records mix seasons, surfaces, lanes and form. The bag recommendation now starts with the same first ball.

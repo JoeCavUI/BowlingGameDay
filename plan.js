@@ -119,7 +119,8 @@
     ordered.forEach(p => items.push(`<b>${role(p)}: ${esc(p.n)}</b> · ${[p.t.cover, p.t.core && p.t.core + ' core', p.t.layout, p.t.box].filter(Boolean).map(esc).join(', ')}. ${why(p)}.`));
     if (picked.length < count) items.push(`Only ${picked.length} of your balls read far enough apart to be worth bringing; more would overlap.`);
     items.push('Plus your spare ball.');
-    return { items, picked: ordered.map(p => p.n), first: first.n };
+    const roles = {}; ordered.forEach(q => { roles[q.n] = role(q); });
+    return { items, picked: ordered.map(p => p.n), first: first.n, roles };
   }
 
   function sets() { try { return BT().lsGet(BT().KEYS.ARSENAL_SETS, []) || []; } catch (_e) { return []; } }
@@ -179,8 +180,11 @@
       items.push(`${rank ? `${esc(house)} is your <b>${rank}</b> regular house: ` : `${esc(house)}: `}<b>${S.avg}</b> average over ${S.n} games, ${S.strike}% strikes, ${S.spare}% spares${others.length ? ` (${others.map(o => `${esc(o.key.replace(/ Lanes?$/, ''))} ${o.avg}`).join(', ')})` : ''}.`);
       // This season = the latest league here (6+ games), else the last 12 months.
       const latest = G.slice().sort((a, b) => (a.d < b.d ? 1 : -1))[0];
-      let season = latest && latest.lg ? G.filter(g => g.lg === latest.lg) : [];
-      let seasonLabel = latest && latest.lg ? `This season (${esc(latest.lg)})` : '';
+      const lgKey = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const wantLg = opts.league ? [...new Set(G.map(g => g.lg))].filter(l => l && (lgKey(l).includes(lgKey(opts.league).slice(0, 8)) || lgKey(opts.league).includes(lgKey(l).slice(0, 8)))).sort((a, b2) => { const la = G.filter(g => g.lg === a).map(g => g.d).sort().pop(), lb = G.filter(g => g.lg === b2).map(g => g.d).sort().pop(); return la < lb ? 1 : -1; })[0] : '';
+      const seasonLg = wantLg || (latest && latest.lg) || '';
+      let season = seasonLg ? G.filter(g => g.lg === seasonLg) : [];
+      let seasonLabel = seasonLg ? `This season (${esc(seasonLg)})` : '';
       if (season.length < 6) { const cut = new Date(Date.parse(today) - 365 * 864e5).toISOString().slice(0, 10); season = G.filter(g => g.d >= cut); seasonLabel = 'The last 12 months'; }
       if (season.length >= 6 && season.length < G.length) {
         const s2 = hist.summary(season), d = r1(s2.avg - S.avg);
@@ -290,7 +294,7 @@
     if (opts.count && G.length >= MIN_HOUSE && hist) {
       try {
         const rb = recommendBag({ hist, G, lanes, S, b, count: Math.max(1, Math.min(6, Number(opts.count) || 3)), lean, today, firstBall: out.firstBall });
-        if (rb) { sec('🎒', `Your ${Math.max(1, Math.min(6, Number(opts.count) || 3))}-ball bag for ${lanes ? 'lanes ' + lanes.replace('-', ' & ') : 'this house'}`, rb.items); out.recBag = rb.picked; }
+        if (rb) { out.recRoles = rb.roles; out.recFirst = rb.first; sec('🎒', `Your ${Math.max(1, Math.min(6, Number(opts.count) || 3))}-ball bag for ${lanes ? 'lanes ' + lanes.replace('-', ' & ') : 'this house'}`, rb.items); out.recBag = rb.picked; }
       } catch (e) { console.error(e); }
     }
 
@@ -431,5 +435,15 @@
     return lines.join('\n');
   }
 
-  root.BTPlan = { build, toText, houseOptions, sets, patterns, pairKey };
+  // One answer for the whole app: the Game Plan's pick for a house / lanes / league / pattern (+ bag).
+  // Game Day's Coach and the Arsenal's "Suggest my bag" call this so all three say the same thing.
+  const _cache = {};
+  function forContext(ctx) {
+    ctx = ctx || {};
+    const key = JSON.stringify([ctx.house, pairKey(ctx.lanes), ctx.league, ctx.setName, ctx.patternName, ctx.count, new Date().toISOString().slice(0, 10)]);
+    if (_cache[key]) return _cache[key];
+    let r = null; try { r = build(ctx); } catch (e) { console.error(e); }
+    _cache[key] = r; return r;
+  }
+  root.BTPlan = { build, forContext, toText, houseOptions, sets, patterns, pairKey };
 })(typeof window !== 'undefined' ? window : globalThis);
