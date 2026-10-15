@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Arsenal</title>
-  <link rel="stylesheet" href="styles.css?v=92" />
+  <link rel="stylesheet" href="styles.css?v=93" />
 </head>
 <body data-page="arsenal">
   <div class="navlinks"></div>
@@ -268,7 +268,7 @@
 
         <div>
           <div style="display:flex;justify-content:space-between;gap:10px">
-            <div><b>Hook / Strength</b> <span class="small dim">(overall hook)</span></div>
+            <div><b>Strength</b> <span class="small dim">(weaker ↔ stronger: moves it between Weak, Medium and Strong boxes)</span></div>
             <div class="pill" id="tuneHookVal">0</div>
           </div>
           <input type="range" min="-10" max="10" step="1" value="0" id="tuneHook" style="width:100%" />
@@ -276,7 +276,7 @@
 
         <div>
           <div style="display:flex;justify-content:space-between;gap:10px">
-            <div><b>Length</b> <span class="small dim">(push / midlane read)</span></div>
+            <div><b>Length</b> <span class="small dim">(earlier ↔ later: moves it left / right on the chart)</span></div>
             <div class="pill" id="tuneLenVal">0</div>
           </div>
           <input type="range" min="-10" max="10" step="1" value="0" id="tuneLen" style="width:100%" />
@@ -284,7 +284,7 @@
 
         <div>
           <div style="display:flex;justify-content:space-between;gap:10px">
-            <div><b>Backend</b> <span class="small dim">(sharpness / response)</span></div>
+            <div><b>Backend</b> <span class="small dim">(smoother ↔ sharper: moves it between Smooth and Sharp boxes)</span></div>
             <div class="pill" id="tuneBackVal">0</div>
           </div>
           <input type="range" min="-10" max="10" step="1" value="0" id="tuneBack" style="width:100%" />
@@ -339,11 +339,11 @@
     </div>
   </div>
 
-  <script src="app.js?v=92"></script>
-  <script src="coach.js?v=92"></script>
-  <script src="chart.js?v=92"></script>
-  <script src="pinpal.js?v=92"></script>
-  <script src="history.js?v=92"></script>
+  <script src="app.js?v=93"></script>
+  <script src="coach.js?v=93"></script>
+  <script src="chart.js?v=93"></script>
+  <script src="pinpal.js?v=93"></script>
+  <script src="history.js?v=93"></script>
   <script>
     BT.renderNav('arsenal');
 
@@ -1440,6 +1440,17 @@
         if (fills) txt += ` ✅ That fills your empty ${BTChart.label(sim.rowKey)} box.`;
         if (leavesEmpty) txt += ` ⚠️ It would leave ${BTChart.label(now.rowKey)} empty.`;
       }
+      // Live: where your slider settings would put it (before you tap Save).
+      try {
+        const st = tuneStateFromInputs(), saved = BT.ballTweaksFor(tune.currentName);
+        if (st.hook !== (saved.hook || 0) || st.length !== (saved.length || 0) || st.backend !== (saved.backend || 0)) {
+          const tmpName = '__slider_preview__', clone = Object.assign({}, row, { 'Ball Name': tmpName });
+          BT.setBallTweaks(tmpName, { hook: st.hook, length: st.length, backend: st.backend, surfaceOverride: saved.surfaceOverride || '' });
+          const pv = BTChart.place([clone], bowler)[0];
+          BT.clearBallTweaks(tmpName);
+          txt += `<br>🎚️ With these sliders: <b>${BTChart.label(pv.rowKey)}</b>, reads <b>${BTChart.timingWord(pv.timing)}</b> (${Math.round(pv.x)} on Early → Late)${pv.rowKey !== now.rowKey ? ' ← a different box' : ''}. Tap <b>Save</b> to keep it; Coach and the Game Plan use your setting.`;
+        }
+      } catch (_e) {}
       out.innerHTML = txt;
     }
 

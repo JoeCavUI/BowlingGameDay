@@ -58,6 +58,11 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v93-beta30: sliders move balls between Barnes boxes
+- **Sliders are the advanced player's own read.** Strength and Backend now count double in the Barnes box (about 2–5 clicks crosses a box edge), so you can put a ball in the box you see it in. Leave them at 0 and the app uses its own calculation. Coach (Game Day), the Game Plan, the Role Planner and the chart all use your saved setting.
+- Clearer slider labels: **Strength** (weaker ↔ stronger: Weak / Medium / Strong), **Length** (earlier ↔ later on the chart), **Backend** (smoother ↔ sharper: Smooth / Sharp).
+- **Live preview** in Ball details: "With these sliders: Strong / Smooth, reads mid (52)… ← a different box" before you tap Save.
+
 ## Changes in v92-beta29: high-flare pin position
 - Pin-to-PAP around **3⅜–4¼″ is now "High flare"** (the core's maximum-flare position): the most total hook, strong but arcing, peaking near 3¾″. It was wrongly treated as neutral "benchmark". Short (< 3″) is lower flare and smoother; long (4¼–5½″) is the most angular, peaking near 5″; very long (past ~5½–6″) smooths out again.
 - With the new PAP: Physix Blackout and Infinite Physix (≈3.3–3.4″) → Strong / Sharp; Code Black → Strong / Sharp; HyRoad 40 → Medium / Smooth.

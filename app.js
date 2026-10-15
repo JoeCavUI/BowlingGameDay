@@ -6,7 +6,7 @@
 
 (function () {
   // Bump this string each build so pages can display it and cache-bust resources.
-  const APP_VERSION = 'v92-beta29';
+  const APP_VERSION = 'v93-beta30';
   const KEYS = {
     CSV_CACHE: 'bt_csv_cache_v1',          // stringified { savedAt, name, rows }
     BOWLER: 'bt_bowler_v1',               // stringified object
@@ -504,6 +504,7 @@
   // Stored as ints -10..+10 for hook/length/backend.
   // Converted to model deltas with a small scale so tweaks nudge, not replace, the math.
   const TWEAK_SCALE = 0.015; // 10 clicks => +/-0.15 in the 0..1 motion space
+  const MATRIX_TWEAK = 0.03;  // Barnes box: 10 clicks => +/-0.30 (enough to cross a box edge in 2–5 clicks)
 
   function ballTweaksAll() {
     const v = lsGet(KEYS.BALL_TWEAKS, {});
@@ -1328,12 +1329,14 @@
     let shape = clamp(shapeBase * diffShapeW, 0, 1);
 
     // Apply user perception tweaks (backend slider nudges shape).
+    // Sliders are the bowler's own read: in the Barnes box they count double (3 clicks ≈ one box edge),
+    // so an advanced player can move a ball to the box they see it in. Leave them at 0 to use the app's rating.
     const tw = ballTweaksFor(ballName(row));
-    shape = clamp(shape + (tw.backend * TWEAK_SCALE), 0, 1);
+    shape = clamp(shape + (tw.backend * MATRIX_TWEAK), 0, 1);
 
     // Layout from CSV should influence matrix placement too.
     const lm = layoutMotionMods(row);
-    const strength2 = clamp(strength + (tw.hook * TWEAK_SCALE) + (lm.hook * 0.60) - (lm.length * 0.25), 0, 1);
+    const strength2 = clamp(strength + (tw.hook * MATRIX_TWEAK) + (lm.hook * 0.60) - (lm.length * 0.25), 0, 1);
     shape = clamp(shape + (lm.shape * 0.70) + (lm.backend * 0.15), 0, 1);
 
     return { strength: strength2, shape, layoutType: lm.kind };
