@@ -58,6 +58,11 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v91-beta28: pin distance on a smooth curve
+- **No more 4.75″ cliff.** Pin-to-PAP now changes a ball's motion gradually: short (< 3″) earlier and smoother; benchmark (3–4½″) neutral; long (4½–5½″) more length and the most angular backend, peaking near 5″; **very long (past ~5½–6″) smooths out again** as flare drops off, while staying long through the front. "Pin down" keeps its control effect; with no number, the Pin Location label is used.
+- New layout type **"Very long pin"** in Ball details, Compare, Game Plan and lane-condition patterns.
+- With the new PAP, 8 balls change Barnes box (e.g. Zen Master #2, Phaze 2, ProMotion → Strong / Smooth; HyRoad #1 / #2, Crown Victory → Medium / Smooth; Venom Shock #1 / #2 → Weak / Smooth). Medium / Sharp drops from 19 balls to 16.
+
 ## Changes in v90-beta27: ⚖️ compare balls; "on paper" timing notes
 - **Compare 2–3 balls side by side:** tap ⚖️ on a ball in the list or in Ball details; a Compare bar appears at the bottom. Columns = balls; rows = specs (brand, cover, core, RG, diff, intermediate diff, surface), layout (pin-to-PAP, PSA-to-PAP, pin buffer, drill, VAL, total, layout type, pin), on paper for you (Barnes box, Early→Late, hook / length / backend), and your record (PinPal games, average, strikes, best house, status, bags). Rows where they differ are highlighted.
 - **Barnes chart notes say "on paper":** "most of your arsenal rates late" is a spec + layout + PAP rating, not how the balls rolled. When Game Day reads disagree (e.g., mostly early / high), the note says so, tells you to trust the lanes, and suggests checking the layouts against your PAP instead of adding surface.

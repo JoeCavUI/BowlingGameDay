@@ -39,7 +39,7 @@
     const coreS = String(BT().getField(row, ['Core'], '') || '').toLowerCase();
     const core = /asym/.test(coreS) ? 'Asymmetric' : /sym/.test(coreS) ? 'Symmetric' : '';
     const v = BT().motionVector(row, b);
-    const layout = { short: 'Short pin', long: 'Long pin', control: 'Pin down', benchmark: 'Benchmark' }[v.layoutType] || '';
+    const layout = { short: 'Short pin', long: 'Long pin', xlong: 'Very long pin', control: 'Pin down', benchmark: 'Benchmark' }[v.layoutType] || '';
     let box = '', x = null;
     try { const p = root.BTChart.place([row], b)[0]; box = root.BTChart.label(p.rowKey); x = p.x; } catch (_e) {}
     return { cover, core, layout, box, x, v };
