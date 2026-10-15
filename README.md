@@ -58,6 +58,11 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v87-beta24: ✏️ edit a ball on the phone
+- **Arsenal → tap a ball → ✏️ Edit:** change the name, brand, cover, core, RG, differential, intermediate diff, surface, pin location, and the layout (pin-to-PAP, PSA-to-PAP, pin buffer in inches, "4 1/2" works; drill and VAL angles in degrees; total angle = drill + VAL). Pin-to-PAP is written to both the VLS and dual-angle columns.
+- **Renaming keeps everything:** sliders, surface change, weight / resurfaced / retired, saved bags, Game Day shots (current and saved sessions, last line) and PinPal ball matches move to the new name. Duplicate names are blocked.
+- Edits are saved on the phone; uploading a new ball spreadsheet replaces them.
+
 ## Changes in v86-beta23: 🎒 bag recommendation + ball details
 - **Game Plan → "How many balls?" (1–6):** Coach recommends a bag for that house and pair. It first reads your patterns there: averages by cover (solid / pearl / hybrid / urethane), core (sym / asym), layout (short / benchmark / long pin) and Barnes box, for games thrown with balls matched to your arsenal (small groups pulled toward the average). Each ball is scored on its own record there (3+ games, recent form blended in) plus what its traits predict; the pair adjusts the house read when it has games. Picks start with the best ball, then alternate earlier and later (what the lanes need first), each at least 10 points apart on the Early→Late scale, so every ball has a job. Tournament defaults to 6.
 - **Arsenal → tap a ball = Ball details first:** core, RG, differential, intermediate diff, cover, surface, VLS (pin-to-PAP × PSA-to-PAP × pin buffer), dual angle (drill × pin-to-PAP × VAL), total angle, layout type, pin, and Barnes box. Adjustment sliders below.

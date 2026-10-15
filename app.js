@@ -6,7 +6,7 @@
 
 (function () {
   // Bump this string each build so pages can display it and cache-bust resources.
-  const APP_VERSION = 'v86-beta23';
+  const APP_VERSION = 'v87-beta24';
   const KEYS = {
     CSV_CACHE: 'bt_csv_cache_v1',          // stringified { savedAt, name, rows }
     BOWLER: 'bt_bowler_v1',               // stringified object
@@ -263,6 +263,62 @@
   }
 
   // Retired balls stay in your history but leave your active arsenal (chart, bags, Coach).
+  // ---- Edit a ball (name, specs, layout) on the phone ----
+  // patch keys: name, brand, cover, core, rg, diff, psa (intermediate diff), surface, pin (pin location),
+  //             vlsPin, vlsPsa, vlsBuf (VLS inches), drill, val (dual-angle degrees). Total angle = drill + val.
+  // A rename carries the ball's sliders, care/retired, bags, Game Day shots and PinPal matches to the new name.
+  const EDIT_FIELDS = {
+    name: ['Ball Name'], brand: ['Brand'], cover: ['Cover'], core: ['Core'], rg: ['RG'], diff: ['Diff'], psa: ['PSA'],
+    surface: ['Surface'], pin: ['Pin Location'], vlsPin: ['PAP#1'], vlsPsa: ['PSA#1'], vlsBuf: ['Val#1'],
+    drill: ['Drill Angle'], dualPin: ['PAP'], val: ['Val'], total: ['Total Angle'],
+  };
+  function setFieldOn(row, names, value) {
+    const keys = Object.keys(row); const want = normKey(names[0]);
+    const hit = keys.find(k => normKey(k) === want);
+    row[hit || names[0]] = value;
+  }
+  function editBall(oldName, patch) {
+    const old = String(oldName || '').trim(); if (!old) return { ok: false, msg: 'No ball picked.' };
+    const newName = String(patch.name == null ? old : patch.name).trim();
+    if (!newName) return { ok: false, msg: 'The ball needs a name.' };
+    const cache = lsGet(KEYS.CSV_CACHE, null) || null;
+    const csvRows = cache && Array.isArray(cache.rows) ? cache.rows : [];
+    const customs = customBalls();
+    const allNames = withCustomBalls(csvRows).map(r => ballName(r).toLowerCase());
+    if (newName.toLowerCase() !== old.toLowerCase() && allNames.includes(newName.toLowerCase())) return { ok: false, msg: `You already have a ball named "${newName}".` };
+    let row = csvRows.find(r => ballName(r) === old), where = 'csv';
+    if (!row) { row = customs.find(r => ballName(r) === old); where = 'custom'; }
+    if (!row) return { ok: false, msg: 'Could not find that ball.' };
+    const p = Object.assign({}, patch);
+    if (p.vlsPin != null) p.dualPin = p.vlsPin;            // one pin-to-PAP, written to both layout blocks
+    const d = Number(p.drill), v = Number(p.val);
+    if (p.drill != null || p.val != null) { const dd = Number.isFinite(d) ? d : Number(getField(row, ['Drill Angle'], '')); const vv = Number.isFinite(v) ? v : Number(getField(row, ['Val'], '')); if (Number.isFinite(dd) && Number.isFinite(vv)) p.total = String(dd + vv); }
+    for (const [k, names] of Object.entries(EDIT_FIELDS)) if (p[k] != null && k !== 'name') setFieldOn(row, names, String(p[k]).trim());
+    if (newName !== old) setFieldOn(row, EDIT_FIELDS.name, newName);
+    if (where === 'csv') lsSet(KEYS.CSV_CACHE, Object.assign({}, cache, { rows: csvRows, editedAt: Date.now() }));
+    else lsSet(CUSTOM_BALLS_KEY, customs);
+    if (newName !== old) renameEverywhere(old, newName, withCustomBalls(csvRows).map(r => ballName(r)));
+    return { ok: true, name: newName, renamed: newName !== old };
+  }
+  function renameEverywhere(old, nu, arsenalNamesAfter) {
+    const moveKey = (key) => { const o = lsGet(key, {}); if (o && typeof o === 'object' && Object.prototype.hasOwnProperty.call(o, old)) { o[nu] = o[old]; delete o[old]; lsSet(key, o); } };
+    moveKey(KEYS.BALL_TWEAKS); moveKey(BALL_CARE_KEY);
+    const sets = lsGet(KEYS.ARSENAL_SETS, []);
+    if (Array.isArray(sets)) { let ch = false; sets.forEach(s => { if (Array.isArray(s.balls)) s.balls = s.balls.map(b => { if (b === old) { ch = true; return nu; } if (b && typeof b === 'object' && b.name === old) { ch = true; return Object.assign({}, b, { name: nu }); } return b; }); }); if (ch) lsSet(KEYS.ARSENAL_SETS, sets); }
+    const fixShots = (arr) => { let ch = false; (arr || []).forEach(s => { if (s && s.ball === old) { s.ball = nu; ch = true; } }); return ch; };
+    const sess = lsGet(KEYS.GAME_SESSIONS, []); if (Array.isArray(sess)) { let ch = false; sess.forEach(s => { if (fixShots(s.shots)) ch = true; }); if (ch) lsSet(KEYS.GAME_SESSIONS, sess); }
+    const cur = lsGet('bt_current_session_v1', null); if (cur && fixShots(cur.shots)) lsSet('bt_current_session_v1', cur);
+    const ll = lsGet('bt_gameday_last_line_v1', null); if (ll && ll.ball === old) { ll.ball = nu; lsSet('bt_gameday_last_line_v1', ll); }
+    // PinPal matches: anything matched to the old name (by hand or automatically) now points at the new name.
+    try {
+      const H = (typeof window !== 'undefined' ? window : globalThis).BTHistory;
+      if (H && H.has()) {
+        const before = H.ballMap(arsenalNamesAfter.map(n => n === nu ? old : n));
+        Object.entries(before).forEach(([pp, ar]) => { if (ar === old) H.setBallMap(pp, nu); });
+      }
+    } catch (_e) {}
+  }
+
   function isRetired(nameOrRow) { const n = typeof nameOrRow === 'string' ? nameOrRow : ballName(nameOrRow); return ballCareFor(n).retired === true; }
   function activeOnly(rows) { return (rows || []).filter(r => !isRetired(r)); }
   // A blank spreadsheet with the columns the app reads, plus one example row.
@@ -1445,6 +1501,7 @@
     surfaceToGrit,
     motionVector,
     getField,
+    editBall,
     motionDistance,
     computeIndices,
     classifySession,

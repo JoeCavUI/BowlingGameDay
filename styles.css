@@ -517,3 +517,6 @@ button, a, select { -webkit-tap-highlight-color:rgba(99,230,210,0.25); }
 .bs-v{ font-size:14px; font-weight:700; overflow-wrap:anywhere; }
 .bs-h{ font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:var(--accent); margin:10px 0 6px; }
 .bs-wide{ grid-column:1 / -1; }
+.be-grid{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; }
+.be-f{ min-width:0; }
+.be-f label{ font-size:12px; color:var(--muted); }
