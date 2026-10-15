@@ -58,6 +58,10 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v88-beta25: 🗑 delete a ball
+- **Arsenal → tap a ball → 🗑 Delete** (next to Retire). Removes one entry: a double-entered ball deletes one copy and the other keeps its sliders, bags and history. A hand-added copy goes first.
+- When the last copy is deleted it also comes out of saved bags, sliders, care and PinPal matches; Game Day shots thrown with it stay in history. The confirm explains Retire (ball you no longer throw) vs Delete (a mistake).
+
 ## Changes in v87-beta24: ✏️ edit a ball on the phone
 - **Arsenal → tap a ball → ✏️ Edit:** change the name, brand, cover, core, RG, differential, intermediate diff, surface, pin location, and the layout (pin-to-PAP, PSA-to-PAP, pin buffer in inches, "4 1/2" works; drill and VAL angles in degrees; total angle = drill + VAL). Pin-to-PAP is written to both the VLS and dual-angle columns.
 - **Renaming keeps everything:** sliders, surface change, weight / resurfaced / retired, saved bags, Game Day shots (current and saved sessions, last line) and PinPal ball matches move to the new name. Duplicate names are blocked.

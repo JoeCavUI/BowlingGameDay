@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Arsenal</title>
-  <link rel="stylesheet" href="styles.css?v=87" />
+  <link rel="stylesheet" href="styles.css?v=88" />
 </head>
 <body data-page="arsenal">
   <div class="navlinks"></div>
@@ -295,6 +295,7 @@
           </select>
           <button class="btn secondary" id="tuneResurfaced" type="button">Just resurfaced</button>
           <button class="btn danger" id="tuneRetire" type="button">Retire this ball</button>
+          <button class="btn secondary" id="tuneDelete" type="button">🗑 Delete</button>
         </div>
         <div class="small dim" id="tuneCareInfo" style="margin-top:6px"></div>
       </div>
@@ -319,11 +320,11 @@
     </div>
   </div>
 
-  <script src="app.js?v=87"></script>
-  <script src="coach.js?v=87"></script>
-  <script src="chart.js?v=87"></script>
-  <script src="pinpal.js?v=87"></script>
-  <script src="history.js?v=87"></script>
+  <script src="app.js?v=88"></script>
+  <script src="coach.js?v=88"></script>
+  <script src="chart.js?v=88"></script>
+  <script src="pinpal.js?v=88"></script>
+  <script src="history.js?v=88"></script>
   <script>
     BT.renderNav('arsenal');
 
@@ -775,6 +776,22 @@
       renderArsenalCheck();
     });
 
+    BT.$('#tuneDelete')?.addEventListener('click', () => {
+      const nm = tune.currentName; if (!nm) return;
+      const copies = viewRowsAll().filter(r => !r.__proposed && BT.ballName(r) === nm).length;
+      const msg = copies > 1
+        ? `You have ${copies} entries named "${nm}". Delete one of them? The other stays, with its sliders, bags and history.`
+        : `Delete "${nm}" from your arsenal?\n\nUse this for a mistake or a ball you never owned. For a ball you no longer throw, "Retire" keeps its history out of the way instead.\n\nIt also comes out of your saved bags. Game Day shots thrown with it stay in your history.`;
+      if (!confirm(msg)) return;
+      const r = BT.deleteBall(nm);
+      if (!r.ok) return alert(r.msg);
+      const cache = BT.lsGet(BT.KEYS.CSV_CACHE, null);
+      allRows = ((cache && cache.rows) || []).filter(x => !x.__custom);
+      customRows = BT.lsGet('bt_custom_balls_v1', []); if (!Array.isArray(customRows)) customRows = [];
+      tune.modal.classList.add('hidden'); tune.currentName = '';
+      setStatus(); applyFilter(); try { renderArsenalCheck(); } catch (_e) {}
+      alert(r.duplicateLeft ? `Deleted one "${nm}". The other one stays.` : `Deleted "${nm}".`);
+    });
     BT.$('#tuneRetire')?.addEventListener('click', () => {
       const nm = tune.currentName; if (!nm) return;
       const care = BT.ballCareFor(nm);

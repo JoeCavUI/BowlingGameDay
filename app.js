@@ -6,7 +6,7 @@
 
 (function () {
   // Bump this string each build so pages can display it and cache-bust resources.
-  const APP_VERSION = 'v87-beta24';
+  const APP_VERSION = 'v88-beta25';
   const KEYS = {
     CSV_CACHE: 'bt_csv_cache_v1',          // stringified { savedAt, name, rows }
     BOWLER: 'bt_bowler_v1',               // stringified object
@@ -300,6 +300,31 @@
     if (newName !== old) renameEverywhere(old, newName, withCustomBalls(csvRows).map(r => ballName(r)));
     return { ok: true, name: newName, renamed: newName !== old };
   }
+  // Delete ONE ball (the first entry with that name: a double-entered ball keeps its other copy and all its data).
+  // When no ball with that name is left, it also comes out of saved bags, sliders, care and PinPal matches.
+  // Game Day sessions keep the shots thrown with it (that's history).
+  function deleteBall(name) {
+    const nm = String(name || '').trim(); if (!nm) return { ok: false, msg: 'No ball picked.' };
+    const cache = lsGet(KEYS.CSV_CACHE, null) || null;
+    const csvRows = cache && Array.isArray(cache.rows) ? cache.rows : [];
+    const customs = customBalls();
+    // A hand-added copy goes first (that's usually the double entry); then the spreadsheet copy.
+    let i = customs.findIndex(r => ballName(r) === nm), where = 'custom';
+    if (i < 0) { i = csvRows.findIndex(r => ballName(r) === nm); where = 'csv'; }
+    if (i < 0) return { ok: false, msg: 'Could not find that ball.' };
+    if (where === 'csv') { csvRows.splice(i, 1); lsSet(KEYS.CSV_CACHE, Object.assign({}, cache, { rows: csvRows, editedAt: Date.now() })); }
+    else { customs.splice(i, 1); lsSet(CUSTOM_BALLS_KEY, customs); }
+    const left = csvRows.some(r => ballName(r) === nm) || customs.some(r => ballName(r) === nm);
+    if (!left) {
+      const drop = (key) => { const o = lsGet(key, {}); if (o && typeof o === 'object' && Object.prototype.hasOwnProperty.call(o, nm)) { delete o[nm]; lsSet(key, o); } };
+      drop(KEYS.BALL_TWEAKS); drop(BALL_CARE_KEY);
+      const sets = lsGet(KEYS.ARSENAL_SETS, []);
+      if (Array.isArray(sets)) { let ch = false; sets.forEach(s => { if (Array.isArray(s.balls)) { const n0 = s.balls.length; s.balls = s.balls.filter(b => (typeof b === 'string' ? b : b && b.name) !== nm); if (s.balls.length !== n0) ch = true; } }); if (ch) lsSet(KEYS.ARSENAL_SETS, sets); }
+      try { const m = lsGet('bt_history_ballmap_v1', {}); let ch = false; Object.keys(m || {}).forEach(k => { if (m[k] === nm) { m[k] = ''; ch = true; } }); if (ch) lsSet('bt_history_ballmap_v1', m); } catch (_e) {}
+    }
+    return { ok: true, duplicateLeft: left };
+  }
+
   function renameEverywhere(old, nu, arsenalNamesAfter) {
     const moveKey = (key) => { const o = lsGet(key, {}); if (o && typeof o === 'object' && Object.prototype.hasOwnProperty.call(o, old)) { o[nu] = o[old]; delete o[old]; lsSet(key, o); } };
     moveKey(KEYS.BALL_TWEAKS); moveKey(BALL_CARE_KEY);
@@ -1502,6 +1527,7 @@
     motionVector,
     getField,
     editBall,
+    deleteBall,
     motionDistance,
     computeIndices,
     classifySession,
