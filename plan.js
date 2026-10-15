@@ -98,6 +98,8 @@
     if (!scored.length) return null;
     // Pick: the best ball first, then alternate sides of it (what the lanes need first), each at least 10 points
     // apart on the Early → Late scale from everything picked, so every ball has its own job.
+    const fbI = ctx.firstBall ? scored.findIndex(s => s.n === ctx.firstBall) : -1;
+    if (fbI > 0) scored.unshift(scored.splice(fbI, 1)[0]); // same first ball as the Ball section
     const picked = [scored[0]], x0 = scored[0].t.x ?? 50;
     const order = lean === 1 ? ['earlier', 'later'] : ['later', 'earlier']; // reads early (-1) or neutral: the later / smoother ball comes first
     while (picked.length < Math.min(count, scored.length)) {
@@ -112,7 +114,7 @@
     const ordered = picked.slice().sort((p, q) => (p.t.x ?? 50) - (q.t.x ?? 50));
     const role = (p) => p === first ? 'Start with' : (p.t.x ?? 50) < x0 ? 'Earlier / more ball' : 'Later / cleaner (transition)';
     const gm = (n) => `${n} game${n === 1 ? '' : 's'}`;
-    const why = (p) => [p.os ? `${p.os.avg} over ${gm(p.os.n)} here${p.rs ? ` (${p.rs.avg} in the last 12 months)` : ''}` : `${p.predK ? `its cover / core / layout average about ${Math.round(p.pred)} here` : 'no record here yet'}`, p.po ? `${p.po.avg} over ${gm(p.po.n)} on this pair` : ''].filter(Boolean).join('; ');
+    const why = (p) => [p.os ? `${p.os.avg} over ${gm(p.os.n)} here${p.rs ? ` (${p.rs.avg} in the last 12 months)` : ''}` : `${p.predK ? `no games on it here; other balls with its cover / core / layout averaged about ${Math.round(p.pred)} (not this ball's own result)` : 'no record here yet'}`, p.po ? `${p.po.avg} over ${gm(p.po.n)} on this pair` : ''].filter(Boolean).join('; ');
     items.push('<b>The bag (Early → Late):</b>');
     ordered.forEach(p => items.push(`<b>${role(p)}: ${esc(p.n)}</b> · ${[p.t.cover, p.t.core && p.t.core + ' core', p.t.layout, p.t.box].filter(Boolean).map(esc).join(', ')}. ${why(p)}.`));
     if (picked.length < count) items.push(`Only ${picked.length} of your balls read far enough apart to be worth bringing; more would overlap.`);
@@ -224,13 +226,13 @@
         if (prior.length >= 30) {
           const lvS = hist.leaves(SG, 400), lvP = hist.leaves(prior, 400);
           const sl = rate(lvS, LIGHT, SG.length), pl = rate(lvP, LIGHT, prior.length), sh = rate(lvS, HIGH, SG.length), ph = rate(lvP, HIGH, prior.length);
-          if (sl > pl * 1.15 && sh > ph * 1.15) { seasonBoth = true; items.push(`${out.season.label.replace(/ \(.*\)$/, '')}: weak-hit leaves are up (${r1(sl)} a game vs ${r1(pl)} before) <b>and</b> high-hit leaves are up (${r1(sh)} vs ${r1(ph)}). A ball that's simply too weak only adds weak hits; both together means it's <b>reading early and burning up</b>: some go through the face, the rest roll out and arrive flat.`); }
+          if (sl > pl * 1.15 && sh > ph * 1.15) { seasonBoth = true; items.push(`${out.season.label.replace(/ \(.*\)$/, '')}: weak-hit leaves are up (${r1(sl)} a game vs ${r1(pl)} before) <b>and</b> high-hit leaves are up (${r1(sh)} vs ${r1(ph)}). Both rising together <b>can</b> mean the ball is reading early and losing energy, but it can also come from launch direction, speed or release changes, or an over/under lane. Leaves can't show where the ball left skid and entered roll; your Game Day reads (Early / Long, pocket) can.`); }
         }
       }
       const lightUp = lh > la * 1.12 && lh - la > 0.08, highUp = hh > ha * 1.12 && hh - ha > 0.06;
       if (seasonBoth || (lightUp && highUp) || (lightUp && gdSays === 'early') || (highUp && !lightUp)) {
         lean = -1;
-        if (!seasonBoth) items.push(lightUp && highUp ? `Both weak-hit (${r1(lh)} a game vs ${r1(la)} everywhere) and high-hit leaves (${r1(hh)} vs ${r1(ha)}) run high here: the ball is <b>reading early</b>.` : lightUp ? `Weak-hit leaves run high here (${r1(lh)} a game vs ${r1(la)}), and your Game Day reads say <b>early</b>: the ball is reading early and arriving flat.` : `Your leaves here point to <b>high hits</b> (${r1(hh)} a game vs ${r1(ha)} everywhere): the ball reads early.`);
+        if (!seasonBoth) items.push(lightUp && highUp ? `Both weak-hit (${r1(lh)} a game vs ${r1(la)} everywhere) and high-hit leaves (${r1(hh)} vs ${r1(ha)}) run high here. That fits a ball reading early, but launch, speed or release variation and over/under conditions leave the same pins.` : lightUp ? `Weak-hit leaves run high here (${r1(lh)} a game vs ${r1(la)}), and your Game Day reads say <b>early</b>: likely reading early and arriving flat.` : `Your leaves here lean to <b>high hits</b> (${r1(hh)} a game vs ${r1(ha)} everywhere), which fits the ball reading early.`);
       } else if (lightUp && gdSays === 'long') {
         lean = 1;
         items.push(`Weak-hit leaves run high here (${r1(lh)} a game vs ${r1(la)}), and your Game Day reads say <b>long / light</b>: the ball isn't getting enough hook.`);
@@ -239,7 +241,7 @@
       } else items.push('Your leaves here look like your leaves everywhere else: no strong high or weak signature. Read the first few shots before deciding.');
       if (sig && sig.h / sig.a >= 1.4) items.push(`The ${nm(sig.k)} shows up <b>${r1(sig.h / sig.a)}×</b> as often here as anywhere else (${sig.h.toFixed(2)} a game vs ${sig.a.toFixed(2)}).`);
       if (early + long >= 8) items.push(`Game Day reads here: ${early} early / high, ${long} long / light.`);
-      if (lean === -1) items.push('<b>Start smoother and more controlled</b> (a ball that gets through the front without burning up), not stronger. If the left is opening up, moving left takes you into that friction: change balls before you chase it.');
+      if (lean === -1) items.push('<b>Worth testing in practice:</b> a ball that gets through the front more easily (reads later) and/or responds more evenly at the back (smoother), alongside your usual line. Check alignment first. If the left is opening up, a big move left can take you into that friction, so a ball change is worth weighing as well as a move.');
       if (lean === 1) items.push('<b>Start with more ball</b>, or move right to find friction.');
       sec('🛣️', 'What the lanes are telling you', items);
     }
@@ -266,12 +268,13 @@
       if (pool.length) {
         const first = pool[0], fl = lately(first);
         out.firstBall = first.ar || first.key;
-        items.push(`<b>First ball: ${esc(first.ar || first.key)}.</b> Strongest record here: ${first.avg} over ${first.n} games, ${first.strike}% strikes${fl ? `; ${fl.avg} in its ${fl.n} games here in the last 12 months` : ''}${recentCut.length && !usedRecently.has(first.key) ? `. <b>You haven't thrown it ${out.season.label.toLowerCase().startsWith('this season') ? 'this season' : 'in the last 12 months'}.</b>` : '.'}`);
+        items.push(`<b>First ball: ${esc(first.ar || first.key)}.</b> Top pick on sample-weighted record here (more games and recent form count more than a high average on a few games): ${first.avg} over ${first.n} games, ${first.strike}% strikes${fl ? `; ${fl.avg} in its ${fl.n} games here in the last 12 months` : ''}${recentCut.length && !usedRecently.has(first.key) ? `. <b>You haven't thrown it ${out.season.label.toLowerCase().startsWith('this season') ? 'this season' : 'in the last 12 months'}.</b>` : '.'}`);
         const second = pool[1];
         if (second) {
           const rs = lately(second);
           items.push(`<b>Backup: ${esc(second.ar || second.key)}</b> (${second.avg} over ${second.n} games${rs ? `; ${rs.avg} in its ${rs.n} games here in the last 12 months` : ''}).`);
         }
+        items.push('<span class="small">Records mix seasons, surfaces, lanes and your form, so they show what has worked, not proof one ball is best. Confirm in practice.</span>');
         const avoid = hist.groupBy(G, 'ball', 4).filter(r => r.avg <= S.avg - 12 && owned(r.key) && (!bag.length || bag.includes(owned(r.key)))).sort((a, b) => a.avg - b.avg).slice(0, 2);
         if (avoid.length) items.push(`Avoid opening with ${avoid.map(r => `${esc(owned(r.key))} (${r.avg} over ${r.n})`).join(' or ')}: ${avoid.length > 1 ? 'both have' : 'it has'} struggled here.`);
       } else if (byBall.length) items.push(`Your best balls here (${byBall.slice(0, 3).map(r => `${esc(r.key)} ${r.avg}`).join(', ')}) aren't matched to balls in your arsenal yet. Match them under Scores → History → Ball names.`);
@@ -286,7 +289,7 @@
     // ---- Recommended bag (count balls) for this house / pair
     if (opts.count && G.length >= MIN_HOUSE && hist) {
       try {
-        const rb = recommendBag({ hist, G, lanes, S, b, count: Math.max(1, Math.min(6, Number(opts.count) || 3)), lean, today });
+        const rb = recommendBag({ hist, G, lanes, S, b, count: Math.max(1, Math.min(6, Number(opts.count) || 3)), lean, today, firstBall: out.firstBall });
         if (rb) { sec('🎒', `Your ${Math.max(1, Math.min(6, Number(opts.count) || 3))}-ball bag for ${lanes ? 'lanes ' + lanes.replace('-', ' & ') : 'this house'}`, rb.items); out.recBag = rb.picked; }
       } catch (e) { console.error(e); }
     }
@@ -305,7 +308,20 @@
     {
       const items = [];
       const pat = (opts.patternName && patterns().find(p => p.name === opts.patternName)) || null;
-      const len = Number(opts.patLen) || (pat && Number(pat.length)) || null;
+      // Pattern length: the one picked, else what you've used for this house (Game Day tonight / last night here), else a saved pattern named for the house.
+      let patSrc = pat ? `${pat.name}` : '';
+      let pat2 = pat;
+      if (!pat2) {
+        const hk = String(houseLabel || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const pats = patterns();
+        const byName = (n) => n && pats.find(p => p.name === n);
+        let tn = null; try { const t = BT().lsGet('bt_gameday_tonight_v1', null); if (t && t.pattern && String(t.house || '').toLowerCase().replace(/[^a-z0-9]/g, '').startsWith(hk.slice(0, 5))) tn = byName(t.pattern); } catch (_e) {}
+        const sp = sess.map(s => byName(s.pattern)).find(Boolean);
+        const nm = pats.find(p => hk && String(p.name || '').toLowerCase().replace(/[^a-z0-9]/g, '').includes(hk.replace(/lanes?$/, '').slice(0, 6)));
+        pat2 = tn || sp || nm || null;
+        if (pat2) patSrc = `your saved pattern "${pat2.name}"`;
+      }
+      const len = Number(opts.patLen) || (pat2 && Number(pat2.length)) || null;
       // Game Day: the line that opened game 1 last time, and the line in the best game here.
       const withLine = sess.map(s => ({ s, shots: (s.shots || []).filter(x => x && x.type !== 'gameStart' && Number.isFinite(x.feet) && Number.isFinite(x.arrows)).slice().reverse() })).filter(x => x.shots.length);
       if (withLine.length) {
@@ -319,9 +335,10 @@
         const yr = lines[0].d.slice(0, 4);
         items.push(`Lines in your PinPal notes here (latest ${yr}): ${seen.map(x => `${x.l[0]} over ${x.l[1]}`).join(', ')}.${Number(yr) < Number(today.slice(0, 4)) - 1 ? ' Older lines with different balls: use them as a reference only.' : ''}`);
       }
-      if (len) items.push(`Rule of 31: a ${len} ft pattern puts your breakpoint near <b>board ${Math.max(1, Math.round(len - 31))}</b>. Line your slide, target and breakpoint up through it (Game Day's line check does the math).`);
-      else items.push('Rule of 31: pattern length − 31 = breakpoint board. If the house shot is around 40 ft, that\'s near <b>board 9</b>. Confirm it in practice before you move.');
-      items.push('Alignment check before shot 1: slide finish (inside of your slide foot), target, breakpoint, all on one line.');
+      if (len) items.push(`Rule of 31: a ${len} ft pattern${patSrc ? ` (${esc(patSrc)})` : ''} puts the exit area near <b>board ${Math.max(1, Math.round(len - 31))}</b>. It's an estimate of where the ball should leave the pattern, not a required breakpoint; let practice confirm it.`);
+      else items.push('Rule of 31: pattern length − 31 ≈ exit board. No pattern length is saved for this house. Pick or save one on the Oil page (e.g. 43 ft → about board 12) and confirm it in practice.');
+      const lay = Number(b.laydownOffset);
+      items.push(`Alignment check before shot 1: your slide foot is offset from the ball's path${Number.isFinite(lay) && lay > 0 ? ` (your laydown is about ${lay} boards)` : ' by your laydown'}. Line up the <b>ball's path</b> (about slide board − laydown), your target and the exit area, not your foot.`);
       sec('🎯', 'Starting line', items);
     }
 
@@ -333,14 +350,14 @@
         items.push('<b>Light hits keep coming</b> (10s, washouts, buckets): don\'t chase it with your feet first. Play a stronger line in, or keep ' + fb + ' and move right 1–2.');
         items.push('<b>' + fb + ' reads early</b> (high, left of the pocket, on shots where you hit your mark): move 2 left with your feet and 1 with your eyes. Still early: go to the backup.');
       } else if (lean === -1) {
-        items.push('<b>Reads early</b> (high or flat, on shots where you hit your mark): go to a smoother / later ball <b>first</b>, then move. A big move left can put you into friction other players have opened up.');
-        items.push('<b>Trapped</b> (moved left and it still reads early): come back right, straighten the line, and let the smoother ball do the work. A little loft past the heads helps too.');
+        items.push('<b>Reads early</b> (high or flat, on shots where you hit your mark): check alignment first; then choose between a move and a ball that reads later through the front. A big move left can put you into friction other players have opened up.');
+        items.push('<b>Feeling trapped</b> (moved left and it still reads early): a straighter line from farther right, or a ball that gets through the front, are both options; a little loft past the heads helps some players.');
         items.push('<b>Ball starts going long</b> late in the night: come back half the move, or go back to the stronger ball.');
       } else {
         items.push('<b>Reads early</b> (high, left of the pocket, on shots where you hit your mark): 2 left with your feet, 1 with your eyes.');
         items.push('<b>Goes long</b> (light, right of the pocket): 2 right and 1, or a stronger ball.');
       }
-      items.push('<b>Hitting the pocket but not carrying</b>: change ball or surface. Don\'t move your feet.');
+      items.push('<b>Hitting the pocket but not carrying</b>: often a ball-reaction question rather than a big line move; check alignment and release, then consider a ball change or a small move. Surface changes happen <b>before</b> league: no sanding or polishing during sanctioned competition.');
       items.push('<b>Missed your mark</b>: that\'s you, not the lane. Repeat the shot.');
       const mv = sess.map(s => s.summary && s.summary.moves && s.summary.moves.text).filter(Boolean)[0];
       if (mv) items.push(`Last Game Day night here: ${esc(mv)}`);
@@ -395,9 +412,11 @@
     // ---- Focus
     sec('🧠', 'Focus', [
       'Hit your mark; after 15 feet you only observe.',
-      lean === 1 ? 'Watch the exit off the deck: is it arriving weak? That\'s the read tonight.' : lean === -1 ? 'Watch where it starts to hook: early means change to a smoother ball before you chase it left.' : 'Watch the exit off the deck: it tells you ball vs line.',
+      lean === 1 ? 'Watch the exit off the deck: is it arriving weak? That\'s the read tonight.' : lean === -1 ? 'Watch where it starts to hook and tap Early / Long in Game Day: that tells you (and Coach) which kind of miss it is.' : 'Watch the exit off the deck: it tells you ball vs line.',
     ]);
 
+    const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    if (opts.setName) { const dn = DAYS.find(d => String(opts.setName).toLowerCase().includes(d)); const td = DAYS[new Date(today + 'T12:00:00').getDay()]; if (dn && dn !== td) out.sub.push(`⚠️ Bag "${opts.setName}" on a ${td[0].toUpperCase() + td.slice(1)}: is that the right bag?`); }
     out.basedOn = [G.length ? `${G.length} PinPal games at ${house}` : '', sess.length ? `${sess.length} Game Day night${sess.length === 1 ? '' : 's'} here` : '', arsenal.length ? `${arsenal.length} balls in your arsenal` : '', bag.length ? `bag "${opts.setName}"` : ''].filter(Boolean);
     return out;
   }

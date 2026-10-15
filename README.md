@@ -58,6 +58,14 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v95-beta32: Game Plan corrections (from the Shelby 13 & 14 review)
+- Weak + high leaves rising together is presented as a **possibility** (early read and lost energy) alongside launch direction, speed / release changes and over/under lanes; leaves can't show where skid ends and roll begins. Suggestions are "worth testing in practice", with alignment checked first.
+- First ball is "Top pick on **sample-weighted** record" (more games and recent form outweigh a high average on a few games), with a note that records mix seasons, surfaces, lanes and form. The bag recommendation now starts with the same first ball.
+- Balls with no games at the house say "other balls with its cover / core / layout averaged about X (not this ball's own result)".
+- Rule of 31 uses your saved pattern for the house (picked pattern, else tonight's / last Game Day pattern there, else a saved pattern named for the house), and calls the result an **exit area estimate**, not a required breakpoint. Alignment check uses the **ball's path** (slide board − laydown), not the slide foot.
+- If / then is less absolute: no "don't move your feet" / "change balls first" rules; "later" (through the front) and "smoother" (at the back) kept distinct. **No surface changes during sanctioned competition**; do them before league.
+- Warns when a bag named for another weekday is selected (e.g. "Monday" on a Thursday).
+
 ## Changes in v94-beta31: tuned balls marked
 - A gold **\*** marks every ball you've adjusted with the sliders: on its Barnes chart dot and name chip (with a key entry), in Ball details, and in Compare (which also gets a "Your sliders" row).
 

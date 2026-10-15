@@ -965,7 +965,7 @@
         const inGame = C.filter(c => c.gameNo === gNow).length;
         const g1 = hist.byGame[1], gN = hist.byGame[gNow];
         // 🔄 Entering game 2: what has worked for you here once the lanes start to change
-        try { const t = hist.cond && hist.cond.transition; if (gNow === 2 && inGame <= 2 && t && t.balls && t.balls.length) out.notes.push(`🔄 Transition: in games 2–3${t.scope !== hist.cond.house ? ' (all houses)' : ' here'} your best have been ${t.balls.map(x => `${x.n} ${x.avg}`).join(', ')}. When it starts reading early, switch to a smoother ball before you chase it left.`); } catch (_e) {}
+        try { const t = hist.cond && hist.cond.transition; if (gNow === 2 && inGame <= 2 && t && t.balls && t.balls.length) out.notes.push(`🔄 Transition: in games 2–3${t.scope !== hist.cond.house ? ' (all houses)' : ' here'} your best have been ${t.balls.map(x => `${x.n} ${x.avg}`).join(', ')}. If it starts reading early, check alignment, then weigh a move against a ball that reads later through the front.`); } catch (_e) {}
         if (gNow >= 2 && inGame <= 2 && g1 != null && gN != null && gN - g1 <= -6) out.notes.unshift(`📚 History: at ${hist.house} your game ${gNow} averages ${Math.round(g1 - gN)} pins below game 1 (${gN} vs ${g1}). The lanes usually change here by now: watch the first good shots closely and don't wait to move.`);
       }
       // 📐 Alignment: is the line going through the exit point? Only speak up before any move,
