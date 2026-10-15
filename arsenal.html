@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Arsenal</title>
-  <link rel="stylesheet" href="styles.css?v=93" />
+  <link rel="stylesheet" href="styles.css?v=94" />
 </head>
 <body data-page="arsenal">
   <div class="navlinks"></div>
@@ -339,11 +339,11 @@
     </div>
   </div>
 
-  <script src="app.js?v=93"></script>
-  <script src="coach.js?v=93"></script>
-  <script src="chart.js?v=93"></script>
-  <script src="pinpal.js?v=93"></script>
-  <script src="history.js?v=93"></script>
+  <script src="app.js?v=94"></script>
+  <script src="coach.js?v=94"></script>
+  <script src="chart.js?v=94"></script>
+  <script src="pinpal.js?v=94"></script>
+  <script src="history.js?v=94"></script>
   <script>
     BT.renderNav('arsenal');
 
@@ -705,7 +705,7 @@
       const nm = String(ballName || '').trim();
       if (!nm) return;
       tune.currentName = nm;
-      tune.title.textContent = nm;
+      tune.title.textContent = nm + ((() => { const t = BT.ballTweaksFor(nm) || {}; return (t.hook || t.length || t.backend) ? ' *' : ''; })());
       const row = rowByName(nm);
       const tw = BT.ballTweaksFor(nm);
       const preset = nearestSurfacePreset(tw.surfaceOverride || (row ? BT.ballSurface(row) : '4000'));
@@ -768,10 +768,11 @@
         ['Hook', x => Math.round(x.v.hook * 100)], ['Length', x => Math.round(x.v.length * 100)], ['Backend', x => Math.round(x.v.backend * 100)],
         ['Your record'],
         ['PinPal games', x => x.rec && x.rec.n ? `${x.rec.n} · ${x.rec.avg} avg` : '—'], ['Strikes', x => x.rec && x.rec.n ? `${x.rec.strike}%` : '—'], ['Best house', x => x.rec && x.rec.bestHouse ? esc(x.rec.bestHouse) : '—'],
+        ['Your sliders', x => (x.tw.hook || x.tw.length || x.tw.backend) ? `Strength ${x.tw.hook > 0 ? '+' : ''}${x.tw.hook || 0} · Length ${x.tw.length > 0 ? '+' : ''}${x.tw.length || 0} · Backend ${x.tw.backend > 0 ? '+' : ''}${x.tw.backend || 0}` : '—'],
         ['Status', x => [x.care.retired ? 'Retired' : 'Active', x.care.weight ? `${x.care.weight} lb` : '', x.r.__proposed ? 'What-if' : ''].filter(Boolean).join(' · ')],
         ['In bags', x => x.bags.length ? esc(x.bags.join(', ')) : '—'],
       ];
-      const head = `<tr><th></th>${info.map(x => `<th>${esc(x.nm)}</th>`).join('')}</tr>`;
+      const head = `<tr><th></th>${info.map(x => `<th>${esc(x.nm)}${(x.tw.hook || x.tw.length || x.tw.backend) ? ' *' : ''}</th>`).join('')}</tr>`;
       const body = rowsDef.map(d => d.length === 1 ? `<tr class="cmp-sec"><td colspan="${info.length + 1}">${d[0]}</td></tr>` : (() => { const vals = info.map(x => String(d[1](x))); const diff = new Set(vals).size > 1; return `<tr${diff ? ' class="cmp-diff"' : ''}><td>${d[0]}</td>${vals.map(v => `<td>${v}</td>`).join('')}</tr>`; })()).join('');
       BT.$('#cmpTable').innerHTML = `<table class="cmp"><thead>${head}</thead><tbody>${body}</tbody></table><div class="small dim" style="margin-top:6px">Rows where the balls differ are highlighted. "For you" numbers are on paper (specs, layout, your speed and revs), not how they've rolled.</div>`;
     }
@@ -1370,15 +1371,16 @@
       if (sum) sum.innerHTML = `<div class="chart-sum"><b>${an.covered.length} of 6 boxes covered</b>${an.urethane ? ' + urethane' : ''} · ${an.active} active ball${an.active === 1 ? '' : 's'}${retiredN ? ` · ${retiredN} retired` : ''}</div>`;
       // Rows
       const allRowsDef = BTChart.ROWS.concat([{ key: 'SPARE', label: 'Spare (plastic)', job: 'Straight at corner pins.', optional: true }]);
-      box.innerHTML = `<div class="chart-key small"><span class="kd cv-s"></span>solid <span class="kd cv-h"></span>hybrid <span class="kd cv-p"></span>pearl <span class="kd cv-o"></span>other <span class="kd ghost"></span>thinking of buying</div><div class="chart-axis"><span>Early</span><span>reads the lane →</span><span>Late</span></div>` + allRowsDef.map(r => {
+      box.innerHTML = `<div class="chart-key small"><span class="kd cv-s"></span>solid <span class="kd cv-h"></span>hybrid <span class="kd cv-p"></span>pearl <span class="kd cv-o"></span>other <span class="kd ghost"></span>thinking of buying <b class="ctuned-t">*</b> your slider adjustments</div><div class="chart-axis"><span>Early</span><span>reads the lane →</span><span>Late</span></div>` + allRowsDef.map(r => {
         const L = balls.filter(b => b.rowKey === r.key).sort((a, b) => a.timing - b.timing);
         if (r.key === 'SPARE' && !L.length) return '';
         // stack colliding dots into lanes
         const lanes = [];
         L.forEach((b, i) => { b.n = i + 1; let li = lanes.findIndex(x => b.x - x >= 7); if (li < 0) { li = lanes.length < 4 ? lanes.length : lanes.length - 1; if (li === lanes.length) lanes.push(-99); } lanes[li] = b.x; b.lane = li; });
         const h = Math.max(1, lanes.length) * 22 + 6;
-        const dots = L.map(b => `<button type="button" class="cdot ${b.proposed ? 'ghost' : ''} ${b.retired ? 'retired' : ''} cv-${/solid/i.test(b.cover) ? 's' : /pearl/i.test(b.cover) ? 'p' : /hybrid/i.test(b.cover) ? 'h' : 'o'}" style="left:calc(${b.x}% - 10px);top:${3 + b.lane * 22}px" data-cball="${escH(b.name)}" title="${escH(b.name)}">${b.n}</button>`).join('');
-        const chips = L.map(b => `<button type="button" class="cchip ${b.proposed ? 'ghost' : ''} ${b.retired ? 'retired' : ''}" data-cball="${escH(b.name)}"><span class="cn">${b.n}</span>${escH(b.name)}${b.proposed ? ' (what-if)' : b.retired ? ' (retired)' : ''}</button>`).join('');
+        const tunedB = (nm) => { const t = BT.ballTweaksFor(nm) || {}; return !!(t.hook || t.length || t.backend); };
+        const dots = L.map(b => `<button type="button" class="cdot ${b.proposed ? 'ghost' : ''} ${b.retired ? 'retired' : ''} cv-${/solid/i.test(b.cover) ? 's' : /pearl/i.test(b.cover) ? 'p' : /hybrid/i.test(b.cover) ? 'h' : 'o'}" style="left:calc(${b.x}% - 10px);top:${3 + b.lane * 22}px" data-cball="${escH(b.name)}" title="${escH(b.name)}${tunedB(b.name) ? ' (your slider adjustments)' : ''}">${b.n}${tunedB(b.name) ? '<span class="ctuned">*</span>' : ''}</button>`).join('');
+        const chips = L.map(b => `<button type="button" class="cchip ${b.proposed ? 'ghost' : ''} ${b.retired ? 'retired' : ''}" data-cball="${escH(b.name)}"><span class="cn">${b.n}</span>${escH(b.name)}${tunedB(b.name) ? '<b class="ctuned-t" title="Your slider adjustments">*</b>' : ''}${b.proposed ? ' (what-if)' : b.retired ? ' (retired)' : ''}</button>`).join('');
         const empty = !L.filter(b => !b.proposed && !b.retired).length;
         return `<div class="crow ${empty ? 'empty' : ''}">
           <div class="crow-head"><b>${r.label}</b> <span class="small">${L.filter(b => !b.proposed && !b.retired).length || (r.optional ? 'none' : 'empty')}</span></div>

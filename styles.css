@@ -537,3 +537,8 @@ table.cmp{ table-layout:fixed; min-width:0; font-size:12.5px; }
 table.cmp th, table.cmp td{ padding:5px 5px; overflow-wrap:anywhere; }
 table.cmp th{ text-transform:none; letter-spacing:0; font-size:13px; color:var(--text, #e8ecf6); }
 table.cmp td:first-child, table.cmp th:first-child{ width:84px; min-width:0; font-size:11.5px; }
+
+/* Tuned (slider-adjusted) marker */
+.cdot{ position:absolute; }
+.cdot .ctuned{ position:absolute; top:-7px; right:-5px; font-size:13px; font-weight:900; color:#ffd166; line-height:1; text-shadow:0 0 2px #000; }
+.ctuned-t{ color:#ffd166; margin-left:2px; font-weight:900; }
