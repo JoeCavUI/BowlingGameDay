@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Angle Calculator</title>
-  <link rel="stylesheet" href="styles.css?v=102" />
+  <link rel="stylesheet" href="styles.css?v=103" />
 </head>
 <body data-page="angle">
   <div class="navlinks"></div>
@@ -66,7 +66,7 @@
         <div><label for="aBp">Breakpoint board <span class="small">(optional)</span></label><input id="aBp" class="input" type="number" step="0.5" inputmode="decimal" /></div>
         <div><label for="aMore">Also show at <span class="small">(ft)</span></label><input id="aMore" class="input" placeholder="e.g. 32, 43" inputmode="text" /></div>
       </div>
-      <label class="ang-chk"><input type="checkbox" id="aRF" /> Downlane range finders (boards 10 &amp; 30, 34–40 ft), if your house has them</label>
+      <label class="ang-chk"><input type="checkbox" id="aRF" /> Downlane range finders (boards 15 &amp; 25 at 34–37 ft, boards 10 &amp; 30 at 40–43 ft), if your house has them</label>
     </div>
 
     <div class="panel" id="angOut">
@@ -78,7 +78,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=102"></script>
+  <script src="app.js?v=103"></script>
   <script>
   (function () {
     BT.renderNav('angle');
@@ -182,7 +182,7 @@
       // arrows: long narrow darts pointing at the pins
       ARROWS.forEach(([b, ft]) => { const x = xBoard(b), y = yF(ft), w = LW / 39 * 0.55; g.push(`<path d="M${L(x)} ${L(y - 12)} L${L(x - w)} ${L(y + 4)} L${L(x)} ${L(y + 1.5)} L${L(x + w)} ${L(y + 4)} Z" fill="var(--ang-mark)"/>`); });
       // range finders
-      if ($('#aRF').checked) { [10, 30].forEach(b => g.push(`<line x1="${L(xBoard(b))}" y1="${yF(34)}" x2="${L(xBoard(b))}" y2="${yF(40)}" stroke="var(--ang-mark)" stroke-width="2.2" stroke-linecap="round"/>`)); g.push(`<text x="${leftX - 6}" y="${yF(37) + 3}" text-anchor="end" class="ang-t">range finders</text>`); }
+      if ($('#aRF').checked) { [[15, 34, 37], [25, 34, 37], [10, 40, 43], [30, 40, 43]].forEach(([b, f0, f1]) => g.push(`<line x1="${L(xBoard(b))}" y1="${yF(f0)}" x2="${L(xBoard(b))}" y2="${yF(f1)}" stroke="var(--ang-mark)" stroke-width="2.2" stroke-linecap="round"/>`)); g.push(`<text x="${leftX - 6}" y="${yF(35.5) + 3}" text-anchor="end" class="ang-t">tracers 15/25</text><text x="${leftX - 6}" y="${yF(41.5) + 3}" text-anchor="end" class="ang-t">tracers 10/30</text>`); }
       // pins
       for (let n = 1; n <= 10; n++) { const [b, ft] = pinPos(n); g.push(`<circle cx="${L(xBoard(b))}" cy="${L(yPin(ft))}" r="4.3" fill="var(--ang-pin)" stroke="var(--ang-pinb)" stroke-width=".8"/><text x="${L(xBoard(b))}" y="${L(yPin(ft) + 2.4)}" text-anchor="middle" class="ang-pn">${n}</text>`); }
       // foul line + board numbers under the lane
@@ -225,7 +225,7 @@
       const add = (ft, lbl) => { const k = r1(ft); if (!set.has(k)) set.set(k, { ft: k, lbl, b: c.at(k) }); else if (lbl && !set.get(k).lbl.includes(lbl)) set.get(k).lbl += ' · ' + lbl; };
       add(0, 'Foul line (laydown)'); add(7, 'Dots'); add(15, 'Arrows'); add(30, ''); add(45, ''); add(60, 'Head pin');
       if (c.len) add(c.len, 'End of oil');
-      if ($('#aRF').checked) { add(34, 'Range finders start'); add(40, 'Range finders end'); }
+      if ($('#aRF').checked) { add(34, 'Tracers 15/25 start'); add(37, 'Tracers 15/25 end'); add(40, 'Tracers 10/30 start'); add(43, 'Tracers 10/30 end'); }
       // Recovery: from where the ball leaves the oil (or your breakpoint) back to the pocket.
       c.rec = null;
       if (mode !== 'pin' || pin === 1 || pin === (lefty ? 2 : 3)) {
