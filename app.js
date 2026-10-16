@@ -1529,15 +1529,25 @@
     return `${x.getFullYear()}-${p(x.getMonth() + 1)}-${p(x.getDate())}`;
   }
 
-  // 📦 Target box: where you want the ball at the end of the pattern (e.g. boards 6–8, from the end of the oil to 2 ft past it).
-  // Distances are measured from the end of the oil so the box follows the pattern length.
-  const BOX_KEY = 'bt_target_box_v1';
+  // 📦 Target box (the Baker Box): boards 5–8 at 42–46 ft, where the ball splits the 8-9 for the best carry.
+  // Applies to almost all house shots and to sport shots 38–43 ft long (Mark Baker's poster). Elsewhere the rule of 31 leads.
+  // Exception: playing Zone 1 (boards 1–10), the box can start as early as 38 ft for speed-dominant players and urethane.
+  const BOX_KEY = 'bt_target_box_v2';
   function targetBox() {
     const b = lsGet(BOX_KEY, null) || {};
     const n = (v, d) => (Number.isFinite(Number(v)) ? Number(v) : d);
-    return { on: b.on !== false, b1: n(b.b1, 6), b2: n(b.b2, 8), d1: n(b.d1, 0), d2: n(b.d2, 2) };
+    return { on: b.on !== false, b1: n(b.b1, 5), b2: n(b.b2, 8), f1: n(b.f1, 42), f2: n(b.f2, 46) };
   }
-  function setTargetBox(patch) { const b = Object.assign(targetBox(), patch || {}); if (b.b1 > b.b2) [b.b1, b.b2] = [b.b2, b.b1]; if (b.d1 > b.d2) [b.d1, b.d2] = [b.d2, b.d1]; lsSet(BOX_KEY, b); return b; }
+  function setTargetBox(patch) { const b = Object.assign(targetBox(), patch || {}); if (b.b1 > b.b2) [b.b1, b.b2] = [b.b2, b.b1]; if (b.f1 > b.f2) [b.f1, b.f2] = [b.f2, b.f1]; lsSet(BOX_KEY, b); return b; }
+  // Does the box apply to this pattern? ratio: number or null; length: ft. Returns the box (with early38 flag) or { off: reason }.
+  function boxFor(length, ratio, opts) {
+    const b = targetBox(); opts = opts || {};
+    if (!b.on) return { off: 'off' };
+    const house = ratio == null || ratio >= 7;
+    if (!house && !(length >= 38 && length <= 43)) return { off: 'sport', ratio, length };
+    const early = !!(opts.speedDominant || opts.urethane);
+    return { b1: b.b1, b2: b.b2, f1: b.f1, f2: b.f2, early38: early ? Math.min(38, b.f1) : null, house };
+  }
 
   function buildBackup() {
     const data = {};
@@ -1630,7 +1640,7 @@
     APP_VERSION,
     KEYS,
     $, $all,
-    lsGet, lsSet, localDate, targetBox, setTargetBox,
+    lsGet, lsSet, localDate, targetBox, setTargetBox, boxFor,
     getLeagues, addLeague, getLeagueById, setLeague, leagueByName,
     parseCSV,
     ensureCSVLoaded, loadSampleArsenal, isRetired, activeOnly, arsenalTemplateCSV,

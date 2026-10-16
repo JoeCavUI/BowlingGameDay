@@ -67,10 +67,10 @@
         <div><label for="aBp">Breakpoint board <span class="small">(optional)</span></label><input id="aBp" class="input" type="number" step="0.5" inputmode="decimal" /></div>
         <div><label for="aMore">Also show at <span class="small">(ft)</span></label><input id="aMore" class="input" placeholder="e.g. 32, 43" inputmode="text" /></div>
       </div>
-      <label class="ang-chk"><input type="checkbox" id="aBox" /> 📦 Target box (house shots): where you want the ball at the end of the oil</label>
+      <label class="ang-chk"><input type="checkbox" id="aBox" /> 📦 Baker Box: where the ball splits the 8-9 (house shots, sport shots 38–43 ft)</label>
       <div class="ang-boxrow" id="aBoxRow">
         <span>Boards</span><select id="aBoxB1" class="input"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option></select><span>to</span><select id="aBoxB2" class="input"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option></select>
-        <span>from the oil end +</span><select id="aBoxD1" class="input"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select><span>to +</span><select id="aBoxD2" class="input"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option></select><span>ft</span>
+        <span>at</span><select id="aBoxF1" class="input"><option value="34">34</option><option value="35">35</option><option value="36">36</option><option value="37">37</option><option value="38">38</option><option value="39">39</option><option value="40">40</option><option value="41">41</option><option value="42">42</option><option value="43">43</option><option value="44">44</option><option value="45">45</option><option value="46">46</option><option value="47">47</option><option value="48">48</option><option value="49">49</option><option value="50">50</option></select><span>to</span><select id="aBoxF2" class="input"><option value="34">34</option><option value="35">35</option><option value="36">36</option><option value="37">37</option><option value="38">38</option><option value="39">39</option><option value="40">40</option><option value="41">41</option><option value="42">42</option><option value="43">43</option><option value="44">44</option><option value="45">45</option><option value="46">46</option><option value="47">47</option><option value="48">48</option><option value="49">49</option><option value="50">50</option><option value="51">51</option><option value="52">52</option></select><span>ft</span>
       </div>
       <label class="ang-chk"><input type="checkbox" id="aRF" /> Downlane range finders (boards 15 &amp; 25 at 34–37 ft, boards 10 &amp; 30 at 40–43 ft), if your house has them</label>
     </div>
@@ -170,8 +170,16 @@
       // Distance where the straight line is on the breakpoint board. A line straight up one board is on it everywhere.
       const len0 = Number($('#aLen').value) || 45;
       const bpFt = !hasBp ? null : Math.abs(slope) < 1e-6 ? (Math.abs(bp - lay) <= 0.5 ? len0 : null) : (bp - lay) / slope;
-      const bx = BT.targetBox(); const box = (bx.on && len && rc !== 'sport' && rc !== 'mid') ? { b1: bx.b1, b2: bx.b2, f1: len + bx.d1, f2: len + bx.d2, fm: len + (bx.d1 + bx.d2) / 2, bm: (bx.b1 + bx.b2) / 2 } : null;
-      return { box, ratio, rc, slide, off, lay, aim, aimFt, aimLbl, slope, at, len, exit, deg, gutterFt, bp: $('#aBp').value !== '' ? bp : null, bpFt };
+      const speedDom = /speed/i.test(String(bowler.dominance || ''));
+      const bf = BT.boxFor(len, ratio, { speedDominant: speedDom });
+      let box = null, boxOff = bf.off || '';
+      if (!bf.off && len) {
+        const at15 = lay + slope * 15;                       // Zone 1 = playing boards 1–10 at the arrows
+        const zone1 = at15 <= 10.5 && bf.early38 != null;
+        const f1 = zone1 ? bf.early38 : bf.f1;
+        box = { b1: bf.b1, b2: bf.b2, f1, f2: bf.f2, fm: (f1 + bf.f2) / 2, bm: (bf.b1 + bf.b2) / 2, zone1 };
+      }
+      return { box, boxOff, ratio, rc, slide, off, lay, aim, aimFt, aimLbl, slope, at, len, exit, deg, gutterFt, bp: $('#aBp').value !== '' ? bp : null, bpFt };
     }
 
     // ---------- drawing ----------
@@ -362,13 +370,13 @@
       if (c.box) {
         const hb = c.at(c.box.fm), inBox = hb >= c.box.b1 - 0.5 && hb <= c.box.b2 + 0.5;
         const where = `board ${fmt(hb)} at ${r1(c.box.fm)} ft`;
-        if (inBox) A.push(['ok', `📦 ✅ Goes through your box (boards ${c.box.b1}–${c.box.b2} at ${r1(c.box.f1)}–${r1(c.box.f2)} ft): ${where}.`]);
-        else { const off = hb < c.box.b1 ? c.box.b1 - hb : hb - c.box.b2; A.push(['warn', `📦 ⚠️ Misses your box by ${fmt(half(off))} board${half(off) === 1 ? '' : 's'} to the ${hb < c.box.b1 ? OUT : IN}: ${where} (box: boards ${c.box.b1}–${c.box.b2}). See <b>Ways to fix it</b> below.`]); }
-        if (c.exit != null) { const dx = c.box.bm - c.exit; A.push(['info', `📏 For reference, the rule of 31 puts the exit point at board ${c.exit} on ${c.len} ft. Your box is ${fmt(Math.abs(dx))} boards ${dx < 0 ? 'outside' : 'inside'} it${dx < 0 ? (c.rc === 'sport' ? ': on a sport pattern that leaves little room, so watch for misses to the ' + OUT : ': normal on a house shot, where the outside is drier') : ''}.`]); }
+        if (inBox) A.push(['ok', `📦 ✅ Goes through your Baker Box (boards ${c.box.b1}–${c.box.b2} at ${r1(c.box.f1)}–${r1(c.box.f2)} ft${c.box.zone1 ? ': Zone 1, speed-dominant, so it starts at 38 ft' : ''}): ${where}. That's where the ball splits the 8-9.`]);
+        else { const off = hb < c.box.b1 ? c.box.b1 - hb : hb - c.box.b2; A.push(['warn', `📦 ⚠️ Misses your Baker Box by ${fmt(half(off))} board${half(off) === 1 ? '' : 's'} to the ${hb < c.box.b1 ? OUT : IN}: ${where} (box: boards ${c.box.b1}–${c.box.b2}). See <b>Ways to fix it</b> below.`]); }
+        if (c.exit != null) { const dx = c.box.bm - c.exit; A.push(['info', `📏 Rule of 31 (a suggestion here): exit point about board ${c.exit} on ${c.len} ft. The Baker Box is ${fmt(Math.abs(dx))} boards ${dx < 0 ? 'outside' : 'inside'} it${c.rc === 'sport' || c.rc === 'mid' ? ', and on this ratio small misses cost more, so stay on your mark' : ''}.`]); }
       }
       // End of oil vs the rule-of-31 exit point
       else if (c.len && c.exit != null) {
-        if (BT.targetBox().on && (c.rc === 'sport' || c.rc === 'mid')) A.push(['info', `📦 Your target box is a house-shot target, so it's off for this ${c.rc === 'sport' ? 'sport pattern' : 'medium ratio'} (${r1(c.ratio)}:1). Here the outside has oil too, so the exit point (rule of 31) matters more.`]);
+        if (c.boxOff === 'sport') A.push(['info', `📦 The Baker Box is for house shots and sport shots 38–43 ft. This is a ${c.len} ft ${c.rc === 'sport' ? 'sport pattern' : 'pattern'} (${r1(c.ratio)}:1), so the rule of 31 leads: aim to leave the oil near board ${c.exit}.`]);
         const eb = c.at(c.len), d = eb - c.exit; // + = inside the exit point (still in the oil)
         const fs = fixSlide();
         const tol = c.rc === 'sport' ? 1 : 2;
@@ -409,8 +417,8 @@
     $('#aRF').addEventListener('change', render);
     ['#aSlide', '#aOff', '#aTarget', '#aTargetFt', '#aCBoard', '#aCFt', '#aLen', '#aBp', '#aMore'].forEach(id => $(id).addEventListener('input', render));
     // 📦 Target box (shared with Game Day's Coach)
-    function boxInit() { const b = BT.targetBox(); $('#aBox').checked = b.on; $('#aBoxB1').value = b.b1; $('#aBoxB2').value = b.b2; $('#aBoxD1').value = b.d1; $('#aBoxD2').value = b.d2; $('#aBoxRow').style.display = b.on ? '' : 'none'; }
-    ['#aBox', '#aBoxB1', '#aBoxB2', '#aBoxD1', '#aBoxD2'].forEach(id => $(id).addEventListener('change', () => { BT.setTargetBox({ on: $('#aBox').checked, b1: Number($('#aBoxB1').value), b2: Number($('#aBoxB2').value), d1: Number($('#aBoxD1').value), d2: Number($('#aBoxD2').value) }); boxInit(); render(); }));
+    function boxInit() { const b = BT.targetBox(); $('#aBox').checked = b.on; $('#aBoxB1').value = b.b1; $('#aBoxB2').value = b.b2; $('#aBoxF1').value = b.f1; $('#aBoxF2').value = b.f2; $('#aBoxRow').style.display = b.on ? '' : 'none'; }
+    ['#aBox', '#aBoxB1', '#aBoxB2', '#aBoxF1', '#aBoxF2'].forEach(id => $(id).addEventListener('change', () => { BT.setTargetBox({ on: $('#aBox').checked, b1: Number($('#aBoxB1').value), b2: Number($('#aBoxB2').value), f1: Number($('#aBoxF1').value), f2: Number($('#aBoxF2').value) }); boxInit(); render(); }));
     boxInit();
     init(); render();
   })();

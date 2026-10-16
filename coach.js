@@ -199,8 +199,7 @@
       flat: ratio != null && ratio <= 3,       // USBC sport condition (3:1 or less): small miss room
       mid: ratio != null && ratio > 3 && ratio < 7, // challenge / medium ratio: some room, less than a house shot
       house: ratio != null && ratio >= 7,      // typical house shot: forgiving
-      // The target box is a house-shot idea: on sport / medium ratios the exit point (rule of 31) leads.
-      box: (p.box && p.box.on && length != null && !(ratio != null && ratio < 7)) ? { b1: p.box.b1, b2: p.box.b2, f1: length + p.box.d1, f2: length + p.box.d2 } : null,
+      box: (p.box && !p.box.off && p.box.b1 != null) ? p.box : null, // 📦 Baker Box, decided by BT.boxFor
     };
   }
 
@@ -229,7 +228,12 @@
     const own = (v) => mirror ? 40 - v : v;
     const later = phase === 'later';
     const E31 = exitBoardFor(pat);
-    const box = pat && pat.box ? pat.box : null;            // 📦 your target box, if it's on
+    let box = pat && pat.box ? pat.box : null;              // 📦 your target box, if it applies
+    if (box && box.early38 && arrows != null) {             // Zone 1 (boards 1–10 at the arrows): box can start at 38 ft
+      const sl0 = num(slide), lay0 = sl0 != null ? sl0 - prof.laydownOffset : null;
+      const at15 = lay0 != null ? lay0 + (own(arrows) - lay0) * 15 / tFt : own(arrows);
+      if (at15 <= 10.5) box = Object.assign({}, box, { f1: box.early38, zone1: true });
+    }
     const A0 = box ? (box.b1 + box.b2) / 2 : E31;           // the board to aim the line through
     const D0 = box ? (box.f1 + box.f2) / 2 : (pat && Number(pat.length) ? Number(pat.length) : 60);
     let focal = null, basis = '';
@@ -262,7 +266,7 @@
     if (r.tFt && r.tFt !== 15) { const T = (t) => `${t} (at ${r.tFt} ft)`; r = Object.assign({}, r, { target: T(r.target) }); }
     const math = `slide ${r.slide} → lay down ${r.laydown} → target ${r.target} → board ${r.focal}`;
     if (r.basis === 'box') {
-      const bx = `your target box (boards ${r.box.b1}–${r.box.b2} at ${Math.round(r.box.f1)}–${Math.round(r.box.f2)} ft)`;
+      const bx = `your Baker Box (boards ${r.box.b1}–${r.box.b2} at ${Math.round(r.box.f1)}–${Math.round(r.box.f2)} ft${r.box.zone1 ? ', starting at 38 ft in Zone 1' : ''})`;
       if (!r.status) return `📐 Line through ${bx}: ${math}.`;
       if (r.status === 'on') return `📐 ✅ Through ${bx}: from slide ${r.yourSlide} over target ${r.target} the ball is on about board ${r.passesExact} at ${r.boxFt} ft.`;
       const big = Math.abs(r.slide - r.yourSlide) > 5;
@@ -1054,7 +1058,7 @@
         if (lm && lm.status && lm.status !== 'on') {
           const recent = C.slice(-4);
           const markMiss = recent.filter(c => c.missSide && !c.saved).length;
-          if (markMiss >= 2 && out.status === 'repeat') out.next = `${markMiss} misses at the mark, and your slide and target don't line up${lm.basis === 'rule31' ? ' through the exit point' : lm.basis === 'box' ? ' through your target box' : ' with where the ball should leave the oil now'}. Try finishing your slide on ${lm.slide} for target ${lm.target} (lay down ${lm.laydown}) before changing anything else.`;
+          if (markMiss >= 2 && out.status === 'repeat') out.next = `${markMiss} misses at the mark, and your slide and target don't line up${lm.basis === 'rule31' ? ' through the exit point' : lm.basis === 'box' ? ' through your Baker Box' : ' with where the ball should leave the oil now'}. Try finishing your slide on ${lm.slide} for target ${lm.target} (lay down ${lm.laydown}) before changing anything else.`;
           if (markMiss >= 2) out.notes.unshift(`📐 Before blaming your throw: ${markMiss} of your last ${recent.length} missed the mark, and the line itself doesn't line up. ${lineText(lm).replace(/^📐 /, '')}`);
           else if (!moved) out.notes.push(lineText(lm));
         }
@@ -1099,7 +1103,7 @@
       else if (sb) lines.push(`🎳 Ball: start with ${sb}.${ctx.plan && ctx.plan.firstBall && (ctx.setBalls || []).length ? ` (Your Game Plan pick, ${ctx.plan.firstBall}, isn't in tonight's bag.)` : ''}`);
       const lm0 = ctx.line ? lineMath(ctx.line.feet, ctx.line.arrows, pat, prof, 'start', ctx.line.bp, null, ctx.line.targetFt) : null;
       if (lm0 && lm0.basis === 'box') {
-        const tgt = `${lm0.target}${lm0.tFt && lm0.tFt !== 15 ? ` at ${lm0.tFt} ft` : ''}`, bx = `your box (boards ${lm0.box.b1}–${lm0.box.b2} at ${Math.round(lm0.box.f1)}–${Math.round(lm0.box.f2)} ft)`;
+        const tgt = `${lm0.target}${lm0.tFt && lm0.tFt !== 15 ? ` at ${lm0.tFt} ft` : ''}`, bx = `your Baker Box (boards ${lm0.box.b1}–${lm0.box.b2} at ${Math.round(lm0.box.f1)}–${Math.round(lm0.box.f2)} ft${lm0.box.zone1 ? ', from 38 ft in Zone 1' : ''})`;
         if (lm0.status === 'on') lines.push(`📐 Line: slide ${lm0.yourSlide}, target ${tgt} goes through ${bx}: about board ${lm0.passesExact} at ${lm0.boxFt} ft.`);
         else if (lm0.status) lines.push(`📐 Line: from slide ${lm0.yourSlide}, target ${tgt} the ball is on about board ${lm0.passesExact} at ${lm0.boxFt} ft, ${lm0.gap} board${lm0.gap === 1 ? '' : 's'} ${lm0.status} ${bx}. ${Math.abs(lm0.slide - lm0.yourSlide) > 5 ? 'Try half the move and check again.' : `Try slide ${lm0.slide}, target ${tgt}.`}`);
       } else if (lm0 && lm0.basis === 'rule31') {

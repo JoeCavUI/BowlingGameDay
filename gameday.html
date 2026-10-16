@@ -1742,6 +1742,16 @@ function saveCurrentSessionDraft() {
       } catch (_e) { return null; }
     }
 
+    // 📦 Baker Box for this pattern and bowler (house shots, sport shots 38–43 ft; speed-dominant / urethane: Zone 1 can start at 38 ft)
+    function boxForPattern(p0) {
+      if (!p0) return null;
+      const m = String(p0.ratio || '').match(/(\d+(?:\.\d+)?)\s*(?::|to|-|\/)\s*(\d+(?:\.\d+)?)/i);
+      const ratio = m ? Number(m[1]) / (Number(m[2]) || 1) : null;
+      const bw = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
+      let ure = false;
+      try { const nm = el.ball && el.ball.value; const row = nm && typeof BALL_ROW_MAP !== 'undefined' && BALL_ROW_MAP ? BALL_ROW_MAP.get(nm) : null; ure = !!(row && /urethane/i.test(BT.ballCover(row) || '')); } catch (_e) {}
+      return BT.boxFor(Number(p0.length) || null, ratio, { speedDominant: /speed/i.test(String(bw.dominance || '')), urethane: ure });
+    }
     function coachContext() {
       const chron = sessionShots.slice().reverse();
       const sets = BT.lsGet(BT.KEYS.ARSENAL_SETS, []);
@@ -1752,7 +1762,7 @@ function saveCurrentSessionDraft() {
       return {
         shots: chron,
         bowler: BT.lsGet(BT.KEYS.BOWLER, {}) || {},
-        pattern: (() => { const p0 = (Array.isArray(pats) ? pats : []).find(p => patternName(p) === el.pattern.value) || null; return p0 ? Object.assign({}, p0, { box: BT.targetBox() }) : null; })(),
+        pattern: (() => { const p0 = (Array.isArray(pats) ? pats : []).find(p => patternName(p) === el.pattern.value) || null; return p0 ? Object.assign({}, p0, { box: boxForPattern(p0) }) : null; })(),
         setBalls: names.map(n => ({ name: n, row: map.get(n) })).filter(b => b.row),
         currentBall: el.ball ? el.ball.value : '',
         line: { feet: el.feet.value, arrows: el.arrows.value, bp: el.bp.value, targetFt: el.tdist ? Number(el.tdist.value) || 15 : 15 },
@@ -2376,7 +2386,7 @@ function sessionSummary(shots) {
       if (!box || !window.BTCoach || !BTCoach.lineCheck) return;
       const pats = BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || [];
       const pat0 = (Array.isArray(pats) ? pats : []).find(p => patternName(p) === el.pattern.value) || null;
-      const pat = pat0 ? Object.assign({}, pat0, { box: BT.targetBox() }) : null;
+      const pat = pat0 ? Object.assign({}, pat0, { box: boxForPattern(pat0) }) : null;
       const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
       // Starting line = game 1 and no move yet (current line equals every logged line). After that, only "usable".
       const shots = sessionShots.filter(x => x && x.type !== 'gameStart');
