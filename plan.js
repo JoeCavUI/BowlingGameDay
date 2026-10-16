@@ -151,6 +151,9 @@
     const houseLabel = house || String(opts.house || '').trim();
     const lanes = pairKey(opts.lanes);
     const event = opts.event === 'tournament' ? 'tournament' : 'league';
+    // How the inside plays on this league (the bowler's own read): 'opens' | 'holds' | ''.
+    let wear = opts.wear || '';
+    try { if (!wear && opts.league && BT().leagueByName) { const lgO = BT().leagueByName(opts.league, opts.house); wear = (lgO && lgO.wear) || ''; } } catch (_e) {}
     const today = opts.date || BT().localDate();
     const sess = sessionsAt(houseLabel);
     const out = { title: `Game Plan: ${houseLabel || 'pick a house'}`, sub: [], sections: [], house: houseLabel, lefty };
@@ -244,7 +247,7 @@
       } else items.push('Your leaves here look like your leaves everywhere else: no strong high or weak signature. Read the first few shots before deciding.');
       if (sig && sig.h / sig.a >= 1.4) items.push(`The ${nm(sig.k)} shows up <b>${r1(sig.h / sig.a)}×</b> as often here as anywhere else (${sig.h.toFixed(2)} a game vs ${sig.a.toFixed(2)}).`);
       if (early + long >= 8) items.push(`Game Day reads here: ${early} early / high, ${long} long / light.`);
-      if (lean === -1) items.push('<b>Worth testing in practice:</b> a ball that gets through the front more easily (reads later) and/or responds more evenly at the back (smoother), alongside your usual line. Check alignment first. If the left is opening up, a big move left can take you into that friction, so a ball change is worth weighing as well as a move.');
+      if (lean === -1) items.push('<b>Worth testing in practice:</b> a ball that gets through the front more easily (reads later) and/or responds more evenly at the back (smoother), alongside your usual line. Check alignment first.' + (wear === 'holds' ? ` On this league the ${lefty ? 'right' : 'left'} stays oily, so a move in is usually safe.` : wear === 'opens' ? ` On this league the ${lefty ? 'right' : 'left'} opens up, so a ball change is worth weighing as well as a move.` : ` If the ${lefty ? 'right' : 'left'} is opening up, a big move in can take you into that friction, so a ball change is worth weighing as well as a move.`));
       if (lean === 1) items.push('<b>Start with more ball</b>, or move right to find friction.');
       sec('🛣️', 'What the lanes are telling you', items);
     }
@@ -349,15 +352,20 @@
     {
       const fb = out.firstBall ? esc(out.firstBall) : 'your first ball';
       const items = [];
-      if (lean === 1) {
+      const dIn = lefty ? 'right' : 'left', dOut = lefty ? 'left' : 'right';
+      if (wear === 'holds') {
+        items.push(`<b>Reads early</b> (high or flat, on shots where you hit your mark): move ${dIn}, 2 with your feet and 1 with your eyes. On this league the ${dIn} stays oily and the friction is outside and down lane, so moving in is usually safe.`);
+        items.push(`<b>Later in the night</b>: the outside dries first here. Keep moving ${dIn} in small steps rather than chasing it ${dOut}.`);
+        items.push('<b>Ball starts going long</b> after a move in: come back half the move, or go to the stronger ball.');
+      } else if (lean === 1) {
         items.push('<b>Light hits keep coming</b> (10s, washouts, buckets): don\'t chase it with your feet first. Play a stronger line in, or keep ' + fb + ' and move right 1–2.');
         items.push('<b>' + fb + ' reads early</b> (high, left of the pocket, on shots where you hit your mark): move 2 left with your feet and 1 with your eyes. Still early: go to the backup.');
       } else if (lean === -1) {
-        items.push('<b>Reads early</b> (high or flat, on shots where you hit your mark): check alignment first; then choose between a move and a ball that reads later through the front. A big move left can put you into friction other players have opened up.');
+        items.push(`<b>Reads early</b> (high or flat, on shots where you hit your mark): check alignment first; then choose between a move and a ball that reads later through the front.${wear === 'opens' ? ` On this league the ${dIn} opens up (two-handers and high revs): a big move ${dIn} can put you into that friction.` : ` A big move ${dIn} can put you into friction if other players have opened it up. Tell Coach how the ${dIn} plays on this league (Game Day → Tonight).`}`);
         items.push('<b>Feeling trapped</b> (moved left and it still reads early): a straighter line from farther right, or a ball that gets through the front, are both options; a little loft past the heads helps some players.');
         items.push('<b>Ball starts going long</b> late in the night: come back half the move, or go back to the stronger ball.');
       } else {
-        items.push('<b>Reads early</b> (high, left of the pocket, on shots where you hit your mark): 2 left with your feet, 1 with your eyes.');
+        items.push(`<b>Reads early</b> (high, ${dIn} of the pocket, on shots where you hit your mark): 2 ${dIn} with your feet, 1 with your eyes.${wear === 'opens' ? ` On this league the ${dIn} opens up: keep the moves small.` : ''}`);
         items.push('<b>Goes long</b> (light, right of the pocket): 2 right and 1, or a stronger ball.');
       }
       items.push('<b>Hitting the pocket but not carrying</b>: often a ball-reaction question rather than a big line move; check alignment and release, then consider a ball change or a small move. Surface changes happen <b>before</b> league: no sanding or polishing during sanctioned competition.');
@@ -439,7 +447,8 @@
   const _cache = {};
   function forContext(ctx) {
     ctx = ctx || {};
-    const key = JSON.stringify([ctx.house, pairKey(ctx.lanes), ctx.league, ctx.setName, ctx.patternName, ctx.count, BT().localDate()]);
+    let wr = ctx.wear || ''; try { if (!wr && ctx.league && BT().leagueByName) { const l = BT().leagueByName(ctx.league, ctx.house); wr = (l && l.wear) || ''; } } catch (_e) {}
+    const key = JSON.stringify([ctx.house, pairKey(ctx.lanes), ctx.league, wr, ctx.setName, ctx.patternName, ctx.count, BT().localDate()]);
     if (_cache[key]) return _cache[key];
     let r = null; try { r = build(ctx); } catch (e) { console.error(e); }
     _cache[key] = r; return r;

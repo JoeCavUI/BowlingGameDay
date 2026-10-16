@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=99" />
+  <link rel="stylesheet" href="styles.css?v=100" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -42,6 +42,12 @@
                 <select id="league" class="input" style="flex:1"></select>
                 <button class="btn secondary" id="addLeagueBtn" type="button">Add</button>
               </div>
+              <label for="leagueWear" style="margin-top:8px" id="leagueWearLbl">How the left plays on this league</label>
+              <select id="leagueWear" class="input" disabled>
+                <option value="">Not sure / mixed</option>
+                <option value="opens">Left opens up (two-handers, high revs)</option>
+                <option value="holds">Left stays oily (friction outside & down lane)</option>
+              </select>
             </div>
             <div>
               <label>Lanes / Pair</label>
@@ -251,12 +257,12 @@
     </div>
   </div>
 
-  <script src="app.js?v=99"></script>
-  <script src="coach.js?v=99"></script>
-  <script src="pinpal.js?v=99"></script>
-  <script src="history.js?v=99"></script>
-  <script src="chart.js?v=99"></script>
-  <script src="plan.js?v=99"></script>
+  <script src="app.js?v=100"></script>
+  <script src="coach.js?v=100"></script>
+  <script src="pinpal.js?v=100"></script>
+  <script src="history.js?v=100"></script>
+  <script src="chart.js?v=100"></script>
+  <script src="plan.js?v=100"></script>
   <script>
     BT.renderNav('gameday');
     BT.wireReadAloud(document.getElementById('coachSpeak'), () => ((document.getElementById('coachText') || {}).innerText || '').split('\n').filter(l => !/^(Why & what's next|What Coach is using)/i.test(l.trim())).join('\n'));
@@ -1741,6 +1747,7 @@ function saveCurrentSessionDraft() {
         currentBall: el.ball ? el.ball.value : '',
         line: { feet: el.feet.value, arrows: el.arrows.value, bp: el.bp.value },
         history: historyFor(),
+        wear: (() => { try { const l = el.league.value ? BT.getLeagueById(el.league.value) : null; return (l && l.wear) || ''; } catch (_e) { return ''; } })(),
         plan: planFor(),
         motion: { vector: (r, b) => BT.motionVector(r, b), distance: (a, b) => BT.motionDistance(a, b) },
         ballInfo: (r) => ({ cover: BT.ballCover(r), grit: BT.surfaceToGrit(BT.ballSurface(r)), asym: /asym/i.test(BT.ballCore(r) || ''), known: !!(String(BT.ballSurface(r) || '').trim() && BT.ballRG(r) && BT.ballDiff(r)) }),
@@ -2195,7 +2202,23 @@ function sessionSummary(shots) {
       el.ball.addEventListener('change', markCoachDirty);
       el.house.addEventListener('change', () => { renderLeagues(); updatePrep(); markCoachDirty(); });
       el.pattern.addEventListener('change', () => { updatePrep(); markCoachDirty(); });
-      el.league.addEventListener('change', () => { updatePrep(); markCoachDirty(); });
+      el.league.addEventListener('change', () => { syncLeagueWear(); updatePrep(); markCoachDirty(); });
+      // How the inside plays on this league: saved on the league, used by Coach and the Game Plan.
+      const wearSel = document.getElementById('leagueWear');
+      function syncLeagueWear() {
+        if (!wearSel) return;
+        const lefty = (() => { try { return isLeftyBowler(); } catch (_e) { return false; } })();
+        const dIn = lefty ? 'right' : 'left', DIn = lefty ? 'Right' : 'Left';
+        document.getElementById('leagueWearLbl').textContent = `How the ${dIn} plays on this league`;
+        wearSel.options[1].text = `${DIn} opens up (two-handers, high revs)`;
+        wearSel.options[2].text = `${DIn} stays oily (friction outside & down lane)`;
+        const l = el.league.value ? BT.getLeagueById(el.league.value) : null;
+        wearSel.disabled = !l;
+        wearSel.value = (l && l.wear) || '';
+      }
+      if (wearSel) wearSel.addEventListener('change', () => { if (!el.league.value) return; BT.setLeague(el.league.value, { wear: wearSel.value }); markCoachDirty(); try { autoCoach(); } catch (_e) {} });
+      el.house.addEventListener('change', () => syncLeagueWear());
+      setTimeout(syncLeagueWear, 0);
       el.addLeagueBtn.addEventListener('click', () => {
         const house = el.house.value || '';
         if (!house) return alert('Select a House first (from Oil page).');

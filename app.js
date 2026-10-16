@@ -6,7 +6,7 @@
 
 (function () {
   // Bump this string each build so pages can display it and cache-bust resources.
-  const APP_VERSION = 'v99-beta36';
+  const APP_VERSION = 'v100-beta37';
   const KEYS = {
     CSV_CACHE: 'bt_csv_cache_v1',          // stringified { savedAt, name, rows }
     BOWLER: 'bt_bowler_v1',               // stringified object
@@ -99,6 +99,23 @@
   function getLeagues() {
     const arr = lsGet(KEYS.LEAGUES, []);
     return Array.isArray(arr) ? arr : [];
+  }
+
+  // League fields Coach uses (e.g. wear: how the inside plays on this league: 'opens' | 'holds' | '').
+  function setLeague(id, patch) {
+    const leagues = getLeagues();
+    const l = leagues.find(x => x.id === id);
+    if (!l) return null;
+    Object.assign(l, patch || {});
+    lsSet(KEYS.LEAGUES, leagues);
+    return l;
+  }
+  function leagueByName(name, houseName) {
+    const k = (t) => String(t || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const n = k(name); if (!n) return null;
+    const hk = k(houseName);
+    const L = getLeagues().filter(l => k(l.name) && (n.includes(k(l.name).slice(0, 10)) || k(l.name).includes(n.slice(0, 10))));
+    return L.find(l => !hk || k(l.houseId) === hk || k(l.houseId).startsWith(hk) || hk.startsWith(k(l.houseId))) || L[0] || null;
   }
 
   function addLeague(name, houseId) {
@@ -1603,7 +1620,7 @@
     KEYS,
     $, $all,
     lsGet, lsSet, localDate,
-    getLeagues, addLeague, getLeagueById,
+    getLeagues, addLeague, getLeagueById, setLeague, leagueByName,
     parseCSV,
     ensureCSVLoaded, loadSampleArsenal, isRetired, activeOnly, arsenalTemplateCSV,
     customBalls,

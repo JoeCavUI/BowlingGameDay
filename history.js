@@ -192,7 +192,7 @@
     }
     const all = filter({});
     const pick = (fn) => { const hg = house ? all.filter(g => g.h === house && fn(g)) : []; const a = analyze(hg); if (a) return { scope: house, ...a }; const b = analyze(all.filter(fn)); return b ? { scope: 'all houses', ...b } : null; };
-    const out = { house, fresh: pick(g => g.gn === 1), transition: pick(g => g.gn === 2 || g.gn === 3), burn: null };
+    const out = { house, fresh: pick(g => g.gn === 1), transition: pick(g => g.gn === 2), late: pick(g => g.gn >= 3), burn: null };
     // Burn from Game Day: games where 40%+ of tracked shots read early / high. Rated by strikes and pocket hits.
     try {
       const sess = (opts.sessions || []).filter(s => !house || matchHouse(s.house) === house || !s.house);
@@ -217,9 +217,12 @@
     const b = (a) => a.balls.map(x => `${x.n} ${x.avg} (${x.games})`).join(', ');
     const L = [];
     if (bc.fresh) L.push(`🧪 <b>Fresh (game 1)</b>${bc.fresh.scope !== bc.house ? ' across all houses' : ''}: ${[t(bc.fresh), bc.fresh.balls.length ? 'Best: ' + b(bc.fresh) : ''].filter(Boolean).join('. ')}.`);
-    if (bc.transition) L.push(`🔄 <b>Transition (games 2–3)</b>${bc.transition.scope !== bc.house ? ' across all houses' : ''}: ${[t(bc.transition), bc.transition.balls.length ? 'Best: ' + b(bc.transition) : ''].filter(Boolean).join('. ')}.`);
-    if (bc.burn && bc.burn.balls.length) L.push(`🔥 <b>Burn (Game Day games reading early)</b>: ${bc.burn.balls.map(x => `${x.n} ${x.strike}% strikes, ${x.early}% early (${x.shots} shots)`).join(', ')}.`);
-    else L.push('🔥 <b>Burn</b>: not enough Game Day games yet. When the ball reads early, tap <b>Early</b> (or High / Left of pocket) and Coach will learn what gets you through it.');
+    if (bc.transition) L.push(`🔄 <b>Transition (game 2)</b>${bc.transition.scope !== bc.house ? ' across all houses' : ''}: ${[t(bc.transition), bc.transition.balls.length ? 'Best: ' + b(bc.transition) : ''].filter(Boolean).join('. ')}.`);
+    // Burn from PinPal: game 3 is where the lanes are most worn on a league night.
+    if (bc.late) L.push(`🔥 <b>Burn (game 3)</b>${bc.late.scope !== bc.house ? ' across all houses' : ''}: ${[t(bc.late), bc.late.balls.length ? 'Best: ' + b(bc.late) : ''].filter(Boolean).join('. ')}.`);
+    // Sharper: Game Day games where the ball actually read early.
+    if (bc.burn && bc.burn.balls.length) L.push(`🔥 <b>Reading early (Game Day)</b>: ${bc.burn.balls.map(x => `${x.n} ${x.strike}% strikes, ${x.early}% early (${x.shots} shots)`).join(', ')}.`);
+    else if (!bc.late) L.push('🔥 <b>Burn</b>: not enough game 3s here yet. When the ball reads early in Game Day, tap <b>Early</b> (or High / Left of pocket) and Coach will learn what gets you through it.');
     return L;
   }
 

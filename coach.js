@@ -994,6 +994,14 @@
       if (C.length >= 2) moveNotes(out, C, prof);
       laneNotes(out, C, prof);
       missPatternNote(out, C);
+      // 🛣️ How the inside plays on this league (the bowler told us), when the ball is reading early.
+      const wear = ctx && ctx.wear;
+      if (wear && out.situation === 'early' && !(out.notes || []).some(n => /^🛣️ This league/.test(n))) {
+        const dIn = (prof && prof.deeper) || 'left', dOut = (prof && prof.outside) || 'right';
+        out.notes.push(wear === 'holds'
+          ? `🛣️ This league: the ${dIn} stays oily and the friction is outside and down lane, so moving ${dIn} is usually safe here. The trap is staying too far ${dOut}.`
+          : `🛣️ This league: the ${dIn} opens up (two-handers and high revs). Keep moves ${dIn} small; if a move ${dIn} still reads early, a straighter line or a cleaner ball beats going deeper.`);
+      }
       // 📚 History: entering a game where you usually drop off at this house
       const hist = ctx && ctx.history;
       if (hist && hist.byGame && C.length) {
@@ -1001,7 +1009,8 @@
         const inGame = C.filter(c => c.gameNo === gNow).length;
         const g1 = hist.byGame[1], gN = hist.byGame[gNow];
         // 🔄 Entering game 2: what has worked for you here once the lanes start to change
-        try { const t = hist.cond && hist.cond.transition; if (gNow === 2 && inGame <= 2 && t && t.balls && t.balls.length) out.notes.push(`🔄 Transition: in games 2–3${t.scope !== hist.cond.house ? ' (all houses)' : ' here'} your best have been ${t.balls.map(x => `${x.n} ${x.avg}`).join(', ')}. If it starts reading early, check alignment, then weigh a move against a ball that reads later through the front.`); } catch (_e) {}
+        try { const t = hist.cond && hist.cond.transition; if (gNow === 2 && inGame <= 2 && t && t.balls && t.balls.length) out.notes.push(`🔄 Transition: in game 2${t.scope !== hist.cond.house ? ' (all houses)' : ' here'} your best have been ${t.balls.map(x => `${x.n} ${x.avg}`).join(', ')}. If it starts reading early, check alignment, then weigh a move against a ball that reads later through the front.`); } catch (_e) {}
+        try { const t = hist.cond && hist.cond.late; if (gNow >= 3 && inGame <= 2 && t && t.balls && t.balls.length) out.notes.push(`🔥 Game 3${t.scope !== hist.cond.house ? ' (all houses)' : ' here'}: your best have been ${t.balls.map(x => `${x.n} ${x.avg}`).join(', ')}.`); } catch (_e) {}
         if (gNow >= 2 && inGame <= 2 && g1 != null && gN != null && gN - g1 <= -6) out.notes.unshift(`📚 History: at ${hist.house} your game ${gNow} averages ${Math.round(g1 - gN)} pins below game 1 (${gN} vs ${g1}). The lanes usually change here by now: watch the first good shots closely and don't wait to move.`);
       }
       // 📐 Alignment: is the line going through the exit point? Only speak up before any move,
@@ -1067,7 +1076,10 @@
       } else if (pat && pat.length) lines.push(`📐 Line: aim to leave the oil around board ${exitBoardFor(pat)}, not inside it.`);
       if (!pat) lines.push('📐 Pick tonight\'s oil pattern so Coach can check your line.');
       const lean = ctx.plan ? Number(ctx.plan.lean) || 0 : 0;
-      if (lean === -1) lines.push('👀 Watch for: the ball reading early as the lane changes. Small moves (1 board, feet and eyes together) before a big move left.');
+      const wr = ctx.wear, dIn = prof.deeper || 'left';
+      if (wr === 'holds') lines.push(`👀 Watch for: the outside and down lane drying. The ${dIn} stays oily on this league, so moving ${dIn} with feet and eyes is your first move.`);
+      else if (wr === 'opens') lines.push(`👀 Watch for: the ${dIn} opening up as the night goes. Small moves (1 board, feet and eyes together); don't go deep into it.`);
+      else if (lean === -1) lines.push('👀 Watch for: the ball reading early as the lane changes. Small moves (1 board, feet and eyes together) before a big move left.');
       else if (lean === 1) lines.push('👀 Watch for: the ball arriving weak (light hits, 10 pins). Small moves in, or a stronger ball, before a big change.');
       try {
         const sp = ((ctx.history && ctx.history.lines) || []).find(l => /Spare to practice/.test(l));

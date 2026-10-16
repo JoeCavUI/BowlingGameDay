@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Plan</title>
-  <link rel="stylesheet" href="styles.css?v=99" />
+  <link rel="stylesheet" href="styles.css?v=100" />
 </head>
 <body data-page="plan">
   <div class="navlinks"></div>
@@ -29,6 +29,10 @@
       <div class="pl-row">
         <div><label for="pLanes">Lanes <span class="small">(optional)</span></label><input id="pLanes" class="input" placeholder="e.g. 1314 = lanes 13 & 14" inputmode="numeric" /></div>
         <div><label for="pEvent">Event</label><select id="pEvent" class="input"><option value="league">League night</option><option value="tournament">Tournament</option></select></div>
+      </div>
+      <div class="pl-row">
+        <div><label for="pLeague">League <span class="small">(optional)</span></label><select id="pLeague" class="input"></select></div>
+        <div><label for="pWear" id="pWearLbl">How the left plays</label><select id="pWear" class="input" disabled><option value="">Not sure / mixed</option><option value="opens">Opens up (two-handers)</option><option value="holds">Stays oily (friction outside)</option></select></div>
       </div>
       <div class="pl-row">
         <div><label for="pSet">Bag <span class="small">(optional)</span></label><select id="pSet" class="input"></select></div>
@@ -55,11 +59,11 @@
     </div>
   </div>
 
-  <script src="app.js?v=99"></script>
-  <script src="pinpal.js?v=99"></script>
-  <script src="history.js?v=99"></script>
-  <script src="chart.js?v=99"></script>
-  <script src="plan.js?v=99"></script>
+  <script src="app.js?v=100"></script>
+  <script src="pinpal.js?v=100"></script>
+  <script src="history.js?v=100"></script>
+  <script src="chart.js?v=100"></script>
+  <script src="plan.js?v=100"></script>
   <script>
   (function () {
     BT.renderNav('plan');
@@ -85,8 +89,39 @@
       const setPick = last.setName || tonight.set || BT.lsGet('bt_gameday_preferred_set_v1', '');
       if (setPick && sets.some(s => s.name === setPick)) $('#pSet').value = setPick;
       if (last.patternName && pats.some(p => p.name === last.patternName)) $('#pPat').value = last.patternName;
+      fillLeagues(last.leagueId || tonight.league || '');
       if (!(window.BTHistory && BTHistory.has())) $('#pStatus').innerHTML = 'Tip: import your PinPal history (<a href="scores.html" style="color:var(--accent)">Scores → History</a>) so Coach can plan from years of games.';
     }
+
+    // League list for the house typed above; the lane-wear read is saved on the league.
+    const hk = (t) => String(t || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    function fillLeagues(pick) {
+      const h = hk($('#pHouse').value);
+      const L = BT.getLeagues().filter(l => !h || !hk(l.houseId) || hk(l.houseId).startsWith(h) || h.startsWith(hk(l.houseId)) || hk(l.houseId).includes(h));
+      $('#pLeague').innerHTML = '<option value="">—</option>' + L.map(l => `<option value="${esc(l.id)}">${esc(l.name)}</option>`).join('') + '<option value="__add">+ Add a league…</option>';
+      if (pick && L.some(l => l.id === pick)) $('#pLeague').value = pick;
+      else if (L.length === 1) $('#pLeague').value = L[0].id;
+      syncWear();
+    }
+    function syncWear() {
+      const lefty = /^l/i.test(String((BT.lsGet(BT.KEYS.BOWLER, {}) || {}).handedness || ''));
+      $('#pWearLbl').textContent = `How the ${lefty ? 'right' : 'left'} plays`;
+      const l = $('#pLeague').value ? BT.getLeagueById($('#pLeague').value) : null;
+      $('#pWear').disabled = !l; $('#pWear').value = (l && l.wear) || '';
+    }
+    $('#pHouse').addEventListener('change', () => fillLeagues($('#pLeague').value));
+    $('#pLeague').addEventListener('change', () => {
+      if ($('#pLeague').value === '__add') {
+        const house = $('#pHouse').value.trim();
+        if (!house) { alert('Type where you\'re bowling first.'); $('#pLeague').value = ''; return; }
+        const name = prompt(`New league at ${house} (e.g. Saturday Mixed):`);
+        const l = name ? BT.addLeague(name, house) : null;
+        fillLeagues(l ? l.id : '');
+        return;
+      }
+      syncWear();
+    });
+    $('#pWear').addEventListener('change', () => { if ($('#pLeague').value) BT.setLeague($('#pLeague').value, { wear: $('#pWear').value }); });
 
     function render(p) {
       const today = BT.localDate();
@@ -99,7 +134,8 @@
     }
 
     function buildNow() {
-      const opts = { house: $('#pHouse').value.trim(), lanes: $('#pLanes').value.trim(), event: $('#pEvent').value, setName: $('#pSet').value, patternName: $('#pPat').value, count: Number($('#pCount').value) };
+      const lgO = $('#pLeague').value ? BT.getLeagueById($('#pLeague').value) : null;
+      const opts = { house: $('#pHouse').value.trim(), lanes: $('#pLanes').value.trim(), event: $('#pEvent').value, leagueId: lgO ? lgO.id : '', league: lgO ? lgO.name : '', wear: (lgO && lgO.wear) || '', setName: $('#pSet').value, patternName: $('#pPat').value, count: Number($('#pCount').value) };
       if (!opts.house) { $('#pStatus').textContent = 'Type or pick where you\'re bowling.'; $('#pHouse').focus(); return; }
       try { plan = BTPlan.build(opts); } catch (e) { console.error(e); $('#pStatus').textContent = 'Could not build the plan: ' + (e && e.message ? e.message : e); return; }
       BT.lsSet(LAST, opts);

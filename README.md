@@ -58,6 +58,12 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v100-beta37: burn from game 3, how the left plays per league
+
+- **Burn from your PinPal game 3s.** By lane condition is now Fresh (game 1), Transition (game 2) and Burn (game 3), all from PinPal, so a house with years of games always has a burn read. Game Day nights where the ball actually read early add a sharper line on top. Coach adds a game 3 note at the start of game 3.
+- **How the left plays on this league.** Game Day → Tonight and the Game Plan have a setting saved on each league: "Left opens up (two-handers, high revs)", "Left stays oily (friction outside & down lane)" or "Not sure". Shelby Thursday and Sterling Saturday can be set differently. The Game Plan's If / Then, the lanes section, Game Day's "Watch for" line and Coach's notes on early reads follow it (mirrored for lefties).
+- **League on the Game Plan page**, with "+ Add a league…" when the house doesn't have one yet.
+
 ## Changes in v99-beta36: short Game Day plan, lane beside the pins
 
 - **Game Day starting plan is short.** Ball, line, what to watch for, spare and oil: one line each. The house history, ball records and fresh-lane lists stay in the Game Plan, which holds the detail and the reasons.
