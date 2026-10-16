@@ -255,7 +255,11 @@
       $('#aTbl').innerHTML = `<tr><th>Distance</th><th>Board</th><th></th></tr>` + rows.map(r => {
         const off = r.b < 0.5 || r.b > 39.5;
         return `<tr${r.lbl === 'End of oil' ? ' class="ang-oilrow"' : ''}><td>${r.ft} ft</td><td><b>${off ? 'channel' : fmt(r.b)}</b></td><td class="small">${r.lbl || ''}</td></tr>`;
-      }).join('');
+      }).join('') + (c.rec ? (() => {
+        const boards = Math.abs(pocketBoard - c.rec.from), ft = Math.max(1, 60 - c.rec.ft);
+        const from = c.rec.what.startsWith('your breakpoint') ? 'from your breakpoint' : 'from the oil exit';
+        return `<tr class="ang-recrow"><td>Back to pocket</td><td><b>${fmt(boards)} boards</b></td><td class="small">${from}, board ${fmt(c.rec.from)} → ${pocketBoard} in ${r1(ft)} ft</td></tr>`;
+      })() : '');
       draw(c, rows);
       $('#aAlerts').innerHTML = alerts(c).map(a => `<div class="ang-alert ${a[0]}">${a[1]}</div>`).join('');
       renderFixes(c);

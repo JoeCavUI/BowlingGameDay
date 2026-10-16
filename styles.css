@@ -593,3 +593,5 @@ select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }
 .ang-opt-t{display:block;font-weight:700;font-size:15px}
 .ang-opt-s{display:block;font-size:13px;opacity:.8;margin-top:2px}
 .ang-undo{margin-top:10px;width:100%}
+
+.ang-recrow td{color:var(--ang-exit);border-top:2px solid rgba(255,179,92,.35)}

@@ -62,6 +62,7 @@ Then open http://localhost:3000
 
 - **Fix:** a line straight up one board (e.g. slide 20, laydown 6, target 14) with the breakpoint on that board was flagged as not fitting and showed "move 0 boards" fixes. It now fits.
 - A breakpoint only counts as fitting when the line is on that board near the end of the oil (12 ft before to 8 ft after), not back at the arrows.
+- **Back to pocket** row at the bottom of the Angle table: boards the ball has to come back from your breakpoint (or the oil exit) to the pocket, and in how many feet.
 - The warning is reworded in plain terms: where the ball is at the end of the oil, how far off your breakpoint is, and which way.
 
 ## Changes in v104-beta41: placeholders and dropdowns
