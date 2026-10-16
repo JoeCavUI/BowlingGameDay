@@ -117,6 +117,9 @@
       const pi = pats.findIndex(p => p.name === (q.get('pattern') || tonight.pattern || last.pattern));
       if (pi >= 0) { $('#aPat').value = String(pi); $('#aLen').value = pats[pi].length || ''; } else $('#aLen').value = last.len || 42;
       if (last.mode && !q.get('slide')) setMode(last.mode);
+      // From Game Day with a downlane target: open as "board at a distance".
+      if (q.get('tft') && Number(q.get('tft')) !== 15) { setMode('custom'); $('#aCBoard').value = q.get('target') || ''; $('#aCFt').value = q.get('tft'); }
+      else if (q.get('slide')) setMode('target');
       if (last.pin) pin = last.pin; if (last.spot != null) spot = last.spot;
       $('#aPinPick').innerHTML = [[7, 8, 9, 10], [4, 5, 6], [2, 3], [1]].map(r => `<div class="ang-prow">${r.map(n => `<button type="button" data-p="${n}">${n}</button>`).join('')}</div>`).join('');
       paintPicks();

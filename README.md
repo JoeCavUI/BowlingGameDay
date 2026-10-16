@@ -63,6 +63,8 @@ Then open http://localhost:3000
 - **Fix:** a line straight up one board (e.g. slide 20, laydown 6, target 14) with the breakpoint on that board was flagged as not fitting and showed "move 0 boards" fixes. It now fits.
 - A breakpoint only counts as fitting when the line is on that board near the end of the oil (12 ft before to 8 ft after), not back at the arrows.
 - **Back to pocket** row at the bottom of the Angle table: boards the ball has to come back from your breakpoint (or the oil exit) to the pocket, and in how many feet.
+- **Target distance in Game Day:** a "Target is at" dropdown (arrows 15 ft, dots 7 ft, or 20–40 ft) under Slide / Target / Breakpoint. Log the board your eyes are on at the distance you look; Coach's line check, the angle of each shot and the Angle link all use it.
+- **Gentler rule-of-31 advice:** when matching the exit point would take a feet move of more than 5 boards, Coach says the rule of 31 is an estimate (a few boards outside is common on a house shot) instead of telling you to make the big move.
 - The warning is reworded in plain terms: where the ball is at the end of the oil, how far off your breakpoint is, and which way.
 
 ## Changes in v104-beta41: placeholders and dropdowns

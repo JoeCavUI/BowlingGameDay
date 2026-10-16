@@ -127,7 +127,12 @@
               <div class="stepper"><button type="button" class="btn secondary" data-step="bp" data-d="-1" aria-label="Breakpoint minus one">−</button><input id="bp" class="input" type="number" step="1" inputmode="numeric" /><button type="button" class="btn secondary" data-step="bp" data-d="1" aria-label="Breakpoint plus one">+</button></div>
             </div>
           </div>
-          <div class="small" style="margin-top:6px">Slide = the board under the inside of your slide foot at the foul line.</div>
+          <div class="gd-tdist"><label for="tdist">Target is at</label>
+            <select id="tdist" class="input">
+              <option value="15">the arrows (15 ft)</option><option value="7">the dots (7 ft)</option><option value="20">20 ft</option><option value="22">22 ft</option><option value="25">25 ft</option><option value="27">27 ft</option><option value="30">30 ft</option><option value="33">33 ft</option><option value="35">35 ft</option><option value="40">40 ft</option>
+            </select>
+          </div>
+          <div class="small" style="margin-top:6px">Slide = the board under the inside of your slide foot at the foul line. Target = the board your eyes are on, at the distance you pick.</div>
           <div id="lineMath" class="gd-linemath" style="display:none"></div>
           <div style="margin-top:10px">
             <label>Ball</label>
@@ -315,6 +320,7 @@
       set: BT.$('#set'),
       feet: BT.$('#feet'),
       arrows: BT.$('#arrows'),
+      tdist: BT.$('#tdist'),
       bp: BT.$('#bp'),
       pocketBoard: BT.$('#pocketBoard'),
       mode: BT.$('#mode'),
@@ -392,6 +398,7 @@
       BT.lsSet(LAST_LINE_KEY, {
         feet: el.feet.value ? Number(el.feet.value) : null,
         arrows: el.arrows.value ? Number(el.arrows.value) : null,
+        targetFt: el.tdist ? Number(el.tdist.value) || 15 : 15,
         bp: el.bp.value ? Number(el.bp.value) : null,
         pocketBoard: el.pocketBoard && el.pocketBoard.value ? Number(el.pocketBoard.value) : null,
         mode: el.mode.value,
@@ -430,6 +437,7 @@
       const d = lastShot ? {
         feet: lastShot.feet,
         arrows: lastShot.arrows,
+        targetFt: lastShot.targetFt,
         bp: lastShot.bp,
         pocketBoard: lastShot.pocketBoard,
         mode: lastShot.mode,
@@ -439,6 +447,7 @@
       if (!d) return;
       if (Number.isFinite(d.feet)) el.feet.value = d.feet;
       if (Number.isFinite(d.arrows)) el.arrows.value = d.arrows;
+      if (el.tdist) { const t = String(Number(d.targetFt) || 15); if (![...el.tdist.options].some(o => o.value === t)) el.tdist.add(new Option(t + ' ft', t)); el.tdist.value = t; }
       if (Number.isFinite(d.bp)) el.bp.value = d.bp;
       if (d.mode) el.mode.value = d.mode;
       // ball may not exist yet until set is loaded; save so loadSetToUI can apply it.
@@ -1746,7 +1755,7 @@ function saveCurrentSessionDraft() {
         pattern: (Array.isArray(pats) ? pats : []).find(p => patternName(p) === el.pattern.value) || null,
         setBalls: names.map(n => ({ name: n, row: map.get(n) })).filter(b => b.row),
         currentBall: el.ball ? el.ball.value : '',
-        line: { feet: el.feet.value, arrows: el.arrows.value, bp: el.bp.value },
+        line: { feet: el.feet.value, arrows: el.arrows.value, bp: el.bp.value, targetFt: el.tdist ? Number(el.tdist.value) || 15 : 15 },
         history: historyFor(),
         wear: (() => { try { const l = el.league.value ? BT.getLeagueById(el.league.value) : null; return (l && l.wear) || ''; } catch (_e) { return ''; } })(),
         plan: planFor(),
@@ -1912,6 +1921,8 @@ function saveCurrentSessionDraft() {
 
         feet: el.feet.value ? Number(el.feet.value) : null,
         arrows: el.arrows.value ? Number(el.arrows.value) : null,
+        targetFt: el.tdist ? Number(el.tdist.value) || 15 : 15,
+        layOff: (() => { const v = Number((BT.lsGet(BT.KEYS.BOWLER, {}) || {}).laydownOffset); return Number.isFinite(v) && v > 0 ? v : 5; })(),
         bp: el.bp.value ? Number(el.bp.value) : null,
         pocketBoard: el.pocketBoard && el.pocketBoard.value ? Number(el.pocketBoard.value) : null,
         mode: el.mode.value,
@@ -2205,7 +2216,7 @@ function sessionSummary(shots) {
       el.pattern.addEventListener('change', () => { updatePrep(); markCoachDirty(); });
       // Open the Angle calculator with tonight's line and pattern filled in.
       const angA = document.getElementById('gdAngle');
-      if (angA) angA.addEventListener('click', () => { const q = new URLSearchParams(); if (el.feet.value) q.set('slide', el.feet.value); if (el.arrows.value) q.set('target', el.arrows.value); if (el.bp && el.bp.value) q.set('bp', el.bp.value); if (el.pattern.value) q.set('pattern', el.pattern.value); angA.href = 'angle.html?' + q.toString(); });
+      if (angA) angA.addEventListener('click', () => { const q = new URLSearchParams(); if (el.feet.value) q.set('slide', el.feet.value); if (el.arrows.value) q.set('target', el.arrows.value); if (el.tdist && el.tdist.value && el.tdist.value !== '15') q.set('tft', el.tdist.value); if (el.bp && el.bp.value) q.set('bp', el.bp.value); if (el.pattern.value) q.set('pattern', el.pattern.value); angA.href = 'angle.html?' + q.toString(); });
       el.league.addEventListener('change', () => { syncLeagueWear(); updatePrep(); markCoachDirty(); });
       // How the inside plays on this league: saved on the league, used by Coach and the Game Plan.
       const wearSel = document.getElementById('leagueWear');
@@ -2359,6 +2370,7 @@ function sessionSummary(shots) {
     });
 
     // 📐 Live three-point line check (Kegel Math for a Line through the rule-of-31 exit point)
+    if (el.tdist) el.tdist.addEventListener('change', () => { saveLastLineDraft(); try { updateLineMath(); } catch (_e) {} try { markCoachDirty(); } catch (_e) {} });
     function updateLineMath() {
       const box = BT.$('#lineMath');
       if (!box || !window.BTCoach || !BTCoach.lineCheck) return;
@@ -2371,7 +2383,7 @@ function sessionSummary(shots) {
       const phase = (currentGameNumber() > 1 || shots.some(x => !same(x))) ? 'later' : 'start';
       let r = null;
       const firstBp = (shots.slice().reverse().find(x => x.bp != null && x.bp !== '') || {}).bp; // sessionShots is newest-first
-      try { r = BTCoach.lineCheck({ feet: el.feet.value, arrows: el.arrows.value, bp: el.bp.value, bp0: firstBp, pattern: pat, bowler, phase }); } catch (_e) {}
+      try { r = BTCoach.lineCheck({ feet: el.feet.value, arrows: el.arrows.value, bp: el.bp.value, bp0: firstBp, pattern: pat, bowler, phase, targetFt: el.tdist ? Number(el.tdist.value) || 15 : 15 }); } catch (_e) {}
       if (phase === 'start' && (!pat || pat.length == null || pat.length === '')) { box.style.display = ''; box.className = 'gd-linemath'; box.textContent = '📐 Pick an oil pattern with a length to check your starting line against the exit point.'; return; }
       if (!r) { if (phase === 'later') { box.style.display = ''; box.className = 'gd-linemath'; box.textContent = '📐 Log your breakpoint on each shot so Coach can follow how far the exit point has moved.'; } else box.style.display = 'none'; return; }
       box.style.display = '';

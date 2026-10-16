@@ -595,3 +595,8 @@ select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }
 .ang-undo{margin-top:10px;width:100%}
 
 .ang-recrow td{color:var(--ang-exit);border-top:2px solid rgba(255,179,92,.35)}
+
+/* Game Day: target distance (v105) */
+.gd-tdist{display:flex;align-items:center;gap:8px;margin-top:8px}
+.gd-tdist label{margin:0;white-space:nowrap;font-size:14px}
+.gd-tdist select{flex:1;min-width:0}

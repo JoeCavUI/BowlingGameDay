@@ -333,7 +333,7 @@
       if (withLine.length) {
         const last = withLine[0], f = last.shots[0], end = last.shots[last.shots.length - 1];
         const d = BT().localDate(last.s.savedAt || f.at || Date.now());
-        items.push(`Game Day, ${fmtDate(d)}: you started at slide ${f.feet}, target ${f.arrows}${Number.isFinite(f.bp) ? `, breakpoint ${f.bp}` : ''}${f.ball ? ` with ${esc(f.ball)}` : ''} and finished at slide ${end.feet}, target ${end.arrows}${Number.isFinite(end.bp) ? `, breakpoint ${end.bp}` : ''}.`);
+        items.push(`Game Day, ${fmtDate(d)}: you started at slide ${f.feet}, target ${f.arrows}${f.targetFt && f.targetFt !== 15 ? ` (at ${f.targetFt} ft)` : ''}${Number.isFinite(f.bp) ? `, breakpoint ${f.bp}` : ''}${f.ball ? ` with ${esc(f.ball)}` : ''} and finished at slide ${end.feet}, target ${end.arrows}${end.targetFt && end.targetFt !== 15 ? ` (at ${end.targetFt} ft)` : ''}${Number.isFinite(end.bp) ? `, breakpoint ${end.bp}` : ''}.`);
       }
       const lines = G.filter(g => g.lines && g.lines.length).sort((a, b) => (a.d < b.d ? 1 : -1));
       if (lines.length) {
