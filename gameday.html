@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=105" />
+  <link rel="stylesheet" href="styles.css?v=106" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -263,12 +263,12 @@
     </div>
   </div>
 
-  <script src="app.js?v=105"></script>
-  <script src="coach.js?v=105"></script>
-  <script src="pinpal.js?v=105"></script>
-  <script src="history.js?v=105"></script>
-  <script src="chart.js?v=105"></script>
-  <script src="plan.js?v=105"></script>
+  <script src="app.js?v=106"></script>
+  <script src="coach.js?v=106"></script>
+  <script src="pinpal.js?v=106"></script>
+  <script src="history.js?v=106"></script>
+  <script src="chart.js?v=106"></script>
+  <script src="plan.js?v=106"></script>
   <script>
     BT.renderNav('gameday');
     BT.wireReadAloud(document.getElementById('coachSpeak'), () => ((document.getElementById('coachText') || {}).innerText || '').split('\n').filter(l => !/^(Why & what's next|What Coach is using)/i.test(l.trim())).join('\n'));
@@ -1752,7 +1752,7 @@ function saveCurrentSessionDraft() {
       return {
         shots: chron,
         bowler: BT.lsGet(BT.KEYS.BOWLER, {}) || {},
-        pattern: (Array.isArray(pats) ? pats : []).find(p => patternName(p) === el.pattern.value) || null,
+        pattern: (() => { const p0 = (Array.isArray(pats) ? pats : []).find(p => patternName(p) === el.pattern.value) || null; return p0 ? Object.assign({}, p0, { box: BT.targetBox() }) : null; })(),
         setBalls: names.map(n => ({ name: n, row: map.get(n) })).filter(b => b.row),
         currentBall: el.ball ? el.ball.value : '',
         line: { feet: el.feet.value, arrows: el.arrows.value, bp: el.bp.value, targetFt: el.tdist ? Number(el.tdist.value) || 15 : 15 },
@@ -2375,7 +2375,8 @@ function sessionSummary(shots) {
       const box = BT.$('#lineMath');
       if (!box || !window.BTCoach || !BTCoach.lineCheck) return;
       const pats = BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || [];
-      const pat = (Array.isArray(pats) ? pats : []).find(p => patternName(p) === el.pattern.value) || null;
+      const pat0 = (Array.isArray(pats) ? pats : []).find(p => patternName(p) === el.pattern.value) || null;
+      const pat = pat0 ? Object.assign({}, pat0, { box: BT.targetBox() }) : null;
       const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
       // Starting line = game 1 and no move yet (current line equals every logged line). After that, only "usable".
       const shots = sessionShots.filter(x => x && x.type !== 'gameStart');

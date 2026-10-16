@@ -600,3 +600,7 @@ select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }
 .gd-tdist{display:flex;align-items:center;gap:8px;margin-top:8px}
 .gd-tdist label{margin:0;white-space:nowrap;font-size:14px}
 .gd-tdist select{flex:1;min-width:0}
+
+/* Angle: target box controls (v106) */
+.ang-boxrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px;font-size:14px}
+.ang-boxrow select{width:64px;padding:8px 6px}

@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Angle Calculator</title>
-  <link rel="stylesheet" href="styles.css?v=105" />
+  <link rel="stylesheet" href="styles.css?v=106" />
 </head>
 <body data-page="angle">
   <div class="navlinks"></div>
@@ -67,6 +67,11 @@
         <div><label for="aBp">Breakpoint board <span class="small">(optional)</span></label><input id="aBp" class="input" type="number" step="0.5" inputmode="decimal" /></div>
         <div><label for="aMore">Also show at <span class="small">(ft)</span></label><input id="aMore" class="input" placeholder="e.g. 32, 43" inputmode="text" /></div>
       </div>
+      <label class="ang-chk"><input type="checkbox" id="aBox" /> 📦 Target box: where you want the ball at the end of the oil</label>
+      <div class="ang-boxrow" id="aBoxRow">
+        <span>Boards</span><select id="aBoxB1" class="input"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option></select><span>to</span><select id="aBoxB2" class="input"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option></select>
+        <span>from the oil end +</span><select id="aBoxD1" class="input"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select><span>to +</span><select id="aBoxD2" class="input"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option></select><span>ft</span>
+      </div>
       <label class="ang-chk"><input type="checkbox" id="aRF" /> Downlane range finders (boards 15 &amp; 25 at 34–37 ft, boards 10 &amp; 30 at 40–43 ft), if your house has them</label>
     </div>
 
@@ -80,7 +85,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=105"></script>
+  <script src="app.js?v=106"></script>
   <script>
   (function () {
     BT.renderNav('angle');
@@ -165,7 +170,8 @@
       // Distance where the straight line is on the breakpoint board. A line straight up one board is on it everywhere.
       const len0 = Number($('#aLen').value) || 45;
       const bpFt = !hasBp ? null : Math.abs(slope) < 1e-6 ? (Math.abs(bp - lay) <= 0.5 ? len0 : null) : (bp - lay) / slope;
-      return { ratio, rc, slide, off, lay, aim, aimFt, aimLbl, slope, at, len, exit, deg, gutterFt, bp: $('#aBp').value !== '' ? bp : null, bpFt };
+      const bx = BT.targetBox(); const box = (bx.on && len) ? { b1: bx.b1, b2: bx.b2, f1: len + bx.d1, f2: len + bx.d2, fm: len + (bx.d1 + bx.d2) / 2, bm: (bx.b1 + bx.b2) / 2 } : null;
+      return { box, ratio, rc, slide, off, lay, aim, aimFt, aimLbl, slope, at, len, exit, deg, gutterFt, bp: $('#aBp').value !== '' ? bp : null, bpFt };
     }
 
     // ---------- drawing ----------
@@ -192,6 +198,7 @@
       g.push(`<rect x="${L0}" y="${TOP}" width="${LW}" height="${BOT - TOP}" fill="var(--ang-lane)"/>`);
       g.push(`<rect x="${L0 - 7}" y="${TOP}" width="6" height="${BOT - TOP}" fill="var(--ang-gut)"/><rect x="${L0 + LW + 1}" y="${TOP}" width="6" height="${BOT - TOP}" fill="var(--ang-gut)"/>`);
       if (c && c.len) g.push(`<rect x="${L0}" y="${yF(c.len)}" width="${LW}" height="${BOT - yF(c.len)}" fill="var(--ang-oil)"/>`);
+      if (c && c.box) { const xa = xBoard(c.box.b1 - 0.5), xb = xBoard(c.box.b2 + 0.5), ya = yF(c.box.f2), yb = yF(c.box.f1); g.push(`<rect x="${Math.min(xa, xb).toFixed(1)}" y="${ya.toFixed(1)}" width="${Math.abs(xb - xa).toFixed(1)}" height="${Math.max(8, yb - ya).toFixed(1)}" fill="rgba(255,179,92,.35)" stroke="var(--ang-exit)" stroke-width="1.6"/><text x="${(L0 - 12).toFixed(1)}" y="${(ya - 3).toFixed(1)}" text-anchor="end" class="ang-t" fill="var(--ang-exit)">your box</text>`); }
       // all 39 boards, very light; every 5th bold
       for (let i = 1; i < 39; i++) { const x = L0 + i * LW / 39; const bnum = lefty ? i : 39 - i; const bold = bnum % 5 === 0; g.push(`<line x1="${L(x)}" y1="${TOP}" x2="${L(x)}" y2="${BOT}" stroke="${bold ? 'var(--ang-bold)' : 'var(--ang-board)'}" stroke-width="${bold ? 1.1 : 0.5}"/>`); }
       // distance marks: line across the lane, label on the left
@@ -285,6 +292,7 @@
       if (mode === 'pin' || !c.len) return null;
       const D = c.len, here = c.at(D);
       if (c.bp != null) { const reach = bpFits(c); if (!reach) return { D, here, goal: c.bp, why: `reach your breakpoint (board ${fmt(c.bp)}) at the end of the oil` }; return null; } // your own breakpoint beats the rule-of-31 estimate
+      if (c.box) { const hb = c.at(c.box.fm); if (hb < c.box.b1 - 0.5 || hb > c.box.b2 + 0.5) return { D: c.box.fm, here: hb, goal: c.box.bm, why: `go through the middle of your box (board ${fmt(c.box.bm)} at ${r1(c.box.fm)} ft)` }; return null; }
       if (c.exit != null && Math.abs(here - c.exit) > (c.rc === 'sport' ? 1 : 2)) return { D, here, goal: c.exit, why: `leave the oil at the exit point (board ${c.exit})` };
       return null;
     }
@@ -350,8 +358,16 @@
         if (isFinite(c.gutterFt) && c.gutterFt < c.aimFt) A.push(['warn', `🛑 This line reaches the channel at ${r1(c.gutterFt)} ft, before the pin. Move your slide ${c.slope < 0 ? IN : OUT}.`]);
         return A;
       }
+      // 📦 Target box first; the rule of 31 becomes a reference line.
+      if (c.box) {
+        const hb = c.at(c.box.fm), inBox = hb >= c.box.b1 - 0.5 && hb <= c.box.b2 + 0.5;
+        const where = `board ${fmt(hb)} at ${r1(c.box.fm)} ft`;
+        if (inBox) A.push(['ok', `📦 ✅ Goes through your box (boards ${c.box.b1}–${c.box.b2} at ${r1(c.box.f1)}–${r1(c.box.f2)} ft): ${where}.`]);
+        else { const off = hb < c.box.b1 ? c.box.b1 - hb : hb - c.box.b2; A.push(['warn', `📦 ⚠️ Misses your box by ${fmt(half(off))} board${half(off) === 1 ? '' : 's'} to the ${hb < c.box.b1 ? OUT : IN}: ${where} (box: boards ${c.box.b1}–${c.box.b2}). See <b>Ways to fix it</b> below.`]); }
+        if (c.exit != null) { const dx = c.box.bm - c.exit; A.push(['info', `📏 For reference, the rule of 31 puts the exit point at board ${c.exit} on ${c.len} ft. Your box is ${fmt(Math.abs(dx))} boards ${dx < 0 ? 'outside' : 'inside'} it${dx < 0 ? (c.rc === 'sport' ? ': on a sport pattern that leaves little room, so watch for misses to the ' + OUT : ': normal on a house shot, where the outside is drier') : ''}.`]); }
+      }
       // End of oil vs the rule-of-31 exit point
-      if (c.len && c.exit != null) {
+      else if (c.len && c.exit != null) {
         const eb = c.at(c.len), d = eb - c.exit; // + = inside the exit point (still in the oil)
         const fs = fixSlide();
         const tol = c.rc === 'sport' ? 1 : 2;
@@ -391,6 +407,10 @@
     $('#aPat').addEventListener('change', () => { const p = (BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || [])[Number($('#aPat').value)]; if (p && p.length) $('#aLen').value = p.length; render(); });
     $('#aRF').addEventListener('change', render);
     ['#aSlide', '#aOff', '#aTarget', '#aTargetFt', '#aCBoard', '#aCFt', '#aLen', '#aBp', '#aMore'].forEach(id => $(id).addEventListener('input', render));
+    // 📦 Target box (shared with Game Day's Coach)
+    function boxInit() { const b = BT.targetBox(); $('#aBox').checked = b.on; $('#aBoxB1').value = b.b1; $('#aBoxB2').value = b.b2; $('#aBoxD1').value = b.d1; $('#aBoxD2').value = b.d2; $('#aBoxRow').style.display = b.on ? '' : 'none'; }
+    ['#aBox', '#aBoxB1', '#aBoxB2', '#aBoxD1', '#aBoxD2'].forEach(id => $(id).addEventListener('change', () => { BT.setTargetBox({ on: $('#aBox').checked, b1: Number($('#aBoxB1').value), b2: Number($('#aBoxB2').value), d1: Number($('#aBoxD1').value), d2: Number($('#aBoxD2').value) }); boxInit(); render(); }));
+    boxInit();
     init(); render();
   })();
   </script>

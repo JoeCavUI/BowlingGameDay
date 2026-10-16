@@ -6,7 +6,7 @@
 
 (function () {
   // Bump this string each build so pages can display it and cache-bust resources.
-  const APP_VERSION = 'v105-beta42';
+  const APP_VERSION = 'v106-beta43';
   const KEYS = {
     CSV_CACHE: 'bt_csv_cache_v1',          // stringified { savedAt, name, rows }
     BOWLER: 'bt_bowler_v1',               // stringified object
@@ -1529,6 +1529,16 @@
     return `${x.getFullYear()}-${p(x.getMonth() + 1)}-${p(x.getDate())}`;
   }
 
+  // 📦 Target box: where you want the ball at the end of the pattern (e.g. boards 6–8, from the end of the oil to 2 ft past it).
+  // Distances are measured from the end of the oil so the box follows the pattern length.
+  const BOX_KEY = 'bt_target_box_v1';
+  function targetBox() {
+    const b = lsGet(BOX_KEY, null) || {};
+    const n = (v, d) => (Number.isFinite(Number(v)) ? Number(v) : d);
+    return { on: b.on !== false, b1: n(b.b1, 6), b2: n(b.b2, 8), d1: n(b.d1, 0), d2: n(b.d2, 2) };
+  }
+  function setTargetBox(patch) { const b = Object.assign(targetBox(), patch || {}); if (b.b1 > b.b2) [b.b1, b.b2] = [b.b2, b.b1]; if (b.d1 > b.d2) [b.d1, b.d2] = [b.d2, b.d1]; lsSet(BOX_KEY, b); return b; }
+
   function buildBackup() {
     const data = {};
     appDataKeys().forEach(k => { data[k] = localStorage.getItem(k); });
@@ -1620,7 +1630,7 @@
     APP_VERSION,
     KEYS,
     $, $all,
-    lsGet, lsSet, localDate,
+    lsGet, lsSet, localDate, targetBox, setTargetBox,
     getLeagues, addLeague, getLeagueById, setLeague, leagueByName,
     parseCSV,
     ensureCSVLoaded, loadSampleArsenal, isRetired, activeOnly, arsenalTemplateCSV,
