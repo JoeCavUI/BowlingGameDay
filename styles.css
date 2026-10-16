@@ -585,3 +585,11 @@ table.cmp td:first-child, table.cmp th:first-child{ width:84px; min-width:0; fon
 
 /* A dropdown still on its "not set" choice looks like a placeholder, not a value (v104) */
 select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }
+
+/* Angle: ways to fix it (v104) */
+.ang-fix{margin-top:12px;padding:12px;border-radius:12px;border:1px solid rgba(99,230,210,.35)}
+.ang-opt{display:block;width:100%;text-align:left;margin-top:8px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:inherit;font:inherit}
+.ang-opt:active{border-color:var(--accent)}
+.ang-opt-t{display:block;font-weight:700;font-size:15px}
+.ang-opt-s{display:block;font-size:13px;opacity:.8;margin-top:2px}
+.ang-undo{margin-top:10px;width:100%}

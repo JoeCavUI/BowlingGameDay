@@ -74,6 +74,7 @@
       <div class="ang-wrap"><svg id="aLane" viewBox="0 0 330 632" role="img" aria-label="Lane with the ball's straight line"></svg></div>
       <table class="ang-tbl" id="aTbl"></table>
       <div id="aAlerts"></div>
+      <div id="aFix"></div>
       <div class="small" style="margin-top:10px;opacity:.75">A straight line, no hook: it shows where you're sending the ball, not where it turns. Arrows are taken at 15 ft (they're staggered 12–16 ft on a real lane, so set the distance if you use one arrow's exact spot). Board 1 is your outside board.</div>
     </div>
   </div>
@@ -230,7 +231,7 @@
       const save = { rf: $('#aRF').checked, slide: $('#aSlide').value, off: $('#aOff').value, target: $('#aTarget').value, mode, pin, spot, len: $('#aLen').value, more: $('#aMore').value, pattern: ($('#aPat').selectedOptions[0] || {}).value ? (BT.lsGet(BT.KEYS.OIL_PATTERNS, [])[Number($('#aPat').value)] || {}).name : '' };
       try { BT.lsSet(LAST, save); } catch (_e) {}
       $('#aLayTxt').textContent = c ? `Laydown: board ${fmt(c.lay)} (slide ${fmt(c.slide)} − ${fmt(c.off)}).` : '';
-      if (!c) { $('#aHead').innerHTML = 'Fill in your slide and an aim point.'; $('#aTbl').innerHTML = ''; $('#aAlerts').innerHTML = ''; draw(null, []); return; }
+      if (!c) { $('#aHead').innerHTML = 'Fill in your slide and an aim point.'; $('#aTbl').innerHTML = ''; $('#aAlerts').innerHTML = ''; $('#aFix').innerHTML = ''; draw(null, []); return; }
       const extra = String($('#aMore').value || '').split(/[^0-9.]+/).map(Number).filter(x => isFinite(x) && x > 0 && x <= 62.6);
       const set = new Map();
       const add = (ft, lbl) => { const k = r1(ft); if (!set.has(k)) set.set(k, { ft: k, lbl, b: c.at(k) }); else if (lbl && !set.get(k).lbl.includes(lbl)) set.get(k).lbl += ' · ' + lbl; };
@@ -254,6 +255,65 @@
       }).join('');
       draw(c, rows);
       $('#aAlerts').innerHTML = alerts(c).map(a => `<div class="ang-alert ${a[0]}">${a[1]}</div>`).join('');
+      renderFixes(c);
+    }
+
+    // ---------- 🛠️ Ways to fix it ----------
+    // Goal: make the straight line reach a board at the end of the oil: your breakpoint (if this line can't reach it)
+    // or the rule-of-31 exit point (if it leaves the oil 3+ boards away from it). Each option is exact for this line.
+    // Moves follow USBC's standard systems (2-and-1 angle move, parallel move) plus feet-only and target-only.
+    let undo = null;
+    const half = (x) => Math.round(x * 2) / 2;
+    function fixGoal(c) {
+      if (mode === 'pin' || !c.len) return null;
+      const D = c.len, here = c.at(D);
+      if (c.bp != null) { const lim = c.len + 8; const reach = c.bpFt != null && c.bpFt > 0 && c.bpFt <= lim; if (!reach) return { D, here, goal: c.bp, why: `reach your breakpoint (board ${fmt(c.bp)}) at the end of the oil` }; return null; } // your own breakpoint beats the rule-of-31 estimate
+      if (c.exit != null && Math.abs(here - c.exit) > 2) return { D, here, goal: c.exit, why: `leave the oil at the exit point (board ${c.exit})` };
+      return null;
+    }
+    function fixes(c) {
+      const G = fixGoal(c); if (!G) return null;
+      const k = G.D / c.aimFt, need = G.goal - G.here; // boards to move the line at the end of the oil (+ = in)
+      const side = (d) => d > 0 ? IN : OUT, n = (d) => fmt(Math.abs(half(d)));
+      const T = mode === 'target' ? 'target' : 'aim point';
+      const opts = [];
+      // 1. Feet only, same target: a laydown move of x moves the end-of-oil board by x·(1 − k).
+      { const x = need / (1 - k); opts.push({ key: 'feet', title: `Move your feet ${n(x)} ${side(x)}, same ${T}`, sub: `Slide ${fmt(half(c.slide + x))}, ${T} ${fmt(c.aim)}. Changes your angle.`, set: { slide: half(c.slide + x) } }); }
+      // 2. Target only, same feet: a target move of y moves it by y·k.
+      { const y = need / k; opts.push({ key: 'target', title: `Move your ${T} ${n(y)} ${side(y)}, same feet`, sub: `Slide ${fmt(c.slide)}, ${T} ${fmt(half(c.aim + y))}. Small move, big change downlane.`, set: { target: half(c.aim + y) } }); }
+      // 3. 2-and-1 (USBC): feet 2d, target d, same direction: moves it by d·(2 − k).
+      if (Math.abs(2 - k) > 0.2) { const d = need / (2 - k); opts.push({ key: '21', title: `2-and-1: feet ${n(2 * d)} ${side(d)}, ${T} ${n(d)} ${side(d)}`, sub: `Slide ${fmt(half(c.slide + 2 * d))}, ${T} ${fmt(half(c.aim + d))}. The standard angle move${k > 2 ? `: moving ${side(d)} sends the ball farther ${side(-d)} downlane` : ''}.`, set: { slide: half(c.slide + 2 * d), target: half(c.aim + d) } }); }
+      // 4. Parallel: feet and target the same: moves it by d.
+      opts.push({ key: 'par', title: `Parallel: feet and ${T} ${n(need)} ${side(need)}`, sub: `Slide ${fmt(half(c.slide + need))}, ${T} ${fmt(half(c.aim + need))}. Same angle, whole line moves.`, set: { slide: half(c.slide + need), target: half(c.aim + need) } });
+      // 5. Laydown check: what offset would make your line already fit.
+      { const layNeed = (k * c.aim - G.goal) / (k - 1), off = c.slide - layNeed; if (off >= 1 && off <= 12) opts.push({ key: 'off', title: `Check your laydown: is it really ${fmt(half(off))} boards?`, sub: `With a ${fmt(half(off))}-board offset (not ${fmt(c.off)}), slide ${fmt(c.slide)} over ${fmt(c.aim)} already works. Measure it before you move.`, set: { off: half(off) } }); }
+      // 6. The breakpoint is really where the line goes.
+      if (c.bp != null && G.goal === c.bp) opts.push({ key: 'bp', title: `My breakpoint is really about board ${fmt(half(G.here))}`, sub: `Keep this line and log the breakpoint where it actually turns.`, set: { bp: half(G.here) } });
+      // Drop moves nobody would make on the lane (feet more than 12 boards, or off the approach).
+      const ok = opts.filter(o => (o.set.slide == null || (Math.abs(o.set.slide - c.slide) <= 12 && o.set.slide >= 1 && o.set.slide <= 39)) && (o.set.target == null || (o.set.target >= 1 && o.set.target <= 39)));
+      return { G, opts: ok };
+    }
+    function renderFixes(c) {
+      const F = fixes(c), box = $('#aFix');
+      if (!F) { box.innerHTML = undo ? `<button type="button" class="btn secondary ang-undo" id="aUndo">↩ Undo last fix</button>` : ''; wireUndo(); return; }
+      box.innerHTML = `<div class="ang-fix"><b>🛠️ Ways to fix it</b><div class="small" style="margin-top:2px">Each one makes this line ${F.G.why}. Tap one to try it on the lane.</div>`
+        + F.opts.map((o, i) => `<button type="button" class="ang-opt" data-i="${i}"><span class="ang-opt-t">${o.title}</span><span class="ang-opt-s">${o.sub}</span></button>`).join('')
+        + (undo ? `<button type="button" class="btn secondary ang-undo" id="aUndo">↩ Undo last fix</button>` : '') + `</div>`;
+      box.querySelectorAll('.ang-opt').forEach(b => b.addEventListener('click', () => {
+        const o = F.opts[Number(b.dataset.i)];
+        const tf = mode === 'target' ? '#aTarget' : '#aCBoard';
+        undo = { tf, slide: $('#aSlide').value, target: $(tf).value, off: $('#aOff').value, bp: $('#aBp').value };
+        if (o.set.slide != null) $('#aSlide').value = o.set.slide;
+        if (o.set.target != null) $(tf).value = o.set.target;
+        if (o.set.off != null) { const v = String(o.set.off); if (![...$('#aOff').options].some(x => x.value === v)) $('#aOff').add(new Option(v, v)); $('#aOff').value = v; }
+        if (o.set.bp != null) $('#aBp').value = o.set.bp;
+        render(); $('#aHead').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }));
+      wireUndo();
+    }
+    function wireUndo() {
+      const u = document.getElementById('aUndo'); if (!u) return;
+      u.addEventListener('click', () => { if (!undo) return; $('#aSlide').value = undo.slide; $(undo.tf).value = undo.target; $('#aOff').value = undo.off; $('#aBp').value = undo.bp; undo = null; render(); });
     }
 
     function alerts(c) {
