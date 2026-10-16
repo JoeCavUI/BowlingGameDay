@@ -340,8 +340,11 @@ body[data-page="gameday"] select.input option {
   background: #fff;
   color: #000;
 }
-body[data-page="gameday"] ::placeholder {
-  color: #555;
+/* Placeholder (example) text: light and italic so it never looks like a value you entered. */
+::placeholder, body[data-page="gameday"] ::placeholder {
+  color: #a7adb8;
+  font-style: italic;
+  opacity: 1;
 }
 
 /* ===== iPhone / small-screen fixes (v64) ===== */
@@ -579,3 +582,6 @@ table.cmp td:first-child, table.cmp th:first-child{ width:84px; min-width:0; fon
 .ang-alert{margin-top:8px;padding:10px 12px;border-radius:10px;font-size:14px;line-height:1.35;background:rgba(255,255,255,.04)}
 .ang-alert.warn{background:rgba(255,179,92,.12)}
 .ang-alert.ok{background:rgba(99,230,210,.10)}
+
+/* A dropdown still on its "not set" choice looks like a placeholder, not a value (v104) */
+select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }

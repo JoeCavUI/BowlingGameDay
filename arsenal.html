@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Arsenal</title>
-  <link rel="stylesheet" href="styles.css?v=103" />
+  <link rel="stylesheet" href="styles.css?v=104" />
 </head>
 <body data-page="arsenal">
   <div class="navlinks"></div>
@@ -93,7 +93,7 @@
             <button class="btn secondary" data-bagsize="4">4</button>
             <button class="btn secondary" data-bagsize="6">6</button>
             <button class="btn secondary" data-bagsize="9">9</button>
-            <input class="input" id="plannerCount" type="number" inputmode="numeric" min="1" max="15" step="1" value="4" style="width:72px" aria-label="Bag size" />
+            <select class="input" id="plannerCount" style="width:84px" aria-label="Bag size"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4" selected>4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option></select>
           </div>
           <label class="small" style="display:flex;gap:6px;align-items:center;width:100%"><input type="checkbox" id="plannerMineOnly" style="width:auto" /> Only balls I added (Save to Arsenal)</label>
           <button class="btn" id="suggestPlan">Suggest my bag</button>
@@ -350,12 +350,12 @@
     </div>
   </div>
 
-  <script src="app.js?v=103"></script>
-  <script src="coach.js?v=103"></script>
-  <script src="chart.js?v=103"></script>
-  <script src="pinpal.js?v=103"></script>
-  <script src="history.js?v=103"></script>
-  <script src="plan.js?v=103"></script>
+  <script src="app.js?v=104"></script>
+  <script src="coach.js?v=104"></script>
+  <script src="chart.js?v=104"></script>
+  <script src="pinpal.js?v=104"></script>
+  <script src="history.js?v=104"></script>
+  <script src="plan.js?v=104"></script>
   <script>
     BT.renderNav('arsenal');
 

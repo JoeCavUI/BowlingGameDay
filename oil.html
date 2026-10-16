@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Oil / Pattern</title>
-  <link rel="stylesheet" href="styles.css?v=103" />
+  <link rel="stylesheet" href="styles.css?v=104" />
 </head>
 <body data-page="oil">
   <div class="navlinks"></div>
@@ -34,7 +34,7 @@
         </div>
         <div>
           <label>Pattern Length (ft)</label>
-          <input class="input" id="pLen" type="number" step="1" placeholder="e.g., 42" />
+          <select class="input" id="pLen"><option value="">Pick a length</option><option value="30">30</option><option value="31">31</option><option value="32">32</option><option value="33">33</option><option value="34">34</option><option value="35">35</option><option value="36">36</option><option value="37">37</option><option value="38">38</option><option value="39">39</option><option value="40">40</option><option value="41">41</option><option value="42">42</option><option value="43">43</option><option value="44">44</option><option value="45">45</option><option value="46">46</option><option value="47">47</option><option value="48">48</option><option value="49">49</option><option value="50">50</option><option value="51">51</option><option value="52">52</option></select>
         </div>
         <div>
           <label>Oil Volume (mL)</label>
@@ -74,7 +74,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=103"></script>
+  <script src="app.js?v=104"></script>
   <script>
     BT.renderNav('oil');
 
@@ -119,7 +119,7 @@
           if (!p) return;
           el.pName.value = p.name || '';
           el.pCenter.value = p.center || '';
-          el.pLen.value = p.length ?? '';
+          { const t = p.length == null ? '' : String(p.length); if (t && ![...el.pLen.options].some(o => o.value === t)) el.pLen.add(new Option(t, t)); el.pLen.value = t; }
           el.pVol.value = p.volume ?? '';
           el.pRatio.value = p.ratio || '';
           el.pNotes.value = p.notes || '';

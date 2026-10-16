@@ -58,6 +58,11 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v104-beta41: placeholders and dropdowns
+
+- **Example text is light gray and italic** everywhere (e.g. "e.g., 24.5"), so it can't be mistaken for a value you entered. A dropdown still on its "not set" choice looks the same way.
+- **Dropdowns for short, fixed choices:** Bowler → axis tilt (0–30°), axis rotation (0–90° in 5s), laydown offset (2–10, or "Not measured yet (Coach uses 5)"); Oil → pattern length (30–52 ft); Arsenal → bag size (1–15); Angle → laydown offset and pattern length. Saved values that aren't on the list are kept.
+
 ## Changes in v103-beta40: tracer boards placed correctly
 
 - Range finders now sit on boards 15 & 25 (34–37 ft) and boards 10 & 30 (40–43 ft), as on the lane.
