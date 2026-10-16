@@ -58,6 +58,12 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v105-beta42: breakpoint check fixed
+
+- **Fix:** a line straight up one board (e.g. slide 20, laydown 6, target 14) with the breakpoint on that board was flagged as not fitting and showed "move 0 boards" fixes. It now fits.
+- A breakpoint only counts as fitting when the line is on that board near the end of the oil (12 ft before to 8 ft after), not back at the arrows.
+- The warning is reworded in plain terms: where the ball is at the end of the oil, how far off your breakpoint is, and which way.
+
 ## Changes in v104-beta41: placeholders and dropdowns
 
 - **Example text is light gray and italic** everywhere (e.g. "e.g., 24.5"), so it can't be mistaken for a value you entered. A dropdown still on its "not set" choice looks the same way.

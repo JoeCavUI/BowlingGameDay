@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Angle Calculator</title>
-  <link rel="stylesheet" href="styles.css?v=104" />
+  <link rel="stylesheet" href="styles.css?v=105" />
 </head>
 <body data-page="angle">
   <div class="navlinks"></div>
@@ -79,7 +79,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=104"></script>
+  <script src="app.js?v=105"></script>
   <script>
   (function () {
     BT.renderNav('angle');
@@ -153,7 +153,10 @@
       const exit = len ? Math.max(3, Math.min(20, Math.round(len - 31))) : null;
       const deg = Math.atan((slope * BW_IN) / 12) * 180 / Math.PI;
       const gutterFt = slope < 0 ? (lay - 0.5) / -slope : slope > 0 ? (39.5 - lay) / slope : Infinity;
-      const bp = Number($('#aBp').value); const bpFt = isFinite(bp) && $('#aBp').value !== '' && slope !== 0 ? (bp - lay) / slope : null;
+      const bp = Number($('#aBp').value); const hasBp = isFinite(bp) && $('#aBp').value !== '';
+      // Distance where the straight line is on the breakpoint board. A line straight up one board is on it everywhere.
+      const len0 = Number($('#aLen').value) || 45;
+      const bpFt = !hasBp ? null : Math.abs(slope) < 1e-6 ? (Math.abs(bp - lay) <= 0.5 ? len0 : null) : (bp - lay) / slope;
       return { slide, off, lay, aim, aimFt, aimLbl, slope, at, len, exit, deg, gutterFt, bp: $('#aBp').value !== '' ? bp : null, bpFt };
     }
 
@@ -241,7 +244,7 @@
       // Recovery: from where the ball leaves the oil (or your breakpoint) back to the pocket.
       c.rec = null;
       if (mode !== 'pin' || pin === 1 || pin === (lefty ? 2 : 3)) {
-        if (c.bp != null && c.bpFt != null && c.bpFt > 0 && c.bpFt <= (c.len ? c.len + 8 : 52)) c.rec = { from: c.bp, ft: c.bpFt, what: `your breakpoint (board ${fmt(c.bp)} at ${r1(c.bpFt)} ft)` };
+        if (c.bp != null && bpFits(c)) c.rec = { from: c.bp, ft: c.bpFt, what: `your breakpoint (board ${fmt(c.bp)} at ${r1(c.bpFt)} ft)` };
         else if (c.len && c.at(c.len) >= 0.5 && c.at(c.len) <= 39.5) c.rec = { from: c.at(c.len), ft: c.len, what: `the end of the oil (board ${fmt(c.at(c.len))} at ${c.len} ft)` };
       }
       extra.forEach(ft => add(ft, 'Your pick'));
@@ -263,17 +266,19 @@
     // or the rule-of-31 exit point (if it leaves the oil 3+ boards away from it). Each option is exact for this line.
     // Moves follow USBC's standard systems (2-and-1 angle move, parallel move) plus feet-only and target-only.
     let undo = null;
+    const bpFits = (c) => { const L0 = (c.len || 45); return c.bpFt != null && c.bpFt >= L0 - 12 && c.bpFt <= L0 + 8; };
     const half = (x) => Math.round(x * 2) / 2;
     function fixGoal(c) {
       if (mode === 'pin' || !c.len) return null;
       const D = c.len, here = c.at(D);
-      if (c.bp != null) { const lim = c.len + 8; const reach = c.bpFt != null && c.bpFt > 0 && c.bpFt <= lim; if (!reach) return { D, here, goal: c.bp, why: `reach your breakpoint (board ${fmt(c.bp)}) at the end of the oil` }; return null; } // your own breakpoint beats the rule-of-31 estimate
+      if (c.bp != null) { const reach = bpFits(c); if (!reach) return { D, here, goal: c.bp, why: `reach your breakpoint (board ${fmt(c.bp)}) at the end of the oil` }; return null; } // your own breakpoint beats the rule-of-31 estimate
       if (c.exit != null && Math.abs(here - c.exit) > 2) return { D, here, goal: c.exit, why: `leave the oil at the exit point (board ${c.exit})` };
       return null;
     }
     function fixes(c) {
       const G = fixGoal(c); if (!G) return null;
       const k = G.D / c.aimFt, need = G.goal - G.here; // boards to move the line at the end of the oil (+ = in)
+      if (Math.abs(need) < 0.75) return null;
       const side = (d) => d > 0 ? IN : OUT, n = (d) => fmt(Math.abs(half(d)));
       const T = mode === 'target' ? 'target' : 'aim point';
       const opts = [];
@@ -352,11 +357,13 @@
       }
       // Breakpoint: a hook only moves the ball back in, so the breakpoint can't be farther out than the straight line goes.
       if (c.bp != null) {
-        const lim = c.len ? c.len + 8 : 52;
-        if (c.bpFt != null && c.bpFt > 0 && c.bpFt <= lim) A.push(['info', `📍 The straight line reaches your breakpoint (board ${fmt(c.bp)}) at ${r1(c.bpFt)} ft${c.len ? ` (${c.bpFt < c.len ? r1(c.len - c.bpFt) + ' ft before' : r1(c.bpFt - c.len) + ' ft after'} the end of the oil)` : ''}.`]);
+        if (bpFits(c)) A.push(['info', `📍 Your breakpoint fits this line: the straight line is on board ${fmt(c.bp)} at ${r1(c.bpFt)} ft${c.len ? (Math.abs(c.bpFt - c.len) < 0.5 ? ', right at the end of the oil' : ` (${c.bpFt < c.len ? r1(c.len - c.bpFt) + ' ft before' : r1(c.bpFt - c.len) + ' ft after'} the end of the oil)`) : ''}.`]);
         else {
-          const atLim = c.at(lim);
-          A.push(['warn', `⚠️ Your breakpoint (board ${fmt(c.bp)}) is farther ${OUT} than this line goes: it only reaches board ${fmt(atLim)} by ${r1(lim)} ft. So the ball is crossing your target farther ${OUT} than ${fmt(c.aim)}, laying down farther ${OUT} than ${fmt(c.lay)}, or the breakpoint is really nearer board ${fmt(Math.round(atLim))}. Worth checking your alignment.`]);
+          // The line never gets to the breakpoint board before the ball should be turning.
+          const at = c.at(c.len || 45), atR = fmt(half(at)), D = r1(c.len || 45);
+          const bpOut = (c.bp - at) < 0; // breakpoint is outside (toward your channel) of where the line is
+          if (bpOut) A.push(['warn', `⚠️ Your breakpoint doesn't fit this line. Aimed from slide ${fmt(c.slide)} over ${mode === 'target' ? 'target' : 'board'} ${fmt(c.aim)}, the ball is on board ${atR} at ${D} ft, where it should be turning. To turn at board ${fmt(c.bp)} it has to get ${fmt(Math.abs(half(c.bp - at)))} boards farther ${OUT} than that. So either you're really crossing the target (or laying down) farther ${OUT} than you think, or the ball is turning closer to board ${atR}. See <b>Ways to fix it</b> below.`]);
+          else A.push(['warn', `⚠️ Your breakpoint doesn't fit this line. Aimed from slide ${fmt(c.slide)} over ${mode === 'target' ? 'target' : 'board'} ${fmt(c.aim)}, the ball is already out on board ${atR} at ${D} ft, ${fmt(Math.abs(half(c.bp - at)))} boards farther ${OUT} than your breakpoint (board ${fmt(c.bp)}). So either you're really crossing the target (or laying down) farther ${IN} than you think, or the ball is turning closer to board ${atR}. See <b>Ways to fix it</b> below.`]);
         }
       }
       if (c.slope > 0 && mode === 'target') A.push(['info', `↩️ The line moves ${IN} from the laydown (you're aiming in). The ball has to start hooking right away to get back: an angle for very dry lanes.`]);
