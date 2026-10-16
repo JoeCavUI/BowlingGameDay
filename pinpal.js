@@ -91,9 +91,14 @@
   const FULL = (1 << 30) - 1;
   const standing = (mask, ball) => { const m = Math.floor(mask / Math.pow(2, 10 * ball)) & 1023; const a = []; for (let i = 0; i < 10; i++) if (m >> i & 1) a.push(i + 1); return a; };
   function laneFromNotes(t) {
-    const m = String(t || '').match(/lanes?\s*(\d{1,3})\s*(s?)\s*(?:&|-|and|,|\/|\s)\s*(\d{1,3})\s*(s?)/i);
+    const txt = String(t || '');
+    // "Lanes 13 & 14s", plus phone typos: "Lames 13s & 14", "Lanes 21d & 22".
+    let m = txt.match(/\bla[mn]\w{0,2}\s*(\d{1,3})[a-rt-z]?\s*(s?)\s*(?:&|-|and|,|\/|\s)\s*(\d{1,3})[a-rt-z]?\s*(s?)/i);
+    // A bare pair at the start of the note ("5 & 6"): only an odd/even pair, so "16 over 6" never counts.
+    if (!m) { const b2 = txt.match(/^\s*(\d{1,3})\s*(s?)\s*(?:&|and)\s*(\d{1,3})\s*(s?)\b/i); if (b2 && Number(b2[1]) % 2 === 1 && Number(b2[3]) === Number(b2[1]) + 1) m = b2; }
     if (!m) return { lanes: '', start: null };
     const a = Number(m[1]), b = Number(m[3]);
+    if (!(b === a + 1 || a === b + 1)) return { lanes: '', start: null };
     return { lanes: `${a}-${b}`, start: m[2] ? a : m[4] ? b : null };
   }
   function linesFromNotes(t) {
@@ -177,5 +182,5 @@
     return { frames: n, strikes, spareChances, spares, singles, singlesMade, splits, opens, firstBall, leaves };
   }
 
-  root.BTPinPal = { parse, gameStats, pinsOf, isSplit, _sqlite: SqliteFile, _find: findSqlite };
+  root.BTPinPal = { parse, laneFromNotes, gameStats, pinsOf, isSplit, _sqlite: SqliteFile, _find: findSqlite };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Scores</title>
-  <link rel="stylesheet" href="styles.css?v=97" />
+  <link rel="stylesheet" href="styles.css?v=98" />
 </head>
 <body data-page="scores">
   <div class="navlinks"></div>
@@ -108,10 +108,10 @@
     </div>
   </div>
 
-  <script src="app.js?v=97"></script>
-  <script src="coach.js?v=97"></script>
-  <script src="pinpal.js?v=97"></script>
-  <script src="history.js?v=97"></script>
+  <script src="app.js?v=98"></script>
+  <script src="coach.js?v=98"></script>
+  <script src="pinpal.js?v=98"></script>
+  <script src="history.js?v=98"></script>
   <script>
     BT.renderNav('scores');
 
@@ -199,10 +199,10 @@
     }
 
     function recomputeSessionSummary(s) {
-      const shots = (s.shots || []).filter(Boolean);
+      const shots = (s.shots || []).filter(x => x && x.type !== 'gameStart');
       const isStrike = (sh) => (sh.leaves||[]).includes('Strike') || (sh.leaves||[]).includes('Brooklyn');
       const isPocket = (sh) => String(sh.pocket||'').startsWith('Pocket');
-      const weighted = shots.reduce((acc,sh)=>{ const w = Number(sh.executionQuality||3)||3; acc.total += w; if (isStrike(sh)) acc.strike += w; if (isPocket(sh)) acc.pocket += w; if (isPocket(sh)&&isStrike(sh)) acc.carry += w; if (String(sh.pocket||'')==='Pocket flush') acc.flush += w; if ((Number(sh.executionQuality||3)||3) >= 3) acc.quality += w; return acc; }, {total:0,strike:0,pocket:0,carry:0,flush:0,quality:0});
+      const weighted = shots.reduce((acc,sh)=>{ const w = 1; acc.total += w; if (isStrike(sh)) acc.strike += w; if (isPocket(sh)) acc.pocket += w; if (isPocket(sh)&&isStrike(sh)) acc.carry += w; if (String(sh.pocket||'')==='Pocket flush') acc.flush += w; if ((Number(sh.executionQuality||3)||3) >= 3) acc.quality += w; return acc; }, {total:0,strike:0,pocket:0,carry:0,flush:0,quality:0});
       s.summary = {
         total: shots.length,
         strikes: shots.filter(isStrike).length,
@@ -235,15 +235,18 @@
       }
       const by = {left:{shots:[], label:`${leftNum} (left lane)`}, right:{shots:[], label:`${rightNum} (right lane)`}};
       const chron = [...shots].reverse();
-      chron.forEach((sh, idx)=>{
-        const lane = laneForIndex(idx);
-        by[lane.side].shots.push(sh);
+      // Use the lane saved on each shot; fall back to alternating. Game markers are not shots.
+      chron.filter(x => x && x.type !== 'gameStart').forEach((sh, idx)=>{
+        const n = Number(sh.lane);
+        const side = (Number.isFinite(n) && n === Number(leftNum)) ? 'left' : (Number.isFinite(n) && n === Number(rightNum)) ? 'right' : laneForIndex(idx).side;
+        by[side].shots.push(sh);
       });
       function stat(arr){
         const leaves = arr.flatMap(sh=>sh.leaves||[]);
         const strikes = leaves.filter(x=>x==='Strike' || x==='Brooklyn').length;
         const pocketHits = arr.filter(sh=>String(sh.pocket||'').startsWith('Pocket')).length;
-        const carry = pocketHits ? (leaves.filter(x=>x==='Strike' || x==='Brooklyn').length / pocketHits) : 0;
+        const isX = (q)=>(q.leaves||[]).some(x=>x==='Strike' || x==='Brooklyn');
+        const carry = pocketHits ? (arr.filter(q=>String(q.pocket||'').startsWith('Pocket') && isX(q)).length / pocketHits) : 0;
         const execScore = arr.length ? Math.round(arr.reduce((a,sh)=>a + (Number(sh.executionQuality||3)||3),0)/(arr.length*5)*100) : 0;
         return { shots: arr.length, strikes, strikeRate: arr.length ? strikes/arr.length : 0, pocketHits, pocketPct: arr.length ? pocketHits/arr.length : 0, carryPct: carry, execScore };
       }
@@ -325,6 +328,24 @@
       showDetails(activeSessionId);
     }
 
+    // 🎳 Scores and the PinPal check (filled in when PinPal is imported).
+    function pinpalPanel(s) {
+      const r = s.pinpal;
+      const sc = (Array.isArray(s.scores) && s.scores.length) ? s.scores : (r ? r.scores : []);
+      if (!sc.length && !r) return '';
+      const sumTxt = sc.length ? `<b>${sc.join(' / ')}</b> = ${sc.reduce((a, b) => a + Number(b || 0), 0)}` : '';
+      let body = '';
+      if (r && r.mismatches && r.mismatches.length) {
+        const fmt = (a) => a.length ? a.join('-') : 'strike';
+        body = `<div class="small" style="margin-top:6px;opacity:1">⚠️ ${r.mismatches.length} frame${r.mismatches.length === 1 ? '' : 's'} don't match PinPal (Coach and your stats used the Game Day pins):</div>`
+          + r.mismatches.map(m => `<div class="small" style="margin-top:2px;opacity:1">Game ${m.game}, ${m.fill ? '10th-frame fill' : 'frame ' + m.frame}: Game Day <b>${fmt(m.gd)}</b> · PinPal <b>${fmt(m.pp)}</b></div>`).join('')
+          + `<button class="btn secondary" data-ppfix="${s.id}" style="margin-top:8px">Use PinPal's pins for these frames</button>`;
+      } else if (r) {
+        body = `<div class="small" style="margin-top:6px">✅ ${s.pinpalFixed ? 'Fixed to match PinPal.' : `All ${r.compared} frames match PinPal.`}</div>`;
+      }
+      return `<div class="panel" style="padding:12px;margin-top:10px"><b>🎳 Scores</b> ${sumTxt}${r ? ' <span class="small">(from PinPal)</span>' : ''}${body}</div>`;
+    }
+
     function showDetails(id) {
       const s = sessions.find(x => x.id === id);
       if (!s) return;
@@ -369,7 +390,7 @@
       };
 
       const ballCounts = {};
-      for (const sh of shots) {
+      for (const sh of shots) { if (sh && sh.type === 'gameStart') continue;
         const b = sh.ball || 'Unknown';
         ballCounts[b] = (ballCounts[b] || 0) + 1;
       }
@@ -380,8 +401,9 @@
           <div><b>${dt}</b></div>
           <div class="small">House: ${s.house || '—'} • League: ${s.leagueName || '—'} • Lanes: ${s.lanes || '—'} • Pattern: ${s.pattern || '—'} • Set: ${s.setName || '—'}</div>
           <div class="small" style="margin-top:6px">${fmtSummary(s)}</div>
-          <div class="small">Pocket hit %: ${s.summary?.pocketPct||0}% • Carry on pocket hits: ${s.summary?.carryPct||0}% • Quality %: ${s.summary?.qualityPct||0}% • Execution score: ${s.summary?.executionScore||0}</div>
+          <div class="small">Pocket hit %: ${s.summary?.pocketPct||0}% • Carry on pocket hits: ${s.summary?.carryPct||0}% • Good or OK shots: ${s.summary?.qualityPct||0}% • Execution score: ${s.summary?.executionScore||0}</div>
         </div>
+        ${pinpalPanel(s)}
         ${(() => {
           const eb = eyeballFor(s);
           if (!eb) return '';
@@ -456,6 +478,7 @@
           <div class="list" style="max-height:45vh">
             ${shots.map((sh, idx) => {
               const t = new Date(sh.at).toLocaleTimeString();
+              if (sh && sh.type === 'gameStart') return `<div class="small" style="padding:6px 2px;opacity:.75">— ${sh.note || `Start Game ${sh.gameNo || ''}`} · ${t} —</div>`;
               const reads = [...(sh.leaves||[]), ...(sh.obs||[])].join(', ') || '—';
               const gameTxt = `G${Number(sh.gameNo || 1)}`;
               const frameTxt = (sh.frame ? `F${sh.frame}${sh.isFill ? ' (fill)' : ''}` : 'F—');
@@ -481,6 +504,21 @@
       BT.lsSet(BT.KEYS.GAME_SESSIONS, sessions);
       renderList();
     }
+
+    el.details.addEventListener('click', (e) => {
+      const b = e.target && e.target.closest && e.target.closest('button[data-ppfix]');
+      if (!b || !window.BTHistory) return;
+      const s = sessions.find(x => x.id === b.getAttribute('data-ppfix'));
+      if (!s) return;
+      if (!confirm('Replace the Game Day pins with PinPal\'s for these frames? Your pocket and mark reads stay as you tapped them.')) return;
+      const n = BTHistory.applyPinPalPins(s);
+      recomputeSessionSummary(s);
+      recomputeLaneStats(s);
+      BT.lsSet(BT.KEYS.GAME_SESSIONS, sessions);
+      renderList();
+      showDetails(s.id);
+      alert(`Updated ${n} frame${n === 1 ? '' : 's'} from PinPal.`);
+    });
 
     BT.$('#refresh').addEventListener('click', refresh);
     el.editCancel.addEventListener('click', closeEditShot);
@@ -564,7 +602,12 @@
       const H = BTPinPal.parse(await f.arrayBuffer());
       try { BTHistory.save(H); } catch (e) { alert('Not enough room on this phone to store the history.'); return; }
       const done = H.games.filter(g => g.done).length;
-      alert(`Imported ${done} games from PinPal (${H.counts.houses} houses, ${H.counts.leagues} leagues). Coach will use them from now on.`);
+      // Check every Game Day night against PinPal: fill in scores, flag frames that disagree.
+      let rc = { matched: 0, off: 0 };
+      try { const ss = BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || []; rc = BTHistory.reconcileAll(ss); if (rc.matched) BT.lsSet(BT.KEYS.GAME_SESSIONS, ss); } catch (e) { console.error(e); }
+      const rcText = rc.matched ? `\n\nChecked ${rc.matched} Game Day night${rc.matched === 1 ? '' : 's'} against PinPal and added the scores.${rc.off ? ` ${rc.off} night${rc.off === 1 ? ' has' : 's have'} frames where the pins don't agree: open ${rc.off === 1 ? 'it' : 'them'} in Sessions above to fix.` : ''}` : '';
+      alert(`Imported ${done} games from PinPal (${H.counts.houses} houses, ${H.counts.leagues} leagues). Coach will use them from now on.${rcText}`);
+      if (rc.matched) { location.reload(); return; }
       render(); renderBalls();
     } catch (e) { alert('Could not read that file: ' + (e && e.message ? e.message : e)); }
   });

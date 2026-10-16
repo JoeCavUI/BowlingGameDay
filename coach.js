@@ -949,6 +949,40 @@
   }
 
   // ---------- main ----------
+  // 🛣️ One lane of the pair playing differently (needs 6+ good shots on each lane).
+  function laneSplit(C) {
+    const by = {};
+    C.filter(c => c.execution !== 'poor' && c.shot && c.shot.lane).forEach(c => { const k = String(c.shot.lane); (by[k] = by[k] || []).push(c); });
+    const ks = Object.keys(by);
+    if (ks.length !== 2) return null;
+    const st = ks.map(k => { const a = by[k]; const n = a.length; const x = a.filter(c => c.strike).length; const pk = a.filter(c => c.pocketHit).length; const early = a.filter(c => c.early || c.lean > 0).length; const long = a.filter(c => c.long || c.lean < 0).length; return { lane: k, n, x, rate: n ? x / n : 0, pk, early, long }; });
+    if (st.some(t => t.n < 6)) return null;
+    const [a, b] = st[0].rate <= st[1].rate ? st : [st[1], st[0]]; // a = tougher lane
+    const gap = b.rate - a.rate;
+    const earlyGap = a.early - b.early, longGap = a.long - b.long;
+    if (gap < 0.2 && earlyGap < 2 && longGap < 2) return null;
+    return { tough: a, good: b, gap, earlyGap, longGap };
+  }
+  function laneNotes(out, C, prof) {
+    if ((out.notes || []).some(n => /^🛣️/.test(n))) return;
+    const L = laneSplit(C);
+    if (!L) return;
+    const t = L.tough, g = L.good, pct = (v) => Math.round(v * 100) + '%';
+    const why = L.earlyGap >= 2 ? `${t.early} of its good shots read early or high (vs ${g.early} on ${g.lane})` : L.longGap >= 2 ? `${t.long} of its good shots went long or light (vs ${g.long} on ${g.lane})` : `you're in the pocket ${t.pk} of ${t.n} times there but carrying less`;
+    const fix = L.earlyGap >= 2 ? `a 1-board move ${(prof && prof.deeper) || 'left'} with feet and eyes on ${t.lane} only` : L.longGap >= 2 ? `a 1-board move ${(prof && prof.outside) || 'right'} with feet and eyes on ${t.lane} only` : `watching ${t.lane} closely before you move on both`;
+    out.notes.push(`🛣️ Lane ${t.lane} is playing differently: ${pct(t.rate)} strikes on good shots vs ${pct(g.rate)} on ${g.lane}, and ${why}. If it keeps up, try ${fix}, and keep what's working on ${g.lane}.`);
+    out.laneSplit = L;
+  }
+  // 🎯 Execution misses that keep going the same way are a throw pattern, not the lane.
+  function missPatternNote(out, C) {
+    const poor = C.slice(-15).filter(c => c.execution === 'poor' && c.missSide && !c.saved);
+    if (poor.length < 3) return;
+    const side = poor[poor.length - 1].missSide;
+    const same = poor.filter(c => c.missSide === side).length;
+    if (same < 3 || same < poor.length - 1) return;
+    out.notes.push(`🎯 ${same} of your ${poor.length} missed marks went ${side}. That's a pattern in the throw, not the lane: before the next shot, check that your feet, target and finish line up${side === 'outside' ? ' and that you\'re not pushing the ball out' : ' and that you\'re not pulling it'}.`);
+  }
+
   function evaluate(ctx) {
     const out = evaluateCore(ctx);
     try {
@@ -958,6 +992,8 @@
       const W = C.filter(c => c.execution !== 'poor').slice(-5);
       if (C.length >= 3) sideNotes(out, C, W, prof, patternProfile(ctx && ctx.pattern));
       if (C.length >= 2) moveNotes(out, C, prof);
+      laneNotes(out, C, prof);
+      missPatternNote(out, C);
       // 📚 History: entering a game where you usually drop off at this house
       const hist = ctx && ctx.history;
       if (hist && hist.byGame && C.length) {
@@ -1137,7 +1173,7 @@
       : spotOkText ? `Yes (${spotOkText}).` : 'Not sure yet (no pattern or breakpoint).';
     const setCompass = (ball, spot, call, line) => {
       const mk = (v) => v === 'ok' ? '✅' : v === 'warn' ? '⚠️' : (v === 'off' || v === 'mud') ? '❌' : '❔';
-      const CALL = { stay: 'Stay', spot: spot === 'mud' ? 'Get out of the mud first' : 'Move your feet, keep the ball', ball: 'Change the ball, keep your spot', repeat: 'Repeat your shot', watch: 'Keep watching', move: 'Make the move below' };
+      const CALL = { stay: 'Stay', spot: spot === 'mud' ? 'Get out of the mud first' : 'Move your feet, keep the ball', ball: 'Change the ball, keep your spot', repeat: 'Repeat your shot', watch: 'Keep watching', move: 'Make the move below', tweak: 'Keep ball & line, small delivery change' };
       const badge = (call === 'repeat') ? '🧭 Execution first → Repeat your shot'
         : `🧭 Ball ${mk(ball)} · Spot ${mk(spot)}${spot === 'mud' ? ' (mud)' : ''}${CALL[call] ? ' → ' + CALL[call] : ''}`;
       res.compass = { ball, spot, call, line, badge };
@@ -1178,6 +1214,15 @@
       const first = ranked[0], second = ranked[1];
       const firstText = first ? moveText(first.kind, sit, prof, pat, ball, step, angleClass) : '';
       const secondText = second ? moveText(second.kind, sit, prof, pat, ball, step, angleClass) : '';
+      // In the pocket but not carrying: the line is fine, so the compass must not say "Spot ❌, move your feet"
+      // unless the first move really is a line move.
+      if ((sit === 'carryWeak' || sit === 'carryStrong') && first && res.compass) {
+        const k = first.kind;
+        const bm = res.compass.ball;
+        if (k === 'Equipment') setCompass('warn', inMud ? 'mud' : 'ok', 'ball', `🧭 Right spot? Yes: you're in the pocket. Right ball? This is about energy at the pins, and a different ball is the cleanest fix. Keep your line.`);
+        else if (k === 'Aim' || k === 'Angle') setCompass(bm === 'off' ? 'warn' : bm, 'warn', 'spot', `🧭 You're in the pocket, but the angle into it is costing carry. A small line change (feet and eyes together) is the first thing to try. Keep the ball.`);
+        else setCompass(bm === 'off' ? 'warn' : bm, inMud ? 'mud' : 'ok', 'tweak', `🧭 Right spot? Yes: you're in the pocket. This is about how much energy the ball has left at the pins. Keep your ball and your line; make one small change in how you deliver it.`);
+      }
       res.status = 'move'; res.tone = 'move';
       res.element = first ? ELEMENT[first.kind] : '';
       res.headline = `${headline} ${firstText}`;
@@ -1296,6 +1341,18 @@
       const weak = carryFails.filter(c => carryType(c) === 'weak').length;
       const strong = carryFails.filter(c => carryType(c) === 'strong').length;
       const sit = strong > weak ? 'carryStrong' : 'carryWeak';
+      const lastT = W[W.length - 1];
+      const agree = Math.max(weak, strong) >= 2 && Math.max(weak, strong) > Math.min(weak, strong);
+      // A strike on the last good shot, or leaves that point both ways, is not a reason to change speed.
+      if ((lastT && lastT.strike) || !agree) {
+        res.status = 'watch'; res.tone = 'info'; res.lens = '🌀 Energy';
+        res.headline = lastT && lastT.strike ? 'Strike. Keep repeating; no speed change yet.' : (weak && strong) ? 'In the pocket, but the leaves point both ways. Repeat before changing anything.' : 'In the pocket, not carrying yet. Repeat before changing anything.';
+        res.why = `${cnt(recentPocket, c => c.pocketHit)} of your last ${recentPocket.length} good shots hit the pocket (${carryFails.slice(-3).map(c => c.shot.leaveTag || pinsText(c.shot)).filter(Boolean).join(', ') || 'no carry'}). ${lastT && lastT.strike ? 'The last one carried, so the energy is there.' : !agree ? ((weak && strong) ? `Weak signs ${weak}, strong signs ${strong}: they don't agree.` : 'One leave isn\'t enough to tell weak from strong.') : ''}`;
+        res.next = 'Coach calls an energy change when 2 more good pocket shots leave the same kind of pin.';
+        setCompass('ok', inMud ? 'mud' : 'ok', 'watch', '🧭 Right ball, right spot so far. Watch how the 10 pin (or 7 pin) goes down.');
+        if (moveVerdict) res.notes.push(moveVerdict);
+        return res;
+      }
       const leaves = carryFails.slice(-3).map(c => c.shot.leaveTag || pinsText(c.shot)).filter(Boolean);
       const eyes = [];
       const wE = carryFails.filter(c => c.exitRead === 'weak').length, sE = carryFails.filter(c => c.exitRead === 'strong').length;
@@ -1327,9 +1384,10 @@
     res.why = `${pockets} of your last ${W.length} ${unknowns >= Math.ceil(W.length / 2) ? '' : 'good '}shots hit the pocket.` + (unknowns >= 3 ? ' Tip: tapping your mark (Hit my mark / held / recovered) helps Coach trust the read.' : '');
     res.next = 'Coach will call a move when 2 good shots in a row tell the same story.';
     {
-      const b = curT ? `${ctx.currentBall} ${REL_WORD[curT.rel]} for you on this pattern${curT.lowConf ? ' (rough estimate)' : ''}` : '';
+      const provenTonight = curT && curT.rel !== 'right' && W.length >= 2 && pockets >= Math.ceil(W.length * 0.75) && cnt(W, c => c.strike) >= 1;
+      const b = curT ? (provenTonight ? `${ctx.currentBall} is hitting the pocket tonight (on paper it ${REL_WORD[curT.rel]}; your shots win)` : `${ctx.currentBall} ${REL_WORD[curT.rel]} for you on this pattern${curT.lowConf ? ' (rough estimate)' : ''}`) : '';
       const sp = inMud ? `your breakpoint (about board ${Math.round(avgBpW)}) is at or inside the exit point (board ${exitB}), so watch for over/under` : spotOkText ? `${spotOkText}` : '';
-      if (b || sp) setCompass(curT ? (curT.rel === 'right' ? 'ok' : 'warn') : '?', inMud ? 'mud' : sp ? 'ok' : '?', 'watch', `🧭 ${[b && 'Ball: ' + b, sp && 'Spot: ' + sp].filter(Boolean).join('. ')}.`);
+      if (b || sp) setCompass(curT ? ((curT.rel === 'right' || provenTonight) ? 'ok' : 'warn') : '?', inMud ? 'mud' : sp ? 'ok' : '?', 'watch', `🧭 ${[b && 'Ball: ' + b, sp && 'Spot: ' + sp].filter(Boolean).join('. ')}.`);
     }
     if (moveVerdict) res.notes.push(moveVerdict);
     return res;

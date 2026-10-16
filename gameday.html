@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=97" />
+  <link rel="stylesheet" href="styles.css?v=98" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -247,12 +247,12 @@
     </div>
   </div>
 
-  <script src="app.js?v=97"></script>
-  <script src="coach.js?v=97"></script>
-  <script src="pinpal.js?v=97"></script>
-  <script src="history.js?v=97"></script>
-  <script src="chart.js?v=97"></script>
-  <script src="plan.js?v=97"></script>
+  <script src="app.js?v=98"></script>
+  <script src="coach.js?v=98"></script>
+  <script src="pinpal.js?v=98"></script>
+  <script src="history.js?v=98"></script>
+  <script src="chart.js?v=98"></script>
+  <script src="plan.js?v=98"></script>
   <script>
     BT.renderNav('gameday');
     BT.wireReadAloud(document.getElementById('coachSpeak'), () => ((document.getElementById('coachText') || {}).innerText || '').split('\n').filter(l => !/^(Why & what's next|What Coach is using)/i.test(l.trim())).join('\n'));
@@ -634,6 +634,12 @@ function selectedPills(container) {
       el.league.innerHTML = ['<option value="">— Select league —</option>']
         .concat(leagues.map(l => `<option value="${l.id}">${l.name}</option>`))
         .join('');
+      // Fill in tonight's league: the one named for today's weekday at this house, or the only one there.
+      if (!el.league.value && leagues.length) {
+        const day = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][new Date().getDay()];
+        const pick = leagues.find(l => String(l.name || '').toLowerCase().includes(day)) || (leagues.length === 1 ? leagues[0] : null);
+        if (pick) el.league.value = pick.id;
+      }
     }
 
     function leagueNameById(id) {
@@ -657,15 +663,18 @@ function selectedPills(container) {
       const by = {left:{shots:[], label:`${leftNum} (left lane)`}, right:{shots:[], label:`${rightNum} (right lane)`}};
       // shots are stored newest-first; reverse to get chronological
       const chron = [...shots].reverse();
-      chron.forEach((s, idx)=>{
-        const lane = laneForIndex(idx);
-        by[lane.side].shots.push(s);
+      // Use the lane saved on each shot; fall back to alternating. Game markers are not shots.
+      chron.filter(x => x && x.type !== 'gameStart').forEach((s, idx)=>{
+        const n = Number(s.lane);
+        const side = (Number.isFinite(n) && n === Number(leftNum)) ? 'left' : (Number.isFinite(n) && n === Number(rightNum)) ? 'right' : laneForIndex(idx).side;
+        by[side].shots.push(s);
       });
       function stat(arr){
         const leaves = arr.flatMap(s=>s.leaves||[]);
         const strikes = leaves.filter(x=>x==='Strike' || x==='Brooklyn').length;
         const pocketHits = arr.filter(s=>String(s.pocket||'').startsWith('Pocket')).length;
-        const carry = pocketHits ? (leaves.filter(x=>x==='Strike' || x==='Brooklyn').length / pocketHits) : 0;
+        const isX = (q)=>(q.leaves||[]).some(x=>x==='Strike' || x==='Brooklyn');
+        const carry = pocketHits ? (arr.filter(q=>String(q.pocket||'').startsWith('Pocket') && isX(q)).length / pocketHits) : 0;
         const execScore = arr.length ? Math.round(arr.reduce((a,s)=>a + effectiveExecutionValue(s), 0) / (arr.length*5) * 100) : 0;
         return { shots: arr.length, strikes, pocketHits, pocketPct: arr.length? pocketHits/arr.length : 0, carryPct: carry, execScore };
       }
@@ -926,8 +935,10 @@ function isStrike(shot) {
       return { score, label, note, didntTrack };
     }
 
-    function shotWeight(shot) {
-      return effectiveExecutionValue(shot);
+    // Every shot counts once, so "Pocket hit %" means pocket hits ÷ shots (it used to weight
+    // good shots 5× poor ones without saying so, which made the numbers look better than the night).
+    function shotWeight(_shot) {
+      return 1;
     }
 
     function renderScoreboard() {
@@ -973,14 +984,14 @@ function isStrike(shot) {
             <div>Shots: <b>${sL.total}</b> • Strikes: <b>${sL.strikes}</b></div>
             <div>Strike %: <b>${sL.strikePct}%</b></div>
             <div>Pocket hit %: <b>${sL.pocketPct}%</b> • Flush %: <b>${sL.flushPct}%</b></div>
-            <div>Carry on pocket hits: <b>${sL.carry}%</b> • Quality %: <b>${sL.qualityPct}%</b> • Execution: <b>${sL.execScore}%</b></div>
+            <div>Carry on pocket hits: <b>${sL.carry}%</b> • Good or OK shots: <b>${sL.qualityPct}%</b> • Execution: <b>${sL.execScore}%</b></div>
           </div>
           <div class="panel" style="padding:10px;margin:0">
             <div><b>RIGHT (${R})</b></div>
             <div>Shots: <b>${sR.total}</b> • Strikes: <b>${sR.strikes}</b></div>
             <div>Strike %: <b>${sR.strikePct}%</b></div>
             <div>Pocket hit %: <b>${sR.pocketPct}%</b> • Flush %: <b>${sR.flushPct}%</b></div>
-            <div>Carry on pocket hits: <b>${sR.carry}%</b> • Quality %: <b>${sR.qualityPct}%</b> • Execution: <b>${sR.execScore}%</b></div>
+            <div>Carry on pocket hits: <b>${sR.carry}%</b> • Good or OK shots: <b>${sR.qualityPct}%</b> • Execution: <b>${sR.execScore}%</b></div>
           </div>
         </div>
       `;
@@ -1756,7 +1767,16 @@ function saveCurrentSessionDraft() {
     function autoCoach() {
       if (!el || !el.coachText) return;
       try {
-        if (window.BTCoach) return renderCoachV2(BTCoach.evaluate(coachContext()));
+        if (window.BTCoach) {
+          const r = BTCoach.evaluate(coachContext());
+          // Keep what Coach said with the newest shot, so the night can be reviewed later.
+          const top = sessionShots[0];
+          if (top && top.type !== 'gameStart' && r && !top.coach) {
+            top.coach = { headline: r.headline || '', status: r.status || '', badge: (r.compass && r.compass.badge) || '', next: r.next || '', notes: (r.notes || []).slice(0, 3) };
+            saveCurrentSessionDraft();
+          }
+          return renderCoachV2(r);
+        }
       } catch (e) { console.error('Coach v2 failed', e); }
       // Fallback: previous coach
       const chron = sessionShots.slice().reverse();
@@ -1811,8 +1831,25 @@ function saveCurrentSessionDraft() {
       // Auto-assign lane based on pair + starting lane.
       const laneAuto = nextLaneNumber();
 
-      const leavePins = Array.from(selectedPins).filter(n => Number.isFinite(n)).sort((a,b)=>a-b);
+      let leavePins = Array.from(selectedPins).filter(n => Number.isFinite(n)).sort((a,b)=>a-b);
       const leaveTag = resultTag || '';
+      // Sanity check: do the pins tapped fit the pocket read? (Catches tapping the pins that fell.)
+      {
+        const pk = singlePillValue(el.readsPocket, 'Unknown');
+        const lefty = isLeftyBowler();
+        const LEFTP = lefty ? [3, 6, 9, 10] : [2, 4, 7, 8];   // pins a light hit leaves
+        const RIGHTP = lefty ? [2, 4, 7, 8] : [3, 6, 9, 10];  // pins a high hit leaves
+        const lightRead = pk === 'Pocket light' || pk === (lefty ? 'Missed left' : 'Missed right');
+        const highRead = pk === 'Pocket high' || pk === 'Brooklyn' || pk === (lefty ? 'Missed right' : 'Missed left');
+        const nL = leavePins.filter(p => LEFTP.includes(p)).length, nR = leavePins.filter(p => RIGHTP.includes(p)).length;
+        const hasAny = (arr) => arr.some(p => leavePins.includes(p));
+        const odd = leavePins.length >= 3 && ((lightRead && nR >= nL + 2 && !hasAny(LEFTP.slice(0, 2))) || (highRead && nL >= nR + 2 && !hasAny(RIGHTP.slice(0, 2))));
+        if (odd || leavePins.length >= 7) {
+          const flipped = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].filter(p => !leavePins.includes(p));
+          const msg = `Check the pins: you tapped ${leavePins.join('-')} standing${odd ? ` with a "${pk}" read` : ''}.\n\nOK = flip it (standing: ${flipped.join('-') || 'none, a strike'}), if you tapped the pins that fell.\nCancel = keep it as tapped.`;
+          if (confirm(msg)) { leavePins = flipped; selectedPins.clear(); flipped.forEach(p => selectedPins.add(p)); }
+        }
+      }
 
       // Backward-compatible "leaves" text for existing UI/scoreboard logic.
       const leavesCompat = (() => {
@@ -2033,6 +2070,13 @@ function sessionSummary(shots) {
       try { if (window.BTCoach && BTCoach.moveSummary) moves = BTCoach.moveSummary(sessionShots.slice().reverse(), BT.lsGet(BT.KEYS.BOWLER, {}) || {}); } catch (_e) {}
       if (moves) sum.moves = moves;
       const audit = await arsenalAudit(meta, sessionShots);
+      // Game scores (optional). PinPal fills them in on the next import if you skip this.
+      let scores = [];
+      try {
+        const nG = currentGameNumber();
+        const raw = prompt(`Game scores (optional), e.g. ${['222', '186', '203'].slice(0, Math.max(1, Math.min(3, nG))).join(' ')}.\nLeave blank if you keep score in PinPal: they're added when you import it.`, '');
+        scores = String(raw || '').split(/[^0-9]+/).map(Number).filter(n => Number.isFinite(n) && n > 0 && n <= 300).slice(0, Math.max(nG, 1));
+      } catch (_e) {}
 
       const payload = {
         id: `sess_${Math.random().toString(36).slice(2,10)}`,
@@ -2042,6 +2086,7 @@ function sessionSummary(shots) {
         laneStats,
         arsenalAudit: audit,
         games: currentGameNumber(),
+        scores,
         shots: [...sessionShots],
       };
       const sessions = BT.lsGet(BT.KEYS.GAME_SESSIONS, []);

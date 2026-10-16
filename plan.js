@@ -151,7 +151,7 @@
     const houseLabel = house || String(opts.house || '').trim();
     const lanes = pairKey(opts.lanes);
     const event = opts.event === 'tournament' ? 'tournament' : 'league';
-    const today = opts.date || new Date().toISOString().slice(0, 10);
+    const today = opts.date || BT().localDate();
     const sess = sessionsAt(houseLabel);
     const out = { title: `Game Plan: ${houseLabel || 'pick a house'}`, sub: [], sections: [], house: houseLabel, lefty };
     const sec = (icon, h, items, lead) => { if ((items && items.length) || lead) out.sections.push({ icon, h, lead: lead || '', items: items || [] }); };
@@ -330,7 +330,7 @@
       const withLine = sess.map(s => ({ s, shots: (s.shots || []).filter(x => x && x.type !== 'gameStart' && Number.isFinite(x.feet) && Number.isFinite(x.arrows)).slice().reverse() })).filter(x => x.shots.length);
       if (withLine.length) {
         const last = withLine[0], f = last.shots[0], end = last.shots[last.shots.length - 1];
-        const d = new Date(last.s.savedAt || f.at || Date.now()).toISOString().slice(0, 10);
+        const d = BT().localDate(last.s.savedAt || f.at || Date.now());
         items.push(`Game Day, ${fmtDate(d)}: you started at slide ${f.feet}, target ${f.arrows}${Number.isFinite(f.bp) ? `, breakpoint ${f.bp}` : ''}${f.ball ? ` with ${esc(f.ball)}` : ''} and finished at slide ${end.feet}, target ${end.arrows}${Number.isFinite(end.bp) ? `, breakpoint ${end.bp}` : ''}.`);
       }
       const lines = G.filter(g => g.lines && g.lines.length).sort((a, b) => (a.d < b.d ? 1 : -1));
@@ -440,7 +440,7 @@
   const _cache = {};
   function forContext(ctx) {
     ctx = ctx || {};
-    const key = JSON.stringify([ctx.house, pairKey(ctx.lanes), ctx.league, ctx.setName, ctx.patternName, ctx.count, new Date().toISOString().slice(0, 10)]);
+    const key = JSON.stringify([ctx.house, pairKey(ctx.lanes), ctx.league, ctx.setName, ctx.patternName, ctx.count, BT().localDate()]);
     if (_cache[key]) return _cache[key];
     let r = null; try { r = build(ctx); } catch (e) { console.error(e); }
     _cache[key] = r; return r;

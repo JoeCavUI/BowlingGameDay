@@ -6,7 +6,7 @@
 
 (function () {
   // Bump this string each build so pages can display it and cache-bust resources.
-  const APP_VERSION = 'v97-beta34';
+  const APP_VERSION = 'v98-beta35';
   const KEYS = {
     CSV_CACHE: 'bt_csv_cache_v1',          // stringified { savedAt, name, rows }
     BOWLER: 'bt_bowler_v1',               // stringified object
@@ -1503,6 +1503,14 @@
     return out.sort();
   }
 
+  // Local calendar date (YYYY-MM-DD). toISOString() is UTC, which is already
+  // tomorrow after 8 PM in Detroit, right in the middle of league night.
+  function localDate(d) {
+    const x = d instanceof Date ? d : new Date(d == null ? Date.now() : d);
+    const p = (n) => String(n).padStart(2, '0');
+    return `${x.getFullYear()}-${p(x.getMonth() + 1)}-${p(x.getDate())}`;
+  }
+
   function buildBackup() {
     const data = {};
     appDataKeys().forEach(k => { data[k] = localStorage.getItem(k); });
@@ -1511,7 +1519,7 @@
 
   async function exportBackup() {
     const backup = buildBackup();
-    const stamp = new Date().toISOString().slice(0, 10);
+    const stamp = localDate();
     const name = `bowling-${isTestMode() ? 'TEST-' : ''}backup-${stamp}.json`;
     const json = JSON.stringify(backup, null, 1);
     const blob = new Blob([json], { type: 'application/json' });
@@ -1594,7 +1602,7 @@
     APP_VERSION,
     KEYS,
     $, $all,
-    lsGet, lsSet,
+    lsGet, lsSet, localDate,
     getLeagues, addLeague, getLeagueById,
     parseCSV,
     ensureCSVLoaded, loadSampleArsenal, isRetired, activeOnly, arsenalTemplateCSV,

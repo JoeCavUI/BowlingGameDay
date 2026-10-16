@@ -58,6 +58,21 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v98-beta35: fixes from the Oct 15 Shelby night review
+
+- **Local date everywhere.** The Game Plan, its PDF title, the bag-day check, the shared bag cache and backup file names used UTC, which is already tomorrow after 8 PM in Detroit. They now use the phone's own date.
+- **PinPal lane notes with typos.** "Lames 13s & 14" and similar now count as lanes 13 & 14 (only real odd/even pairs, so "16 over 6" never does).
+- **Coach energy calls wait for agreement.** A speed or energy change needs 2+ good pocket shots that leave the same kind of pin; a strike on the last good shot means "keep repeating". The compass no longer says "Move your feet" when the advice is about speed.
+- **Lane by lane.** When one lane of the pair strikes less and reads early (or long) on good shots, Coach says which lane and suggests a 1-board move on that lane only.
+- **Miss pattern.** 3+ missed marks the same way get a "that's the throw, not the lane" note.
+- **Your shots beat "on paper".** When the ball is hitting the pocket and striking, Coach stops flagging it as "reads late on paper".
+- **Coach's advice is saved with each shot**, and **game scores** are asked for (optionally) when you save the session.
+- **PinPal check.** Importing PinPal adds the scores to each Game Day night and lists frames where the pins disagree, with a button to use PinPal's pins.
+- **Pin check on Save shot.** If the pins tapped don't fit the pocket read (or 7+ pins are tapped), Game Day asks whether you tapped the pins that fell and offers to flip them.
+- **League filled in** from the house and the weekday in the league's name.
+- **Lane scoreboard fixed.** It now uses the lane saved on each shot and skips the "Start Game" markers, which had been counted as shots and shifted every later shot to the wrong lane. Carry % counts only strikes on pocket hits.
+- **Plain percentages.** Pocket hit % and carry % count every shot once (they used to weight good shots 5× without saying so). "Quality %" is now "Good or OK shots".
+
 ## Changes in v97-beta34: 🔊 read aloud
 - **Game Plan → 🔊 Read aloud** reads the whole plan (tap again to stop). **Game Day → Coach → 🔊 Read aloud** reads what Coach is showing (the pregame starting plan, or the current advice).
 - Uses the phone's built-in voice, sentence by sentence; symbols are spoken naturally ("13 & 14" → "13 and 14", "%" → "percent", "43 ft" → "43 feet", "5.46″" → "5.46 inches", "G1" → "game 1"; emoji skipped). Hidden if the browser can't speak.

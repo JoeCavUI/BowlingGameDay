@@ -236,5 +236,75 @@
     return { names: pps, ...s, bestHouse: best ? `${best.key} (${best.avg}, ${best.n} games)` : '' };
   }
 
-  root.BTHistory = { KEY, load, save, clear, has, filter, summary, groupBy, leaves, DIMS, ballUsed, mainBall, ballMap, setBallMap, insights, matchHouse, ballRecord, norm, byCondition, conditionLines };
+  // ---------- Game Day night vs PinPal: scores, and frames that don't agree ----------
+  // A Game Day shot is the first ball of a frame. PinPal frames are 0-based (9 = 10th frame, 10/11 = fill racks).
+  const ymd = (ms) => { const x = new Date(ms); const p = (n) => String(n).padStart(2, '0'); return `${x.getFullYear()}-${p(x.getMonth() + 1)}-${p(x.getDate())}`; };
+  function standingOf(shot) {
+    const L = shot.leaves || [];
+    if (L.includes('Strike') || L.includes('Brooklyn') || (!(shot.leavePins || []).length && !shot.leaveTag)) return [];
+    if ((shot.leavePins || []).length) return shot.leavePins.map(Number).sort((a, b) => a - b);
+    if (shot.leaveTag === 'Flat 10' || shot.leaveTag === 'Ringing 10') return [10];
+    return [];
+  }
+  function reconcile(session, h) {
+    h = h || load(); if (!h || !session || !session.house) return null;
+    const hk = houseKey(session.house);
+    const shots = (session.shots || []).filter(s => s && s.type !== 'gameStart' && Number.isFinite(Number(s.frame)));
+    if (!shots.length) return null;
+    const t0 = Math.min(...shots.map(s => s.at || session.savedAt)), t1 = session.savedAt || Math.max(...shots.map(s => s.at || 0));
+    // League night can cross midnight: try the day the first shot was thrown, then the day it was saved.
+    const days = [...new Set([ymd(t0), ymd(t1)])];
+    let games = [];
+    for (const d of days) { games = h.games.filter(g => g.d === d && g.done && (houseKey(g.h) === hk || houseKey(g.h).startsWith(hk) || hk.startsWith(houseKey(g.h)))); if (games.length) break; }
+    if (!games.length) return null;
+    games.sort((a, b) => (a.wk - b.wk) || (a.gn - b.gn));
+    const gdGames = [...new Set(shots.map(s => Number(s.gameNo) || 1))].sort((a, b) => a - b);
+    const mismatches = [];
+    let compared = 0;
+    gdGames.forEach((gno, i) => {
+      const pg = games[i]; if (!pg) return;
+      const mine = shots.filter(s => (Number(s.gameNo) || 1) === gno).sort((a, b) => (a.at || 0) - (b.at || 0));
+      const fills = mine.filter(s => s.isFill);
+      mine.forEach(s => {
+        const fr = Number(s.frame);
+        const idx = s.isFill ? 9 + fills.indexOf(s) + 1 : fr - 1;
+        const pf = pg.f.find(x => x[0] === idx); if (!pf) return;
+        const pp = BTPinPal.pinsOf(pf[4]);
+        const gd = standingOf(s);
+        compared++;
+        if (pp.join('-') !== gd.join('-')) mismatches.push({ id: s.id, game: gno, frame: fr, fill: !!s.isFill, gd, pp });
+      });
+    });
+    const scores = games.slice(0, Math.max(gdGames.length, 1)).map(g => g.s);
+    return { date: games[0].d, scores, series: scores.reduce((a, b) => a + b, 0), compared, mismatches, checkedAt: Date.now() };
+  }
+  // Run the check on every saved Game Day night (after a PinPal import). Returns how many nights matched / disagree.
+  function reconcileAll(sessions) {
+    const h = load(); let matched = 0, off = 0;
+    (sessions || []).forEach(s => {
+      const r = reconcile(s, h); if (!r) return;
+      s.pinpal = r; matched++;
+      if (!Array.isArray(s.scores) || !s.scores.length) s.scores = r.scores;
+      if (r.mismatches.length && !s.pinpalFixed) off++;
+    });
+    return { matched, off };
+  }
+  // Replace the first-ball pins Game Day has with PinPal's for the frames that disagree (keeps the old pins on the shot).
+  function applyPinPalPins(session) {
+    const r = session && session.pinpal; if (!r || !r.mismatches.length) return 0;
+    let n = 0;
+    r.mismatches.forEach(m => {
+      const s = (session.shots || []).find(x => x && x.id === m.id); if (!s) return;
+      s.ppWas = { leavePins: s.leavePins || [], leaves: s.leaves || [], leaveTag: s.leaveTag || '' };
+      s.leavePins = m.pp.slice();
+      s.leaveTag = m.pp.length ? '' : 'Strike';
+      s.leaves = m.pp.length ? [m.pp.length === 1 ? String(m.pp[0]) : m.pp.join('-')] : ['Strike'];
+      n++;
+    });
+    session.pinpalFixed = Date.now();
+    r.mismatches = [];
+    return n;
+  }
+
+  root.BTHistory = { KEY, load, save, clear, has, reconcile, reconcileAll, applyPinPalPins, filter, summary, groupBy, leaves, DIMS, ballUsed, mainBall, ballMap, setBallMap, insights, matchHouse, ballRecord, norm, byCondition, conditionLines };
 })(typeof window !== 'undefined' ? window : globalThis);
