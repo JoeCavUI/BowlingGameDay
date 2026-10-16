@@ -542,3 +542,10 @@ table.cmp td:first-child, table.cmp th:first-child{ width:84px; min-width:0; fon
 .cdot{ position:absolute; }
 .cdot .ctuned{ position:absolute; top:-7px; right:-5px; font-size:13px; font-weight:900; color:#ffd166; line-height:1; text-shadow:0 0 2px #000; }
 .ctuned-t{ color:#ffd166; margin-left:2px; font-weight:900; }
+
+/* Lane + frame beside the pin deck (v99) */
+.deck-row{display:flex;align-items:center;justify-content:center;gap:4px}
+.deck-lbl{flex:0 0 58px;text-align:center;line-height:1.15}
+.deck-lane-k{font-size:12px;opacity:.75}
+.deck-lane{font-weight:800;font-size:26px;color:var(--accent);line-height:1}
+.deck-frame{font-size:12px;opacity:.75;margin-top:2px}

@@ -175,9 +175,8 @@
     // ---- Where you stand
     if (G.length >= MIN_HOUSE) {
       const items = [];
-      const others = hist.groupBy(all, 'house', 30).filter(r => r.key !== house).sort((a, b) => b.n - a.n).slice(0, 4);
-      const rank = others.length ? (S.avg < Math.min(...others.map(o => o.avg)) - 3 ? 'toughest' : S.avg > Math.max(...others.map(o => o.avg)) + 3 ? 'best' : '') : '';
-      items.push(`${rank ? `${esc(house)} is your <b>${rank}</b> regular house: ` : `${esc(house)}: `}<b>${S.avg}</b> average over ${S.n} games, ${S.strike}% strikes, ${S.spare}% spares${others.length ? ` (${others.map(o => `${esc(o.key.replace(/ Lanes?$/, ''))} ${o.avg}`).join(', ')})` : ''}.`);
+      // This house only: other houses don't help tonight.
+      items.push(`${esc(house)}: <b>${S.avg}</b> average over ${S.n} games, ${S.strike}% strikes, ${S.spare}% spares.`);
       // This season = the latest league here (6+ games), else the last 12 months.
       const latest = G.slice().sort((a, b) => (a.d < b.d ? 1 : -1))[0];
       const lgKey = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');

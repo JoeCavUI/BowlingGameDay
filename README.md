@@ -58,6 +58,12 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v99-beta36: short Game Day plan, lane beside the pins
+
+- **Game Day starting plan is short.** Ball, line, what to watch for, spare and oil: one line each. The house history, ball records and fresh-lane lists stay in the Game Plan, which holds the detail and the reasons.
+- **Lane and frame beside the pin deck.** "Lane 13 · G1 · Frame 4" sits on the left of the pins when you're on the left lane and on the right when you're on the right lane.
+- **Game Plan, this house only.** "Where you stand" no longer lists your averages at other houses.
+
 ## Changes in v98-beta35: fixes from the Oct 15 Shelby night review
 
 - **Local date everywhere.** The Game Plan, its PDF title, the bag-day check, the shared bag cache and backup file names used UTC, which is already tomorrow after 8 PM in Detroit. They now use the phone's own date.

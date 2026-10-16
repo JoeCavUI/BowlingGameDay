@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=98" />
+  <link rel="stylesheet" href="styles.css?v=99" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -141,7 +141,11 @@
           <div class="gd-q" style="margin-top:14px"><span class="gd-qnum">3</span><b>Pins left</b> <span class="small">(tap nothing for a strike)</span></div>
           <div id="quickResults" class="qr-row" style="margin-top:8px"></div>
           <div style="margin-top:10px">
-            <div id="pinDeckWrap" style="display:flex;justify-content:center"></div>
+            <div class="deck-row">
+              <div id="deckLblL" class="deck-lbl"></div>
+              <div id="pinDeckWrap" style="display:flex;justify-content:center;flex:1 1 auto;min-width:0;max-width:250px"></div>
+              <div id="deckLblR" class="deck-lbl"></div>
+            </div>
             <div class="small" style="text-align:center;margin-top:6px" id="pinDeckHint">Tap the pins still standing.</div>
           </div>
 
@@ -247,12 +251,12 @@
     </div>
   </div>
 
-  <script src="app.js?v=98"></script>
-  <script src="coach.js?v=98"></script>
-  <script src="pinpal.js?v=98"></script>
-  <script src="history.js?v=98"></script>
-  <script src="chart.js?v=98"></script>
-  <script src="plan.js?v=98"></script>
+  <script src="app.js?v=99"></script>
+  <script src="coach.js?v=99"></script>
+  <script src="pinpal.js?v=99"></script>
+  <script src="history.js?v=99"></script>
+  <script src="chart.js?v=99"></script>
+  <script src="plan.js?v=99"></script>
   <script>
     BT.renderNav('gameday');
     BT.wireReadAloud(document.getElementById('coachSpeak'), () => ((document.getElementById('coachText') || {}).innerText || '').split('\n').filter(l => !/^(Why & what's next|What Coach is using)/i.test(l.trim())).join('\n'));
@@ -496,7 +500,7 @@
       if (!el.pinDeckWrap) return;
       // Simple SVG rack. Tap pins to toggle (selected = standing).
       const svg = `
-        <svg id="pinDeck" width="260" height="260" viewBox="44 34 132 132" style="width:min(260px,82%);height:auto">
+        <svg id="pinDeck" width="260" height="260" viewBox="44 34 132 132" style="width:100%;max-width:250px;height:auto">
           ${pinCircle(1, 110, 145)}
           ${pinCircle(2, 95, 115)}
           ${pinCircle(3, 125, 115)}
@@ -808,6 +812,21 @@ function selectedPills(container) {
       const opt = BT.$(`option[value="${lane}"]`, el.lanePick);
       if (opt) el.lanePick.value = lane;
       renderScoreboard();
+      updateDeckLabel();
+    }
+
+    // Lane and frame beside the pin deck, on the side of the lane you're bowling on.
+    function updateDeckLabel() {
+      const L = document.getElementById('deckLblL'), R = document.getElementById('deckLblR');
+      if (!L || !R) return;
+      const lane = nextLaneNumber();
+      const pair = parseLanePair(el.lanes.value);
+      const info = computeFrameInfo();
+      const fr = info.defaultFill ? '10th, fill' : `Frame ${info.frame}`;
+      const html = `${lane ? `<div class="deck-lane-k">Lane</div><div class="deck-lane">${lane}</div>` : ''}<div class="deck-frame">${fr}</div><div class="deck-frame">Game ${info.gameNo}</div>`;
+      const right = pair.length === 2 && lane && Number(lane) === Number(pair[1]);
+      L.innerHTML = right ? '' : html;
+      R.innerHTML = right ? html : '';
     }
 
     
@@ -824,6 +843,7 @@ function selectedPills(container) {
       if (!el.frame || !el.fill) return;
       const info = computeFrameInfo();
       el.frame.value = String(info.frame);
+      try { updateDeckLabel(); } catch (_e) {}
       if (info.frame !== 10) {
         el.fill.value = 'no';
         el.fill.disabled = true;
@@ -1747,7 +1767,7 @@ function saveCurrentSessionDraft() {
           <div style="font-size:16px;font-weight:800;line-height:1.35;color:var(--text)">${icon} ${escapeHtml(r.headline)}</div>
           ${ballBtn}
           <details id="coachMore" ${(moreOpen || r.status === 'start') ? 'open' : ''} style="margin-top:8px"><summary class="small" style="cursor:pointer;opacity:1"><b>Why &amp; what's next</b>${nNotes ? ` · ${nNotes} heads-up${nNotes > 1 ? 's' : ''}` : ''}</summary>
-          ${r.why ? `<div class="small" style="margin-top:6px;opacity:1">${escapeHtml(r.why)}</div>` : ''}
+          ${r.why ? `<div class="small" style="margin-top:6px;opacity:1;white-space:pre-line">${escapeHtml(r.why)}</div>` : ''}
           ${r.compass && r.compass.line && r.status !== 'start' ? `<div class="small" style="margin-top:6px;opacity:1">${escapeHtml(r.compass.line.replace(/^🧭 /, ''))}</div>` : ''}
           ${r.next ? `<div class="small" style="margin-top:6px"><b>Next:</b> ${escapeHtml(r.next)}</div>` : ''}
           ${notes}

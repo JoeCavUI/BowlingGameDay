@@ -1055,30 +1055,29 @@
       // Same first ball as tonight's Game Plan when it's in the bag (history-based pick); else the motion pick.
       const planPick = ctx.plan && ctx.plan.firstBall && (ctx.setBalls || []).some(b => b.name === ctx.plan.firstBall) ? ctx.plan.firstBall : '';
       const sb = planPick || startingBall(ctx, prof, pat);
+      // Short and specific: the Game Plan holds the detail and the reasons.
       const lines = [];
-      if (pat && pat.length) {
-        const ex = exitBoardFor(pat);
-        lines.push(`🧭 Right spot: on ${pat.length} ft the ball should exit the pattern around board ${ex} (rule of 31). Pick feet and target so your breakpoint lands a few boards outside that, in the dry. Turning at or inside board ${ex} means changing direction in the mud.`);
-      }
+      if (planPick) lines.push(`🎳 Ball: ${planPick} (your Game Plan pick for ${ctx.plan.house || 'this house'}). Confirm it in practice.`);
+      else if (sb) lines.push(`🎳 Ball: start with ${sb}.${ctx.plan && ctx.plan.firstBall && (ctx.setBalls || []).length ? ` (Your Game Plan pick, ${ctx.plan.firstBall}, isn't in tonight's bag.)` : ''}`);
       const lm0 = ctx.line ? lineMath(ctx.line.feet, ctx.line.arrows, pat, prof, 'start', ctx.line.bp) : null;
-      if (lm0) lines.push(lineText(lm0));
+      if (lm0 && lm0.basis === 'rule31') {
+        if (lm0.status === 'on') lines.push(`📐 Line: slide ${lm0.yourSlide != null ? lm0.yourSlide : lm0.slide}, target ${lm0.target} checks out (through the exit point, about board ${lm0.focal}).`);
+        else if (lm0.status) lines.push(`📐 Line: from slide ${lm0.yourSlide}, target ${lm0.target} the ball is ${lm0.gap} board${lm0.gap === 1 ? '' : 's'} ${lm0.status === 'inside' ? 'inside' : 'outside'} the exit point (about board ${lm0.focal}). Try slide ${lm0.slide}, target ${lm0.target}.`);
+        else lines.push(`📐 Line: slide ${lm0.slide}, target ${lm0.target} heads through the exit point (about board ${lm0.focal}).`);
+      } else if (pat && pat.length) lines.push(`📐 Line: aim to leave the oil around board ${exitBoardFor(pat)}, not inside it.`);
+      if (!pat) lines.push('📐 Pick tonight\'s oil pattern so Coach can check your line.');
+      const lean = ctx.plan ? Number(ctx.plan.lean) || 0 : 0;
+      if (lean === -1) lines.push('👀 Watch for: the ball reading early as the lane changes. Small moves (1 board, feet and eyes together) before a big move left.');
+      else if (lean === 1) lines.push('👀 Watch for: the ball arriving weak (light hits, 10 pins). Small moves in, or a stronger ball, before a big change.');
+      try {
+        const sp = ((ctx.history && ctx.history.lines) || []).find(l => /Spare to practice/.test(l));
+        const m = sp && sp.match(/Spare to practice: (?:the )?([^.]+)\. You've made (\d+%)/);
+        if (m) lines.push(`🎯 Spare: the ${m[1]} (${m[2]} here).`);
+      } catch (_e) {}
+      if (pat && pat.volumeClass === 'light') lines.push('🛢️ Light oil: watch for high hits by game 2.');
+      if (pat && pat.volumeClass === 'heavy') lines.push('🛢️ Heavy oil: the lane changes slowly. Don\'t chase it early.');
       const bt = bagTiming(ctx, pat);
-      if (bt.length >= 2) {
-        lines.push(`🧭 Right ball: for you on this pattern, ${bagTimingText(bt)}.${sb ? ` Start with ${sb}.` : ''}`);
-        if (bt.every(b => b.rel === 'late')) lines.push('If it skids past the breakpoint, take a touch of speed off or move a little outside toward the friction before you go hunting for a different ball.');
-        if (bt.every(b => b.rel === 'early')) lines.push('If it hooks early, add a touch of speed or move in toward the oil before you go hunting for a different ball.');
-      }
-      else if (sb) lines.push(`🧭 Right ball: start with ${sb}.`);
-      if (planPick) lines.push(`📋 Same as your Game Plan: ${planPick} is the first-ball pick for ${ctx.plan.house || 'this house'} (your record there, weighted for sample size and recent form). Confirm it in practice.`);
-      else if (ctx.plan && ctx.plan.firstBall && (ctx.setBalls || []).length) lines.push(`📋 Your Game Plan's first pick for ${ctx.plan.house || 'this house'} is ${ctx.plan.firstBall}, but it isn't in tonight's bag.`);
-      if (!pat) lines.push('🧭 Pick tonight\'s oil pattern so Coach can check whether your ball and your spot fit the lane.');
-      // 📚 What your PinPal history says about this house, these lanes and this bag
-      if (ctx.history && ctx.history.lines && ctx.history.lines.length) lines.push(...ctx.history.lines.slice(0, 6));
-      // 🧪 What has worked for you here on fresh lanes (game 1)
-      try { const f = ctx.history && ctx.history.cond && ctx.history.cond.fresh; if (f && f.balls && f.balls.length) lines.push(`🧪 Fresh lanes (game 1)${f.scope !== ctx.history.cond.house ? ', all houses' : ' here'}: your best have been ${f.balls.map(x => `${x.n} ${x.avg}`).join(', ')}.`); } catch (_e) {}
-      if (pat && pat.volumeClass === 'light') lines.push('Light oil: expect the fronts to dry up early. Watch for high hits by game 2.');
-      if (pat && pat.volumeClass === 'heavy') lines.push('Heavy oil: the lane should change slowly. Don\'t chase it early.');
-      if (prof.dom < -0.3 && bt.length < 2) lines.push('As a speed-dominant player, the ball may read late. Favor earlier-reading equipment if it skids.');
+      if (prof.dom < -0.3 && bt.length < 2 && !planPick) lines.push('Speed-dominant: if the ball skids, favor your earlier-reading ball.');
       // Tonight's bag vs tonight's pattern (only when it matters)
       try {
         const bag = (ctx.setBalls || []).filter(b => b && b.row);
@@ -1094,7 +1093,7 @@
         }
       } catch (_e) {}
       res.headline = C.length ? `Building your read: ${C.length}/3 shots` : 'Starting plan';
-      res.why = lines.join(' ') || 'Log your first few shots: mark, pocket and leave matter most.';
+      res.why = lines.join('\n') || 'Log your first few shots: mark, pocket and leave matter most.';
       res.next = 'Coach starts calling moves after 3 shots.';
       res.ballSuggestion = '';
       return res;
