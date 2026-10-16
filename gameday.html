@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=101" />
+  <link rel="stylesheet" href="styles.css?v=102" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -258,12 +258,12 @@
     </div>
   </div>
 
-  <script src="app.js?v=101"></script>
-  <script src="coach.js?v=101"></script>
-  <script src="pinpal.js?v=101"></script>
-  <script src="history.js?v=101"></script>
-  <script src="chart.js?v=101"></script>
-  <script src="plan.js?v=101"></script>
+  <script src="app.js?v=102"></script>
+  <script src="coach.js?v=102"></script>
+  <script src="pinpal.js?v=102"></script>
+  <script src="history.js?v=102"></script>
+  <script src="chart.js?v=102"></script>
+  <script src="plan.js?v=102"></script>
   <script>
     BT.renderNav('gameday');
     BT.wireReadAloud(document.getElementById('coachSpeak'), () => ((document.getElementById('coachText') || {}).innerText || '').split('\n').filter(l => !/^(Why & what's next|What Coach is using)/i.test(l.trim())).join('\n'));

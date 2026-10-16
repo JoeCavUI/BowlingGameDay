@@ -58,6 +58,13 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v102-beta39: Angle lane redraw + back end
+
+- **Narrow lane** in the middle, with distances on the left and the ball's board on the right.
+- **All 39 boards** drawn very lightly, every 5th board bold. Arrows are long, narrow darts staggered in a V (about 12.5 ft outside to 16 ft at board 20), the way you see them from the approach.
+- **Downlane range finders** (boards 10 and 30, 34–40 ft): a checkbox, for houses that have them. They're added to the table too.
+- **Back end:** how many boards the ball must come back from the end of the oil (or your breakpoint) to the pocket, and in how many feet. 8 or fewer = direct line, 13 or more = big swing (same scale as Coach). It replaces "a straight ball hits board X at the pins".
+
 ## Changes in v101-beta38: 📐 Angle calculator
 
 - **New Angle page** (nav → Angle, or "📐 Angle for this line" in Game Day). Put in your slide board and laydown offset, then aim at a target (arrows, 15 ft or any distance), a **pin focal point** (any pin; left edge / left / center / right / right edge, Kegel-style) or any board at any distance.

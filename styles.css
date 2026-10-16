@@ -551,8 +551,8 @@ table.cmp td:first-child, table.cmp th:first-child{ width:84px; min-width:0; fon
 .deck-frame{font-size:12px;opacity:.75;margin-top:2px}
 
 /* Angle calculator (v101) */
-:root{--ang-lane:#2a2216;--ang-oil:rgba(99,230,210,.10);--ang-grid:rgba(255,255,255,.10);--ang-mark:#c9b28a;--ang-pin:#f4f4f4;--ang-pinb:#bbb;--ang-foul:#e05555;--ang-exit:#ffb35c;--ang-foot:#9aa3b2}
-@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--ang-lane:#e9d7b3;--ang-oil:rgba(30,140,130,.16);--ang-grid:rgba(0,0,0,.12);--ang-mark:#7a5a2a;--ang-pinb:#888;--ang-exit:#c46a00;--ang-foot:#5b6474}}
+:root{--ang-board:rgba(255,255,255,.07);--ang-bold:rgba(255,255,255,.28);--ang-gut:#11141b;--ang-lane:#2a2216;--ang-oil:rgba(99,230,210,.10);--ang-grid:rgba(255,255,255,.10);--ang-mark:#c9b28a;--ang-pin:#f4f4f4;--ang-pinb:#bbb;--ang-foul:#e05555;--ang-exit:#ffb35c;--ang-foot:#9aa3b2}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--ang-board:rgba(0,0,0,.08);--ang-bold:rgba(0,0,0,.32);--ang-gut:#c9c3b6;--ang-lane:#e9d7b3;--ang-oil:rgba(30,140,130,.16);--ang-grid:rgba(0,0,0,.12);--ang-mark:#7a5a2a;--ang-pinb:#888;--ang-exit:#c46a00;--ang-foot:#5b6474}}
 .ang-seg{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .ang-seg button,.ang-pins button{background:var(--panel2,#1d2230);color:inherit;border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:9px 12px;font:inherit;font-size:14px}
 .ang-seg button.on,.ang-pins button.on{border-color:var(--accent);color:var(--accent);font-weight:700}
@@ -564,7 +564,12 @@ table.cmp td:first-child, table.cmp th:first-child{ width:84px; min-width:0; fon
 .ang-wrap{margin-top:10px;display:flex;justify-content:center}
 .ang-wrap svg{width:100%;max-width:360px;height:auto}
 .ang-t{font-size:10px;fill:currentColor;opacity:.8}
-.ang-pn{font-size:8px;font-weight:700;fill:#222}
+.ang-pn{font-size:6px;font-weight:700;fill:#222}
+.ang-bn{font-size:8px}
+.ang-rb{fill:var(--accent);opacity:1;font-weight:700}
+.ang-oilt{fill:var(--accent);opacity:1}
+.ang-chk{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:14px}
+.ang-chk input{width:20px;height:20px}
 .ang-tbl{width:100%;min-width:0;border-collapse:collapse;margin-top:10px;table-layout:fixed}
 .ang-tbl th{position:static;background:none}
 .ang-tbl td:nth-child(1),.ang-tbl th:nth-child(1){width:26%}.ang-tbl td:nth-child(2),.ang-tbl th:nth-child(2){width:22%}
