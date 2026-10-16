@@ -71,7 +71,7 @@
 
     <div class="panel" id="angOut">
       <div class="ang-head" id="aHead"></div>
-      <div class="ang-wrap"><svg id="aLane" viewBox="0 0 330 600" role="img" aria-label="Lane with the ball's straight line"></svg></div>
+      <div class="ang-wrap"><svg id="aLane" viewBox="0 0 330 632" role="img" aria-label="Lane with the ball's straight line"></svg></div>
       <table class="ang-tbl" id="aTbl"></table>
       <div id="aAlerts"></div>
       <div class="small" style="margin-top:10px;opacity:.75">A straight line, no hook: it shows where you're sending the ball, not where it turns. Arrows are taken at 15 ft (they're staggered 12–16 ft on a real lane, so set the distance if you use one arrow's exact spot). Board 1 is your outside board.</div>
@@ -164,6 +164,16 @@
     const yPin = (ft) => yF(ft > 60 ? 60 + (ft - 60) * 1.9 : ft);       // pin deck spread out so pins don't overlap
     // Arrows: staggered in a V, 12.5 ft on the outside to 16 ft at board 20 (as you see them from the approach).
     const ARROWS = [[5, 12.5], [10, 13.5], [15, 14.5], [20, 16], [25, 14.5], [30, 13.5], [35, 12.5]];
+    // Slide shoe print: left shoe for a right-hander, right shoe for a left-hander. Its inside edge sits on the slide board.
+    function shoe(slide) {
+      const w = 5 * LW / 39, h = 40, sx = w / 10, sy = h / 28, x0 = xBoard(slide) + (lefty ? -0.5 : 0.5) * LW / 39, y0 = BOT + 18;
+      // Outline of a left sole, toe up, x = 10 is the inside edge (big-toe side).
+      const P = [[5, 28], [2.2, 27], [0.8, 24], [0.4, 18], [0.2, 12], [0.6, 7], [1.6, 3], [3.6, 0.8], [6, 0], [8.4, 0.6], [9.8, 2.6], [10, 6], [9.6, 10], [8.6, 14], [8.4, 18], [9, 22], [8.6, 26], [7.4, 27.6]];
+      const X = (xl) => x0 + (lefty ? 1 : -1) * (10 - xl) * sx, Y = (yl) => y0 + yl * sy;
+      const d = 'M' + P.map(([a, b]) => `${X(a).toFixed(1)} ${Y(b).toFixed(1)}`).join(' L') + ' Z';
+      const tread = [5, 8, 11, 21, 24].map(yl => `<line x1="${X(yl < 16 ? 1.4 : 1.8).toFixed(1)}" y1="${Y(yl).toFixed(1)}" x2="${X(yl < 16 ? 9.2 : 8.2).toFixed(1)}" y2="${Y(yl).toFixed(1)}" stroke="var(--ang-lane)" stroke-width="1"/>`).join('');
+      return `<path d="${d}" fill="var(--ang-foot)" stroke="none"/>${tread}`;
+    }
     function draw(c, rows) {
       const g = [], L = (x) => x.toFixed(1);
       const leftX = L0 - 6, rightX = L0 + LW + 6;
@@ -206,7 +216,8 @@
         });
         if (isFinite(c.gutterFt) && c.gutterFt < (mode === 'pin' ? c.aimFt : 62.6)) g.push(`<text x="${rightX + 6}" y="${L(yF(c.gutterFt) + 3)}" class="ang-t" fill="var(--ang-exit)">channel ${r1(c.gutterFt)} ft</text>`);
         // slide foot and laydown
-        g.push(`<circle cx="${L(xBoard(c.slide))}" cy="${BOT + 24}" r="4" fill="var(--ang-foot)"/><text x="${L(xBoard(c.slide))}" y="${BOT + 36}" text-anchor="middle" class="ang-t">slide ${fmt(c.slide)}</text>`);
+        g.push(shoe(c.slide));
+        g.push(`<text x="${L(xBoard(c.slide) + (lefty ? 1 : -1) * 2.5 * LW / 39)}" y="${BOT + 70}" text-anchor="middle" class="ang-t">slide ${fmt(c.slide)}</text>`);
         g.push(`<circle cx="${L(xBoard(c.lay))}" cy="${BOT}" r="3.6" fill="var(--accent)"/>`);
         g.push(`<text x="${leftX - 6}" y="${BOT + 3}" text-anchor="end" class="ang-t">foul line</text>`);
       }

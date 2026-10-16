@@ -61,6 +61,7 @@ Then open http://localhost:3000
 ## Changes in v104-beta41: placeholders and dropdowns
 
 - **Example text is light gray and italic** everywhere (e.g. "e.g., 24.5"), so it can't be mistaken for a value you entered. A dropdown still on its "not set" choice looks the same way.
+- **Slide shoe on the Angle lane:** a left shoe print for a right-hander (right shoe for a left-hander), with its inside edge on your slide board.
 - **Dropdowns for short, fixed choices:** Bowler → axis tilt (0–30°), axis rotation (0–90° in 5s), laydown offset (2–10, or "Not measured yet (Coach uses 5)"); Oil → pattern length (30–52 ft); Arsenal → bag size (1–15); Angle → laydown offset and pattern length. Saved values that aren't on the list are kept.
 
 ## Changes in v103-beta40: tracer boards placed correctly
