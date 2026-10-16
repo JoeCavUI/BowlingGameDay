@@ -61,6 +61,7 @@ Then open http://localhost:3000
 ## Changes in v106-beta43 (not published yet): 📦 target box
 
 - **Target box** (Angle page, shared with Game Day): where you want the ball at the end of the oil, e.g. boards 6–8 from the end of the oil to 2 ft past it (follows the pattern length). Drawn on the lane; the Angle page says whether your line goes through it, and Ways to fix it aims at the middle of it.
+- **House shots only:** the box applies at 7:1 or more (or no ratio entered). On sport and medium ratios the app goes back to the rule of 31 and says why.
 - **Coach's line check uses the box** when it's on: "from slide 21 over target 14 the ball is on about board 10 at 44 ft, 2 boards inside your box". The rule of 31 stays as a reference line.
 
 ## Changes in v105-beta42: breakpoint check fixed

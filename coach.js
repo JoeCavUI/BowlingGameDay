@@ -199,7 +199,8 @@
       flat: ratio != null && ratio <= 3,       // USBC sport condition (3:1 or less): small miss room
       mid: ratio != null && ratio > 3 && ratio < 7, // challenge / medium ratio: some room, less than a house shot
       house: ratio != null && ratio >= 7,      // typical house shot: forgiving
-      box: (p.box && p.box.on && length != null) ? { b1: p.box.b1, b2: p.box.b2, f1: length + p.box.d1, f2: length + p.box.d2 } : null,
+      // The target box is a house-shot idea: on sport / medium ratios the exit point (rule of 31) leads.
+      box: (p.box && p.box.on && length != null && !(ratio != null && ratio < 7)) ? { b1: p.box.b1, b2: p.box.b2, f1: length + p.box.d1, f2: length + p.box.d2 } : null,
     };
   }
 

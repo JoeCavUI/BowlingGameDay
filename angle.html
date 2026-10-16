@@ -67,7 +67,7 @@
         <div><label for="aBp">Breakpoint board <span class="small">(optional)</span></label><input id="aBp" class="input" type="number" step="0.5" inputmode="decimal" /></div>
         <div><label for="aMore">Also show at <span class="small">(ft)</span></label><input id="aMore" class="input" placeholder="e.g. 32, 43" inputmode="text" /></div>
       </div>
-      <label class="ang-chk"><input type="checkbox" id="aBox" /> 📦 Target box: where you want the ball at the end of the oil</label>
+      <label class="ang-chk"><input type="checkbox" id="aBox" /> 📦 Target box (house shots): where you want the ball at the end of the oil</label>
       <div class="ang-boxrow" id="aBoxRow">
         <span>Boards</span><select id="aBoxB1" class="input"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option></select><span>to</span><select id="aBoxB2" class="input"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option></select>
         <span>from the oil end +</span><select id="aBoxD1" class="input"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select><span>to +</span><select id="aBoxD2" class="input"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option></select><span>ft</span>
@@ -170,7 +170,7 @@
       // Distance where the straight line is on the breakpoint board. A line straight up one board is on it everywhere.
       const len0 = Number($('#aLen').value) || 45;
       const bpFt = !hasBp ? null : Math.abs(slope) < 1e-6 ? (Math.abs(bp - lay) <= 0.5 ? len0 : null) : (bp - lay) / slope;
-      const bx = BT.targetBox(); const box = (bx.on && len) ? { b1: bx.b1, b2: bx.b2, f1: len + bx.d1, f2: len + bx.d2, fm: len + (bx.d1 + bx.d2) / 2, bm: (bx.b1 + bx.b2) / 2 } : null;
+      const bx = BT.targetBox(); const box = (bx.on && len && rc !== 'sport' && rc !== 'mid') ? { b1: bx.b1, b2: bx.b2, f1: len + bx.d1, f2: len + bx.d2, fm: len + (bx.d1 + bx.d2) / 2, bm: (bx.b1 + bx.b2) / 2 } : null;
       return { box, ratio, rc, slide, off, lay, aim, aimFt, aimLbl, slope, at, len, exit, deg, gutterFt, bp: $('#aBp').value !== '' ? bp : null, bpFt };
     }
 
@@ -368,6 +368,7 @@
       }
       // End of oil vs the rule-of-31 exit point
       else if (c.len && c.exit != null) {
+        if (BT.targetBox().on && (c.rc === 'sport' || c.rc === 'mid')) A.push(['info', `📦 Your target box is a house-shot target, so it's off for this ${c.rc === 'sport' ? 'sport pattern' : 'medium ratio'} (${r1(c.ratio)}:1). Here the outside has oil too, so the exit point (rule of 31) matters more.`]);
         const eb = c.at(c.len), d = eb - c.exit; // + = inside the exit point (still in the oil)
         const fs = fixSlide();
         const tol = c.rc === 'sport' ? 1 : 2;
