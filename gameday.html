@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=100" />
+  <link rel="stylesheet" href="styles.css?v=101" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -28,6 +28,7 @@
       <div class="gd-main">
 
         <a class="gd-planlink" href="plan.html">📋 Tonight's game plan →</a>
+        <a class="gd-planlink" id="gdAngle" href="angle.html">📐 Angle for this line →</a>
         <!-- Tonight's setup: folds to one line once it's filled in -->
         <details class="panel gd-fold" id="setupFold">
           <summary><span class="gd-fold-title">Tonight</span> <span id="setupSummary" class="small">Tap to set up</span></summary>
@@ -257,12 +258,12 @@
     </div>
   </div>
 
-  <script src="app.js?v=100"></script>
-  <script src="coach.js?v=100"></script>
-  <script src="pinpal.js?v=100"></script>
-  <script src="history.js?v=100"></script>
-  <script src="chart.js?v=100"></script>
-  <script src="plan.js?v=100"></script>
+  <script src="app.js?v=101"></script>
+  <script src="coach.js?v=101"></script>
+  <script src="pinpal.js?v=101"></script>
+  <script src="history.js?v=101"></script>
+  <script src="chart.js?v=101"></script>
+  <script src="plan.js?v=101"></script>
   <script>
     BT.renderNav('gameday');
     BT.wireReadAloud(document.getElementById('coachSpeak'), () => ((document.getElementById('coachText') || {}).innerText || '').split('\n').filter(l => !/^(Why & what's next|What Coach is using)/i.test(l.trim())).join('\n'));
@@ -2202,6 +2203,9 @@ function sessionSummary(shots) {
       el.ball.addEventListener('change', markCoachDirty);
       el.house.addEventListener('change', () => { renderLeagues(); updatePrep(); markCoachDirty(); });
       el.pattern.addEventListener('change', () => { updatePrep(); markCoachDirty(); });
+      // Open the Angle calculator with tonight's line and pattern filled in.
+      const angA = document.getElementById('gdAngle');
+      if (angA) angA.addEventListener('click', () => { const q = new URLSearchParams(); if (el.feet.value) q.set('slide', el.feet.value); if (el.arrows.value) q.set('target', el.arrows.value); if (el.bp && el.bp.value) q.set('bp', el.bp.value); if (el.pattern.value) q.set('pattern', el.pattern.value); angA.href = 'angle.html?' + q.toString(); });
       el.league.addEventListener('change', () => { syncLeagueWear(); updatePrep(); markCoachDirty(); });
       // How the inside plays on this league: saved on the league, used by Coach and the Game Plan.
       const wearSel = document.getElementById('leagueWear');

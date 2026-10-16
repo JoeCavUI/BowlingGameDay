@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Guide</title>
-  <link rel="stylesheet" href="styles.css?v=100" />
+  <link rel="stylesheet" href="styles.css?v=101" />
   <style>
     .guide { max-width: 760px; margin: 0 auto; line-height: 1.55; font-size: 16px; }
     .guide h2 { margin: 0 0 6px; font-size: 21px; }
@@ -57,6 +57,7 @@
           <a href="#balls"><span>4</span>Add your balls</a>
           <a href="#bag"><span>5</span>Build your bag</a>
           <a href="#plan"><span>📋</span>Game Plan</a>
+          <a href="#angle"><span>📐</span>Angle</a>
           <a href="#history"><span>📚</span>PinPal history</a>
           <a href="#gameday"><span>6</span>Game Day setup</a>
           <a href="#shot"><span>7</span>Logging each shot</a>
@@ -342,12 +343,25 @@
           <li><b>Ball</b>: first ball and backup from your record here (recent form counts), and balls to avoid opening with.</li>
           <li><b>Starting line</b>: your last Game Day line here, lines from your PinPal notes, and the rule of 31.</li>
           <li><b>If / then</b>, <b>Spares</b> (your most expensive one here), <b>Lanes</b> (your record on the pair), and two <b>Focus</b> cues.</li>
-          <li><b>By lane condition</b>: what has worked for you on fresh lanes (game 1), in transition (games 2–3) and when the lanes burn (Game Day games where you tapped Early or High), by cover, core, layout, surface and ball.</li>
+          <li><b>By lane condition</b>: what has worked for you on fresh lanes (game 1), in transition (game 2) and when the lanes burn (game 3, plus Game Day games where you tapped Early or High), by cover, core, layout, surface and ball.</li>
           <li><b>Reading early vs weak</b>: 10 pins and washouts can mean the ball never hooked <i>or</i> that it read early and burned up. When high hits rise at the same time, Coach calls it early and tells you to go smoother before moving left. Tap <b>Early</b> / <b>Long</b> in Game Day ④ so Coach knows which.</li>
           <li><b>Your bag</b> (pick <b>How many balls?</b>): Coach first checks how your covers, cores, layouts and Barnes boxes have done at this house and pair, then picks the balls: the one to start with, plus balls that read earlier (more ball) and later (for transition), each with its own job.</li>
         </ul>
         <p><span class="k">Save as PDF</span> opens the print screen: tap the share icon, then <b>Save to Files</b>. <span class="k">Share text</span> sends it to Notes or a message.</p>
         <div class="why">Every line comes from your games. When there isn't enough data (a new house, a pair with few games), the plan says so instead of guessing. The more nights you log in Game Day, the better it gets.</div>
+        <a class="top" href="#top">↑ Back to top</a>
+      </section>
+
+      <section class="panel" id="angle">
+        <h2>📐 Angle calculator</h2>
+        <p>Open <span class="k">Angle</span> (or <b>📐 Angle for this line</b> in Game Day, which fills in tonight's slide, target, breakpoint and pattern). Enter your <b>slide board</b> and <b>laydown offset</b>, then pick what you aim at:</p>
+        <ul>
+          <li><b>Target (arrows)</b>: a board at 15 ft, or change the distance for your exact arrow or a downlane marker.</li>
+          <li><b>Pin focal point</b>: tap a pin, then left edge, left, center, right or right edge (Kegel's pin targeting). Spare lines get the arrow board to look at.</li>
+          <li><b>Board at a distance</b>: any board at any distance, e.g. your breakpoint.</li>
+        </ul>
+        <p>You get the angle, a lane drawing, and the board at the foul line, 7, 15, 30, 45 and 60 ft and at the end of the oil. Add your own distances in <b>Also show at</b> (e.g. <i>32, 43</i>). The alerts tell you if the line leaves the oil outside the exit point (reads early) or inside it (skid, over/under) and which slide fixes it, how far the ball must hook back to the pocket, and when a breakpoint you logged doesn't fit the line (check your alignment).</p>
+        <div class="why">It's a perfectly straight line, no hook: it shows where you're <i>sending</i> the ball. Your laydown offset is on the Bowler page; measure it once (the board under the ball at the foul line vs your slide foot) and every number gets sharper.</div>
         <a class="top" href="#top">↑ Back to top</a>
       </section>
 
@@ -438,7 +452,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=100"></script>
+  <script src="app.js?v=101"></script>
   <script>
     BT.renderNav('guide');
     BT.$('#ver').textContent = 'Bowling Tool ' + BT.APP_VERSION;

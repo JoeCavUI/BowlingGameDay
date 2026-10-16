@@ -207,9 +207,11 @@
 
   // ---------- 📐 Math for a Line (Kegel three-point targeting) ----------
   // Worked backwards from the SLIDE at the foul line (inside of the slide foot):
-  //   laydown = target + (target − focal) / 3      slide = laydown + laydown offset (default 5)
-  // Focal point = the rule-of-31 exit board. Reverse: the board a slide/target line passes at the exit
-  //   = 4·target − 3·(slide − offset). Each board the slide is off moves the exit by 3 boards.
+  //   A straight line from the laydown (foul line) through the target (arrows, 15 ft) reaches the end of the oil
+  //   (L ft) at  exit = laydown + (target − laydown)·k,  k = L / 15.
+  //   So laydown = (k·target − focal) / (k − 1)      slide = laydown + laydown offset (default 5)
+  // Focal point = the rule-of-31 exit board, measured where the oil ends (not at 60 ft).
+  //   Each board the slide is off moves the exit by (k − 1) boards (about 1.9 on 43 ft).
   // phase 'start' = game 1 before any move: focal point = rule-of-31 exit board (a fresh-pattern estimate). Mild heads-up.
   // phase 'later' = after a move or from game 2: the exit point SHOULD move with the lane. It moves by the same
   //   number of boards your breakpoint has moved since your first shots (bp0). The question becomes "is your line
@@ -227,13 +229,14 @@
     if (focal == null) return null;
     const off = prof.laydownOffset;
     const a = own(arrows);
-    const lay = a + (a - focal) / 3;
+    const k = Math.max(1.5, (pat && Number(pat.length) ? Number(pat.length) : 60) / 15);
+    const lay = (k * a - focal) / (k - 1);
     const mSlide = lay + off;
     const r = { phase: later ? 'later' : 'start', basis, target: arrows, focal: Math.round(own(focal)), exitBoard: E31 == null ? null : own(E31),
       bp, bp0, shift: (basis === 'moved') ? Math.round(own(bp) - own(bp0)) : 0, laydown: Math.round(own(lay)), slide: Math.round(own(mSlide)), offset: off, status: '' };
     if (slide != null) {
       const sl = own(slide);
-      const pass = 4 * a - 3 * (sl - off);
+      const pass = (sl - off) + (a - (sl - off)) * k;
       r.yourSlide = slide;
       r.passes = Math.round(own(pass));
       r.gap = Math.round(Math.abs(pass - focal));

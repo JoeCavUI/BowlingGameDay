@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1116" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Bowling" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <title>Angle Calculator</title>
+  <link rel="stylesheet" href="styles.css?v=101" />
+</head>
+<body data-page="angle">
+  <div class="navlinks"></div>
+  <div class="container">
+    <div class="header">
+      <h1>📐 Angle</h1>
+      <div class="small">Slide, laydown and one aim point give you a straight line down the lane. See which board the ball is on at any distance, where it leaves the oil, and what a perfectly straight shot would hit at the pins.</div>
+    </div>
+
+    <div class="panel" id="angForm">
+      <div class="pl-row">
+        <div><label for="aSlide">Slide board <span class="small">(foul line)</span></label><input id="aSlide" class="input" type="number" step="0.5" inputmode="decimal" /></div>
+        <div><label for="aOff">Laydown offset <span class="small">(boards)</span></label><input id="aOff" class="input" type="number" step="0.5" inputmode="decimal" /></div>
+      </div>
+      <div class="small" id="aLayTxt" style="margin-top:4px"></div>
+
+      <label style="margin-top:12px">Aim at</label>
+      <div class="ang-seg" id="aMode">
+        <button type="button" data-m="target" class="on">Target (arrows)</button>
+        <button type="button" data-m="pin">Pin focal point</button>
+        <button type="button" data-m="custom">Board at a distance</button>
+      </div>
+
+      <div id="mTarget" class="ang-mode" style="margin-top:8px">
+        <div class="pl-row">
+          <div><label for="aTarget">Target board</label><input id="aTarget" class="input" type="number" step="0.5" inputmode="decimal" /></div>
+          <div><label for="aTargetFt">At <span class="small">(ft)</span></label><input id="aTargetFt" class="input" type="number" step="0.5" inputmode="decimal" value="15" /></div>
+        </div>
+      </div>
+      <div id="mPin" class="ang-mode" style="margin-top:8px;display:none">
+        <label>Pin</label>
+        <div class="ang-pins" id="aPinPick"></div>
+        <label style="margin-top:8px">Spot on the pin</label>
+        <div class="ang-seg" id="aSpot">
+          <button type="button" data-s="-2">Left edge</button><button type="button" data-s="-1">Left</button><button type="button" data-s="0" class="on">Center</button><button type="button" data-s="1">Right</button><button type="button" data-s="2">Right edge</button>
+        </div>
+        <div class="small" id="aPinTxt" style="margin-top:6px"></div>
+      </div>
+      <div id="mCustom" class="ang-mode" style="margin-top:8px;display:none">
+        <div class="pl-row">
+          <div><label for="aCBoard">Board</label><input id="aCBoard" class="input" type="number" step="0.5" inputmode="decimal" /></div>
+          <div><label for="aCFt">At <span class="small">(ft)</span></label><input id="aCFt" class="input" type="number" step="0.5" inputmode="decimal" value="40" /></div>
+        </div>
+      </div>
+
+      <div class="pl-row" style="margin-top:12px">
+        <div><label for="aPat">Oil pattern</label><select id="aPat" class="input"></select></div>
+        <div><label for="aLen">Length <span class="small">(ft)</span></label><input id="aLen" class="input" type="number" step="1" inputmode="numeric" /></div>
+      </div>
+      <div class="pl-row">
+        <div><label for="aBp">Breakpoint board <span class="small">(optional)</span></label><input id="aBp" class="input" type="number" step="0.5" inputmode="decimal" /></div>
+        <div><label for="aMore">Also show at <span class="small">(ft)</span></label><input id="aMore" class="input" placeholder="e.g. 32, 43" inputmode="text" /></div>
+      </div>
+    </div>
+
+    <div class="panel" id="angOut">
+      <div class="ang-head" id="aHead"></div>
+      <div class="ang-wrap"><svg id="aLane" viewBox="0 0 330 600" role="img" aria-label="Lane with the ball's straight line"></svg></div>
+      <table class="ang-tbl" id="aTbl"></table>
+      <div id="aAlerts"></div>
+      <div class="small" style="margin-top:10px;opacity:.75">A straight line, no hook: it shows where you're sending the ball, not where it turns. Arrows are taken at 15 ft (they're staggered 12–16 ft on a real lane, so set the distance if you use one arrow's exact spot). Board 1 is your outside board.</div>
+    </div>
+  </div>
+
+  <script src="app.js?v=101"></script>
+  <script>
+  (function () {
+    BT.renderNav('angle');
+    const $ = (q) => document.querySelector(q);
+    const LAST = 'bt_angle_last_v1';
+    const BW_IN = 41.5 / 39;            // one board, inches
+    const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
+    const lefty = /^l/i.test(String(bowler.handedness || ''));
+    const IN = lefty ? 'right' : 'left', OUT = lefty ? 'left' : 'right';
+    // Pin positions in boards from your outside gutter (righty: from the right). Head pin = board 20 at 60 ft.
+    const S = 12 / BW_IN / 2;           // half the pin spacing (6 in) in boards
+    const R = 10.392 / 12;              // row spacing in ft
+    const PINS_R = { 1: [20, 60], 2: [20 + S, 60 + R], 3: [20 - S, 60 + R], 4: [20 + 2 * S, 60 + 2 * R], 5: [20, 60 + 2 * R], 6: [20 - 2 * S, 60 + 2 * R], 7: [20 + 3 * S, 60 + 3 * R], 8: [20 + S, 60 + 3 * R], 9: [20 - S, 60 + 3 * R], 10: [20 - 3 * S, 60 + 3 * R] };
+    const pinPos = (n) => { const p = PINS_R[n]; return lefty ? [40 - p[0], p[1]] : p; };
+    const pocketBoard = 17.5;
+
+    let mode = 'target', pin = 1, spot = 0;
+    const r1 = (x) => Math.round(x * 10) / 10;
+    const fmt = (b) => (b == null || !isFinite(b)) ? '—' : (Math.abs(b - Math.round(b)) < 0.05 ? String(Math.round(b)) : r1(b).toFixed(1));
+
+    // ---------- inputs ----------
+    function init() {
+      const pats = BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || [];
+      $('#aPat').innerHTML = '<option value="">Custom / house shot</option>' + pats.map((p, i) => `<option value="${i}">${String(p.name || 'Pattern').replace(/</g, '&lt;')}${p.length ? ` (${p.length} ft)` : ''}</option>`).join('');
+      const last = BT.lsGet(LAST, null) || {};
+      const line = BT.lsGet('bt_gameday_last_line_v1', null) || {};
+      const tonight = BT.lsGet('bt_gameday_tonight_v1', null) || {};
+      const q = new URLSearchParams(location.search);
+      $('#aSlide').value = q.get('slide') || line.feet || last.slide || 20;
+      $('#aTarget').value = q.get('target') || line.arrows || last.target || 12;
+      $('#aOff').value = last.off != null ? last.off : (bowler.laydownOffset != null ? bowler.laydownOffset : 5);
+      if (q.get('bp') || line.bp) $('#aBp').value = q.get('bp') || line.bp;
+      if (last.more) $('#aMore').value = last.more;
+      const pi = pats.findIndex(p => p.name === (q.get('pattern') || tonight.pattern || last.pattern));
+      if (pi >= 0) { $('#aPat').value = String(pi); $('#aLen').value = pats[pi].length || ''; } else $('#aLen').value = last.len || 42;
+      if (last.mode && !q.get('slide')) setMode(last.mode);
+      if (last.pin) pin = last.pin; if (last.spot != null) spot = last.spot;
+      $('#aPinPick').innerHTML = [[7, 8, 9, 10], [4, 5, 6], [2, 3], [1]].map(r => `<div class="ang-prow">${r.map(n => `<button type="button" data-p="${n}">${n}</button>`).join('')}</div>`).join('');
+      paintPicks();
+    }
+    function setMode(m) {
+      mode = m;
+      document.querySelectorAll('#aMode button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+      $('#mTarget').style.display = m === 'target' ? '' : 'none';
+      $('#mPin').style.display = m === 'pin' ? '' : 'none';
+      $('#mCustom').style.display = m === 'custom' ? '' : 'none';
+    }
+    function paintPicks() {
+      document.querySelectorAll('#aPinPick button').forEach(b => b.classList.toggle('on', Number(b.dataset.p) === pin));
+      document.querySelectorAll('#aSpot button').forEach(b => b.classList.toggle('on', Number(b.dataset.s) === spot));
+    }
+
+    // ---------- math ----------
+    function compute() {
+      const slide = Number($('#aSlide').value), off = Number($('#aOff').value) || 0;
+      if (!isFinite(slide)) return null;
+      const lay = slide - off;
+      let aim, aimFt, aimLbl;
+      if (mode === 'target') { aim = Number($('#aTarget').value); aimFt = Number($('#aTargetFt').value) || 15; aimLbl = `target ${fmt(aim)} at ${fmt(aimFt)} ft`; }
+      else if (mode === 'pin') {
+        const [b, ft] = pinPos(pin);
+        // Left on the pin = toward the higher boards for a righty (board 1 is on the right); mirrored for a lefty.
+        aim = lefty ? b + spot : b - spot;
+        aimFt = ft; $('#aPinTxt').textContent = `Aiming at board ${fmt(aim)}, ${r1(ft)} ft from the foul line.`; aimLbl = `the ${pin} pin, ${['left edge', 'left', 'center', 'right', 'right edge'][spot + 2]} (board ${fmt(aim)})`;
+      } else { aim = Number($('#aCBoard').value); aimFt = Number($('#aCFt').value); aimLbl = `board ${fmt(aim)} at ${fmt(aimFt)} ft`; }
+      if (!isFinite(aim) || !isFinite(aimFt) || aimFt <= 0) return null;
+      const slope = (aim - lay) / aimFt;                  // boards per foot (negative = heading outside)
+      const at = (ft) => lay + slope * ft;
+      const len = Number($('#aLen').value) || null;
+      const exit = len ? Math.max(3, Math.min(20, Math.round(len - 31))) : null;
+      const deg = Math.atan((slope * BW_IN) / 12) * 180 / Math.PI;
+      const gutterFt = slope < 0 ? (lay - 0.5) / -slope : slope > 0 ? (39.5 - lay) / slope : Infinity;
+      const bp = Number($('#aBp').value); const bpFt = isFinite(bp) && $('#aBp').value !== '' && slope !== 0 ? (bp - lay) / slope : null;
+      return { slide, off, lay, aim, aimFt, aimLbl, slope, at, len, exit, deg, gutterFt, bp: $('#aBp').value !== '' ? bp : null, bpFt };
+    }
+
+    // ---------- drawing ----------
+    const W = 330, H = 600, L0 = 18, LW = 294, TOP = 8, BOT = 560, FT_MAX = 66;
+    const xBoard = (b) => lefty ? L0 + (b - 0.5) * LW / 39 : L0 + (39.5 - b) * LW / 39;
+    const yF = (ft) => BOT - ft / FT_MAX * (BOT - TOP);
+    function draw(c, rows) {
+      const g = [];
+      g.push(`<rect x="${L0}" y="${TOP}" width="${LW}" height="${BOT - TOP}" rx="4" fill="var(--ang-lane)"/>`);
+      if (c && c.len) g.push(`<rect x="${L0}" y="${yF(c.len)}" width="${LW}" height="${BOT - yF(c.len)}" fill="var(--ang-oil)"/><text x="${L0 + 4}" y="${yF(c.len) - 4}" class="ang-t">end of oil ${c.len} ft</text>`);
+      for (let b = 5; b <= 35; b += 5) g.push(`<line x1="${xBoard(b)}" y1="${TOP}" x2="${xBoard(b)}" y2="${BOT}" stroke="var(--ang-grid)" stroke-width="1"/>`);
+      [15, 30, 45, 60].forEach(ft => g.push(`<line x1="${L0}" y1="${yF(ft)}" x2="${L0 + LW}" y2="${yF(ft)}" stroke="var(--ang-grid)" stroke-dasharray="3 4"/><text x="${L0 + LW - 2}" y="${yF(ft) - 3}" text-anchor="end" class="ang-t">${ft} ft</text>`));
+      // dots (7 ft) and arrows (≈15 ft)
+      [3, 5, 8, 11, 14, 26, 29, 32, 35, 37].forEach(b => g.push(`<circle cx="${xBoard(b)}" cy="${yF(7)}" r="2" fill="var(--ang-mark)"/>`));
+      [5, 10, 15, 20, 25, 30, 35].forEach(b => { const x = xBoard(b), y = yF(15); g.push(`<path d="M${x} ${y - 7} L${x - 4} ${y + 4} L${x + 4} ${y + 4} Z" fill="var(--ang-mark)"/>`); });
+      // pins
+      for (let n = 1; n <= 10; n++) { const [b, ft0] = pinPos(n); const ft = 60 + (ft0 - 60) * 1.9; g.push(`<circle cx="${xBoard(b)}" cy="${yF(ft)}" r="6" fill="var(--ang-pin)" stroke="var(--ang-pinb)"/><text x="${xBoard(b)}" y="${yF(ft) + 3}" text-anchor="middle" class="ang-pn">${n}</text>`); }
+      // foul line + board labels
+      g.push(`<line x1="${L0}" y1="${BOT}" x2="${L0 + LW}" y2="${BOT}" stroke="var(--ang-foul)" stroke-width="2"/>`);
+      [1, 5, 10, 15, 20, 25, 30, 35, 39].forEach(b => g.push(`<text x="${xBoard(b)}" y="${BOT + 14}" text-anchor="middle" class="ang-t">${b}</text>`));
+      if (c) {
+        if (c.exit != null && c.len) g.push(`<circle cx="${xBoard(c.exit)}" cy="${yF(c.len)}" r="7" fill="none" stroke="var(--ang-exit)" stroke-width="2"/><text x="${xBoard(c.exit)}" y="${yF(c.len) - 10}" text-anchor="middle" class="ang-t" fill="var(--ang-exit)">exit ${c.exit}</text>`);
+        const endFt = Math.min(isFinite(c.gutterFt) ? c.gutterFt : FT_MAX, mode === 'pin' ? c.aimFt : 62.6);
+        const yEnd = (ft) => ft > 60 ? 60 + (ft - 60) * 1.9 : ft;
+        g.push(`<line x1="${xBoard(c.lay)}" y1="${yF(0)}" x2="${xBoard(c.at(endFt))}" y2="${yF(yEnd(endFt))}" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/>`);
+        if (isFinite(c.gutterFt) && c.gutterFt < (mode === 'pin' ? c.aimFt : 62.6)) g.push(`<text x="${xBoard(c.at(endFt))}" y="${yF(endFt) - 6}" text-anchor="middle" class="ang-t" fill="var(--warn,#ffb35c)">channel ${r1(endFt)} ft</text>`);
+        rows.forEach(r => { if (r.ft > 0 && r.ft <= endFt) g.push(`<circle cx="${xBoard(r.b)}" cy="${yF(r.ft)}" r="3.5" fill="var(--accent)"/>`); });
+        if (c.bp != null && c.bpFt != null && c.bpFt > 0 && c.bpFt < 62.6) g.push(`<rect x="${xBoard(c.bp) - 4}" y="${yF(c.bpFt) - 4}" width="8" height="8" fill="none" stroke="var(--accent)"/>`);
+        // slide foot and laydown at the foul line
+        g.push(`<circle cx="${xBoard(c.slide)}" cy="${BOT + 26}" r="5" fill="var(--ang-foot)"/><text x="${xBoard(c.slide)}" y="${BOT + 38}" text-anchor="middle" class="ang-t">slide ${fmt(c.slide)}</text>`);
+        g.push(`<circle cx="${xBoard(c.lay)}" cy="${BOT}" r="4.5" fill="var(--accent)"/>`);
+      }
+      $('#aLane').innerHTML = g.join('');
+    }
+
+    // ---------- output ----------
+    function render() {
+      const c = compute();
+      const save = { slide: $('#aSlide').value, off: $('#aOff').value, target: $('#aTarget').value, mode, pin, spot, len: $('#aLen').value, more: $('#aMore').value, pattern: ($('#aPat').selectedOptions[0] || {}).value ? (BT.lsGet(BT.KEYS.OIL_PATTERNS, [])[Number($('#aPat').value)] || {}).name : '' };
+      try { BT.lsSet(LAST, save); } catch (_e) {}
+      $('#aLayTxt').textContent = c ? `Laydown: board ${fmt(c.lay)} (slide ${fmt(c.slide)} − ${fmt(c.off)}).` : '';
+      if (!c) { $('#aHead').innerHTML = 'Fill in your slide and an aim point.'; $('#aTbl').innerHTML = ''; $('#aAlerts').innerHTML = ''; draw(null, []); return; }
+      const extra = String($('#aMore').value || '').split(/[^0-9.]+/).map(Number).filter(x => isFinite(x) && x > 0 && x <= 62.6);
+      const set = new Map();
+      const add = (ft, lbl) => { const k = r1(ft); if (!set.has(k)) set.set(k, { ft: k, lbl, b: c.at(k) }); else if (lbl && !set.get(k).lbl.includes(lbl)) set.get(k).lbl += ' · ' + lbl; };
+      add(0, 'Foul line (laydown)'); add(7, 'Dots'); add(15, 'Arrows'); add(30, ''); add(45, ''); add(60, 'Head pin');
+      if (c.len) add(c.len, 'End of oil');
+      extra.forEach(ft => add(ft, 'Your pick'));
+      if (mode !== 'target') add(c.aimFt, 'Aim point');
+      const rows = [...set.values()].sort((a, b) => a.ft - b.ft);
+      const dir = c.slope < 0 ? `out toward the ${OUT} channel` : c.slope > 0 ? `in toward the ${IN}` : 'straight up the board';
+      $('#aHead').innerHTML = `<div class="ang-big">${Math.abs(r1(c.deg)).toFixed(1)}°</div><div class="small">${fmt(Math.abs(c.slope * 15))} boards every 15 ft, ${dir}. Laydown ${fmt(c.lay)} → ${c.aimLbl}.</div>`;
+      $('#aTbl').innerHTML = `<tr><th>Distance</th><th>Board</th><th></th></tr>` + rows.map(r => {
+        const off = r.b < 0.5 || r.b > 39.5;
+        return `<tr${r.lbl === 'End of oil' ? ' class="ang-oilrow"' : ''}><td>${r.ft} ft</td><td><b>${off ? 'channel' : fmt(r.b)}</b></td><td class="small">${r.lbl || ''}</td></tr>`;
+      }).join('');
+      draw(c, rows);
+      $('#aAlerts').innerHTML = alerts(c).map(a => `<div class="ang-alert ${a[0]}">${a[1]}</div>`).join('');
+    }
+
+    function alerts(c) {
+      const A = [];
+      const spare = mode === 'pin' && !(pin === 1 || (pin === 3 && !lefty) || (pin === 2 && lefty));
+      const k = c.len ? c.len / c.aimFt : null;
+      // The slide that puts this target through the exit point at the end of the oil.
+      const fixSlide = () => { if (mode !== 'target' || !k || k <= 1) return null; const lay = (k * c.aim - c.exit) / (k - 1); return Math.round((lay + c.off) * 2) / 2; };
+      if (spare) {
+        const at15 = c.at(15);
+        A.push(['ok', `🎯 Spare line to the ${pin} pin: crosses the arrows on board ${fmt(at15)}. Throw it straight (spare ball, flat release) and look at board ${fmt(Math.round(at15 * 2) / 2)} at the arrows.`]);
+        if (c.len && Math.abs(c.at(c.len) - c.lay) < 40) {
+          const drySide = c.at(c.len) < 7 || c.at(c.len) > 33;
+          if (drySide) A.push(['info', `👀 The line stays near the ${c.slope < 0 ? OUT : IN} edge of the lane, where there's little oil. A reactive ball will hook here, so use your spare ball or a flat release.`]);
+        }
+        if (isFinite(c.gutterFt) && c.gutterFt < c.aimFt) A.push(['warn', `🛑 This line reaches the channel at ${r1(c.gutterFt)} ft, before the pin. Move your slide ${c.slope < 0 ? IN : OUT}.`]);
+        return A;
+      }
+      // End of oil vs the rule-of-31 exit point
+      if (c.len && c.exit != null) {
+        const eb = c.at(c.len), d = eb - c.exit; // + = inside the exit point (still in the oil)
+        const fs = fixSlide();
+        if (Math.abs(d) <= 2) A.push(['ok', `✅ Leaves the oil on board ${fmt(eb)}, at the exit point (board ${c.exit} on ${c.len} ft, rule of 31). Good starting angle.`]);
+        else if (d < 0) {
+          A.push(['warn', `⚠️ Leaves the oil on board ${fmt(eb)}, ${fmt(-d)} boards outside the exit point (board ${c.exit}). The ball reaches the dry before the oil ends: expect it to read early.${fs != null ? ` With target ${fmt(c.aim)}, slide ${fmt(fs)} sends it through board ${c.exit}.` : ''}`]);
+          if (c.slope < 0) { const ftX = (c.exit - c.lay) / c.slope; if (ftX > 0 && ftX < c.len - 3) A.push(['info', `👀 It crosses board ${c.exit} at about ${r1(ftX)} ft, ${r1(c.len - ftX)} ft before the oil ends.`]); }
+        } else A.push(['warn', `⚠️ Leaves the oil on board ${fmt(eb)}, ${fmt(d)} boards inside the exit point (board ${c.exit}). It's still in the oil where it should be turning: expect skid, then a turn in the mud (over/under).${fs != null ? ` With target ${fmt(c.aim)}, slide ${fmt(fs)} sends it through board ${c.exit}.` : ''}`]);
+      }
+      // Channel
+      if (isFinite(c.gutterFt) && c.gutterFt < 60) A.push(['info', `🛑 A ball that never hooked would reach the ${c.slope < 0 ? OUT : IN} channel at ${r1(c.gutterFt)} ft. Normal for a hook played out this far; just know the ball has to start back before then.`]);
+      // Straight ball at the pins
+      if (!(isFinite(c.gutterFt) && c.gutterFt < 60)) {
+        const at60 = c.at(60), need = pocketBoard - at60;
+        if (Math.abs(need) <= 1.5) A.push(['info', `🎯 Straight, it gets to the pins on board ${fmt(at60)}: the pocket. That's a straight-ball line.`]);
+        else A.push(['info', `🎯 Straight, it gets to the pins on board ${fmt(at60)}. To reach the pocket (board ${pocketBoard}) the ball has to hook ${fmt(Math.abs(need))} boards back ${need > 0 ? IN : OUT}.`]);
+      }
+      // Breakpoint: a hook only moves the ball back in, so the breakpoint can't be farther out than the straight line goes.
+      if (c.bp != null) {
+        const lim = c.len ? c.len + 8 : 52;
+        if (c.bpFt != null && c.bpFt > 0 && c.bpFt <= lim) A.push(['info', `📍 The straight line reaches your breakpoint (board ${fmt(c.bp)}) at ${r1(c.bpFt)} ft${c.len ? ` (${c.bpFt < c.len ? r1(c.len - c.bpFt) + ' ft before' : r1(c.bpFt - c.len) + ' ft after'} the end of the oil)` : ''}.`]);
+        else {
+          const atLim = c.at(lim);
+          A.push(['warn', `⚠️ Your breakpoint (board ${fmt(c.bp)}) is farther ${OUT} than this line goes: it only reaches board ${fmt(atLim)} by ${r1(lim)} ft. So the ball is crossing your target farther ${OUT} than ${fmt(c.aim)}, laying down farther ${OUT} than ${fmt(c.lay)}, or the breakpoint is really nearer board ${fmt(Math.round(atLim))}. Worth checking your alignment.`]);
+        }
+      }
+      if (c.slope > 0 && mode === 'target') A.push(['info', `↩️ The line moves ${IN} from the laydown (you're aiming in). The ball has to start hooking right away to get back: an angle for very dry lanes.`]);
+      return A;
+    }
+
+    // ---------- wiring ----------
+    document.querySelectorAll('#aMode button').forEach(b => b.addEventListener('click', () => { setMode(b.dataset.m); render(); }));
+    $('#aPinPick').addEventListener('click', (e) => { const b = e.target.closest('button[data-p]'); if (!b) return; pin = Number(b.dataset.p); paintPicks(); render(); });
+    document.querySelectorAll('#aSpot button').forEach(b => b.addEventListener('click', () => { spot = Number(b.dataset.s); paintPicks(); render(); }));
+    $('#aPat').addEventListener('change', () => { const p = (BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || [])[Number($('#aPat').value)]; if (p && p.length) $('#aLen').value = p.length; render(); });
+    ['#aSlide', '#aOff', '#aTarget', '#aTargetFt', '#aCBoard', '#aCFt', '#aLen', '#aBp', '#aMore'].forEach(id => $(id).addEventListener('input', render));
+    init(); render();
+  })();
+  </script>
+</body>
+</html>

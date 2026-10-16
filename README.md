@@ -58,6 +58,13 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v101-beta38: 📐 Angle calculator
+
+- **New Angle page** (nav → Angle, or "📐 Angle for this line" in Game Day). Put in your slide board and laydown offset, then aim at a target (arrows, 15 ft or any distance), a **pin focal point** (any pin; left edge / left / center / right / right edge, Kegel-style) or any board at any distance.
+- It draws the straight line on a lane (dots, arrows, oil, exit point, pins) and lists the board at the foul line, 7, 15, 30, 45 and 60 ft, the end of the oil, and any distances you add (e.g. "32, 43").
+- Alerts: leaving the oil outside the exit point (reads early) or inside it (skid, over/under), with the slide that fixes it for your target; reaching the channel; what a straight ball hits at the pins and how many boards the ball must hook back to the pocket; a breakpoint that this line can't reach (an alignment check); spare lines with the arrow board to look at.
+- **Coach's line math now uses the real pattern length.** It used to measure the exit at 60 ft whatever the pattern; it now measures where the oil ends, so "slide X, lay down Y" matches the Angle page.
+
 ## Changes in v100-beta37: burn from game 3, how the left plays per league
 
 - **Burn from your PinPal game 3s.** By lane condition is now Fresh (game 1), Transition (game 2) and Burn (game 3), all from PinPal, so a house with years of games always has a burn read. Game Day nights where the ball actually read early add a sharper line on top. Coach adds a game 3 note at the start of game 3.
