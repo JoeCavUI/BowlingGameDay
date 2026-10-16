@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Bowling Tool</title>
-  <link rel="stylesheet" href="styles.css?v=106" />
+  <link rel="stylesheet" href="styles.css?v=107" />
 </head>
 <body data-page="home">
   <div class="navlinks"></div>
@@ -52,6 +52,12 @@
           Back up after each league night. Save the file to Files or email it to yourself. If you switch phones or clear Safari, use <b>Restore</b> to bring everything back.
         </div>
       </div>
+    </div>
+
+    <div class="panel" id="feedbackPanel" style="margin-top:14px">
+      <h2>💬 Send feedback</h2>
+      <div class="small">Found something wrong or confusing? Take a screenshot first, then tap below. It opens a message with your app version and phone already filled in: pick Messages or Mail, add the screenshot, and send it to whoever gave you the app.</div>
+      <div class="btn-row"><button class="btn" id="feedbackBtn" type="button">💬 Send feedback</button></div>
     </div>
 
     <div class="panel" id="testTools" style="margin-top:14px">
@@ -101,7 +107,39 @@
     </div>
   </div>
 
-  <script src="app.js?v=106"></script>
+  <script src="app.js?v=107"></script>
+  <script>
+  // 💬 Feedback: share sheet with version + device filled in (the tester picks Messages / Mail and who to send it to).
+  (function () {
+    const btn = document.getElementById('feedbackBtn'); if (!btn) return;
+    function device() {
+      const ua = navigator.userAgent || '';
+      const ios = ua.match(/OS (\d+)[_.](\d+)/); const android = ua.match(/Android (\d+(?:\.\d+)?)/);
+      const kind = /iPad/.test(ua) ? 'iPad' : /iPhone/.test(ua) ? 'iPhone' : android ? 'Android' : /Mac/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : 'Other';
+      const os = ios ? `iOS ${ios[1]}.${ios[2]}` : android ? `Android ${android[1]}` : '';
+      const installed = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone ? 'home-screen app' : 'browser';
+      return `${kind}${os ? ' · ' + os : ''} · ${installed} · screen ${screen.width}×${screen.height}`;
+    }
+    btn.addEventListener('click', async () => {
+      const b = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
+      const text = [
+        'Bowling Tool feedback',
+        `Version: ${BT.APP_VERSION}`,
+        `Device: ${device()}`,
+        `Hand: ${/^l/i.test(String(b.handedness || '')) ? 'left' : 'right'}`,
+        '',
+        'Which page:',
+        'What happened:',
+        'What I expected:',
+        '',
+        '(Screenshot attached)'
+      ].join('\n');
+      try { if (navigator.share) { await navigator.share({ title: 'Bowling Tool feedback', text }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+      try { await navigator.clipboard.writeText(text); alert('Feedback template copied. Paste it into a text or email, add your screenshot, and send it.'); }
+      catch (_e) { location.href = 'mailto:?subject=' + encodeURIComponent('Bowling Tool feedback ' + BT.APP_VERSION) + '&body=' + encodeURIComponent(text); }
+    });
+  })();
+  </script>
   <script>
     BT.renderNav('home');
     BT.$('#buildTag').textContent = 'Beta ' + BT.APP_VERSION;

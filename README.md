@@ -58,7 +58,11 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
-## Changes in v106-beta43 (not published yet): 📦 Baker Box
+## Changes in v107-beta44 (not published yet): 💬 Send feedback
+
+- **Send feedback** on Home: opens the share sheet (Messages / Mail) with the app version, phone, iOS version, home-screen vs browser and hand filled in, plus "Which page / What happened / What I expected". Testers add a screenshot and send it. Falls back to copying the text, then to email.
+
+## Changes in v106-beta43: 📦 Baker Box
 
 - **Baker Box** (Angle page, shared with Game Day's Coach): boards 5–8 at 42–46 ft, where the ball splits the 8-9 for the best carry (Mark Baker). Drawn on the lane; the Angle page says whether your line goes through it, and Ways to fix it aims at its middle.
 - **When it applies (per the poster):** almost all house shots, and sport shots 38–43 ft long. On other sport patterns the rule of 31 leads; on house shots the rule of 31 is shown as a suggestion.
