@@ -159,7 +159,24 @@
     const out = { title: `Game Plan: ${houseLabel || 'pick a house'}`, sub: [], sections: [], house: houseLabel, lefty };
     const sec = (icon, h, items, lead) => { if ((items && items.length) || lead) out.sections.push({ icon, h, lead: lead || '', items: items || [] }); };
 
-    const G = house ? hist.filter({ house }) : [];
+    let G = house ? hist.filter({ house }) : [];
+    // 🏁 Sport pattern picked (ratio 3:1 or less, USBC's line): house-shot records don't transfer.
+    // Use PinPal games on this pattern (any house), else games on any named tournament pattern; else warn.
+    const patPick = (opts.patternName && patterns().find(p => p.name === opts.patternName)) || null;
+    const rmP = String((patPick && patPick.ratio) || '').match(/(\d+(?:\.\d+)?)\s*(?::|to|-|\/)\s*(\d+(?:\.\d+)?)/i);
+    const ratioP = rmP ? Number(rmP[1]) / (Number(rmP[2]) || 1) : null;
+    const sport = ratioP != null && ratioP <= 3;
+    out.sport = sport;
+    if (sport && hist) {
+      const pk = (t) => String(t || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const want = pk(patPick.name);
+      const allG = hist.filter({});
+      const onPat = allG.filter(g => g.p && want && (pk(g.p).includes(want) || want.includes(pk(g.p))) && !/house/i.test(g.p));
+      const onSport = allG.filter(g => g.p && !/house/i.test(g.p));
+      const pool = onPat.length >= MIN_HOUSE ? onPat : onSport.length >= MIN_HOUSE ? onSport : null;
+      if (pool) { G = pool; out.sportFrom = pool === onPat ? `your ${pool.length} PinPal games on ${patPick.name}` : `your ${pool.length} PinPal games on tournament patterns (${[...new Set(pool.map(g => g.p))].slice(0, 3).join(', ')})`; }
+      out.sub.push(`Sport pattern ${Math.round(ratioP * 10) / 10}:1`);
+    }
     out.games = G.length;
     if (lanes) out.sub.push(`Lanes ${lanes.replace('-', ' & ')}`);
     if (opts.league) out.sub.push(opts.league);
@@ -175,11 +192,18 @@
     const S = G.length ? hist.summary(G) : null;
     const life = all.length ? hist.summary(all) : null;
 
+    if (sport) {
+      const items = [];
+      items.push(out.sportFrom ? `Records below come from ${esc(out.sportFrom)}, not the house shot here.` : `No PinPal games on sport patterns to plan from, so the records below are from the <b>house shot</b> here: they show which balls you like at this house, not how they play on a sport shot.`);
+      items.push('Little room to miss: start with your <b>smoothest, most controllable</b> ball, play close to the exit point (rule of 31), and make <b>smaller moves</b> (1-and-1 or 2-and-1, not big jumps).');
+      items.push('A miss outside won\'t come back and a miss inside won\'t hook: hitting your mark matters more than the ball.');
+      sec('🏁', `Sport pattern (${Math.round(ratioP * 10) / 10}:1)`, items);
+    }
     // ---- Where you stand
     if (G.length >= MIN_HOUSE) {
       const items = [];
       // This house only: other houses don't help tonight.
-      items.push(`${esc(house)}: <b>${S.avg}</b> average over ${S.n} games, ${S.strike}% strikes, ${S.spare}% spares.`);
+      items.push(`${out.sportFrom ? 'On sport patterns' : esc(house)}: <b>${S.avg}</b> average over ${S.n} games, ${S.strike}% strikes, ${S.spare}% spares.`);
       // This season = the latest league here (6+ games), else the last 12 months.
       const latest = G.slice().sort((a, b) => (a.d < b.d ? 1 : -1))[0];
       const lgKey = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -190,7 +214,7 @@
       if (season.length < 6) { const cut = new Date(Date.parse(today) - 365 * 864e5).toISOString().slice(0, 10); season = G.filter(g => g.d >= cut); seasonLabel = 'The last 12 months'; }
       if (season.length >= 6 && season.length < G.length) {
         const s2 = hist.summary(season), d = r1(s2.avg - S.avg);
-        items.push(`${seasonLabel}: <b>${s2.avg}</b> over ${s2.n} games, ${s2.strike}% strikes${Math.abs(d) >= 4 ? ` (${d > 0 ? '+' : ''}${d} vs your ${esc(house)} average)` : ''}.`);
+        items.push(`${seasonLabel}: <b>${s2.avg}</b> over ${s2.n} games, ${s2.strike}% strikes${Math.abs(d) >= 4 ? ` (${d > 0 ? '+' : ''}${d} vs your ${out.sportFrom ? 'sport-pattern' : esc(house)} average)` : ''}.`);
         out.season = { games: season, label: seasonLabel, sum: s2 };
       }
       const lastDate = latest && latest.d; if (lastDate) { const last = G.filter(g => g.d === lastDate).sort((a, b) => a.gn - b.gn); items.push(`Last time here (${fmtDate(lastDate)}${last[0].lanes ? `, lanes ${last[0].lanes.replace('-', ' & ')}` : ''}): ${last.map(g => g.s).join(', ')}.`); }
@@ -281,7 +305,8 @@
           items.push(`<b>Backup: ${esc(second.ar || second.key)}</b> (${second.avg} over ${second.n} games${rs ? `; ${rs.avg} in its ${rs.n} games here in the last 12 months` : ''}).`);
         }
         items.push('<span class="small">Records mix seasons, surfaces, lanes and your form, so they show what has worked, not proof one ball is best. Confirm in practice.</span>');
-        const avoid = hist.groupBy(G, 'ball', 4).filter(r => r.avg <= S.avg - 12 && owned(r.key) && (!bag.length || bag.includes(owned(r.key)))).sort((a, b) => a.avg - b.avg).slice(0, 2);
+        const picked = new Set([first.ar || first.key, second && (second.ar || second.key)].filter(Boolean));
+        const avoid = hist.groupBy(G, 'ball', 4).filter(r => r.avg <= S.avg - 12 && owned(r.key) && !picked.has(owned(r.key)) && (!bag.length || bag.includes(owned(r.key)))).sort((a, b) => a.avg - b.avg).slice(0, 2);
         if (avoid.length) items.push(`Avoid opening with ${avoid.map(r => `${esc(owned(r.key))} (${r.avg} over ${r.n})`).join(' or ')}: ${avoid.length > 1 ? 'both have' : 'it has'} struggled here.`);
       } else if (byBall.length) items.push(`Your best balls here (${byBall.slice(0, 3).map(r => `${esc(r.key)} ${r.avg}`).join(', ')}) aren't matched to balls in your arsenal yet. Match them under Scores → History → Ball names.`);
       if (bag.length && pool.length) {

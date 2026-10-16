@@ -65,6 +65,11 @@ Then open http://localhost:3000
 - **Back to pocket** row at the bottom of the Angle table: boards the ball has to come back from your breakpoint (or the oil exit) to the pocket, and in how many feet.
 - **Target distance in Game Day:** a "Target is at" dropdown (arrows 15 ft, dots 7 ft, or 20–40 ft) under Slide / Target / Breakpoint. Log the board your eyes are on at the distance you look; Coach's line check, the angle of each shot and the Angle link all use it.
 - **Gentler rule-of-31 advice:** when matching the exit point would take a feet move of more than 5 boards, Coach says the rule of 31 is an estimate (a few boards outside is common on a house shot) instead of telling you to make the big move.
+- **Sport patterns (ratio 3:1 or less, USBC's line):** Coach labels them "sport pattern", medium ratios (3–7:1) "medium ratio", 7:1+ "house shot". Big-move advice depends on it: on a house shot a few boards outside the exit point is fine; on a sport pattern Coach works you back toward it in 2-board moves.
+- **Angle page shows the ratio** of the pattern and tightens the exit-point check to ±1 board on sport patterns, with wording for each type.
+- **Game Plan on a sport pattern** (pick it under Pattern) uses your PinPal games on that pattern, or on any named tournament pattern, instead of the house shot, and adds a 🏁 Sport pattern section: smoothest, most controllable ball, close to the exit point, smaller moves. With no sport games it says the records are from the house shot.
+- **Fix:** ratios written "10-1" were read as 101; "10-1", "10:1", "10 to 1" and "10/1" all work now.
+- **Fix:** a ball could show as the first pick and in "avoid opening with" at the same time (two PinPal names matched to one ball).
 - The warning is reworded in plain terms: where the ball is at the end of the oil, how far off your breakpoint is, and which way.
 
 ## Changes in v104-beta41: placeholders and dropdowns

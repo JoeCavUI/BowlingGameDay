@@ -62,6 +62,7 @@
         <div><label for="aPat">Oil pattern</label><select id="aPat" class="input"></select></div>
         <div><label for="aLen">Length <span class="small">(ft)</span></label><select id="aLen" class="input"><option value="30">30</option><option value="31">31</option><option value="32">32</option><option value="33">33</option><option value="34">34</option><option value="35">35</option><option value="36">36</option><option value="37">37</option><option value="38">38</option><option value="39">39</option><option value="40">40</option><option value="41">41</option><option value="42">42</option><option value="43">43</option><option value="44">44</option><option value="45">45</option><option value="46">46</option><option value="47">47</option><option value="48">48</option><option value="49">49</option><option value="50">50</option><option value="51">51</option><option value="52">52</option></select></div>
       </div>
+      <div class="small" id="aRatioTxt" style="margin-top:4px"></div>
       <div class="pl-row">
         <div><label for="aBp">Breakpoint board <span class="small">(optional)</span></label><input id="aBp" class="input" type="number" step="0.5" inputmode="decimal" /></div>
         <div><label for="aMore">Also show at <span class="small">(ft)</span></label><input id="aMore" class="input" placeholder="e.g. 32, 43" inputmode="text" /></div>
@@ -153,6 +154,10 @@
       const slope = (aim - lay) / aimFt;                  // boards per foot (negative = heading outside)
       const at = (ft) => lay + slope * ft;
       const len = Number($('#aLen').value) || null;
+      const patO = (BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || [])[Number($('#aPat').value)] || null;
+      const rm = String((patO && patO.ratio) || '').match(/(\d+(?:\.\d+)?)\s*(?::|to|-|\/)\s*(\d+(?:\.\d+)?)/i);
+      const ratio = rm ? Number(rm[1]) / (Number(rm[2]) || 1) : null;
+      const rc = ratio == null ? '' : ratio <= 3 ? 'sport' : ratio < 7 ? 'mid' : 'house';
       const exit = len ? Math.max(3, Math.min(20, Math.round(len - 31))) : null;
       const deg = Math.atan((slope * BW_IN) / 12) * 180 / Math.PI;
       const gutterFt = slope < 0 ? (lay - 0.5) / -slope : slope > 0 ? (39.5 - lay) / slope : Infinity;
@@ -160,7 +165,7 @@
       // Distance where the straight line is on the breakpoint board. A line straight up one board is on it everywhere.
       const len0 = Number($('#aLen').value) || 45;
       const bpFt = !hasBp ? null : Math.abs(slope) < 1e-6 ? (Math.abs(bp - lay) <= 0.5 ? len0 : null) : (bp - lay) / slope;
-      return { slide, off, lay, aim, aimFt, aimLbl, slope, at, len, exit, deg, gutterFt, bp: $('#aBp').value !== '' ? bp : null, bpFt };
+      return { ratio, rc, slide, off, lay, aim, aimFt, aimLbl, slope, at, len, exit, deg, gutterFt, bp: $('#aBp').value !== '' ? bp : null, bpFt };
     }
 
     // ---------- drawing ----------
@@ -237,6 +242,7 @@
       const save = { rf: $('#aRF').checked, slide: $('#aSlide').value, off: $('#aOff').value, target: $('#aTarget').value, mode, pin, spot, len: $('#aLen').value, more: $('#aMore').value, pattern: ($('#aPat').selectedOptions[0] || {}).value ? (BT.lsGet(BT.KEYS.OIL_PATTERNS, [])[Number($('#aPat').value)] || {}).name : '' };
       try { BT.lsSet(LAST, save); } catch (_e) {}
       $('#aLayTxt').textContent = c ? `Laydown: board ${fmt(c.lay)} (slide ${fmt(c.slide)} − ${fmt(c.off)}).` : '';
+      { const el = document.getElementById('aRatioTxt'); if (el) el.textContent = c && c.ratio != null ? `Ratio ${r1(c.ratio)}:1 · ${c.rc === 'sport' ? 'sport pattern (USBC: 3:1 or less): little room to miss' : c.rc === 'mid' ? 'medium ratio: some room to miss' : 'house shot: drier outside, room to miss'}` : (c ? 'No ratio on this pattern: the alerts assume a house shot.' : ''); }
       if (!c) { $('#aHead').innerHTML = 'Fill in your slide and an aim point.'; $('#aTbl').innerHTML = ''; $('#aAlerts').innerHTML = ''; $('#aFix').innerHTML = ''; draw(null, []); return; }
       const extra = String($('#aMore').value || '').split(/[^0-9.]+/).map(Number).filter(x => isFinite(x) && x > 0 && x <= 62.6);
       const set = new Map();
@@ -279,7 +285,7 @@
       if (mode === 'pin' || !c.len) return null;
       const D = c.len, here = c.at(D);
       if (c.bp != null) { const reach = bpFits(c); if (!reach) return { D, here, goal: c.bp, why: `reach your breakpoint (board ${fmt(c.bp)}) at the end of the oil` }; return null; } // your own breakpoint beats the rule-of-31 estimate
-      if (c.exit != null && Math.abs(here - c.exit) > 2) return { D, here, goal: c.exit, why: `leave the oil at the exit point (board ${c.exit})` };
+      if (c.exit != null && Math.abs(here - c.exit) > (c.rc === 'sport' ? 1 : 2)) return { D, here, goal: c.exit, why: `leave the oil at the exit point (board ${c.exit})` };
       return null;
     }
     function fixes(c) {
@@ -338,7 +344,7 @@
         const at15 = c.at(15);
         A.push(['ok', `🎯 Spare line to the ${pin} pin: crosses the arrows on board ${fmt(at15)}. Throw it straight (spare ball, flat release) and look at board ${fmt(Math.round(at15 * 2) / 2)} at the arrows.`]);
         if (c.len && Math.abs(c.at(c.len) - c.lay) < 40) {
-          const drySide = c.at(c.len) < 7 || c.at(c.len) > 33;
+          const drySide = c.rc !== 'sport' && (c.at(c.len) < 7 || c.at(c.len) > 33);
           if (drySide) A.push(['info', `👀 The line stays near the ${c.slope < 0 ? OUT : IN} edge of the lane, where there's little oil. A reactive ball will hook here, so use your spare ball or a flat release.`]);
         }
         if (isFinite(c.gutterFt) && c.gutterFt < c.aimFt) A.push(['warn', `🛑 This line reaches the channel at ${r1(c.gutterFt)} ft, before the pin. Move your slide ${c.slope < 0 ? IN : OUT}.`]);
@@ -348,9 +354,10 @@
       if (c.len && c.exit != null) {
         const eb = c.at(c.len), d = eb - c.exit; // + = inside the exit point (still in the oil)
         const fs = fixSlide();
-        if (Math.abs(d) <= 2) A.push(['ok', `✅ Leaves the oil on board ${fmt(eb)}, at the exit point (board ${c.exit} on ${c.len} ft, rule of 31). Good starting angle.`]);
+        const tol = c.rc === 'sport' ? 1 : 2;
+        if (Math.abs(d) <= tol) A.push(['ok', `✅ Leaves the oil on board ${fmt(eb)}, at the exit point (board ${c.exit} on ${c.len} ft, rule of 31). Good starting angle.`]);
         else if (d < 0) {
-          A.push(['warn', `⚠️ Leaves the oil on board ${fmt(eb)}, ${fmt(-d)} boards outside the exit point (board ${c.exit}). The ball reaches the dry before the oil ends: expect it to read early.${fs != null ? ` With target ${fmt(c.aim)}, slide ${fmt(fs)} sends it through board ${c.exit}.` : ''}`]);
+          A.push(['warn', `⚠️ Leaves the oil on board ${fmt(eb)}, ${fmt(-d)} boards outside the exit point (board ${c.exit}). ${c.rc === 'sport' ? 'On a sport pattern there\'s little friction out there to bring it back, so it may read early and then run out of room, or miss right.' : c.rc === 'mid' ? 'The ball reaches the drier boards before the oil ends: expect it to read early, with less room to recover than on a house shot.' : 'The ball reaches the dry before the oil ends: expect it to read early. On a house shot a couple of boards outside can still work if the ball comes back.'}${fs != null ? ` With target ${fmt(c.aim)}, slide ${fmt(fs)} sends it through board ${c.exit}.` : ''}`]);
           if (c.slope < 0) { const ftX = (c.exit - c.lay) / c.slope; if (ftX > 0 && ftX < c.len - 3) A.push(['info', `👀 It crosses board ${c.exit} at about ${r1(ftX)} ft, ${r1(c.len - ftX)} ft before the oil ends.`]); }
         } else A.push(['warn', `⚠️ Leaves the oil on board ${fmt(eb)}, ${fmt(d)} boards inside the exit point (board ${c.exit}). It's still in the oil where it should be turning: expect skid, then a turn in the mud (over/under).${fs != null ? ` With target ${fmt(c.aim)}, slide ${fmt(fs)} sends it through board ${c.exit}.` : ''}`]);
       }

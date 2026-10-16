@@ -183,7 +183,7 @@
   }
 
   function parseRatio(r) {
-    const m = String(r || '').match(/(\d+(?:\.\d+)?)\s*(?::|to)\s*(\d+(?:\.\d+)?)/i);
+    const m = String(r || '').match(/(\d+(?:\.\d+)?)\s*(?::|to|-|\/)\s*(\d+(?:\.\d+)?)/i); // 10:1, 10-1, 10 to 1, 10/1
     if (m) { const a = Number(m[1]), b = Number(m[2]) || 1; return a / b; }
     const n = num(String(r || '').replace(/[^0-9.]/g, ''));
     return n;
@@ -196,7 +196,8 @@
       name: p.name || '', length, volume, ratio,
       lengthClass: length == null ? null : length <= 37 ? 'short' : length >= 43 ? 'long' : 'medium',
       volumeClass: volume == null ? null : volume <= 21 ? 'light' : volume >= 26 ? 'heavy' : 'medium',
-      flat: ratio != null && ratio <= 4,       // sport / challenge: small miss room
+      flat: ratio != null && ratio <= 3,       // USBC sport condition (3:1 or less): small miss room
+      mid: ratio != null && ratio > 3 && ratio < 7, // challenge / medium ratio: some room, less than a house shot
       house: ratio != null && ratio >= 7,      // typical house shot: forgiving
     };
   }
@@ -237,7 +238,7 @@
     const k = k0;
     const lay = (k * a - focal) / (k - 1);
     const mSlide = lay + off;
-    const r = { tFt, phase: later ? 'later' : 'start', basis, target: arrows, focal: Math.round(own(focal)), exitBoard: E31 == null ? null : own(E31),
+    const r = { tFt, rc: pat ? (pat.flat ? 'sport' : pat.mid ? 'mid' : 'house') : 'house', ratio: pat ? pat.ratio : null, phase: later ? 'later' : 'start', basis, target: arrows, focal: Math.round(own(focal)), exitBoard: E31 == null ? null : own(E31),
       bp, bp0, shift: (basis === 'moved') ? Math.round(own(bp) - own(bp0)) : 0, laydown: Math.round(own(lay)), slide: Math.round(own(mSlide)), offset: off, status: '' };
     if (slide != null) {
       const sl = own(slide);
@@ -258,7 +259,11 @@
       if (!r.status) return `📐 Starting line through the rule-of-31 exit point: ${math}.`;
       if (r.status === 'on') return `📐 ✅ Starting line checks out: ${math} (the rule-of-31 exit point).`;
       return `📐 ⚠️ Starting-line heads-up: from slide ${r.yourSlide} over target ${r.target}, the ball heads ${r.passes >= 1 && r.passes <= 39 ? `to about board ${r.passes}` : 'off the edge of the lane'} by the end of the oil, ${r.gap} board${r.gap === 1 ? '' : 's'} ${r.status === 'inside' ? 'inside' : 'outside'} the rule-of-31 exit point (board ${r.focal}) for a fresh pattern. ` + (Math.abs(r.slide - r.yourSlide) > 5
-        ? (r.status === 'outside' ? `The rule of 31 is an estimate: on a house shot a few boards outside is common. If your breakpoint holds and the ball comes back, keep it; if it reads early, move in a little at a time.` : `That's a lot of oil to turn in: move out a little at a time and watch for over/under.`)
+        ? (r.status === 'outside'
+          ? (r.rc === 'sport' ? `On a sport pattern there's little friction outside to bring it back: work toward slide ${r.slide} (lay down ${r.laydown}) in 2-board moves.`
+            : r.rc === 'mid' ? `On a medium ratio there's some room outside, less than a house shot: move in 2 boards at a time toward slide ${r.slide} if it reads early or misses right.`
+            : `The rule of 31 is an estimate: on a house shot a few boards outside is common. If your breakpoint holds and the ball comes back, keep it; if it reads early, move in a little at a time.`)
+          : `That's a lot of oil to turn in: move out a little at a time and watch for over/under.`)
         : `To start through it with target ${r.target}, slide ${r.slide} (lay down ${r.laydown}).`);
     }
     // later games: the exit point has moved with the breakpoint
@@ -1065,7 +1070,7 @@
       if (pat.length) b.push(`${pat.length} ft`);
       if (pat.volume) b.push(`${pat.volume} mL`);
       if (pat.ratio) b.push(`${Math.round(pat.ratio * 10) / 10}:1`);
-      res.patternLine = `${pat.name}${b.length ? ' (' + b.join(', ') + ')' : ''}${pat.flat ? ', flat/sport: small misses matter' : pat.house ? ', house shot: room to miss' : ''}`;
+      res.patternLine = `${pat.name}${b.length ? ' (' + b.join(', ') + ')' : ''}${pat.flat ? ', sport pattern: small misses matter' : pat.mid ? ', medium ratio: some room to miss' : pat.house ? ', house shot: room to miss' : ''}`;
     }
 
     // ---- Before there's enough to read: starting plan ----
@@ -1086,7 +1091,11 @@
           const tgt = `${lm0.target}${lm0.tFt && lm0.tFt !== 15 ? ` at ${lm0.tFt} ft` : ''}`;
           const big = Math.abs(lm0.slide - lm0.yourSlide) > 5;
           lines.push(`📐 Line: from slide ${lm0.yourSlide}, target ${tgt} the ball is ${lm0.gap} board${lm0.gap === 1 ? '' : 's'} ${lm0.status === 'inside' ? 'inside' : 'outside'} the exit point (about board ${lm0.focal}). ` + (big
-            ? (lm0.status === 'outside' ? `On a house shot a few boards outside is common; if your breakpoint holds and the ball comes back, keep it. If it reads early, move in a little at a time.` : `That's a lot of oil to turn in; move out a little at a time and watch for over/under.`)
+            ? (lm0.status === 'outside'
+              ? (lm0.rc === 'sport' ? `On a sport pattern there's little friction outside to bring it back: work toward slide ${lm0.slide} in 2-board moves and stay close to the exit point.`
+                : lm0.rc === 'mid' ? `On a medium ratio there's some room outside, less than a house shot: move in 2 boards at a time toward slide ${lm0.slide} if it reads early or misses right.`
+                : `On a house shot a few boards outside is common; if your breakpoint holds and the ball comes back, keep it. If it reads early, move in a little at a time.`)
+              : `That's a lot of oil to turn in; move out a little at a time and watch for over/under.`)
             : `Try slide ${lm0.slide}, target ${tgt}.`));
         }
         else lines.push(`📐 Line: slide ${lm0.slide}, target ${lm0.target} heads through the exit point (about board ${lm0.focal}).`);
