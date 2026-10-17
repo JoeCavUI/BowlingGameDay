@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Arsenal</title>
-  <link rel="stylesheet" href="styles.css?v=107" />
+  <link rel="stylesheet" href="styles.css?v=108" />
 </head>
 <body data-page="arsenal">
   <div class="navlinks"></div>
@@ -350,12 +350,12 @@
     </div>
   </div>
 
-  <script src="app.js?v=107"></script>
-  <script src="coach.js?v=107"></script>
-  <script src="chart.js?v=107"></script>
-  <script src="pinpal.js?v=107"></script>
-  <script src="history.js?v=107"></script>
-  <script src="plan.js?v=107"></script>
+  <script src="app.js?v=108"></script>
+  <script src="coach.js?v=108"></script>
+  <script src="chart.js?v=108"></script>
+  <script src="pinpal.js?v=108"></script>
+  <script src="history.js?v=108"></script>
+  <script src="plan.js?v=108"></script>
   <script>
     BT.renderNav('arsenal');
 
@@ -1307,7 +1307,9 @@
       const list = Array.isArray(sets) ? sets : [];
       const existing = list.find(x => String(x.name || '').toLowerCase() === name.toLowerCase());
       if (existing && !confirm(`Replace your saved bag "${existing.name}"?`)) return null;
-      const payload = { id: existing ? existing.id : `set_${Math.random().toString(36).slice(2, 10)}`, name, balls: names, savedAt: Date.now(), source: 'coach' };
+      const cx = ctxValue(); const lgId = BT.$('#ctxLeague') ? BT.$('#ctxLeague').value : '';
+      const ctx = cx.house ? { house: cx.house, lanes: cx.lanes, leagueId: lgId, patternName: cx.patternName } : null;
+      const payload = { id: existing ? existing.id : `set_${Math.random().toString(36).slice(2, 10)}`, name, balls: names, savedAt: Date.now(), source: 'coach', ctx };
       const next = existing ? list.map(x => x.id === payload.id ? payload : x) : [payload, ...list];
       BT.lsSet(BT.KEYS.ARSENAL_SETS, next);
       BT.lsSet(PREFERRED_SET_KEY, name);
@@ -1316,7 +1318,7 @@
 
     function wireSaveBagBox() {
       const go = BT.$('#saveBagGo'), only = BT.$('#saveBagOnly');
-      if (go) go.addEventListener('click', () => { if (saveSuggestedBag()) location.href = 'gameday.html'; });
+      if (go) go.addEventListener('click', () => { const p = saveSuggestedBag(); if (p) { BT.lsSet('bt_gameday_handoff_v1', Object.assign({}, p.ctx || {}, { set: p.name, at: Date.now() })); location.href = 'gameday.html'; } });
       if (only) only.addEventListener('click', () => {
         const p = saveSuggestedBag();
         if (p) BT.$('#saveBagMsg').innerHTML = `✅ Saved <b>${p.name}</b> (${p.balls.length} balls). It's ready on <a href="gameday.html" style="color:var(--accent)">Game Day</a> and listed on the Bag page.`;
@@ -1615,6 +1617,15 @@
         if (tn.league && lg.some(l => l.id === tn.league)) BT.$('#ctxLeague').value = tn.league;
         const pn = tn.pattern || last.patternName || ''; if (pn && pats.some(p => p.name === pn)) BT.$('#ctxPattern').value = pn;
         BT.$('#ctxLeague').addEventListener('change', () => { const l = lg.find(x => x.id === BT.$('#ctxLeague').value); if (l && l.houseId) BT.$('#ctxHouse').value = l.houseId; });
+        // A new house: drop a league or oil pattern that belongs to another house (use this house's pattern if you have one).
+        const hk = (t) => String(t || '').toLowerCase().replace(/\blanes?\b/g, '').replace(/[^a-z0-9]/g, '');
+        const same = (a, b) => { const x = hk(a), y = hk(b); return !x || !y || x === y || x.startsWith(y) || y.startsWith(x); };
+        BT.$('#ctxHouse').addEventListener('change', () => {
+          const h = BT.$('#ctxHouse').value;
+          const l = lg.find(x => x.id === BT.$('#ctxLeague').value); if (l && l.houseId && !same(l.houseId, h)) BT.$('#ctxLeague').value = '';
+          const cur = pats.find(p => p.name === BT.$('#ctxPattern').value);
+          if (cur && cur.center && !same(cur.center, h)) { const m = pats.filter(p => p.center && same(p.center, h)).sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0))[0]; BT.$('#ctxPattern').value = m ? m.name : ''; }
+        });
       } catch (e) { console.error(e); }
     }
     ctxInit();

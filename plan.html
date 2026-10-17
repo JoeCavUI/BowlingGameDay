@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Plan</title>
-  <link rel="stylesheet" href="styles.css?v=107" />
+  <link rel="stylesheet" href="styles.css?v=108" />
 </head>
 <body data-page="plan">
   <div class="navlinks"></div>
@@ -59,11 +59,11 @@
     </div>
   </div>
 
-  <script src="app.js?v=107"></script>
-  <script src="pinpal.js?v=107"></script>
-  <script src="history.js?v=107"></script>
-  <script src="chart.js?v=107"></script>
-  <script src="plan.js?v=107"></script>
+  <script src="app.js?v=108"></script>
+  <script src="pinpal.js?v=108"></script>
+  <script src="history.js?v=108"></script>
+  <script src="chart.js?v=108"></script>
+  <script src="plan.js?v=108"></script>
   <script>
   (function () {
     BT.renderNav('plan');
@@ -109,7 +109,13 @@
       const l = $('#pLeague').value ? BT.getLeagueById($('#pLeague').value) : null;
       $('#pWear').disabled = !l; $('#pWear').value = (l && l.wear) || '';
     }
-    $('#pHouse').addEventListener('change', () => fillLeagues($('#pLeague').value));
+    $('#pHouse').addEventListener('change', () => {
+      fillLeagues($('#pLeague').value);
+      // Oil follows the house: swap a pattern saved for another house for this house's one (or House shot / not sure).
+      const h = hk($('#pHouse').value), same = (c) => { const x = hk(c); return !x || !h || x === h || x.startsWith(h) || h.startsWith(x); };
+      const pats = BTPlan.patterns(), cur = pats.find(p => p.name === $('#pPat').value);
+      if (cur && cur.center && !same(cur.center)) { const m = pats.filter(p => p.center && same(p.center)).sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0))[0]; $('#pPat').value = m ? m.name : ''; }
+    });
     $('#pLeague').addEventListener('change', () => {
       if ($('#pLeague').value === '__add') {
         const house = $('#pHouse').value.trim();

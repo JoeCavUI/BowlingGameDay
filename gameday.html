@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=107" />
+  <link rel="stylesheet" href="styles.css?v=108" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -32,7 +32,9 @@
         <!-- Tonight's setup: folds to one line once it's filled in -->
         <details class="panel gd-fold" id="setupFold">
           <summary><span class="gd-fold-title">Tonight</span> <span id="setupSummary" class="small">Tap to set up</span></summary>
+          <div class="gd-handoff small" id="handoffNote" style="display:none"></div>
           <div class="grid-2" style="margin-top:10px">
+            <div class="gd-tstep first" style="grid-column:1/-1"><span class="gd-step-n" id="step1n">1</span><span><b>Where you're bowling</b><span class="gd-tstep-sub">house, league, lanes, oil pattern</span></span><span class="gd-step-st small" id="step1st"></span></div>
             <div>
               <label>House</label>
               <select id="house" class="input"></select>
@@ -49,17 +51,6 @@
                 <option value="opens">Left opens up (two-handers, high revs)</option>
                 <option value="holds">Left stays oily (friction outside & down lane)</option>
               </select>
-            </div>
-            <div class="gd-lineup" style="grid-column:1/-1">
-              <div class="small"><b>Who's on the pair tonight</b> (helps Coach estimate how fast your side breaks down)</div>
-              <div class="gd-team-head"><span class="small"><b>Your team</b> (roster saved on the league)</span>
-                <label class="small">Team size <select id="luSize" class="input"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></label></div>
-              <div id="luRoster"></div>
-              <button type="button" class="btn secondary" id="luAdd" style="margin-top:6px">+ Add teammate</button>
-              <div class="small" style="margin-top:10px"><b>Tonight's opponent</b> (count each bowler once, by what they throw)</div>
-              <div class="gd-opp-head"><span>Right</span><span>Two-handed</span><span>Left</span><span>Urethane</span><span>Plastic</span></div>
-              <div class="gd-opp-row"><select id="luOR" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select><select id="luO2" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select><select id="luOL" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select><select id="luOU" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select><select id="luOP" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></div>
-              <div class="small" id="luTraffic" style="margin-top:6px"></div>
             </div>
             <div>
               <label>Lanes / Pair</label>
@@ -81,9 +72,22 @@
               <div class="small" id="patternSummary" style="margin-top:6px"></div>
               <div class="small" id="patternHint" style="margin-top:6px">Pulled from Oil → Patterns.</div>
             </div>
-            <div>
-              <label>Bag</label>
+            <div class="gd-tstep" style="grid-column:1/-1"><span class="gd-step-n" id="step2n">2</span><span><b>Your bag</b><span class="gd-tstep-sub">bags built for this house are listed first</span></span><span class="gd-step-st small" id="step2st"></span></div>
+            <div style="grid-column:1/-1">
               <select id="set" class="input"></select>
+              <div id="bagWarn" class="gd-bagwarn" style="display:none"></div>
+            </div>
+            <div class="gd-tstep" style="grid-column:1/-1"><span class="gd-step-n" id="step3n">3</span><span><b>Who's on the pair</b><span class="gd-tstep-sub">your team and tonight's opponent</span></span><span class="gd-step-st small" id="step3st"></span></div>
+            <div class="gd-lineup" style="grid-column:1/-1">
+              <div class="small">Helps Coach estimate how fast your side breaks down.</div>
+              <div class="gd-team-head"><span class="small"><b>Your team</b> (roster saved on the league)</span>
+                <label class="small">Team size <select id="luSize" class="input"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></label></div>
+              <div id="luRoster"></div>
+              <button type="button" class="btn secondary" id="luAdd" style="margin-top:6px">+ Add teammate</button>
+              <div class="small" style="margin-top:10px"><b>Tonight's opponent</b> (count each bowler once, by what they throw)</div>
+              <div class="gd-opp-head"><span>Right</span><span>Two-handed</span><span>Left</span><span>Urethane</span><span>Plastic</span></div>
+              <div class="gd-opp-row"><select id="luOR" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select><select id="luO2" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select><select id="luOL" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select><select id="luOU" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select><select id="luOP" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></div>
+              <div class="small" id="luTraffic" style="margin-top:6px"></div>
             </div>
             <input id="pocketBoard" type="hidden" value="" />
             <div style="display:none">
@@ -277,12 +281,12 @@
     </div>
   </div>
 
-  <script src="app.js?v=107"></script>
-  <script src="coach.js?v=107"></script>
-  <script src="pinpal.js?v=107"></script>
-  <script src="history.js?v=107"></script>
-  <script src="chart.js?v=107"></script>
-  <script src="plan.js?v=107"></script>
+  <script src="app.js?v=108"></script>
+  <script src="coach.js?v=108"></script>
+  <script src="pinpal.js?v=108"></script>
+  <script src="history.js?v=108"></script>
+  <script src="chart.js?v=108"></script>
+  <script src="plan.js?v=108"></script>
   <script>
     BT.renderNav('gameday');
     BT.wireReadAloud(document.getElementById('coachSpeak'), () => ((document.getElementById('coachText') || {}).innerText || '').split('\n').filter(l => !/^(Why & what's next|What Coach is using)/i.test(l.trim())).join('\n'));
@@ -652,14 +656,28 @@ function selectedPills(container) {
       });
     }
 
-    function renderHouses() {
-      const houses = BT.lsGet(BT.KEYS.HOUSES, []);
-      const keep = el.house.value;
-      const opts = ['— Select house (optional for now) —', ...houses];
-      el.house.innerHTML = opts.map((h, idx) => `<option value="${idx===0?'':escapeHtml(h)}">${escapeHtml(h)}</option>`).join('');
-      if (keep && houses.includes(keep)) el.house.value = keep;
+    // Houses: the ones you saved plus the ones in your PinPal history (so a bag built for Sterling finds Sterling here).
+    const hkey = (t) => String(t || '').toLowerCase().replace(/\blanes?\b/g, '').replace(/[^a-z0-9]/g, '');
+    function matchHouse(name) {
+      const k = hkey(name); if (!k) return '';
+      const list = BT.lsGet(BT.KEYS.HOUSES, []) || [];
+      return list.find(h => hkey(h) === k) || list.find(h => hkey(h).startsWith(k) || k.startsWith(hkey(h))) || '';
     }
-
+    function ensureHouse(name) {
+      const hit = matchHouse(name); if (hit) return hit;
+      const list = BT.lsGet(BT.KEYS.HOUSES, []) || []; const nm = String(name).trim();
+      if (!nm) return ''; list.push(nm); BT.lsSet(BT.KEYS.HOUSES, list); return nm;
+    }
+    function renderHouses() {
+      const houses = BT.lsGet(BT.KEYS.HOUSES, []) || [];
+      let hist = [];
+      try { if (window.BTPlan && BTPlan.houseOptions) hist = BTPlan.houseOptions().map(h => h.name).filter(h => h && !matchHouse(h)); } catch (_e) {}
+      const keep = el.house.value;
+      const o = (h) => `<option value="${escapeHtml(h)}">${escapeHtml(h)}</option>`;
+      el.house.innerHTML = '<option value="">— Select house —</option>' + houses.map(o).join('') + (hist.length ? `<optgroup label="From your PinPal history">${hist.map(o).join('')}</optgroup>` : '');
+      if (keep && Array.from(el.house.options).some(x => x.value === keep)) el.house.value = keep;
+    }
+    el.house.addEventListener('change', () => { if (el.house.value && !(BT.lsGet(BT.KEYS.HOUSES, []) || []).includes(el.house.value)) { ensureHouse(el.house.value); } });
 
     function renderLeagues() {
       const house = el.house.value || '';
@@ -1048,9 +1066,16 @@ function isStrike(shot) {
       `;
     }
 
+    // A bag remembers the house (and lanes, league, oil) it was built for.
+    function bagCtx(name) { const st = (BT.lsGet(BT.KEYS.ARSENAL_SETS, []) || []).find(x => x.name === name); return (st && st.ctx) || null; }
     function renderSets() {
-      const sets = BT.lsGet(BT.KEYS.ARSENAL_SETS, []);
-      el.set.innerHTML = [sets.length ? '— Pick your bag —' : '— No saved sets yet —', ...sets.map(s => s.name)].map((n,i) => `<option value="${i===0?'':n}">${n}</option>`).join('');
+      const all = BT.lsGet(BT.KEYS.ARSENAL_SETS, []) || [];
+      const here = hkey(el.house.value);
+      const mine = (st) => st.ctx && st.ctx.house && hkey(st.ctx.house) === here;
+      const sets = here ? [...all.filter(mine), ...all.filter(st => !mine(st))] : all;
+      const keep = el.set.value;
+      el.set.innerHTML = `<option value="">${sets.length ? '— Pick your bag —' : '— No saved bags yet —'}</option>` + sets.map(st => `<option value="${escapeHtml(st.name)}">${escapeHtml(st.name)}${st.ctx && st.ctx.house ? ' · ' + escapeHtml(st.ctx.house.replace(/ Lanes?$/i, '')) : ''}</option>`).join('');
+      if (keep && sets.some(x => x.name === keep)) { el.set.value = keep; return; }
       // Pre-select the bag saved from Arsenal's Coach, or the last bag used here.
       const pref = BT.lsGet('bt_gameday_preferred_set_v1', '');
       if (pref && sets.some(x => x.name === pref)) el.set.value = pref;
@@ -1783,6 +1808,7 @@ function saveCurrentSessionDraft() {
       const box = document.getElementById('luRoster'); if (!box) return;
       const lg = curLeague();
       document.getElementById('luAdd').disabled = !lg;
+      { const hd = document.querySelector('.gd-team-head label'); if (hd) hd.style.visibility = lg ? '' : 'hidden'; }
       if (!lg) { box.innerHTML = '<div class="small" style="opacity:.75">Pick a league to set up your roster.</div>'; return; }
       const R = rosterOf(lg), size = Number(lg.teamSize) || 5, L = lineupToday();
       const on = L.bowling ? new Set(L.bowling) : new Set(R.slice(0, size).map(p => p.id));
@@ -2383,6 +2409,7 @@ function sessionSummary(shots) {
       }
       if (wearSel) wearSel.addEventListener('change', () => { if (!el.league.value) return; BT.setLeague(el.league.value, { wear: wearSel.value }); markCoachDirty(); try { autoCoach(); } catch (_e) {} });
       el.house.addEventListener('change', () => syncLeagueWear());
+      el.league.addEventListener('wearsync', () => syncLeagueWear());
       setTimeout(syncLeagueWear, 0);
       el.addLeagueBtn.addEventListener('click', () => {
         const house = el.house.value || '';
@@ -2412,6 +2439,7 @@ function sessionSummary(shots) {
 
       loadCurrentSessionDraft();
       restoreTonight();
+      applyHandoff();
       restoreLastLineDraft();
       renderLog();
       renderLaneGeometry();
@@ -2419,6 +2447,79 @@ function sessionSummary(shots) {
       updateFrameUI();
       autoCoach();
     }
+
+    // Bag ↔ house. Coming from "Save & go to Game Day", the bag's house, lanes, league and oil fill in Tonight.
+    // Oil follows the house: a pattern saved for another house is swapped for this house's newest one, or cleared.
+    function syncPatternToHouse() {
+      const pats = BT.lsGet(BT.KEYS.OIL_PATTERNS || 'bt_oil_patterns_v1', []) || [];
+      const cur = pats.find(x => x.name === el.pattern.value);
+      if (!el.house.value || (cur && (!cur.center || hkey(cur.center) === hkey(el.house.value)))) return false;
+      const mine = pats.filter(x => x.center && hkey(x.center) === hkey(el.house.value)).sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0))[0];
+      const nv = mine && Array.from(el.pattern.options).some(o => o.value === mine.name) ? mine.name : '';
+      if (nv === el.pattern.value) return false;
+      el.pattern.value = nv;
+      try { updatePatternSummary(); } catch (_e) {} try { updatePrep(); } catch (_e) {}
+      return true;
+    }
+    function applyBagCtx(c, setName) {
+      if (!c) return [];
+      const done = [];
+      if (c.house) { const h = ensureHouse(c.house); renderHouses(); if (h && el.house.value !== h) { el.house.value = h; done.push(h); } renderLeagues(); syncLeagueWearSafe(); }
+      if (c.leagueId && Array.from(el.league.options).some(o => o.value === c.leagueId)) { if (el.league.value !== c.leagueId) done.push(leagueNameById(c.leagueId)); el.league.value = c.leagueId; syncLeagueWearSafe(); }
+      if (c.lanes) { const ln = String(c.lanes).replace(/^(\d{1,2})(\d{2})$/, (m, x, y) => Number(y) === Number(x) + 1 ? `${x}-${y}` : m); if (el.lanes.value.trim() !== ln) { el.lanes.value = ln; done.push('lanes ' + ln); } try { updateLanePick(); } catch (_e) {} }
+      const cpat = c.patternName && (BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || []).find(x => x.name === c.patternName);
+      if (cpat && !(cpat.center && c.house && hkey(cpat.center) !== hkey(c.house)) && Array.from(el.pattern.options).some(o => o.value === c.patternName)) { if (el.pattern.value !== c.patternName) done.push(c.patternName); el.pattern.value = c.patternName; try { updatePatternSummary(); } catch (_e) {} }
+      else if (syncPatternToHouse()) done.push(el.pattern.value ? el.pattern.value : 'oil pattern cleared (pick tonight\'s)');
+      renderSets();
+      if (setName && Array.from(el.set.options).some(o => o.value === setName)) { el.set.value = setName; BT.lsSet('bt_gameday_preferred_set_v1', setName); loadSetToUI(); }
+      saveTonight(); try { updatePrep(); } catch (_e) {} try { lineupLoad(); } catch (_e) {} try { updateSetupSummary(); } catch (_e) {} try { updateSteps(); } catch (_e) {} markCoachDirty();
+      return done;
+    }
+    function syncLeagueWearSafe() { try { el.league.dispatchEvent(new Event('wearsync')); } catch (_e) {} }
+    function applyHandoff() {
+      const h = BT.lsGet('bt_gameday_handoff_v1', null);
+      if (!h) return;
+      BT.lsSet('bt_gameday_handoff_v1', null);
+      if (Date.now() - (h.at || 0) > 30 * 60 * 1000) return;
+      const done = applyBagCtx(h, h.set);
+      const n = BT.$('#handoffNote');
+      if (n) { n.style.display = ''; n.innerHTML = `✅ Set up for <b>${escapeHtml(h.set || 'your bag')}</b>${done.length ? ': ' + done.map(escapeHtml).join(', ') : ''}. Check the steps below.`; }
+      const f = BT.$('#setupFold'); if (f) f.open = true;
+    }
+    function updateBagWarn() {
+      const w = BT.$('#bagWarn'); if (!w) return;
+      const c = bagCtx(el.set.value);
+      if (!c || !c.house || !el.house.value || hkey(c.house) === hkey(el.house.value) || w.dataset.kept === el.set.value + '|' + el.house.value) { w.style.display = 'none'; w.innerHTML = ''; return; }
+      w.style.display = '';
+      w.innerHTML = `⚠️ This bag was built for <b>${escapeHtml(c.house)}</b>${c.lanes ? ` (lanes ${escapeHtml(c.lanes)})` : ''}, but tonight is set to <b>${escapeHtml(el.house.value)}</b>. Coach's pregame plan uses tonight's house.
+        <div class="btn-row" style="margin-top:6px"><button type="button" class="btn" id="bagUseHouse">Bowl at ${escapeHtml(c.house.replace(/ Lanes?$/i, ''))}</button><button type="button" class="btn secondary" id="bagKeep">Keep ${escapeHtml(el.house.value.replace(/ Lanes?$/i, ''))}</button></div>`;
+      BT.$('#bagUseHouse').addEventListener('click', () => { applyBagCtx(c, el.set.value); updateBagWarn(); updateSteps(); });
+      BT.$('#bagKeep').addEventListener('click', () => setTimeout(updateSteps, 0));
+      BT.$('#bagKeep').addEventListener('click', () => { w.dataset.kept = el.set.value + '|' + el.house.value; w.style.display = 'none'; });
+    }
+    // Numbered steps: a check when each one is done.
+    function updateSteps() {
+      const mark = (n, ok, need) => { const st = BT.$('#step' + n + 'st'), nn = BT.$('#step' + n + 'n'); if (!st) return; st.textContent = ok ? '✓ done' : need; st.className = 'gd-step-st small ' + (ok ? 'ok' : 'need'); if (nn) nn.classList.toggle('ok', ok); };
+      const m1 = [!el.house.value && 'house', !el.lanes.value.trim() && 'lanes', !el.pattern.value && 'oil'].filter(Boolean);
+      mark(1, !m1.length, 'needs ' + m1.join(', '));
+      const bagOff = el.set.value && BT.$('#bagWarn') && BT.$('#bagWarn').style.display !== 'none';
+      mark(2, !!el.set.value && !bagOff, el.set.value ? 'check house' : 'pick a bag');
+      let T = null; try { T = trafficInfo(); } catch (_e) {}
+      mark(3, !!T, 'optional'); { const st = BT.$('#step3st'); if (st && !T) st.className = 'gd-step-st small dim'; }
+    }
+    ['house', 'league', 'lanes', 'pattern', 'set'].forEach(k => { if (el[k]) ['change', 'input'].forEach(ev => el[k].addEventListener(ev, () => setTimeout(() => { updateBagWarn(); updateSteps(); }, 0))); });
+    el.house.addEventListener('change', () => {
+      // New house: if the bag you have picked was built for another house, switch to your newest bag for this one.
+      const c = bagCtx(el.set.value); renderSets();
+      if (c && c.house && hkey(c.house) !== hkey(el.house.value)) {
+        const st = (BT.lsGet(BT.KEYS.ARSENAL_SETS, []) || []).filter(x => x.ctx && hkey(x.ctx.house) === hkey(el.house.value)).sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0))[0];
+        if (st) { el.set.value = st.name; BT.lsSet('bt_gameday_preferred_set_v1', st.name); loadSetToUI(); saveTonight(); }
+      }
+      if (syncPatternToHouse()) { saveTonight(); try { updateSetupSummary(); } catch (_e) {} markCoachDirty(); }
+      updateBagWarn(); updateSteps();
+    });
+    document.addEventListener('change', (e) => { if (e.target && /^lu|ros-/.test(e.target.id || e.target.className || '')) setTimeout(updateSteps, 0); });
+    setTimeout(() => { updateBagWarn(); updateSteps(); }, 500);
 
     // Quick-add a pattern without leaving Game Day.
     BT.$('#addPatternBtn').addEventListener('click', () => {
@@ -2555,6 +2656,7 @@ function sessionSummary(shots) {
       const txt = (sel) => (sel && sel.value && sel.selectedIndex >= 0) ? sel.options[sel.selectedIndex].text : '';
       const parts = [el.house.value && el.house.value, el.lanes.value.trim(), el.pattern.value && txt(el.pattern), el.set.value && el.set.value].filter(Boolean);
       const missing = [];
+      if (!el.house.value) missing.push('house');
       if (!el.pattern.value) missing.push('oil pattern');
       if (!el.set.value) missing.push('bag');
       if (!el.ball.value) missing.push('ball');

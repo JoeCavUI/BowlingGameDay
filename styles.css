@@ -625,3 +625,15 @@ select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }
 .gd-ready{margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(255,196,0,.14);border:1px solid rgba(255,196,0,.5);font-size:14px;line-height:1.4;font-weight:600}
 .gd-opts{margin-top:8px}
 .gd-opt{display:block;width:100%;text-align:left;border-radius:10px;margin-top:6px}
+
+/* Tonight: numbered steps */
+.gd-tstep{display:flex;align-items:center;gap:8px;margin-top:6px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08);font-size:16px}
+.gd-tstep.first{border-top:none;padding-top:0;margin-top:0}
+.gd-tstep-sub{display:block;font-weight:400;font-size:12px;opacity:.7}
+.gd-step-n{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:#4a4f5a;color:#fff;font-weight:900;font-size:13px;flex:none}
+.gd-step-n.ok{background:#2e9d5b;color:#fff}
+.gd-step-st{margin-left:auto;white-space:nowrap}
+.gd-step-st.ok{color:#5fd08a}
+.gd-step-st.need{color:var(--danger)}
+.gd-bagwarn{margin-top:8px;padding:10px;border-radius:10px;background:rgba(255,170,0,.12);border:1px solid rgba(255,170,0,.45);font-size:14px}
+.gd-handoff{margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(46,157,91,.15);border:1px solid rgba(46,157,91,.5)}

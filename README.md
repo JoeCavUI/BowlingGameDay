@@ -58,6 +58,14 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v108-beta45 (not published yet): Tonight in 3 steps, bags remember their house
+
+- **Tonight is 3 numbered steps:** ① Where you're bowling (house, league, lanes, oil), ② Your bag, ③ Who's on the pair (optional). Each step shows ✓ done or what it still needs, and the house is now a must-have.
+- **A bag remembers the house it was built for.** Arsenal → Suggest my bag saves the house, lanes, league and oil with the bag. "Save & go to Game Day" sets Tonight to that house, so Coach's pregame plan is for the right house.
+- **Bag / house mismatch warning:** pick a bag built for another house and Game Day asks: Bowl at Sterling, or Keep Shelby. Bags for tonight's house are listed first; changing house switches to your newest bag for that house.
+- **Oil follows the house** (Game Day, Arsenal, Game Plan): a pattern saved for another house is swapped for this house's pattern, or cleared so you pick tonight's.
+- Houses from your PinPal history are in Game Day's house list.
+
 ## Changes in v107-beta44: staying ahead of the lanes, 💬 Send feedback, team roster and carrydown heads-up
 
 - **Who's on the pair** (Game Day → Tonight): your team's roster is saved on the league (name, right/left, one- or two-handed, reactive/urethane/plastic) with a team size (Monday 4, Thursday 5); tick who's bowling tonight. Tonight's opponent is counted by right / two-handed / left / urethane / plastic. Coach estimates the shots on each lane between your frames and games, how many reactive balls are on your side, and how many urethane/plastic balls are pushing oil down the lane.
