@@ -58,11 +58,12 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
-## Changes in v109-beta46 (not published yet): matchup & risk, your notes tested against your games
+## Changes in v109-beta46: matchup & risk, your notes tested against your games
 
 - **🎯 Matchup & risk by game** (Game Plan): each bag ball's game 1 / 2 / 3 average at this house, with a warning when a ball fades (e.g. Fate at Sterling: 244 / 229 / 189, every game 3 well under).
 - **🎯 Matchup meter** (Game Day, above Coach): Good / Watch / Not a matchup tonight for the ball in your hand. Starts from that ball's history for this game here, then updates from tonight's last 6 shots with it (pocket, strikes, and whether good shots read early / high or long / light). Names the bag ball to go to.
 - **📓 From your PinPal notes:** "14 over 5" is read as slide 14 over breakpoint 5. Where you usually start game 1 and finish game 3, when you change line and ball in each game, and what your notes mention most.
+- **Meter labels name the game:** "Good matchup for game 1", "Watch: game 3 drop-off", "Fading in game 3, as it usually does here: switch". A ball that's strong here in this game gets a line move before a ball change. When Coach calls a ball change, the meter names the same ball.
 - **🧪 Your notes for a house** (Game Plan and Game Day): write what you've noticed; Coach tests each claim (10 pin, high / weak hits, a game that scores well or is hit-or-miss, ball changes, moving outside / inside) against your PinPal games and Game Day: ✅ supported, 🟡 partly, ❌ not supported, 👀 watch for, ⏳ not enough data.
 
 ## Changes in v108-beta45: Tonight in 3 steps, bags remember their house, bag picks by lane condition, tabs in order

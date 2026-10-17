@@ -1951,6 +1951,11 @@ function saveCurrentSessionDraft() {
         if (window.BTInsight && el.house.value) {
           const setObj = (BT.lsGet(BT.KEYS.ARSENAL_SETS, []) || []).find(x => x.name === el.set.value) || {};
           const M = BTInsight.meter({ shots: sessionShots.slice().reverse(), ball: el.ball.value, gameNow: currentGameNumber(), house: el.house.value, bagRoles: setObj.roles || {} });
+          // One answer on screen: when Coach is already calling a ball change, the meter names Coach's ball.
+          const eq = (r.options || []).find(o => o.kind === 'Equipment'), mm = eq && String(eq.text || '').match(/Switch to (.+?)(?: for\b|[.,(]|$)/);
+          const coachBall = r.ballSuggestion || (mm ? mm[1].trim() : '');
+          if (M && coachBall && M.next && /\([^)]+\)\.?$/.test(M.next)) M.next = M.next.replace(/\(([^)]+)\)\.?$/, `(${coachBall}).`);
+          else if (M && coachBall && M.level === 'switch' && !M.next.includes(coachBall)) M.next += ` Coach's pick: ${coachBall}.`;
           if (M) meterHtml = `<div class="gd-meter ${M.level}"><b>🎯 ${escapeHtml(M.ball)}: ${escapeHtml(M.label)}</b><div class="small" style="opacity:1">${escapeHtml(M.why.join(' · '))}.</div>${M.next ? `<div class="small" style="opacity:1;margin-top:3px"><b>${escapeHtml(M.next)}</b></div>` : ''}</div>`;
           const N = BTInsight.notesFor(el.house.value);
           notesBlock = `<details class="gd-notes"><summary class="small" style="cursor:pointer"><b>📝 Your notes for ${escapeHtml(el.house.value)}</b>${N.length ? ` (${N.length})` : ''}</summary>${BTInsight.notesHtml(el.house.value)}<button type="button" class="btn secondary" id="gdNoteAdd" style="margin-top:6px">+ Add a note</button></details>`;
