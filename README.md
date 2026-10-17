@@ -58,7 +58,7 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
-## Changes in v107-beta44 (not published yet): staying ahead of the lanes, 💬 Send feedback
+## Changes in v107-beta44: staying ahead of the lanes, 💬 Send feedback, team roster and carrydown heads-up
 
 - **Who's on the pair** (Game Day → Tonight): your team's roster is saved on the league (name, right/left, one- or two-handed, reactive/urethane/plastic) with a team size (Monday 4, Thursday 5); tick who's bowling tonight. Tonight's opponent is counted by right / two-handed / left / urethane / plastic. Coach estimates the shots on each lane between your frames and games, how many reactive balls are on your side, and how many urethane/plastic balls are pushing oil down the lane.
 - **🛢️ Carrydown heads-up:** with 2 or more urethane/plastic bowlers on the pair, the starting plan, the game 2/3 heads-up and the early warning say to expect a weaker back end and a longer lane, and to try a stronger solid ball, a touch less speed or more rotation before moving in.
