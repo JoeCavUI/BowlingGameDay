@@ -51,11 +51,15 @@
               </select>
             </div>
             <div class="gd-lineup" style="grid-column:1/-1">
-              <div class="small"><b>Who's on the pair</b> (counts help Coach estimate how fast your side breaks down)</div>
-              <div class="gd-lu-head"><span></span><span>Right</span><span>Two-handed</span><span>Left</span></div>
-              <div class="gd-lu-row"><span class="small">Your team <span style="opacity:.7">(incl. you, saved on league)</span></span><select id="luTR" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select><select id="luT2" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select><select id="luTL" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></div>
-              <div class="gd-lu-row"><span class="small">Tonight's opponent</span><select id="luOR" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select><select id="luO2" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select><select id="luOL" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></div>
-              <div class="small" id="luTraffic" style="margin-top:4px"></div>
+              <div class="small"><b>Who's on the pair tonight</b> (helps Coach estimate how fast your side breaks down)</div>
+              <div class="gd-team-head"><span class="small"><b>Your team</b> (roster saved on the league)</span>
+                <label class="small">Team size <select id="luSize" class="input"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></label></div>
+              <div id="luRoster"></div>
+              <button type="button" class="btn secondary" id="luAdd" style="margin-top:6px">+ Add teammate</button>
+              <div class="small" style="margin-top:10px"><b>Tonight's opponent</b> (count each bowler once, by what they throw)</div>
+              <div class="gd-opp-head"><span>Right</span><span>Two-handed</span><span>Left</span><span>Urethane</span><span>Plastic</span></div>
+              <div class="gd-opp-row"><select id="luOR" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select><select id="luO2" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select><select id="luOL" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select><select id="luOU" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select><select id="luOP" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></div>
+              <div class="small" id="luTraffic" style="margin-top:6px"></div>
             </div>
             <div>
               <label>Lanes / Pair</label>
@@ -1763,48 +1767,90 @@ function saveCurrentSessionDraft() {
       try { const nm = el.ball && el.ball.value; const row = nm && typeof BALL_ROW_MAP !== 'undefined' && BALL_ROW_MAP ? BALL_ROW_MAP.get(nm) : null; ure = !!(row && /urethane/i.test(BT.ballCover(row) || '')); } catch (_e) {}
       return BT.boxFor(Number(p0.length) || null, ratio, { speedDominant: /speed/i.test(String(bw.dominance || '')), urethane: ure });
     }
-    // 👥 Lineup and lane traffic. Your team is saved on the league; tonight's opponent is saved for today only.
-    const OPP_KEY = 'bt_gameday_opp_v1';
+    // 👥 Lineup and lane traffic. Your roster (+ team size) is saved on the league; who's bowling and tonight's opponent are saved for today.
+    const LINEUP_KEY = 'bt_gameday_lineup_v1';
     const luv = (id) => { const e = document.getElementById(id); return e && e.value !== '' ? Number(e.value) : null; };
+    const escA = (t) => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    function curLeague() { return el.league && el.league.value ? BT.getLeagueById(el.league.value) : null; }
+    function myHand() { try { const b = BT.lsGet(BT.KEYS.BOWLER, {}) || {}; return String(b.handedness || b.hand || 'Right').toLowerCase().startsWith('l') ? 'L' : 'R'; } catch (_e) { return 'R'; } }
+    function rosterOf(lg) {
+      const r = (lg && Array.isArray(lg.roster)) ? lg.roster.slice() : [];
+      if (!r.some(p => p.me)) r.unshift({ id: 'me', me: true, name: 'Me', hand: myHand(), style: '1h', ball: 'reactive' });
+      return r;
+    }
+    function lineupToday() { const d = BT.lsGet(LINEUP_KEY, null) || {}; return d.date === BT.localDate() && d.league === (el.league ? el.league.value : '') ? d : { date: BT.localDate(), league: el.league ? el.league.value : '', bowling: null, opp: {} }; }
+    function renderRoster() {
+      const box = document.getElementById('luRoster'); if (!box) return;
+      const lg = curLeague();
+      document.getElementById('luAdd').disabled = !lg;
+      if (!lg) { box.innerHTML = '<div class="small" style="opacity:.75">Pick a league to set up your roster.</div>'; return; }
+      const R = rosterOf(lg), size = Number(lg.teamSize) || 5, L = lineupToday();
+      const on = L.bowling ? new Set(L.bowling) : new Set(R.slice(0, size).map(p => p.id));
+      document.getElementById('luSize').value = String(size);
+      const opt = (v, cur, t) => `<option value="${v}"${v === cur ? ' selected' : ''}>${t}</option>`;
+      box.innerHTML = R.map(p => `<div class="gd-ros" data-id="${escA(p.id)}">
+          <input type="checkbox" class="ros-on" ${on.has(p.id) ? 'checked' : ''} aria-label="Bowling tonight" />
+          <input class="input ros-name" value="${escA(p.name)}" ${p.me ? 'readonly' : ''} placeholder="Name" />
+          <select class="input ros-hand">${opt('R', p.hand, 'R')}${opt('L', p.hand, 'L')}</select>
+          <select class="input ros-style">${opt('1h', p.style, '1H')}${opt('2h', p.style, '2H')}</select>
+          <select class="input ros-ball">${opt('reactive', p.ball, 'Reactive')}${opt('urethane', p.ball, 'Urethane')}${opt('plastic', p.ball, 'Plastic')}</select>
+          ${p.me ? '<span></span>' : '<button type="button" class="ros-del" aria-label="Remove">✕</button>'}
+        </div>`).join('') + `<div class="small" id="luCount" style="margin-top:4px"></div>`;
+      const n = R.filter(p => on.has(p.id)).length;
+      document.getElementById('luCount').textContent = `${n} bowling tonight${n !== size ? ` (team of ${size})` : ''}.`;
+      box.querySelectorAll('.gd-ros').forEach(row => {
+        row.querySelectorAll('input,select').forEach(inp => inp.addEventListener('change', rosterSave));
+        const del = row.querySelector('.ros-del'); if (del) del.addEventListener('click', () => { if (confirm('Remove this teammate from the roster?')) { row.remove(); rosterSave(); } });
+      });
+    }
+    function rosterSave() {
+      const lg = curLeague(); if (!lg) return;
+      const rows = [...document.querySelectorAll('#luRoster .gd-ros')];
+      const roster = rows.map(r => ({ id: r.dataset.id, me: r.dataset.id === 'me' || undefined, name: r.querySelector('.ros-name').value.trim() || 'Teammate', hand: r.querySelector('.ros-hand').value, style: r.querySelector('.ros-style').value, ball: r.querySelector('.ros-ball').value }));
+      BT.setLeague(lg.id, { roster, teamSize: Number(document.getElementById('luSize').value) || 5 });
+      const L = lineupToday(); L.bowling = rows.filter(r => r.querySelector('.ros-on').checked).map(r => r.dataset.id); BT.lsSet(LINEUP_KEY, L);
+      renderRoster(); lineupText(); try { autoCoach(); } catch (_e) {}
+    }
+    function oppSave() {
+      const L = lineupToday(); L.opp = { r: luv('luOR'), r2: luv('luO2'), l: luv('luOL'), u: luv('luOU'), p: luv('luOP') }; BT.lsSet(LINEUP_KEY, L);
+      lineupText(); try { autoCoach(); } catch (_e) {}
+    }
     function lineupLoad() {
-      const lg = el.league && el.league.value ? BT.getLeagueById(el.league.value) : null;
-      const t = (lg && lg.team) || {};
+      renderRoster();
+      const o = lineupToday().opp || {};
       const set = (id, v) => { const e = document.getElementById(id); if (e) e.value = v == null ? '' : String(v); };
-      set('luTR', t.r); set('luT2', t.r2); set('luTL', t.l);
-      const o = BT.lsGet(OPP_KEY, null) || {};
-      const today = BT.localDate();
-      const oo = o.date === today ? o : {};
-      set('luOR', oo.r); set('luO2', oo.r2); set('luOL', oo.l);
-      ['luTR', 'luT2', 'luTL'].forEach(id => { const e = document.getElementById(id); if (e) e.disabled = !lg; });
+      set('luOR', o.r); set('luO2', o.r2); set('luOL', o.l); set('luOU', o.u); set('luOP', o.p);
       lineupText();
       try { if ((sessionShots || []).length) autoCoach(); } catch (_e) {}
     }
-    function lineupSave() {
-      if (el.league && el.league.value) BT.setLeague(el.league.value, { team: { r: luv('luTR'), r2: luv('luT2'), l: luv('luTL') } });
-      BT.lsSet(OPP_KEY, { date: BT.localDate(), r: luv('luOR'), r2: luv('luO2'), l: luv('luOL') });
-      lineupText(); try { autoCoach(); } catch (_e) {}
-    }
     function trafficInfo() {
-      const vals = ['luTR', 'luT2', 'luTL', 'luOR', 'luO2', 'luOL'].map(luv);
-      if (vals.every(v => v == null)) return null;
-      const n = (v) => v || 0;
-      const [tr, t2, tl, or, o2, ol] = vals;
-      const pair = n(tr) + n(t2) + n(tl) + n(or) + n(o2) + n(ol);
+      const lg = curLeague(); const L = lineupToday();
+      const R = lg ? rosterOf(lg) : [];
+      const on = L.bowling ? new Set(L.bowling) : new Set(R.slice(0, Number(lg && lg.teamSize) || 5).map(p => p.id));
+      const mine = lg && lg.roster ? R.filter(p => on.has(p.id)) : [];
+      const o = L.opp || {}, n = (v) => v || 0;
+      const oppN = n(o.r) + n(o.r2) + n(o.l) + n(o.u) + n(o.p);
+      if (!mine.length && !oppN) return null;
+      const me = myHand();
+      const mates = mine.filter(p => !p.me);
+      const pair = (mine.length || 1) + oppN;
       if (pair < 2) return null;
-      const lefty = (() => { try { return isLeftyBowler(); } catch (_e) { return false; } })();
-      const sameSide = lefty ? n(tl) + n(ol) : n(tr) + n(t2) + n(or) + n(o2);
-      const twoHand = lefty ? 0 : n(t2) + n(o2);
+      // Reactive bowlers on your side wear your line; urethane / plastic push oil down the lane (carrydown).
+      const sameSide = mates.filter(p => p.hand === me && p.ball === 'reactive').length + (me === 'R' ? n(o.r) + n(o.r2) : n(o.l));
+      const twoHand = mates.filter(p => p.style === '2h' && p.ball === 'reactive').length + n(o.r2);
+      const ure = mates.filter(p => p.ball === 'urethane').length + n(o.u);
+      const plastic = mates.filter(p => p.ball === 'plastic').length + n(o.p);
       const others = pair - 1;
-      // Shots on a lane between your frames on it: everyone else on the pair bowls once (~1.6 balls a frame).
-      // Between games the 10th frames add fill balls, so a little more.
-      return { pair, sameSide, twoHand, perGap: Math.round(others * 1.6), gameGap: Math.round(others * 1.75), sameSideShare: others ? Math.max(0, sameSide - 1) / others : null };
+      return { pair, sameSide, twoHand, ure, plastic, carry: ure + plastic, perGap: Math.round(others * 1.6), gameGap: Math.round(others * 1.75), sameSideShare: others ? sameSide / others : null };
     }
     function lineupText() {
       const box = document.getElementById('luTraffic'); if (!box) return;
       const T = trafficInfo();
-      box.textContent = T ? `${T.pair} on the pair: about ${T.perGap} shots go down on each lane between your frames (about ${T.gameGap} between games), ${Math.round(T.sameSideShare * 100)}% of them on your side${T.twoHand ? `, ${T.twoHand} two-handed` : ''}.` : 'Fill in the counts and Coach can estimate how many shots hit your side between your frames.';
+      box.textContent = T ? `${T.pair} on the pair: about ${T.perGap} shots go down on each lane between your frames (about ${T.gameGap} between games). ${T.sameSide} other reactive bowler${T.sameSide === 1 ? '' : 's'} on your side${T.twoHand ? ` (${T.twoHand} two-handed)` : ''}${T.carry ? `; ${T.carry} throw${T.carry === 1 ? 's' : ''} urethane or plastic (carrydown)` : ''}.` : 'Set up your roster and tonight\'s opponent so Coach can estimate how fast your side breaks down.';
     }
-    ['luTR', 'luT2', 'luTL', 'luOR', 'luO2', 'luOL'].forEach(id => { const e = document.getElementById(id); if (e) e.addEventListener('change', lineupSave); });
+    ['luOR', 'luO2', 'luOL', 'luOU', 'luOP'].forEach(id => { const e = document.getElementById(id); if (e) e.addEventListener('change', oppSave); });
+    { const sz = document.getElementById('luSize'); if (sz) sz.addEventListener('change', rosterSave); }
+    { const add = document.getElementById('luAdd'); if (add) add.addEventListener('click', () => { const lg = curLeague(); if (!lg) return; const R = rosterOf(lg); R.push({ id: 'p' + Math.random().toString(36).slice(2, 8), name: '', hand: 'R', style: '1h', ball: 'reactive' }); BT.setLeague(lg.id, { roster: R }); const L = lineupToday(); if (L.bowling) { L.bowling.push(R[R.length - 1].id); BT.lsSet(LINEUP_KEY, L); } renderRoster(); const rows = document.querySelectorAll('#luRoster .gd-ros'); const last = rows.length && rows[rows.length - 1].querySelector('.ros-name'); if (last) last.focus(); lineupText(); }); }
     if (el.league) el.league.addEventListener('change', lineupLoad);
     setTimeout(lineupLoad, 0);
 

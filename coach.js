@@ -1043,7 +1043,9 @@
           const dIn = prof.deeper || 'left', dOut = prof.outside || 'right';
           const small = wear === 'opens' ? ` Keep it small: the ${dIn} opens up on this league.` : wear === 'holds' ? ` The ${dIn} holds on this league, so this move is safe.` : '';
           if (prevOk && (last.lean || 0) >= 1) out.ready = { dir: 'early', text: `⚡ First sign the lane is changing: that one came in higher / read earlier than the two before it. If your next good shot does the same, make the move right away: feet 1 ${dIn}, eyes ½ ${dIn}.${small}` };
-          else if (prevOk && (last.lean || 0) <= -1) out.ready = { dir: 'late', text: `⚡ First sign the lane is changing: that one held longer / came in lighter than the two before it. If your next good shot does the same, make the move right away: feet 1 ${dOut}, eyes ½ ${dOut}.` };
+          else if (prevOk && (last.lean || 0) <= -1) out.ready = { dir: 'late', text: (ctx.traffic && ctx.traffic.carry >= 2)
+            ? `⚡ First sign the lane is changing: that one held longer / came in lighter. With ${ctx.traffic.carry} urethane / plastic bowlers on the pair this is likely carrydown: if the next good shot does the same, try a stronger ball or a touch less speed before moving ${dOut}.`
+            : `⚡ First sign the lane is changing: that one held longer / came in lighter than the two before it. If your next good shot does the same, make the move right away: feet 1 ${dOut}, eyes ½ ${dOut}.` };
         }
       } catch (_e) {}
       // 🔁 Between games: shots on your lane since you were last on it, what usually happens here, and the move to have ready.
@@ -1053,7 +1055,8 @@
         if (gNext >= 2 && inThis < 2) {
           const T = ctx.traffic, dIn = prof.deeper || 'left', dOut = prof.outside || 'right';
           const parts = [];
-          if (T && T.gameGap) parts.push(`About ${T.gameGap} shots have gone down on this lane since you were last on it${T.sameSideShare != null ? `, ${Math.round(T.gameGap * T.sameSideShare)} of them on your side (${T.sameSide} ${T.sameSide === 1 ? 'bowler' : 'bowlers'} who play your side${T.twoHand ? `, ${T.twoHand} two-handed` : ''})` : ''}.`);
+          if (T && T.gameGap) parts.push(`About ${T.gameGap} shots have gone down on this lane since you were last on it${T.sameSideShare != null && T.sameSide ? `, about ${Math.round(T.gameGap * T.sameSideShare)} of them reactive on your side (${T.sameSide} other ${T.sameSide === 1 ? 'bowler' : 'bowlers'}${T.twoHand ? `, ${T.twoHand} two-handed` : ''})` : ''}.`);
+          if (T && T.carry >= 2) parts.push(`${T.carry} on the pair throw urethane or plastic: by now they've pushed oil down the lane, so expect a weaker back end.`);
           const hb = ctx.history && ctx.history.byGame;
           if (hb && hb[1] && hb[gNext]) { const d = Math.round(hb[gNext] - hb[1]); if (Math.abs(d) >= 4) parts.push(`Your game ${gNext} here averages ${Math.abs(d)} pins ${d < 0 ? 'below' : 'above'} game 1${d < 0 ? ': the lanes usually change on you' : ''}.`); }
           const pm = ctx.pastMoves && ctx.pastMoves[gNext];
@@ -1163,6 +1166,7 @@
         const m = sp && sp.match(/Spare to practice: (?:the )?([^.]+)\. You've made (\d+%)/);
         if (m) lines.push(`🎯 Spare: the ${m[1]} (${m[2]} here).`);
       } catch (_e) {}
+      try { const T = ctx.traffic; if (T && T.carry >= 2) lines.push(`🛢️ ${T.carry} on the pair throw urethane or plastic${T.plastic ? ` (${T.plastic} plastic, usually down the middle)` : ''}. They push oil down the lane: as the night goes the back end gets weaker and the lane plays longer, sometimes with an early read in front. Before moving in, try a stronger solid ball, a touch less speed or more rotation. Tap Carrydown when you see it.`); } catch (_e) {}
       if (pat && pat.volumeClass === 'light') lines.push('🛢️ Light oil: watch for high hits by game 2.');
       if (pat && pat.volumeClass === 'heavy') lines.push('🛢️ Heavy oil: the lane changes slowly. Don\'t chase it early.');
       const bt = bagTiming(ctx, pat);

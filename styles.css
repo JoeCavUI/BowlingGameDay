@@ -607,9 +607,16 @@ select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }
 
 /* Game Day: lineup, changed chips, heads-up, early warning, options (v107) */
 .gd-lineup{margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08)}
-.gd-lu-head,.gd-lu-row{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:6px;align-items:center;margin-top:6px}
-.gd-lu-head span{font-size:12px;opacity:.75;text-align:center}
-.gd-lu-row select{padding:8px 4px;text-align:center}
+.gd-team-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px}
+.gd-team-head select{width:64px;padding:6px 4px;display:inline-block;margin-left:4px}
+.gd-ros{display:grid;grid-template-columns:22px minmax(0,1fr) 50px 54px 92px 18px;gap:4px;align-items:center;margin-top:6px}
+.gd-ros .input{padding:7px 4px;font-size:14px;min-width:0}
+.gd-ros select.input{padding-right:2px;background-position:right 2px center}
+.gd-ros input[type=checkbox]{width:20px;height:20px}
+.ros-del{background:none;border:none;color:inherit;opacity:.6;font-size:16px;padding:0}
+.gd-opp-head,.gd-opp-row{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:6px}
+.gd-opp-head span{font-size:11px;opacity:.75;text-align:center}
+.gd-opp-row select{padding:7px 2px;text-align:center;min-width:0}
 .gd-changed{margin-top:10px}
 .gd-chg{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .gd-chg button,.gd-opt{background:rgba(255,255,255,.05);color:inherit;border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:8px 12px;font:inherit;font-size:14px}

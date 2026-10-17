@@ -60,7 +60,8 @@ Then open http://localhost:3000
 
 ## Changes in v107-beta44 (not published yet): staying ahead of the lanes, 💬 Send feedback
 
-- **Who's on the pair** (Game Day → Tonight): right-handed, two-handed and left-handed counts for your team (saved on the league) and tonight's opponent (saved for today). Coach estimates how many shots go down on each lane between your frames and between games, and how many are on your side.
+- **Who's on the pair** (Game Day → Tonight): your team's roster is saved on the league (name, right/left, one- or two-handed, reactive/urethane/plastic) with a team size (Monday 4, Thursday 5); tick who's bowling tonight. Tonight's opponent is counted by right / two-handed / left / urethane / plastic. Coach estimates the shots on each lane between your frames and games, how many reactive balls are on your side, and how many urethane/plastic balls are pushing oil down the lane.
+- **🛢️ Carrydown heads-up:** with 2 or more urethane/plastic bowlers on the pair, the starting plan, the game 2/3 heads-up and the early warning say to expect a weaker back end and a longer lane, and to try a stronger solid ball, a touch less speed or more rotation before moving in.
 - **🔁 Between-games heads-up:** at the start of games 2 and 3, Coach shows the shots on your lane since you were last on it (and on your side), how that game usually goes at this house, when you've moved in that game on past nights here, where you finished, and the move to have ready if your first good shot reads early or light.
 - **⚡ Early warning:** the first good shot that reads differently after good ones gets "if your next good shot does the same, make the move right away", with the move.
 - **Ways to do it:** when Coach calls a move it lists the top 2–3 ways (feet and eyes, speed, loft, ball...), ranked by the lane and your LASER ratings. Tap the one you'll use.
