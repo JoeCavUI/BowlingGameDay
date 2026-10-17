@@ -543,8 +543,7 @@ table.cmp td:first-child, table.cmp th:first-child{ width:84px; min-width:0; fon
 
 /* Tuned (slider-adjusted) marker */
 .cdot{ position:absolute; }
-.cdot .ctuned{ position:static; display:inline; font-size:10px; font-weight:900; color:#0f1116; line-height:1; vertical-align:top; margin-left:0; letter-spacing:-1px; }
-.cdot.tuned{ box-shadow:0 0 0 2px #ffd166; letter-spacing:-.5px; }
+.cdot .ctuned{ position:absolute; top:-7px; right:-5px; font-size:13px; font-weight:900; color:#ffd166; line-height:1; text-shadow:0 0 2px #000; }
 .ctuned-t{ color:#ffd166; margin-left:2px; font-weight:900; }
 
 /* Lane + frame beside the pin deck (v99) */
