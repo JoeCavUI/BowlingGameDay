@@ -235,12 +235,20 @@
     }
     if (!why.length) return null;
     const level = score >= 1 ? 'good' : score <= -2 ? 'switch' : 'watch';
-    const label = { good: 'Good matchup', watch: 'Watch', switch: 'Not a matchup tonight' }[level];
+    // Labels say WHICH game: a ball that's great in games 1-2 and fades in game 3 gets a game-3 warning, not "bad ball".
+    const G_ = GL[gk], strongHere = m && m.strong && m.strong.includes(gk);
+    const label = level === 'good' ? `Good matchup for ${G_}`
+      : level === 'watch' ? (risk ? `Watch: ${G_} drop-off` : 'Watch')
+      : risk ? `Fading in ${G_}, as it usually does here: switch`
+      : strongHere ? `Off tonight (usually strong here in ${G_})`
+      : `Not matching ${G_} so far`;
     const roleBall = (re) => Object.keys(bagRoles).find(n => n !== ball && re.test(bagRoles[n] || ''));
     let next = '';
     if (level === 'switch') {
       const alt = dir === 'early' ? roleBall(/\blater\b|cleaner/i) : dir === 'long' ? roleBall(/earlier|more ball/i) : roleBall(gk >= 3 ? /Burn/ : /Transition/);
       next = dir === 'early' ? `It's reading early on good shots: move in with it, or go to a cleaner / later ball${alt ? ` (${alt})` : ''}.` : dir === 'long' ? `It's not reading on good shots: move right with it, or go to a stronger / earlier ball${alt ? ` (${alt})` : ''}.` : `Have ${alt || 'your next ball'} ready.`;
+    } else if (level === 'watch' && dir && !risk) {
+      next = `It usually does well here in ${GL[gk]}, so make the line move first (${dir === 'early' ? 'in' : 'right'}); change balls only if good shots keep reading ${dir === 'early' ? 'early' : 'long'}.`;
     } else if (risk) {
       const alt = roleBall(gk >= 3 ? /Burn/ : /Transition/);
       next = riskText(m, gk) + (alt ? ` Your ${gk >= 3 ? 'burn' : 'transition'} ball: ${alt}.` : '');
