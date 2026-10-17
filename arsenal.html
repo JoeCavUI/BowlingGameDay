@@ -1656,7 +1656,7 @@
       lastSuggestion = { count: chosen.length, chosen: chosen.map(x => ({ name: x.name, roles: roleMap[x.name] || [], whatIf: !!(x.row && x.row.__proposed) })) };
       const sec = (res.sections || []).find(s => /bag for/i.test(s.h));
       const ball = (res.sections || []).find(s => s.h === 'Ball');
-      const why = [...(ball ? ball.items.slice(0, 1) : []), ...(sec ? sec.items.filter(t => !/^<b>(Start with|Earlier|Later)/.test(t) && !/The bag \(Early/.test(t) && !/Plus your spare/.test(t)).slice(0, 4) : [])];
+      const why = [...(ball ? ball.items.slice(0, 1) : []), ...(sec ? sec.items.filter(t => !/^<b>(Start with|Earlier|Later|Fresh|Transition|Burn)/.test(t) && !/The bag \(Early|<b>The bag<\/b>/.test(t) && !/Plus your spare/.test(t)).slice(0, 4) : [])];
       const where = [res.house, res.sub && res.sub[0] && /^Lanes/.test(res.sub[0]) ? res.sub[0] : '', cx.league, cx.patternName].filter(Boolean).map(esc).join(' · ');
       const body = chosen.map((x, i) => `<div class="list-item" style="margin-bottom:8px"><b>${i + 1}. ${esc(x.name)}</b><div class="small dim">${esc((roleMap[x.name] || []).join(' • '))}</div></div>`).join('');
       el.roleSuggestion.innerHTML = `<div class="panel" style="padding:12px;background:#111"><div style="font-weight:900">${chosen.length}-ball bag: ${where}</div><div class="small dim" style="margin-top:4px">Same pick as your Game Plan and Game Day for this house and pair.</div><ul class="small" style="margin:8px 0 0;padding-left:18px">${why.map(t => `<li>${t}</li>`).join('')}</ul><div style="margin-top:10px">${body}</div>${renderSaveBagBox(chosen.length)}</div>`;

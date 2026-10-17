@@ -96,26 +96,50 @@
       return { n, t, os, rs, po, pred, predK: ph ? ph.k : 0, score: score + pAdj };
     }).sort((p, q) => q.score - p.score);
     if (!scored.length) return null;
-    // Pick: the best ball first, then alternate sides of it (what the lanes need first), each at least 10 points
-    // apart on the Early → Late scale from everything picked, so every ball has its own job.
+    // Pick by job, from your own results here: the start ball (fresh, game 1), then the ball that has scored best
+    // in game 2s (transition) and game 3s (burn). A ball needs 4+ games in that condition to count; otherwise
+    // Coach falls back to motion spread. Every ball still sits 10+ points from the others on the Early → Late scale.
     const fbI = ctx.firstBall ? scored.findIndex(s => s.n === ctx.firstBall) : -1;
     if (fbI > 0) scored.unshift(scored.splice(fbI, 1)[0]); // same first ball as the Ball section
-    const picked = [scored[0]], x0 = scored[0].t.x ?? 50;
+    const COND = { fresh: g => g.gn === 1, transition: g => g.gn === 2, burn: g => g.gn >= 3 };
+    const CL = { fresh: 'game 1s', transition: 'game 2s', burn: 'game 3s' };
+    const cBase = {}; Object.keys(COND).forEach(c => { const gs = G.filter(COND[c]); cBase[c] = gs.length ? hist.summary(gs).avg : null; });
+    scored.forEach(sc => {
+      const pps = Object.keys(map).filter(p => map[p] === sc.n); sc.cond = {};
+      Object.keys(COND).forEach(c => {
+        const gs = G.filter(g => COND[c](g) && pps.includes(hist.mainBall(g)));
+        if (gs.length >= 4 && cBase[c] != null) { const s2 = hist.summary(gs); sc.cond[c] = { n: gs.length, avg: s2.avg, rel: (s2.avg - cBase[c]) * gs.length / (gs.length + K) }; }
+      });
+    });
+    const picked = [scored[0]], x0 = scored[0].t.x ?? 50; const job = new Map([[scored[0], 'fresh']]);
+    const spaced = (s) => !picked.includes(s) && s.t.x != null && Math.min(...picked.map(p => Math.abs((p.t.x ?? 50) - s.t.x))) >= 10;
     const order = lean === 1 ? ['earlier', 'later'] : ['later', 'earlier']; // reads early (-1) or neutral: the later / smoother ball comes first
+    const bySide = (want, pool) => { const side = pool.filter(s => want === 'earlier' ? s.t.x < x0 : s.t.x > x0); const P2 = side.length ? side : pool; return P2.sort((p, q) => (q.score + (picked.some(z => z.t.box === q.t.box) ? 0 : 2)) - (p.score + (picked.some(z => z.t.box === p.t.box) ? 0 : 2)))[0]; };
+    for (const c of ['transition', 'burn']) {
+      if (picked.length >= Math.min(count, scored.length)) break;
+      const ok = scored.filter(spaced); if (!ok.length) break;
+      const proven = ok.filter(s => s.cond[c] && s.cond[c].rel > 0).sort((p, q) => (q.cond[c].rel + q.score * 0.1) - (p.cond[c].rel + p.score * 0.1));
+      const pick = proven.length ? proven[0] : bySide(order[(picked.length - 1) % 2], ok);
+      picked.push(pick); job.set(pick, proven.length ? c : c + '?');
+    }
     while (picked.length < Math.min(count, scored.length)) {
-      const want = order[(picked.length - 1) % 2];
-      const ok = scored.filter(s => !picked.includes(s) && s.t.x != null && Math.min(...picked.map(p => Math.abs((p.t.x ?? 50) - s.t.x))) >= 10);
-      const side = ok.filter(s => want === 'earlier' ? s.t.x < x0 : s.t.x > x0);
-      const pool = side.length ? side : ok; if (!pool.length) break;
-      pool.sort((p, q) => (q.score + (picked.some(z => z.t.box === q.t.box) ? 0 : 2)) - (p.score + (picked.some(z => z.t.box === p.t.box) ? 0 : 2)));
-      picked.push(pool[0]);
+      const ok = scored.filter(spaced); if (!ok.length) break;
+      picked.push(bySide(order[(picked.length - 1) % 2], ok));
     }
     const first = picked[0];
     const ordered = picked.slice().sort((p, q) => (p.t.x ?? 50) - (q.t.x ?? 50));
-    const role = (p) => p === first ? 'Start with' : (p.t.x ?? 50) < x0 ? 'Earlier / more ball' : 'Later / cleaner (transition)';
+    const motion = (p) => (p.t.x ?? 50) < x0 ? 'earlier / more ball' : 'later / cleaner';
+    const role = (p) => { const j = job.get(p);
+      if (j === 'fresh') return 'Fresh (game 1): start with';
+      if (j === 'transition') return 'Transition (game 2)';
+      if (j === 'burn') return 'Burn (game 3)';
+      if (j === 'transition?') return `Transition (${motion(p)})`;
+      if (j === 'burn?') return `Burn (${motion(p)})`;
+      return (p.t.x ?? 50) < x0 ? 'Earlier / more ball' : 'Later / cleaner'; };
     const gm = (n) => `${n} game${n === 1 ? '' : 's'}`;
-    const why = (p) => [p.os ? `${p.os.avg} over ${gm(p.os.n)} here${p.rs ? ` (${p.rs.avg} in the last 12 months)` : ''}` : `${p.predK ? `no games on it here; other balls with its cover / core / layout averaged about ${Math.round(p.pred)} (not this ball's own result)` : 'no record here yet'}`, p.po ? `${p.po.avg} over ${gm(p.po.n)} on this pair` : ''].filter(Boolean).join('; ');
-    items.push('<b>The bag (Early → Late):</b>');
+    const condWhy = (p) => { const j = String(job.get(p) || '').replace('?', ''); const c = p.cond && p.cond[j]; return c ? `${CL[j]} here: ${c.avg} over ${gm(c.n)} (your ${CL[j]} here average ${cBase[j]})` : (job.get(p) || '').endsWith('?') ? `no ball that fits the bag has beaten your ${CL[j]} average here (4+ games), so this one is picked for its motion` : ''; };
+    const why = (p) => [condWhy(p), p.os ? `${p.os.avg} over ${gm(p.os.n)} here${p.rs ? ` (${p.rs.avg} in the last 12 months)` : ''}` : `${p.predK ? `no games on it here; other balls with its cover / core / layout averaged about ${Math.round(p.pred)} (not this ball's own result)` : 'no record here yet'}`, p.po ? `${p.po.avg} over ${gm(p.po.n)} on this pair` : ''].filter(Boolean).join('; ');
+    items.push('<b>The bag</b> (each ball has a job: fresh, transition, burn; listed Early → Late):');
     ordered.forEach(p => items.push(`<b>${role(p)}: ${esc(p.n)}</b> · ${[p.t.cover, p.t.core && p.t.core + ' core', p.t.layout, p.t.box].filter(Boolean).map(esc).join(', ')}. ${why(p)}.`));
     if (picked.length < count) items.push(`Only ${picked.length} of your balls read far enough apart to be worth bringing; more would overlap.`);
     items.push('Plus your spare ball.');

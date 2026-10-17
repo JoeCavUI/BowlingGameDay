@@ -36,8 +36,10 @@
     <div class="grid-2" style="margin-top:14px">
       <div class="panel">
         <h2>Get set up</h2>
-        <div class="small">Do these once. Game Day needs steps 2–4 before you can log shots. New here? <a href="guide.html" style="color:var(--accent);font-weight:700">Read the step-by-step guide →</a></div>
+        <div class="small">Do these once, in order (the tabs at the top run in the same order). New here? <a href="guide.html" style="color:var(--accent);font-weight:700">Read the step-by-step guide →</a></div>
         <ul class="checklist" id="checklist"></ul>
+        <h2 style="margin-top:16px">Every league night</h2>
+        <ul class="checklist" id="nightlist"></ul>
       </div>
 
       <div class="panel">
@@ -151,12 +153,25 @@
     function renderChecklist() {
       const s = BT.setupStatus();
       const steps = [
-        { done: s.bowler, title: 'Enter your bowler info', sub: 'Speed, rev rate, PAP, tilt, rotation.', href: 'bowler.html', link: 'Bowler' },
-        { done: s.houses && s.patterns, title: 'Add your bowling house and an oil pattern', sub: s.houses && !s.patterns ? 'House added. Now add a pattern.' : 'Example: your league house + its house shot.', href: 'oil.html', link: 'Oil' },
-        { done: s.customBalls > 0 || s.ballList > 0, title: 'Add your balls', sub: 'Upload your ball spreadsheet (CSV) or tap “+ Add a ball”.', href: 'arsenal.html', link: 'Arsenal' },
-        { done: s.sets, title: 'Pack your bag (the balls you bring tonight)', sub: 'Tap the balls, name the bag, save it.', href: 'analyze.html', link: 'Bag' },
-        { done: s.sessions > 0, title: 'Bowl! Log shots on Game Day and save the session', sub: s.sessions ? `${s.sessions} session${s.sessions === 1 ? '' : 's'} saved.` : 'Saved sessions show up in Scores.', href: 'gameday.html', link: 'Game Day' },
+        { done: s.bowler, title: 'Enter your bowler info', sub: 'Hand, speed, rev rate, PAP, tilt, rotation and your LASER ratings.', href: 'bowler.html', link: 'Bowler' },
+        { done: s.customBalls > 0 || s.ballList > 0, title: 'Add your balls', sub: 'Upload your ball spreadsheet (CSV) or tap “+ Add a ball”. Mark retired balls.', href: 'arsenal.html', link: 'Arsenal' },
+        { done: s.history, title: 'Import your PinPal history', sub: 'Scores → History → Import PinPal backup, then match ball names. The Game Plan, bag picks and Coach all learn from it. Re-import after each league night.', href: 'scores.html#histPanel', link: 'Scores', optional: true },
+        { done: s.houses && s.patterns, title: 'Add your house and its oil pattern', sub: s.houses && !s.patterns ? 'House added. Now add a pattern.' : 'Your league house + its house shot (length, volume, ratio).', href: 'oil.html', link: 'Oil' },
       ];
+      const night = [
+        { title: 'Game Plan', sub: 'House, lanes, league, oil, how many balls. Read the plan, then tap “Save this bag & go to Game Day”.', href: 'plan.html', link: 'Plan' },
+        { title: 'Game Day → Tonight', sub: 'Check the 3 steps: where you’re bowling, your bag, who’s on the pair.', href: 'gameday.html', link: 'Game Day' },
+        { title: 'Practice, then bowl', sub: 'Start with Coach’s ball and line. Log every shot with your reads; Coach stays ahead of the lanes.', href: 'gameday.html', link: 'Game Day' },
+        { title: 'Scores', sub: s.sessions ? `${s.sessions} session${s.sessions === 1 ? '' : 's'} saved. Enter scores; run the PinPal check once the night is in PinPal.` : 'Enter scores; run the PinPal check once the night is in PinPal.', href: 'scores.html', link: 'Scores' },
+      ];
+      BT.$('#nightlist').innerHTML = night.map((st, i) => `
+        <li>
+          <span class="mark">${i + 1}</span>
+          <div>
+            <div><b>${st.title}</b></div>
+            <div class="small">${st.sub} <a href="${st.href}">Open ${st.link} →</a></div>
+          </div>
+        </li>`).join('');
       BT.$('#checklist').innerHTML = steps.map((st, i) => `
         <li class="${st.done ? 'done' : ''}">
           <span class="mark">${st.done ? '✓' : (i + 1)}</span>

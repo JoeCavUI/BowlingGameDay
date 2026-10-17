@@ -53,6 +53,7 @@
         <button class="btn" id="pPdf">📄 Save as PDF</button>
         <button class="btn secondary" id="pSpeak" type="button">🔊 Read aloud</button>
         <button class="btn secondary" id="pShare">Share text</button>
+        <button class="btn" id="pSaveBag" type="button" style="display:none">🎒 Save this bag &amp; go to Game Day</button>
         <a class="btn secondary" href="gameday.html">Go to Game Day →</a>
       </div>
       <div class="small" style="margin-top:8px">On iPhone: <b>Save as PDF</b> opens the print screen. Tap the share icon at the top, then <b>Save to Files</b> (or pinch out on the preview first).</div>
@@ -137,7 +138,24 @@
       const foot = `<div class="pl-foot">${p.basedOn && p.basedOn.length ? 'Based on ' + p.basedOn.map(esc).join(', ') + '. ' : ''}Built by Coach, ${today}.</div>`;
       $('#planOut').innerHTML = `<div class="panel pl-sheet">${head}${empty}${secs}${foot}</div>`;
       $('#planActions').style.display = '';
+      $('#pSaveBag').style.display = p.recBag && p.recBag.length ? '' : 'none';
     }
+    // Save the plan's bag (with the house, lanes, league and oil) and open Game Day set up for it.
+    $('#pSaveBag').addEventListener('click', () => {
+      if (!plan || !plan.recBag || !plan.recBag.length) return;
+      const o = BT.lsGet(LAST, {}) || {};
+      const def = `${(o.house || 'My').replace(/ Lanes?$/i, '')}${o.lanes ? ' ' + o.lanes.replace('-', ' & ') : ''} bag`;
+      const name = (prompt(`Name this ${plan.recBag.length}-ball bag:`, def) || '').trim(); if (!name) return;
+      const sets = BT.lsGet(BT.KEYS.ARSENAL_SETS, []) || [];
+      const ex = sets.find(x => String(x.name || '').toLowerCase() === name.toLowerCase());
+      if (ex && !confirm(`Replace your saved bag "${ex.name}"?`)) return;
+      const ctx = { house: o.house || '', lanes: o.lanes || '', leagueId: o.leagueId || '', patternName: o.patternName || '' };
+      const payload = { id: ex ? ex.id : `set_${Math.random().toString(36).slice(2, 10)}`, name, balls: plan.recBag.slice(), roles: plan.recRoles || {}, savedAt: Date.now(), source: 'plan', ctx };
+      BT.lsSet(BT.KEYS.ARSENAL_SETS, ex ? sets.map(x => x.id === ex.id ? payload : x) : [payload, ...sets]);
+      BT.lsSet('bt_gameday_preferred_set_v1', name);
+      BT.lsSet('bt_gameday_handoff_v1', Object.assign({}, ctx, { set: name, at: Date.now() }));
+      location.href = 'gameday.html';
+    });
 
     function buildNow() {
       const lgO = $('#pLeague').value ? BT.getLeagueById($('#pLeague').value) : null;

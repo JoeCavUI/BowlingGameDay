@@ -58,8 +58,12 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
-## Changes in v108-beta45 (not published yet): Tonight in 3 steps, bags remember their house
+## Changes in v108-beta45: Tonight in 3 steps, bags remember their house, bag picks by lane condition, tabs in order
 
+- **Tabs in order:** Home · Bowler · Arsenal · Oil · Plan · Bag · Game Day · Scores, then Angle and Guide (tools you use any time).
+- **Home:** "Get set up" (once, in order: Bowler, Arsenal, PinPal history, Oil) and "Every league night" (Game Plan → Game Day Tonight → practice and bowl → Scores).
+- **Game Plan → 🎒 Save this bag & go to Game Day:** saves the plan's bag with the house, lanes, league and oil, and opens Game Day set up for it.
+- **Bag picks by lane condition:** the start ball (fresh, game 1), then the ball that has beaten your game-2 average here (transition) and your game-3 average here (burn), 4+ games each. Where no ball has, Coach picks for motion spread and says so. Every ball still sits 10+ points apart on the Early → Late scale.
 - **Tonight is 3 numbered steps:** ① Where you're bowling (house, league, lanes, oil), ② Your bag, ③ Who's on the pair (optional). Each step shows ✓ done or what it still needs, and the house is now a must-have.
 - **A bag remembers the house it was built for.** Arsenal → Suggest my bag saves the house, lanes, league and oil with the bag. "Save & go to Game Day" sets Tonight to that house, so Coach's pregame plan is for the right house.
 - **Bag / house mismatch warning:** pick a bag built for another house and Game Day asks: Bowl at Sterling, or Keep Shelby. Bags for tonight's house are listed first; changing house switches to your newest bag for that house.

@@ -1496,12 +1496,12 @@
       { key: 'home', label: 'Home', href: 'index.html' },
       { key: 'bowler', label: 'Bowler', href: 'bowler.html' },
       { key: 'arsenal', label: 'Arsenal', href: 'arsenal.html' },
-      { key: 'analyze', label: 'Bag', href: 'analyze.html' },
       { key: 'oil', label: 'Oil', href: 'oil.html' },
-      { key: 'angle', label: 'Angle', href: 'angle.html' },
       { key: 'plan', label: 'Plan', href: 'plan.html' },
+      { key: 'analyze', label: 'Bag', href: 'analyze.html' },
       { key: 'gameday', label: 'Game Day', href: 'gameday.html' },
       { key: 'scores', label: 'Scores', href: 'scores.html' },
+      { key: 'angle', label: 'Angle', href: 'angle.html' },
       { key: 'guide', label: 'Guide', href: 'guide.html' },
     ];
     nav.innerHTML = items.map(i => {
@@ -1618,6 +1618,7 @@
       customBalls: customBalls().length,
       ballList: ((lsGet(KEYS.CSV_CACHE, null) || {}).rows || []).length,
       sessions: arr(KEYS.GAME_SESSIONS).length,
+      history: (() => { try { const h = JSON.parse(localStorage.getItem('bt_history_v1') || 'null'); return !!(h && (h.games || h.g || Object.keys(h).length)); } catch (_e) { return false; } })(),
     };
   }
 
