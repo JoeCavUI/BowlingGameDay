@@ -637,3 +637,17 @@ select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }
 .gd-step-st.need{color:var(--danger)}
 .gd-bagwarn{margin-top:8px;padding:10px;border-radius:10px;background:rgba(255,170,0,.12);border:1px solid rgba(255,170,0,.45);font-size:14px}
 .gd-handoff{margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(46,157,91,.15);border:1px solid rgba(46,157,91,.5)}
+
+/* Insight: matchup meter, house notes */
+.ins-notes{list-style:none;padding:0;margin:8px 0 0}
+.ins-note{padding:8px 0;border-top:1px solid rgba(255,255,255,.08)}
+.ins-note:first-child{border-top:none}
+.ins-del{background:none;border:none;color:var(--accent);font-size:13px;padding:4px 0;text-decoration:underline}
+.ins-add{display:flex;gap:8px;margin-top:10px}
+.ins-add .input{flex:1;min-width:0}
+.gd-meter{margin:0 0 8px;padding:8px 10px;border-radius:10px;font-size:14px;border:1px solid rgba(255,255,255,.18)}
+.gd-meter.good{background:rgba(46,157,91,.15);border-color:rgba(46,157,91,.55)}
+.gd-meter.watch{background:rgba(255,196,0,.12);border-color:rgba(255,196,0,.5)}
+.gd-meter.switch{background:rgba(255,107,107,.14);border-color:rgba(255,107,107,.6)}
+.gd-notes{margin-top:8px}
+@media print{.ins-del{display:none}}

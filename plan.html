@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Plan</title>
-  <link rel="stylesheet" href="styles.css?v=108" />
+  <link rel="stylesheet" href="styles.css?v=109" />
 </head>
 <body data-page="plan">
   <div class="navlinks"></div>
@@ -60,11 +60,12 @@
     </div>
   </div>
 
-  <script src="app.js?v=108"></script>
-  <script src="pinpal.js?v=108"></script>
-  <script src="history.js?v=108"></script>
-  <script src="chart.js?v=108"></script>
-  <script src="plan.js?v=108"></script>
+  <script src="app.js?v=109"></script>
+  <script src="pinpal.js?v=109"></script>
+  <script src="history.js?v=109"></script>
+  <script src="chart.js?v=109"></script>
+  <script src="plan.js?v=109"></script>
+  <script src="insight.js?v=109"></script>
   <script>
   (function () {
     BT.renderNav('plan');
@@ -130,13 +131,40 @@
     });
     $('#pWear').addEventListener('change', () => { if ($('#pLeague').value) BT.setLeague($('#pLeague').value, { wear: $('#pWear').value }); });
 
+    // 🎯 Matchup & risk, 📓 your PinPal notes, 🧪 your house notes (tested against your games).
+    function insightHtml(p) {
+      if (!window.BTInsight) return '';
+      const o = BT.lsGet(LAST, {}) || {}, house = o.house || '';
+      if (!house) return '';
+      const I = BTInsight, out = [];
+      const bag = (p.recBag && p.recBag.length ? p.recBag : []).slice();
+      if (p.firstBall && !bag.includes(p.firstBall)) bag.unshift(p.firstBall);
+      const items = bag.map(b => { const m = I.ballByGame(house, b); if (!m || !m.n) return ''; const risk = I.riskText(m); const role = p.recRoles && p.recRoles[b] ? ` <span class="small dim">(${esc(p.recRoles[b])})</span>` : '';
+        return `<li><b>${esc(b)}</b>${role}: ${[1, 2, 3].filter(n => m.g[n]).map(n => `game ${n} ${m.g[n].avg} <span class="dim">(${m.g[n].n})</span>`).join(' · ')}.${risk ? ` ⚠️ ${esc(risk)}` : m.strong && m.strong.length ? ` ✅ Above your average here in game ${m.strong.join(' & ')}.` : ''}</li>`; }).filter(Boolean);
+      if (items.length) out.push(`<section class="pl-sec"><h3><span class="pl-ic">🎯</span>Matchup &amp; risk by game</h3><p>How each ball has scored in game 1, 2 and 3 here (number of games in brackets). In Game Day, Coach's matchup meter starts from this and updates every shot from your reads.</p><ul>${items.join('')}</ul></section>`);
+      const pn = I.pinpalNotes(house);
+      if (pn && pn.lines.length) out.push(`<section class="pl-sec"><h3><span class="pl-ic">📓</span>From your PinPal notes here</h3><p>${pn.n} of ${pn.games} games here have notes. "14 over 5" is read as slide board 14 over breakpoint 5.</p><ul>${pn.lines.map(l => `<li>${l}</li>`).join('')}</ul></section>`);
+      out.push(`<section class="pl-sec" id="notesSec"><h3><span class="pl-ic">🧪</span>Your notes for ${esc(house)}</h3><p>What you've noticed here, tested against your games: ✅ supported · 🟡 partly · ❌ not supported · 👀 watch for (needs Game Day reads) · ⏳ not enough data.</p>${I.notesHtml(house, { edit: true })}
+        <div class="no-print ins-add"><input class="input" id="noteTxt" placeholder="e.g. game 3 move back outside with the right ball" /><button class="btn secondary" id="noteAdd" type="button">Add note</button></div></section>`);
+      return out.join('');
+    }
+    function wireNotes() {
+      const add = $('#noteAdd'); if (!add) return;
+      const house = (BT.lsGet(LAST, {}) || {}).house || '';
+      const go = () => { const t = $('#noteTxt').value.trim(); if (!t) return; BTInsight.addNote(house, t); render(plan); const ns = $('#notesSec'); if (ns) ns.scrollIntoView({ block: 'center' }); };
+      add.addEventListener('click', go);
+      $('#noteTxt').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+      document.querySelectorAll('#notesSec [data-del]').forEach(b => b.addEventListener('click', () => { if (confirm('Remove this note?')) { BTInsight.removeNote(b.dataset.del); render(plan); } }));
+    }
     function render(p) {
       const today = BT.localDate();
       const head = `<div class="pl-head"><div class="pl-title">${esc(p.title)}</div><div class="pl-sub">${p.sub.map(esc).join(' · ')}</div></div>`;
       const empty = p.empty ? `<div class="pl-empty">${p.empty}</div>` : '';
       const secs = p.sections.map(s => `<section class="pl-sec"><h3><span class="pl-ic">${s.icon}</span>${esc(s.h)}</h3>${s.lead ? `<p>${s.lead}</p>` : ''}<ul>${s.items.map(i => `<li>${i}</li>`).join('')}</ul></section>`).join('');
+      const extra = insightHtml(p);
       const foot = `<div class="pl-foot">${p.basedOn && p.basedOn.length ? 'Based on ' + p.basedOn.map(esc).join(', ') + '. ' : ''}Built by Coach, ${today}.</div>`;
-      $('#planOut').innerHTML = `<div class="panel pl-sheet">${head}${empty}${secs}${foot}</div>`;
+      $('#planOut').innerHTML = `<div class="panel pl-sheet">${head}${empty}${secs}${extra}${foot}</div>`;
+      wireNotes();
       $('#planActions').style.display = '';
       $('#pSaveBag').style.display = p.recBag && p.recBag.length ? '' : 'none';
     }

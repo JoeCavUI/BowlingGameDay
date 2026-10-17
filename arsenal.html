@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Arsenal</title>
-  <link rel="stylesheet" href="styles.css?v=108" />
+  <link rel="stylesheet" href="styles.css?v=109" />
 </head>
 <body data-page="arsenal">
   <div class="navlinks"></div>
@@ -350,12 +350,12 @@
     </div>
   </div>
 
-  <script src="app.js?v=108"></script>
-  <script src="coach.js?v=108"></script>
-  <script src="chart.js?v=108"></script>
-  <script src="pinpal.js?v=108"></script>
-  <script src="history.js?v=108"></script>
-  <script src="plan.js?v=108"></script>
+  <script src="app.js?v=109"></script>
+  <script src="coach.js?v=109"></script>
+  <script src="chart.js?v=109"></script>
+  <script src="pinpal.js?v=109"></script>
+  <script src="history.js?v=109"></script>
+  <script src="plan.js?v=109"></script>
   <script>
     BT.renderNav('arsenal');
 
@@ -1309,7 +1309,7 @@
       if (existing && !confirm(`Replace your saved bag "${existing.name}"?`)) return null;
       const cx = ctxValue(); const lgId = BT.$('#ctxLeague') ? BT.$('#ctxLeague').value : '';
       const ctx = cx.house ? { house: cx.house, lanes: cx.lanes, leagueId: lgId, patternName: cx.patternName } : null;
-      const payload = { id: existing ? existing.id : `set_${Math.random().toString(36).slice(2, 10)}`, name, balls: names, savedAt: Date.now(), source: 'coach', ctx };
+      const payload = { id: existing ? existing.id : `set_${Math.random().toString(36).slice(2, 10)}`, name, balls: names, savedAt: Date.now(), source: 'coach', ctx, roles: Object.fromEntries((lastSuggestion.chosen || []).map(c => [c.name, (c.roles || [])[0] || ''])) };
       const next = existing ? list.map(x => x.id === payload.id ? payload : x) : [payload, ...list];
       BT.lsSet(BT.KEYS.ARSENAL_SETS, next);
       BT.lsSet(PREFERRED_SET_KEY, name);

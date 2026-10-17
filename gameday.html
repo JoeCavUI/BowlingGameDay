@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=108" />
+  <link rel="stylesheet" href="styles.css?v=109" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -281,12 +281,13 @@
     </div>
   </div>
 
-  <script src="app.js?v=108"></script>
-  <script src="coach.js?v=108"></script>
-  <script src="pinpal.js?v=108"></script>
-  <script src="history.js?v=108"></script>
-  <script src="chart.js?v=108"></script>
-  <script src="plan.js?v=108"></script>
+  <script src="app.js?v=109"></script>
+  <script src="coach.js?v=109"></script>
+  <script src="pinpal.js?v=109"></script>
+  <script src="history.js?v=109"></script>
+  <script src="chart.js?v=109"></script>
+  <script src="plan.js?v=109"></script>
+  <script src="insight.js?v=109"></script>
   <script>
     BT.renderNav('gameday');
     BT.wireReadAloud(document.getElementById('coachSpeak'), () => ((document.getElementById('coachText') || {}).innerText || '').split('\n').filter(l => !/^(Why & what's next|What Coach is using)/i.test(l.trim())).join('\n'));
@@ -1944,7 +1945,18 @@ function saveCurrentSessionDraft() {
       let moreOpen = false; try { moreOpen = localStorage.getItem('bt_gd_coach_more_open') === '1'; } catch (_e) {}
       const nNotes = (r.notes || []).length;
       const headsHtml = r.heads ? `<div class="gd-heads">${escapeHtml(r.heads.text)}</div>` : '';
-      el.coachText.innerHTML = headsHtml + `
+      // 🎯 Matchup meter for the ball in your hand: history here for this game, then tonight's reads.
+      let meterHtml = '', notesBlock = '';
+      try {
+        if (window.BTInsight && el.house.value) {
+          const setObj = (BT.lsGet(BT.KEYS.ARSENAL_SETS, []) || []).find(x => x.name === el.set.value) || {};
+          const M = BTInsight.meter({ shots: sessionShots.slice().reverse(), ball: el.ball.value, gameNow: currentGameNumber(), house: el.house.value, bagRoles: setObj.roles || {} });
+          if (M) meterHtml = `<div class="gd-meter ${M.level}"><b>🎯 ${escapeHtml(M.ball)}: ${escapeHtml(M.label)}</b><div class="small" style="opacity:1">${escapeHtml(M.why.join(' · '))}.</div>${M.next ? `<div class="small" style="opacity:1;margin-top:3px"><b>${escapeHtml(M.next)}</b></div>` : ''}</div>`;
+          const N = BTInsight.notesFor(el.house.value);
+          notesBlock = `<details class="gd-notes"><summary class="small" style="cursor:pointer"><b>📝 Your notes for ${escapeHtml(el.house.value)}</b>${N.length ? ` (${N.length})` : ''}</summary>${BTInsight.notesHtml(el.house.value)}<button type="button" class="btn secondary" id="gdNoteAdd" style="margin-top:6px">+ Add a note</button></details>`;
+        }
+      } catch (e) { console.error(e); }
+      el.coachText.innerHTML = headsHtml + meterHtml + `
         <div style="border-left:4px solid ${border};background:${color};border-radius:0 12px 12px 0;padding:10px 12px">
           ${(r.lens || r.element) ? `<div class="small" style="opacity:1;font-weight:800;letter-spacing:.3px;margin-bottom:4px">${escapeHtml([r.lens, r.element].filter(Boolean).join(' · '))}</div>` : ''}
           ${r.compass && r.compass.badge ? `<div style="font-weight:800;font-size:15px;margin-bottom:6px;line-height:1.35;color:var(--text)">${escapeHtml(r.compass.badge)}</div>` : ''}
@@ -1960,7 +1972,9 @@ function saveCurrentSessionDraft() {
           ${eyeLine}
           </details>
         </div>
-        ${details ? `<details style="margin-top:8px"><summary class="small" style="cursor:pointer">What Coach is using</summary>${details}</details>` : ''}`;
+        ${details ? `<details style="margin-top:8px"><summary class="small" style="cursor:pointer">What Coach is using</summary>${details}</details>` : ''}
+        ${notesBlock}`;
+      { const na = BT.$('#gdNoteAdd'); if (na) na.addEventListener('click', () => { const t = prompt(`What have you noticed at ${el.house.value}? Coach will test it against your games.\n(e.g. "10 pin won't fall", "game 3 move back outside")`); if (t && t.trim()) { BTInsight.addNote(el.house.value, t.trim()); autoCoach(); const d = BT.$('.gd-notes'); if (d) d.open = true; } }); }
       const KIND2CHG = { Aim: 'feet', Angle: 'feet', Speed: 'speed', Loft: 'loft', Release: 'hand', Equipment: 'ball' };
       BT.$all('.gd-opt', el.coachText).forEach(b => b.addEventListener('click', () => {
         const k = KIND2CHG[b.getAttribute('data-optk')]; if (!k) return;
