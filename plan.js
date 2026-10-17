@@ -144,7 +144,7 @@
     if (picked.length < count) items.push(`Only ${picked.length} of your balls read far enough apart to be worth bringing; more would overlap.`);
     items.push('Plus your spare ball.');
     const roles = {}; ordered.forEach(q => { roles[q.n] = role(q); });
-    return { items, picked: ordered.map(p => p.n), first: first.n, roles };
+    return { items, picked: ordered.map(p => p.n), first: first.n, roles, why: scored.map(s => ({ n: s.n, score: Math.round(s.score * 10) / 10, pred: Math.round(s.pred * 10) / 10, predK: s.predK, own: s.os ? [s.os.avg, s.os.n] : null, pair: s.po ? [s.po.avg, s.po.n] : null, t: s.t, cond: s.cond, job: job.get(s) || "" })), traits: { house: H.eff, pair: P ? P.eff : null, base: H.base } };
   }
 
   function sets() { try { return BT().lsGet(BT().KEYS.ARSENAL_SETS, []) || []; } catch (_e) { return []; } }
@@ -345,7 +345,7 @@
     if (opts.count && G.length >= MIN_HOUSE && hist) {
       try {
         const rb = recommendBag({ hist, G, lanes, S, b, count: Math.max(1, Math.min(6, Number(opts.count) || 3)), lean, today, firstBall: out.firstBall });
-        if (rb) { out.recRoles = rb.roles; out.recFirst = rb.first; sec('🎒', `Your ${Math.max(1, Math.min(6, Number(opts.count) || 3))}-ball bag for ${lanes ? 'lanes ' + lanes.replace('-', ' & ') : 'this house'}`, rb.items); out.recBag = rb.picked; }
+        if (rb) { out.recWhy = rb.why; out.recTraits = rb.traits; out.recRoles = rb.roles; out.recFirst = rb.first; sec('🎒', `Your ${Math.max(1, Math.min(6, Number(opts.count) || 3))}-ball bag for ${lanes ? 'lanes ' + lanes.replace('-', ' & ') : 'this house'}`, rb.items); out.recBag = rb.picked; }
       } catch (e) { console.error(e); }
     }
 
