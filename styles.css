@@ -604,3 +604,17 @@ select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }
 /* Angle: target box controls (v106) */
 .ang-boxrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px;font-size:14px}
 .ang-boxrow select{width:64px;padding:8px 6px}
+
+/* Game Day: lineup, changed chips, heads-up, early warning, options (v107) */
+.gd-lineup{margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08)}
+.gd-lu-head,.gd-lu-row{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:6px;align-items:center;margin-top:6px}
+.gd-lu-head span{font-size:12px;opacity:.75;text-align:center}
+.gd-lu-row select{padding:8px 4px;text-align:center}
+.gd-changed{margin-top:10px}
+.gd-chg{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.gd-chg button,.gd-opt{background:rgba(255,255,255,.05);color:inherit;border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:8px 12px;font:inherit;font-size:14px}
+.gd-chg button.on,.gd-opt.on{border-color:var(--accent);color:var(--accent);font-weight:700}
+.gd-heads{margin-bottom:10px;padding:10px 12px;border-radius:12px;background:rgba(120,160,255,.12);border:1px solid rgba(120,160,255,.45);font-size:14px;line-height:1.4}
+.gd-ready{margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(255,196,0,.14);border:1px solid rgba(255,196,0,.5);font-size:14px;line-height:1.4;font-weight:600}
+.gd-opts{margin-top:8px}
+.gd-opt{display:block;width:100%;text-align:left;border-radius:10px;margin-top:6px}

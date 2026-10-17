@@ -1035,6 +1035,36 @@
           ? `🛣️ This league: the ${dIn} stays oily and the friction is outside and down lane, so moving ${dIn} is usually safe here. The trap is staying too far ${dOut}.`
           : `🛣️ This league: the ${dIn} opens up (two-handers and high revs). Keep moves ${dIn} small; if a move ${dIn} still reads early, a straighter line or a cleaner ball beats going deeper.`);
       }
+      // ⚡ Early warning: the first good shot that reads differently after good ones. Decide the move now.
+      try {
+        if (!['move', 'repeat', 'start'].includes(out.status) && W.length >= 3) {
+          const last = W[W.length - 1], prev = W.slice(-3, -1);
+          const prevOk = prev.every(c => c.strike || Math.abs(c.lean || 0) < 1);
+          const dIn = prof.deeper || 'left', dOut = prof.outside || 'right';
+          const small = wear === 'opens' ? ` Keep it small: the ${dIn} opens up on this league.` : wear === 'holds' ? ` The ${dIn} holds on this league, so this move is safe.` : '';
+          if (prevOk && (last.lean || 0) >= 1) out.ready = { dir: 'early', text: `⚡ First sign the lane is changing: that one came in higher / read earlier than the two before it. If your next good shot does the same, make the move right away: feet 1 ${dIn}, eyes ½ ${dIn}.${small}` };
+          else if (prevOk && (last.lean || 0) <= -1) out.ready = { dir: 'late', text: `⚡ First sign the lane is changing: that one held longer / came in lighter than the two before it. If your next good shot does the same, make the move right away: feet 1 ${dOut}, eyes ½ ${dOut}.` };
+        }
+      } catch (_e) {}
+      // 🔁 Between games: shots on your lane since you were last on it, what usually happens here, and the move to have ready.
+      try {
+        const gNext = Number(ctx && ctx.gameNow) || 0;
+        const inThis = all.filter(s => Number(s.gameNo) === gNext).length;
+        if (gNext >= 2 && inThis < 2) {
+          const T = ctx.traffic, dIn = prof.deeper || 'left', dOut = prof.outside || 'right';
+          const parts = [];
+          if (T && T.gameGap) parts.push(`About ${T.gameGap} shots have gone down on this lane since you were last on it${T.sameSideShare != null ? `, ${Math.round(T.gameGap * T.sameSideShare)} of them on your side (${T.sameSide} ${T.sameSide === 1 ? 'bowler' : 'bowlers'} who play your side${T.twoHand ? `, ${T.twoHand} two-handed` : ''})` : ''}.`);
+          const hb = ctx.history && ctx.history.byGame;
+          if (hb && hb[1] && hb[gNext]) { const d = Math.round(hb[gNext] - hb[1]); if (Math.abs(d) >= 4) parts.push(`Your game ${gNext} here averages ${Math.abs(d)} pins ${d < 0 ? 'below' : 'above'} game 1${d < 0 ? ': the lanes usually change on you' : ''}.`); }
+          const pm = ctx.pastMoves && ctx.pastMoves[gNext];
+          if (pm && pm.n >= 2) parts.push(`On your last ${pm.n} nights here you moved by frame ${pm.frame} of game ${gNext}${pm.dir ? `, usually ${pm.dir}` : ''}.`);
+          const lastShot = all[all.length - 1];
+          if (lastShot && lastShot.feet != null) parts.push(`You finished game ${gNext - 1} at slide ${lastShot.feet}, target ${lastShot.arrows}${lastShot.targetFt && lastShot.targetFt !== 15 ? ` (at ${lastShot.targetFt} ft)` : ''}.`);
+          const keep = wear === 'opens' ? ` Keep it small: the ${dIn} opens up on this league.` : '';
+          parts.push(`Move ready: if your first good shot reads early or comes in high, go feet 1 ${dIn}, eyes ½ ${dIn} right away.${keep} If it's light or holds, feet 1 ${dOut}, eyes ½ ${dOut}.`);
+          out.heads = { game: gNext, text: `🔁 Game ${gNext}. ` + parts.join(' ') };
+        }
+      } catch (_e) {}
       // 📚 History: entering a game where you usually drop off at this house
       const hist = ctx && ctx.history;
       if (hist && hist.byGame && C.length) {
@@ -1270,6 +1300,8 @@
       }
       const ranked = rankMoves(sit, prof, pat, !!ball, tried, angleClass, favor);
       const first = ranked[0], second = ranked[1];
+      // Several ways to make the same fix (best first, from the lane + your LASER ratings): you pick, and tap what you did.
+      res.options = ranked.slice(0, 3).map(m => ({ kind: m.kind, label: ELEMENT[m.kind], text: moveText(m.kind, sit, prof, pat, ball, step, angleClass) }));
       const firstText = first ? moveText(first.kind, sit, prof, pat, ball, step, angleClass) : '';
       const secondText = second ? moveText(second.kind, sit, prof, pat, ball, step, angleClass) : '';
       // In the pocket but not carrying: the line is fine, so the compass must not say "Spot ❌, move your feet"

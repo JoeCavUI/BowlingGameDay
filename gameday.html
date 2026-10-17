@@ -50,6 +50,13 @@
                 <option value="holds">Left stays oily (friction outside & down lane)</option>
               </select>
             </div>
+            <div class="gd-lineup" style="grid-column:1/-1">
+              <div class="small"><b>Who's on the pair</b> (counts help Coach estimate how fast your side breaks down)</div>
+              <div class="gd-lu-head"><span></span><span>Right</span><span>Two-handed</span><span>Left</span></div>
+              <div class="gd-lu-row"><span class="small">Your team <span style="opacity:.7">(incl. you, saved on league)</span></span><select id="luTR" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select><select id="luT2" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select><select id="luTL" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></div>
+              <div class="gd-lu-row"><span class="small">Tonight's opponent</span><select id="luOR" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select><select id="luO2" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select><select id="luOL" class="input"><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></div>
+              <div class="small" id="luTraffic" style="margin-top:4px"></div>
+            </div>
             <div>
               <label>Lanes / Pair</label>
               <input id="lanes" class="input" placeholder="e.g., 23-24" inputmode="text" />
@@ -133,6 +140,9 @@
             </select>
           </div>
           <div class="small" style="margin-top:6px">Slide = the board under the inside of your slide foot at the foul line. Target = the board your eyes are on, at the distance you pick.</div>
+          <div class="gd-changed"><span class="small"><b>Changed since last shot</b> (optional)</span>
+            <div id="changedPills" class="gd-chg"><button type="button" data-chg="feet">Feet / eyes</button><button type="button" data-chg="speed">Speed</button><button type="button" data-chg="loft">Loft</button><button type="button" data-chg="hand">Hand</button><button type="button" data-chg="ball">Ball</button></div>
+          </div>
           <div id="lineMath" class="gd-linemath" style="display:none"></div>
           <div style="margin-top:10px">
             <label>Ball</label>
@@ -628,6 +638,7 @@ function selectedPills(container) {
     }
 
     function clearPills() {
+      try { changedSel.clear(); paintChanged(); } catch (_e) {}
 	      [el.readsQuality, el.readsMiss, el.readsBallObs, el.readsPocket, el.readsExit, el.readsSpeed].forEach(c => {
 	        if (!c) return;
         BT.$all('button[data-pill]', c).forEach(b => {
@@ -1752,6 +1763,76 @@ function saveCurrentSessionDraft() {
       try { const nm = el.ball && el.ball.value; const row = nm && typeof BALL_ROW_MAP !== 'undefined' && BALL_ROW_MAP ? BALL_ROW_MAP.get(nm) : null; ure = !!(row && /urethane/i.test(BT.ballCover(row) || '')); } catch (_e) {}
       return BT.boxFor(Number(p0.length) || null, ratio, { speedDominant: /speed/i.test(String(bw.dominance || '')), urethane: ure });
     }
+    // 👥 Lineup and lane traffic. Your team is saved on the league; tonight's opponent is saved for today only.
+    const OPP_KEY = 'bt_gameday_opp_v1';
+    const luv = (id) => { const e = document.getElementById(id); return e && e.value !== '' ? Number(e.value) : null; };
+    function lineupLoad() {
+      const lg = el.league && el.league.value ? BT.getLeagueById(el.league.value) : null;
+      const t = (lg && lg.team) || {};
+      const set = (id, v) => { const e = document.getElementById(id); if (e) e.value = v == null ? '' : String(v); };
+      set('luTR', t.r); set('luT2', t.r2); set('luTL', t.l);
+      const o = BT.lsGet(OPP_KEY, null) || {};
+      const today = BT.localDate();
+      const oo = o.date === today ? o : {};
+      set('luOR', oo.r); set('luO2', oo.r2); set('luOL', oo.l);
+      ['luTR', 'luT2', 'luTL'].forEach(id => { const e = document.getElementById(id); if (e) e.disabled = !lg; });
+      lineupText();
+      try { if ((sessionShots || []).length) autoCoach(); } catch (_e) {}
+    }
+    function lineupSave() {
+      if (el.league && el.league.value) BT.setLeague(el.league.value, { team: { r: luv('luTR'), r2: luv('luT2'), l: luv('luTL') } });
+      BT.lsSet(OPP_KEY, { date: BT.localDate(), r: luv('luOR'), r2: luv('luO2'), l: luv('luOL') });
+      lineupText(); try { autoCoach(); } catch (_e) {}
+    }
+    function trafficInfo() {
+      const vals = ['luTR', 'luT2', 'luTL', 'luOR', 'luO2', 'luOL'].map(luv);
+      if (vals.every(v => v == null)) return null;
+      const n = (v) => v || 0;
+      const [tr, t2, tl, or, o2, ol] = vals;
+      const pair = n(tr) + n(t2) + n(tl) + n(or) + n(o2) + n(ol);
+      if (pair < 2) return null;
+      const lefty = (() => { try { return isLeftyBowler(); } catch (_e) { return false; } })();
+      const sameSide = lefty ? n(tl) + n(ol) : n(tr) + n(t2) + n(or) + n(o2);
+      const twoHand = lefty ? 0 : n(t2) + n(o2);
+      const others = pair - 1;
+      // Shots on a lane between your frames on it: everyone else on the pair bowls once (~1.6 balls a frame).
+      // Between games the 10th frames add fill balls, so a little more.
+      return { pair, sameSide, twoHand, perGap: Math.round(others * 1.6), gameGap: Math.round(others * 1.75), sameSideShare: others ? Math.max(0, sameSide - 1) / others : null };
+    }
+    function lineupText() {
+      const box = document.getElementById('luTraffic'); if (!box) return;
+      const T = trafficInfo();
+      box.textContent = T ? `${T.pair} on the pair: about ${T.perGap} shots go down on each lane between your frames (about ${T.gameGap} between games), ${Math.round(T.sameSideShare * 100)}% of them on your side${T.twoHand ? `, ${T.twoHand} two-handed` : ''}.` : 'Fill in the counts and Coach can estimate how many shots hit your side between your frames.';
+    }
+    ['luTR', 'luT2', 'luTL', 'luOR', 'luO2', 'luOL'].forEach(id => { const e = document.getElementById(id); if (e) e.addEventListener('change', lineupSave); });
+    if (el.league) el.league.addEventListener('change', lineupLoad);
+    setTimeout(lineupLoad, 0);
+
+    // 📚 When you've moved in games 2 and 3 on past nights at this house (from saved Game Day nights).
+    function pastMovesHere() {
+      const house = el.house ? el.house.value : '';
+      if (!house) return null;
+      const lefty = (() => { try { return isLeftyBowler(); } catch (_e) { return false; } })();
+      const sess = (BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || []).filter(x => x && x.house === house);
+      const out = {};
+      for (const g of [2, 3]) {
+        const frames = [], dirs = [];
+        sess.forEach(x => {
+          const sh = (x.shots || []).filter(q => q && q.type !== 'gameStart' && !q.isFill && Number(q.gameNo) === g).sort((a, b) => (a.at || 0) - (b.at || 0));
+          if (sh.length < 3 || sh[0].feet == null) return;
+          const i = sh.findIndex(q => q.feet != null && q.feet !== sh[0].feet);
+          if (i > 0) { frames.push(Number(sh[i].frame) || i + 1); const d = sh[i].feet - sh[0].feet; dirs.push((d > 0) !== lefty ? 'left' : 'right'); }
+        });
+        if (frames.length) { frames.sort((a, b) => a - b); const lc = dirs.filter(d => d === 'left').length; out[g] = { n: frames.length, frame: frames[Math.floor(frames.length / 2)], dir: lc * 2 > dirs.length ? 'left' : lc * 2 < dirs.length ? 'right' : '' }; }
+      }
+      return out;
+    }
+
+    // ✋ What you changed since the last shot (feet / speed / loft / hand / ball): saved on the shot, so Coach can learn what works for you.
+    const changedSel = new Set();
+    function paintChanged() { document.querySelectorAll('#changedPills [data-chg]').forEach(b => b.classList.toggle('on', changedSel.has(b.dataset.chg))); }
+    document.querySelectorAll('#changedPills [data-chg]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.chg; changedSel.has(k) ? changedSel.delete(k) : changedSel.add(k); paintChanged(); }));
+
     function coachContext() {
       const chron = sessionShots.slice().reverse();
       const sets = BT.lsGet(BT.KEYS.ARSENAL_SETS, []);
@@ -1765,6 +1846,9 @@ function saveCurrentSessionDraft() {
         pattern: (() => { const p0 = (Array.isArray(pats) ? pats : []).find(p => patternName(p) === el.pattern.value) || null; return p0 ? Object.assign({}, p0, { box: boxForPattern(p0) }) : null; })(),
         setBalls: names.map(n => ({ name: n, row: map.get(n) })).filter(b => b.row),
         currentBall: el.ball ? el.ball.value : '',
+        gameNow: currentGameNumber(),
+        traffic: trafficInfo(),
+        pastMoves: pastMovesHere(),
         line: { feet: el.feet.value, arrows: el.arrows.value, bp: el.bp.value, targetFt: el.tdist ? Number(el.tdist.value) || 15 : 15 },
         history: historyFor(),
         wear: (() => { try { const l = el.league.value ? BT.getLeagueById(el.league.value) : null; return (l && l.wear) || ''; } catch (_e) { return ''; } })(),
@@ -1787,11 +1871,14 @@ function saveCurrentSessionDraft() {
         .filter(Boolean).map(x => `<div class="small" style="margin-top:4px">${x}</div>`).join('');
       let moreOpen = false; try { moreOpen = localStorage.getItem('bt_gd_coach_more_open') === '1'; } catch (_e) {}
       const nNotes = (r.notes || []).length;
-      el.coachText.innerHTML = `
+      const headsHtml = r.heads ? `<div class="gd-heads">${escapeHtml(r.heads.text)}</div>` : '';
+      el.coachText.innerHTML = headsHtml + `
         <div style="border-left:4px solid ${border};background:${color};border-radius:0 12px 12px 0;padding:10px 12px">
           ${(r.lens || r.element) ? `<div class="small" style="opacity:1;font-weight:800;letter-spacing:.3px;margin-bottom:4px">${escapeHtml([r.lens, r.element].filter(Boolean).join(' · '))}</div>` : ''}
           ${r.compass && r.compass.badge ? `<div style="font-weight:800;font-size:15px;margin-bottom:6px;line-height:1.35;color:var(--text)">${escapeHtml(r.compass.badge)}</div>` : ''}
           <div style="font-size:16px;font-weight:800;line-height:1.35;color:var(--text)">${icon} ${escapeHtml(r.headline)}</div>
+          ${r.ready ? `<div class="gd-ready">${escapeHtml(r.ready.text)}</div>` : ''}
+          ${r.status === 'move' && r.options && r.options.length > 1 ? `<div class="gd-opts"><div class="small" style="opacity:1"><b>Ways to do it</b> (tap the one you'll use; it's saved with your next shot):</div>${r.options.map(o => `<button type="button" class="gd-opt" data-optk="${escapeHtml(o.kind)}"><b>${escapeHtml(o.label)}</b> ${escapeHtml(o.text)}</button>`).join('')}</div>` : ''}
           ${ballBtn}
           <details id="coachMore" ${(moreOpen || r.status === 'start') ? 'open' : ''} style="margin-top:8px"><summary class="small" style="cursor:pointer;opacity:1"><b>Why &amp; what's next</b>${nNotes ? ` · ${nNotes} heads-up${nNotes > 1 ? 's' : ''}` : ''}</summary>
           ${r.why ? `<div class="small" style="margin-top:6px;opacity:1;white-space:pre-line">${escapeHtml(r.why)}</div>` : ''}
@@ -1802,6 +1889,12 @@ function saveCurrentSessionDraft() {
           </details>
         </div>
         ${details ? `<details style="margin-top:8px"><summary class="small" style="cursor:pointer">What Coach is using</summary>${details}</details>` : ''}`;
+      const KIND2CHG = { Aim: 'feet', Angle: 'feet', Speed: 'speed', Loft: 'loft', Release: 'hand', Equipment: 'ball' };
+      BT.$all('.gd-opt', el.coachText).forEach(b => b.addEventListener('click', () => {
+        const k = KIND2CHG[b.getAttribute('data-optk')]; if (!k) return;
+        changedSel.add(k); paintChanged();
+        BT.$all('.gd-opt', el.coachText).forEach(x => x.classList.toggle('on', x === b));
+      }));
       const cm = BT.$('#coachMore');
       if (cm) cm.addEventListener('toggle', () => { try { localStorage.setItem('bt_gd_coach_more_open', cm.open ? '1' : '0'); } catch (_e) {} });
       const b = BT.$('#coachUseBall');
@@ -1931,6 +2024,7 @@ function saveCurrentSessionDraft() {
 
         feet: el.feet.value ? Number(el.feet.value) : null,
         arrows: el.arrows.value ? Number(el.arrows.value) : null,
+        changed: (() => { const c = new Set(changedSel); const prevS = (sessionShots || []).find(x => x && x.type !== 'gameStart'); if (prevS) { if (el.feet.value && prevS.feet != null && Number(el.feet.value) !== prevS.feet) c.add('feet'); if (el.arrows.value && prevS.arrows != null && Number(el.arrows.value) !== prevS.arrows) c.add('feet'); if (el.ball.value && prevS.ball && el.ball.value !== prevS.ball) c.add('ball'); } return [...c]; })(),
         targetFt: el.tdist ? Number(el.tdist.value) || 15 : 15,
         layOff: (() => { const v = Number((BT.lsGet(BT.KEYS.BOWLER, {}) || {}).laydownOffset); return Number.isFinite(v) && v > 0 ? v : 5; })(),
         bp: el.bp.value ? Number(el.bp.value) : null,

@@ -58,7 +58,13 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
-## Changes in v107-beta44 (not published yet): 💬 Send feedback
+## Changes in v107-beta44 (not published yet): staying ahead of the lanes, 💬 Send feedback
+
+- **Who's on the pair** (Game Day → Tonight): right-handed, two-handed and left-handed counts for your team (saved on the league) and tonight's opponent (saved for today). Coach estimates how many shots go down on each lane between your frames and between games, and how many are on your side.
+- **🔁 Between-games heads-up:** at the start of games 2 and 3, Coach shows the shots on your lane since you were last on it (and on your side), how that game usually goes at this house, when you've moved in that game on past nights here, where you finished, and the move to have ready if your first good shot reads early or light.
+- **⚡ Early warning:** the first good shot that reads differently after good ones gets "if your next good shot does the same, make the move right away", with the move.
+- **Ways to do it:** when Coach calls a move it lists the top 2–3 ways (feet and eyes, speed, loft, ball...), ranked by the lane and your LASER ratings. Tap the one you'll use.
+- **Changed since last shot:** Feet / eyes, Speed, Loft, Hand, Ball chips, saved on the shot (feet and ball are filled in automatically when your line or ball changed). This is what Coach will use to check your LASER ratings against what actually works.
 
 - **Send feedback** on Home: opens the share sheet (Messages / Mail) with the app version, phone, iOS version, home-screen vs browser and hand filled in, plus "Which page / What happened / What I expected". Testers add a screenshot and send it. Falls back to copying the text, then to email.
 
