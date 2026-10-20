@@ -1385,23 +1385,61 @@
       if (sum) sum.innerHTML = `<div class="chart-sum"><b>${an.covered.length} of 6 boxes covered</b>${an.urethane ? ' + urethane' : ''} · ${an.active} active ball${an.active === 1 ? '' : 's'}${retiredN ? ` · ${retiredN} retired` : ''}</div>`;
       // Rows
       const allRowsDef = BTChart.ROWS.concat([{ key: 'SPARE', label: 'Spare (plastic)', job: 'Straight at corner pins.', optional: true }]);
-      box.innerHTML = `<div class="chart-key small"><span class="kd cv-s"></span>solid <span class="kd cv-h"></span>hybrid <span class="kd cv-p"></span>pearl <span class="kd cv-o"></span>other <span class="kd ghost"></span>thinking of buying <b class="ctuned-t">*</b> your slider adjustments</div><div class="chart-axis"><span>Early</span><span>reads the lane →</span><span>Late</span></div>` + allRowsDef.map(r => {
-        const L = balls.filter(b => b.rowKey === r.key).sort((a, b) => a.timing - b.timing);
-        if (r.key === 'SPARE' && !L.length) return '';
-        // stack colliding dots into lanes
-        const lanes = [];
-        L.forEach((b, i) => { b.n = i + 1; let li = lanes.findIndex(x => b.x - x >= 7); if (li < 0) { li = lanes.length < 4 ? lanes.length : lanes.length - 1; if (li === lanes.length) lanes.push(-99); } lanes[li] = b.x; b.lane = li; });
-        const h = Math.max(1, lanes.length) * 22 + 6;
-        const tunedB = (nm) => { const t = BT.ballTweaksFor(nm) || {}; return !!(t.hook || t.length || t.backend); };
-        const dots = L.map(b => `<button type="button" class="cdot ${b.proposed ? 'ghost' : ''} ${b.retired ? 'retired' : ''} cv-${/solid/i.test(b.cover) ? 's' : /pearl/i.test(b.cover) ? 'p' : /hybrid/i.test(b.cover) ? 'h' : 'o'}" style="left:calc(${b.x}% - 10px);top:${3 + b.lane * 22}px" data-cball="${escH(b.name)}" title="${escH(b.name)}${tunedB(b.name) ? ' (your slider adjustments)' : ''}">${b.n}${tunedB(b.name) ? '<span class="ctuned">*</span>' : ''}</button>`).join('');
-        const chips = L.map(b => `<button type="button" class="cchip ${b.proposed ? 'ghost' : ''} ${b.retired ? 'retired' : ''}" data-cball="${escH(b.name)}"><span class="cn">${b.n}</span>${escH(b.name)}${tunedB(b.name) ? '<b class="ctuned-t" title="Your slider adjustments">*</b>' : ''}${b.proposed ? ' (what-if)' : b.retired ? ' (retired)' : ''}</button>`).join('');
-        const empty = !L.filter(b => !b.proposed && !b.retired).length;
-        return `<div class="crow ${empty ? 'empty' : ''}">
-          <div class="crow-head"><b>${r.label}</b> <span class="small">${L.filter(b => !b.proposed && !b.retired).length || (r.optional ? 'none' : 'empty')}</span></div>
-          <div class="ctrack" style="height:${h}px">${dots}</div>
-          ${chips ? `<div class="cchips">${chips}</div>` : `<div class="small" style="opacity:.75">${r.optional ? '' : '❌ Empty. '}${escH(r.job)}</div>`}
-        </div>`;
-      }).join('');
+      // 🧮 Barnes matrix: strength down, shape across (the way Chris Barnes draws it). Double-tap a box for a full page.
+      const tunedB = (nm) => { const t = BT.ballTweaksFor(nm) || {}; return !!(t.hook || t.length || t.backend); };
+      const cvc = (b) => /solid/i.test(b.cover) ? 's' : /pearl/i.test(b.cover) ? 'p' : /hybrid/i.test(b.cover) ? 'h' : 'o';
+      const inBox = (k) => { const L = balls.filter(b => b.rowKey === k).sort((a, b) => a.timing - b.timing); L.forEach((b, i) => { b.n = i + 1; }); return L; };
+      const stackL = (L, gap, max) => { const lanes = []; L.forEach(b => { let li = lanes.findIndex(x => b.x - x >= gap); if (li < 0) { li = lanes.length < max ? lanes.length : max - 1; if (li === lanes.length) lanes.push(-99); } lanes[li] = b.x; b.lane = li; }); return Math.max(1, lanes.length); };
+      const chipOf = (b) => `<button type="button" class="mx-name ${b.proposed ? 'ghost' : ''} ${b.retired ? 'retired' : ''}" data-cball="${escH(b.name)}">${escH(b.name)}${tunedB(b.name) ? '<b class="ctuned-t" title="Your slider adjustments">*</b>' : ''}${b.proposed ? ' <span class="dim">(what-if)</span>' : b.retired ? ' <span class="dim">(retired)</span>' : ''}</button>`;
+      const cellOf = (k) => {
+        const L = inBox(k), act = L.filter(b => !b.proposed && !b.retired).length;
+        const st = act >= 10 ? '<span class="mx-st deep">Deep</span>' : act ? '<span class="mx-st">Covered</span>' : '<span class="mx-st gap">Gap</span>';
+        const nl = stackL(L, 4, 3);
+        const dots = L.map(b => `<span class="mx-t cv-${cvc(b)} ${b.proposed ? 'ghost' : ''} ${b.retired ? 'retired' : ''}" style="left:${4 + b.x * 0.92}%;top:${3 + b.lane * 11}px"></span>`).join('');
+        const top = L.slice(0, 3).map(chipOf).join('');
+        const more = L.length > 3 ? `<button type="button" class="mx-more" data-mxopen="${escH(k)}">+${L.length - 3} more ›</button>` : '';
+        const row = BTChart.ROWS.find(r => r.key === k) || {};
+        return `<div class="mx-cell ${act ? '' : 'empty'}" data-mxbox="${escH(k)}">${st}<button type="button" class="mx-n" data-mxopen="${escH(k)}">${act}<small>ball${act === 1 ? '' : 's'}</small></button>
+          <div class="mx-trk" style="height:${6 + nl * 11}px">${dots}</div>
+          <div class="mx-names">${top || `<div class="small" style="opacity:.8">${escH(row.job || '')}</div>`}${more}</div><span class="mx-dt">double-tap ⤢</span></div>`;
+      };
+      const extra = ['URETHANE', 'SPARE'].map(k => { const L = inBox(k); const lbl = k === 'URETHANE' ? 'Urethane' : 'Spare'; return `<span><b>${lbl}</b>: ${L.length ? L.map(chipOf).join(' ') : (k === 'URETHANE' ? 'none yet' : 'none')}</span>`; }).join(' · ');
+      box.innerHTML = `<div class="chart-key small"><span class="kd cv-s"></span>solid <span class="kd cv-h"></span>hybrid <span class="kd cv-p"></span>pearl <span class="kd cv-o"></span>other <span class="kd ghost"></span>thinking of buying <b class="ctuned-t">*</b> your slider adjustments</div>
+        <div class="mx"><div></div><div class="mx-colh">Smooth</div><div class="mx-colh">Sharp</div>
+        ${['STRONG', 'MEDIUM', 'WEAK'].map(sx => `<div class="mx-rowh">${sx}</div>${cellOf(sx + '|SMOOTH')}${cellOf(sx + '|SHARP')}`).join('')}</div>
+        <div class="mx-foot"><span>dots: reads early ←</span><span>→ late</span></div>
+        <div class="mx-extra small">${extra}</div>
+        <div class="small dim" style="margin-top:6px">Tap a ball name to tune it. Double-tap a box (or tap its number) to see every ball in it.</div>`;
+      // Full-page view of one box: every ball, where it reads, its specs, and Tune.
+      const openBox = (k) => {
+        const L = inBox(k), row = BTChart.ROWS.find(r => r.key === k) || {};
+        const n = stackL(L, 6, 12), h = n * 26 + 10;
+        const dots = L.map(b => `<button type="button" class="mx-bd cv-${cvc(b)} ${b.proposed ? 'ghost' : ''} ${b.retired ? 'retired' : ''}" style="left:${3 + b.x * 0.94}%;top:${5 + b.lane * 26}px" data-cball="${escH(b.name)}">${b.n}${tunedB(b.name) ? '<span class="ctuned">*</span>' : ''}</button>`).join('');
+        const bar = (v, c) => `<i><b style="width:${Math.round(Math.max(0, Math.min(1, v || 0)) * 100)}%;background:${c}"></b></i>`;
+        const rows = L.map(b => { const r0 = b.row || {}; const surf = BT.ballSurface(r0); const rg = BT.ballRG(r0), df = BT.ballDiff(r0);
+          return `<div class="mx-br"><span class="mx-num cv-${cvc(b)}">${b.n}${tunedB(b.name) ? '<span class="ctuned">*</span>' : ''}</span>
+          <div style="min-width:0"><div class="mx-bn">${escH(b.name)}${tunedB(b.name) ? ' <b class="ctuned-t">*</b>' : ''}${b.proposed ? ' <span class="dim">(what-if)</span>' : b.retired ? ' <span class="dim">(retired)</span>' : ''}</div>
+          <div class="small dim">${[BT.getField(r0, ['Brand'], ''), b.cover, surf && (/^\d+$/.test(String(surf)) ? surf + ' grit' : surf), rg && 'RG ' + rg, df && 'Diff ' + df].filter(Boolean).map(escH).join(' · ')}</div>
+          <div class="mx-mt"><span>Hook</span>${bar(b.hook, '#6b5ce7')}<span>Backend</span>${bar(b.backend, '#e7a35c')}<span>Reads</span>${bar(b.x / 100, '#63e6d2')}</div></div>
+          <button type="button" class="mx-tune" data-cball="${escH(b.name)}">Tune ›</button></div>`; }).join('');
+        let dd = document.getElementById('mxPage');
+        if (!dd) { dd = document.createElement('div'); dd.id = 'mxPage'; dd.className = 'mx-page'; document.body.appendChild(dd); }
+        dd.innerHTML = `<div class="mx-pg"><div class="mx-top"><button type="button" class="btn secondary" id="mxBack">‹ Barnes chart</button><span class="small dim">${L.length} ball${L.length === 1 ? '' : 's'}</span></div>
+          <h2 style="margin:6px 0 2px">${escH(row.label || (k === 'SPARE' ? 'Spare' : k))}</h2><div class="small dim" style="margin-bottom:12px">${escH(row.job || '')}</div>
+          ${L.length ? `<div class="mx-big"><div class="mx-bar" style="height:${h}px">${dots}</div><div class="mx-ax"><span>Early</span><span>Mid</span><span>Late</span></div></div>${rows}` : `<div class="list-item">❌ No balls in this box yet. Look for: ${escH((BTChart.SPEC || {})[k] || '')}</div>`}</div>`;
+        dd.classList.add('on'); document.body.classList.add('mx-lock'); dd.scrollTop = 0;
+        const close = () => { dd.classList.remove('on'); document.body.classList.remove('mx-lock'); if (history.state && history.state.mx) history.back(); };
+        BT.$('#mxBack').addEventListener('click', close);
+        try { history.pushState({ mx: 1 }, ''); window.onpopstate = () => { dd.classList.remove('on'); document.body.classList.remove('mx-lock'); }; } catch (_e) {}
+        BT.$all('[data-cball]', dd).forEach(x => x.addEventListener('click', () => { const nm = x.getAttribute('data-cball'); const r = viewRowsAll().find(rr => BT.ballName(rr) === nm); if (r && r.__proposed) return; openTune(nm); }));
+      };
+      BT.$all('[data-mxopen]', box).forEach(x => x.addEventListener('click', (e) => { e.stopPropagation(); openBox(x.getAttribute('data-mxopen')); }));
+      let lastTap = { t: 0, k: '' };
+      BT.$all('.mx-cell', box).forEach(c => c.addEventListener('click', (e) => {
+        if (e.target.closest('[data-cball],[data-mxopen]')) return;
+        const now = Date.now(), k = c.dataset.mxbox;
+        if (now - lastTap.t < 400 && lastTap.k === k) { lastTap = { t: 0, k: '' }; openBox(k); } else lastTap = { t: now, k };
+      }));
       BT.$all('[data-cball]', box).forEach(x => x.addEventListener('click', () => {
         const nm = x.getAttribute('data-cball');
         const row = viewRowsAll().find(r => BT.ballName(r) === nm);
