@@ -58,6 +58,11 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v111-beta48: Lane conditions, cleaner Game Plan
+
+- **🛣️ Lane conditions** (Arsenal, replaces the role list): pick a condition (fresh / heavy oil, typical house shot, carrydown, moving left, lanes burning up, wet / dry, early friction) and see your top 3 balls rated Great / OK / Weak fit. Resurface tips only when a new surface moves the ball up a level, with warnings if it would then play like another ball or leave another job uncovered; "Best resurface option" when nothing you own fits well; "Use this ball on Game Day". Plastic spare balls are left out.
+- **Game Plan bag and lane-condition sections:** one result per line with ⭐ on the best, small headings for "On lanes" / "Across the house" / "The bag", and each ball's reasons as sub-bullets.
+
 ## Changes in v110-beta47: Barnes matrix
 
 - **Barnes chart is now a 3x2 matrix** (strength down, smooth / sharp across, the way Chris Barnes draws it): ball count, Covered / Deep / Gap, an early → late strip, and your top balls in each box. Urethane and spare on one line underneath.
