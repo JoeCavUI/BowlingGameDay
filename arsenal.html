@@ -101,9 +101,8 @@
         </div>
       </div>
       <div class="hr-split"></div>
-      <div class="setup-banner small" style="margin:0 0 10px"><b>Suggest my bag</b> uses the same pick as your Game Plan and Game Day Coach: your record at that house and pair (weighted for sample size and recent form), your cover / core / layout patterns there, and balls spread from earlier to later. With no history for the house, it falls back to the motion roles below.</div>
-      <div class="small dim" style="margin-bottom:10px">Each role's target is set <b>inside your own range</b> (your speed, revs and arsenal): "Early / Control" means the earliest, smoothest motion <i>you</i> can throw, "Burn / Friction" your cleanest and latest. The % is how close a ball comes to that job for you. “Early / Control” means stronger and smoother. “Shape / Corner” means stronger with more downlane pop. A low % does not mean the ball is bad—only that it is farther from that specific role target. <b>Covered</b> means a strong fit, <b>Close</b> means usable, and <b>Gap</b> means the bag still lacks that motion.</div>
-      <div id="rolePlanner"></div>
+      <div class="setup-banner small" style="margin:0 0 10px"><b>Suggest my bag</b> uses the same pick as your Game Plan and Game Day Coach: your record at that house and pair (weighted for sample size and recent form), your cover / core / layout patterns there, and balls spread from earlier to later. With no history for the house, it falls back to ball motion (the same ratings as Lane conditions below).</div>
+<div id="rolePlanner"></div>
       <div id="roleSuggestion" style="margin-top:12px"></div>
     </div>
 
@@ -1147,7 +1146,93 @@
       if (node) node.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
+    // 🛣️ Lane conditions: pick a condition, see your best balls for it (on paper) and resurface tips for the close ones.
+    const LANE_CONDS = [
+      { role: 'early', label: 'Fresh / heavy oil', note: 'Reads early and smooth to slow the ball down on lots of oil.' },
+      { role: 'benchmark', label: 'Typical house shot', note: 'Your first ball out of the bag: balanced, easy to read.' },
+      { role: 'corner', label: 'Carrydown / weak 10s', note: 'Strong with a sharp move downlane so it still finishes through the pins.' },
+      { role: 'clean', label: 'Moving left (fronts hooking)', note: 'Clears the front and turns the corner when you move in.' },
+      { role: 'burn', label: 'Lanes burning up (high hits, 4-pins)', note: 'Cleanest and latest: gets through the dry front and still turns.' },
+      { role: 'blend', label: 'Wet / dry (over / under)', note: 'Smooth and controlled so it doesn\'t jump off friction or skid past it.' },
+      { role: 'control', label: 'Early friction (the left has opened up)', note: 'Clean through the front, smooth at the back.' },
+    ];
+    let laneCondSel = (() => { try { return localStorage.getItem('bt_lane_cond') || 'early'; } catch (_e) { return 'early'; } })();
+    function laneConditionsHTML(rows) {
+      const esc = (t) => String(t ?? '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+      const bw0 = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
+      const isSpareRow = (r) => { try { const b = BTChart.place([r], bw0)[0]; return b && b.rowKey === 'SPARE'; } catch (_e) { return false; } };
+      const own = (rows || []).filter(r => !r.__proposed && !BT.isRetired(r) && !isSpareRow(r)); // plastic spare balls aren't strike balls
+      const opts = LANE_CONDS.map(c => `<option value="${c.role}"${c.role === laneCondSel ? ' selected' : ''}>${esc(c.label)}</option>`).join('');
+      const cond = LANE_CONDS.find(c => c.role === laneCondSel) || LANE_CONDS[0];
+      let body = '';
+      if (cond.role === 'control') body = controlCheckHTML();
+      else {
+        const role = roleById(cond.role);
+        const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
+        const all = bestRoleCandidates(own, 50);
+        const mine = all.find(x => x.role.id === cond.role);
+        const ranked = (mine ? mine.allRanked : []).slice(0, 3);
+        const fit = (d) => d <= 0.22 ? { t: 'Great fit', c: 'good' } : d <= 0.30 ? { t: 'OK fit', c: 'ok' } : { t: 'Weak fit', c: 'weak' };
+        const boxOf = (row) => { try { const b = BTChart.place([row], bowler)[0]; return b ? BTChart.label(b.rowKey) : ''; } catch (_e) { return ''; } };
+        const rowsHtml = ranked.map(it => {
+          const f = fit(it.dist), cur = BT.ballSurface(it.row) || '';
+          let tip = '';
+          if (f.c !== 'good') {
+            // Surface-only search: a real change your pro shop operator can make (the sliders are only how you see the ball).
+            let best = null;
+            for (const pr of SURFACE_PRESETS) { if (String(pr.surface) === String(cur)) continue; const v = vectorWithManualTune(it.row, { surface: pr.surface }); const d = safeScoreRole(role, it.row, v); if (!best || d < best.d) best = { d, pr, v }; }
+            const rank = (x) => ({ good: 2, ok: 1, weak: 0 })[x.c];
+            if (best && best.d <= it.dist - 0.03 && rank(fit(best.d)) > rank(f)) {
+              const nf = fit(best.d);
+              const clone = Object.assign({}, it.row, { Surface: best.pr.surface });
+              const b0 = boxOf(it.row), b1 = boxOf(clone);
+              const shine = BT.surfaceToGrit(best.pr.surface) > BT.surfaceToGrit(cur || '4000') ? 'Shine it' : 'Sand it';
+              // Would it now play like another ball you own?
+              const twin = own.filter(r => BT.ballName(r) !== it.name).map(r => ({ n: BT.ballName(r), d: BT.motionDistance(best.v, BT.motionVector(r, bowler)) })).sort((x, y) => x.d - y.d)[0];
+              // Is it your best ball for another job today?
+              const lose = all.filter(x => x.role.id !== cond.role && x.allRanked[0] && x.allRanked[0].name === it.name).map(x => (LANE_CONDS.find(c => c.role === x.role.id) || {}).label).filter(Boolean);
+              tip = `<div class="lc-tip">🔧 <b>To make it a ${nf.t.toLowerCase()}:</b> ${shine} to <b>${esc(best.pr.label)}${/^\d+$/.test(best.pr.label) ? ' grit' : ''}</b> (now ${esc(cur || 'unknown')}).${b0 && b1 && b0 !== b1 ? ` It moves from ${esc(b0)} to ${esc(b1)}.` : ''}
+                ${twin && twin.d < 0.06 ? `<div class="lc-warn">⚠️ It would then play a lot like your ${esc(twin.n)}.</div>` : ''}${lose.length ? `<div class="lc-warn">⚠️ It's your best ball today for ${esc(lose.join(' and '))}; that job would go to another ball.</div>` : ''}
+                <div class="small dim">Ask your pro shop operator: balls respond to surface differently. A resurface costs a lot less than a new ball.</div></div>`;
+            } else if (it === ranked[0]) tip = `<div class="small dim" style="margin-top:4px">No surface change makes it a better fit for this; the cover and core decide it. This is the kind of ball to shop for if you see this condition a lot.</div>`;
+          }
+          return `<div class="lc-ball"><div class="lc-top"><button type="button" class="lc-name" data-cball="${esc(it.name)}">${esc(it.name)}</button><span class="lc-fit ${f.c}">${f.t}</span></div>
+            <div class="small dim">${esc([it.cell ? `${it.cell.strength} / ${it.cell.shape}` : '', cur && (/^\d+$/.test(String(cur)) ? cur + ' grit' : cur)].filter(Boolean).join(' · '))}</div>${tip}
+            <button type="button" class="btn secondary small lc-use" data-lc-use="${esc(it.name)}">Use this ball on Game Day</button></div>`;
+        }).join('');
+        // When even your best ball is only OK / weak here: which ball in your arsenal becomes the best fit with a resurface?
+        let alt = '';
+        const topFit = ranked[0] ? fit(ranked[0].dist) : null;
+        if (topFit && topFit.c !== 'good') {
+          let bestR = null;
+          for (const it of (mine ? mine.allRanked : [])) { const cur = BT.ballSurface(it.row) || ''; for (const pr of SURFACE_PRESETS) { if (String(pr.surface) === String(cur)) continue; const d = safeScoreRole(role, it.row, vectorWithManualTune(it.row, { surface: pr.surface })); if (!bestR || d < bestR.d) bestR = { d, it, pr, cur }; } }
+          if (bestR && bestR.d < ranked[0].dist - 0.03 && ({ good: 2, ok: 1, weak: 0 })[fit(bestR.d).c] > ({ good: 2, ok: 1, weak: 0 })[topFit.c]) {
+            const shine = BT.surfaceToGrit(bestR.pr.surface) > BT.surfaceToGrit(bestR.cur || '4000') ? 'shine' : 'sand';
+            alt = `<div class="lc-tip" style="margin-bottom:6px">💡 <b>Best resurface option for this:</b> ${shine} your <b>${esc(bestR.it.name)}</b> to <b>${esc(bestR.pr.label)}${/^\d+$/.test(bestR.pr.label) ? ' grit' : ''}</b> (now ${esc(bestR.cur || 'unknown')}) and it becomes a <b>${fit(bestR.d).t.toLowerCase()}</b>, better than anything you have for it today. <span class="small dim">Check with your pro shop operator first.</span></div>`;
+          }
+        }
+        body = `<div class="small" style="margin:6px 0 8px;opacity:.85">${esc(cond.note)}</div>${alt}${rowsHtml || '<div class="small dim">No balls to rate yet.</div>'}`;
+      }
+      return `<details class="lc-fold" id="lcFold"${(() => { try { return localStorage.getItem('bt_lane_cond_open') === '1' ? ' open' : ''; } catch (_e) { return ''; } })()}><summary><b>🛣️ Lane conditions</b> <span class="small dim">your best balls for each condition, plus resurface tips</span></summary>
+        <select class="input" id="lcSel" style="margin-top:8px">${opts}</select><div id="lcOut">${body}</div>
+        <div class="small dim" style="margin-top:8px">Rated on paper (specs, layout, your speed and revs), not from how the balls have rolled. Your Game Day reads and history win when they disagree.</div></details>`;
+    }
+    function wireLaneConditions(rows) {
+      const sel = BT.$('#lcSel'); if (!sel) return;
+      sel.addEventListener('change', () => { laneCondSel = sel.value; try { localStorage.setItem('bt_lane_cond', laneCondSel); } catch (_e) {} renderRolePlanner(rows); const f = BT.$('#lcFold'); if (f) f.open = true; });
+      const f = BT.$('#lcFold'); if (f) f.addEventListener('toggle', () => { try { localStorage.setItem('bt_lane_cond_open', f.open ? '1' : '0'); } catch (_e) {} });
+      BT.$all('#lcFold [data-cball]').forEach(b => b.addEventListener('click', () => openTune(b.getAttribute('data-cball'))));
+      BT.$all('#lcFold [data-lc-use]').forEach(b => b.addEventListener('click', () => {
+        const nm = b.getAttribute('data-lc-use');
+        try { const k = 'bt_gameday_last_line_v1'; const cur = BT.lsGet(k, {}) || {}; BT.lsSet(k, Object.assign({}, cur, { ball: nm })); } catch (_e) {}
+        b.textContent = `✓ ${nm} is your Game Day ball`; b.disabled = true;
+      }));
+    }
     function renderRolePlanner(rows) {
+      el.rolePlanner.innerHTML = laneConditionsHTML(rows);
+      wireLaneConditions(rows);
+    }
+    function renderRolePlannerOld(rows) {
       const out = bestRoleCandidates(rows, 3);
       if (!out.length) {
         el.rolePlanner.innerHTML = '<div class="small dim">No role data available yet.</div>';
