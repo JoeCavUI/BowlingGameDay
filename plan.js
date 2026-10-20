@@ -65,7 +65,7 @@
         const m = {}; tg.forEach(x => { const k = x.t[tr]; if (k) (m[k] = m[k] || []).push(x.g); });
         const groups = Object.entries(m).filter(([, x]) => x.length >= 6).map(([k, x]) => { const s = hist.summary(x); return { k, n: x.length, avg: s.avg, strike: s.strike, eff: (s.avg - base) * x.length / (x.length + K) }; }).sort((p, q) => q.avg - p.avg);
         eff[tr] = {}; groups.forEach(gp => { eff[tr][gp.k] = gp; });
-        if (groups.length >= 2 && groups[0].avg - groups[groups.length - 1].avg >= 5) lines.push(`<b>${LBL[tr]}:</b> ${groups.map(gp => `${esc(gp.k)} ${gp.avg} (${gp.n} games, ${gp.strike}% strikes)`).join(' · ')}.`);
+        if (groups.length >= 2 && groups[0].avg - groups[groups.length - 1].avg >= 5) lines.push(`<b>${LBL[tr]}</b><ul class="pl-sub">${groups.map((gp, gi) => `<li>${gi === 0 ? '⭐ ' : ''}<b>${esc(gp.k)}</b>: ${gp.avg} avg <span class="dim">· ${gp.n} games · ${Math.round(gp.strike)}% strikes</span></li>`).join('')}</ul>`);
       }
       return { tg, base, eff, lines };
     }
@@ -73,8 +73,8 @@
     const items = [];
     const pairNote = lanes ? (P && P.tg.length >= 12 ? '' : ` Lanes ${lanes.replace('-', ' & ')} have ${pairG.length} game${pairG.length === 1 ? '' : 's'}${pairG.length ? ` (${tag(pairG).length} with balls in your arsenal)` : ''}, so patterns come from the whole house and the pair only adjusts them.`) : '';
     items.push(`${H.tg.length} of ${G.length} games here were thrown with balls matched to your arsenal.${pairNote}`);
-    if (P && P.lines.length) { items.push(`On lanes ${lanes.replace('-', ' & ')}:`); P.lines.forEach(l => items.push(l)); }
-    if (H.lines.length) { if (P && P.lines.length) items.push('Across the house:'); H.lines.forEach(l => items.push(l)); }
+    if (P && P.lines.length) { items.push(`<span class="pl-h">On lanes ${lanes.replace('-', ' & ')}</span>`); P.lines.forEach(l => items.push(l)); }
+    if (H.lines.length) { if (P && P.lines.length) items.push('<span class="pl-h">Across the house</span>'); H.lines.forEach(l => items.push(l)); }
     if (!H.lines.length && !(P && P.lines.length)) items.push(H.tg.length >= 12 ? 'No strong cover, core or layout pattern here: your results are about the same across them.' : 'Not enough games with your current balls here to read cover / core / layout patterns yet. Matching more names under Scores → History → Ball names helps.');
     // Score: what the traits predict at the house (+ pair where it has data), blended with the ball's own record.
     const yrCut = new Date(Date.parse(today) - 365 * 864e5).toISOString().slice(0, 10);
@@ -139,8 +139,9 @@
     const gm = (n) => `${n} game${n === 1 ? '' : 's'}`;
     const condWhy = (p) => { const j = String(job.get(p) || '').replace('?', ''); const c = p.cond && p.cond[j]; return c ? `${CL[j]} here: ${c.avg} over ${gm(c.n)} (your ${CL[j]} here average ${cBase[j]})` : (job.get(p) || '').endsWith('?') ? `no ball that fits the bag has beaten your ${CL[j]} average here (4+ games), so this one is picked for its motion` : ''; };
     const why = (p) => [condWhy(p), p.os ? `${p.os.avg} over ${gm(p.os.n)} here${p.rs ? ` (${p.rs.avg} in the last 12 months)` : ''}` : `${p.predK ? `no games on it here; other balls with its cover / core / layout averaged about ${Math.round(p.pred)} (not this ball's own result)` : 'no record here yet'}`, p.po ? `${p.po.avg} over ${gm(p.po.n)} on this pair` : ''].filter(Boolean).join('; ');
-    items.push('<b>The bag</b> (each ball has a job: fresh, transition, burn; listed Early → Late):');
-    ordered.forEach(p => items.push(`<b>${role(p)}: ${esc(p.n)}</b> · ${[p.t.cover, p.t.core && p.t.core + ' core', p.t.layout, p.t.box].filter(Boolean).map(esc).join(', ')}. ${why(p)}.`));
+    items.push('<span class="pl-h"><b>The bag</b> · each ball has a job (fresh, transition, burn), listed early → late</span>');
+    const whyList = (p) => why(p).split('; ').filter(Boolean).map(w => `<li>${w}</li>`).join('');
+    ordered.forEach(p => items.push(`<b>${role(p)}: ${esc(p.n)}</b><ul class="pl-sub"><li class="dim">${[p.t.cover, p.t.core && p.t.core + ' core', p.t.layout, p.t.box].filter(Boolean).map(esc).join(' · ')}</li>${whyList(p)}</ul>`));
     if (picked.length < count) items.push(`Only ${picked.length} of your balls read far enough apart to be worth bringing; more would overlap.`);
     items.push('Plus your spare ball.');
     const roles = {}; ordered.forEach(q => { roles[q.n] = role(q); });
@@ -486,7 +487,7 @@
     const strip = (s) => String(s).replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
     const lines = [p.title, p.sub.join(' · '), ''];
     if (p.empty) lines.push(strip(p.empty), '');
-    p.sections.forEach(s => { lines.push(`${s.icon} ${s.h.toUpperCase()}`); if (s.lead) lines.push(strip(s.lead)); s.items.forEach(i => lines.push('• ' + strip(i))); lines.push(''); });
+    p.sections.forEach(s => { lines.push(`${s.icon} ${s.h.toUpperCase()}`); if (s.lead) lines.push(strip(s.lead)); s.items.forEach(i => { const t = String(i).replace(/<li[^>]*>/g, '\n   – ').replace(/<span class="pl-h">/g, ''); const isH = /^<span class="pl-h">/.test(i); lines.push((isH ? '' : '• ') + strip(t)); }); lines.push(''); });
     if (p.basedOn && p.basedOn.length) lines.push('Based on ' + p.basedOn.join(', ') + '.');
     return lines.join('\n');
   }

@@ -160,7 +160,7 @@
       const today = BT.localDate();
       const head = `<div class="pl-head"><div class="pl-title">${esc(p.title)}</div><div class="pl-sub">${p.sub.map(esc).join(' · ')}</div></div>`;
       const empty = p.empty ? `<div class="pl-empty">${p.empty}</div>` : '';
-      const secs = p.sections.map(s => `<section class="pl-sec"><h3><span class="pl-ic">${s.icon}</span>${esc(s.h)}</h3>${s.lead ? `<p>${s.lead}</p>` : ''}<ul>${s.items.map(i => `<li>${i}</li>`).join('')}</ul></section>`).join('');
+      const secs = p.sections.map(s => `<section class="pl-sec"><h3><span class="pl-ic">${s.icon}</span>${esc(s.h)}</h3>${s.lead ? `<p>${s.lead}</p>` : ''}<ul>${s.items.map(i => `<li${/^<span class="pl-h">/.test(i) ? ' class="pl-hli"' : ''}>${i}</li>`).join('')}</ul></section>`).join('');
       const extra = insightHtml(p);
       const foot = `<div class="pl-foot">${p.basedOn && p.basedOn.length ? 'Based on ' + p.basedOn.map(esc).join(', ') + '. ' : ''}Built by Coach, ${today}.</div>`;
       $('#planOut').innerHTML = `<div class="panel pl-sheet">${head}${empty}${secs}${extra}${foot}</div>`;
