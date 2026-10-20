@@ -58,6 +58,13 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v110-beta47: Barnes matrix
+
+- **Barnes chart is now a 3x2 matrix** (strength down, smooth / sharp across, the way Chris Barnes draws it): ball count, Covered / Deep / Gap, an early → late strip, and your top balls in each box. Urethane and spare on one line underneath.
+- **Double-tap a box** (or tap its count or "+N more") for a full page: every ball on a big early → late chart, with brand, cover, surface, RG, differential, hook / backend bars and **Tune ›**. Back button or swipe back returns to the matrix.
+- **Your slider adjustments:** a small gold * badge on the edge of the ball.
+- Wording: "pro shop operator" instead of "driller".
+
 ## Changes in v109-beta46: matchup & risk, your notes tested against your games
 
 - **🎯 Matchup & risk by game** (Game Plan): each bag ball's game 1 / 2 / 3 average at this house, with a warning when a ball fades (e.g. Fate at Sterling: 244 / 229 / 189, every game 3 well under).
