@@ -786,3 +786,4 @@ select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }
   body.print-review .nr-note, body.print-review .nr-mv{color:#0b6b5f !important}
 }
 .ang-foot{display:block;margin-top:2px;opacity:.75;font-size:12px}.ang-foot a{color:var(--accent)}
+.gd-laypt{margin-top:8px;font-size:15px}.gd-layfoot{opacity:.75;font-size:12px;margin-top:2px}.gd-layfoot a{color:var(--accent)}

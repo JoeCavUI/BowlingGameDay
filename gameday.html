@@ -148,6 +148,7 @@
               <div class="stepper"><button type="button" class="btn secondary" data-step="bp" data-d="-1" aria-label="Breakpoint minus one">−</button><input id="bp" class="input" type="number" step="1" inputmode="numeric" /><button type="button" class="btn secondary" data-step="bp" data-d="1" aria-label="Breakpoint plus one">+</button></div>
             </div>
           </div>
+          <div id="layPt" class="gd-laypt"></div>
           <div class="gd-tdist"><label for="tdist">Target is at</label>
             <select id="tdist" class="input">
               <option value="15">the arrows (15 ft)</option><option value="7">the dots (7 ft)</option><option value="20">20 ft</option><option value="22">22 ft</option><option value="25">25 ft</option><option value="27">27 ft</option><option value="30">30 ft</option><option value="33">33 ft</option><option value="35">35 ft</option><option value="40">40 ft</option>
@@ -2823,6 +2824,18 @@ function sessionSummary(shots) {
       box.innerHTML = '📐 ' + escapeHtml(t)
         .replace(/^(✅ Starting line checks out:|✅ Usable line:|⚠️ Starting-line heads-up:|⚠️ Usable-line heads-up:|Starting line through the rule-of-31 exit point:)/, '<b>$1</b>');
     }
+    // 🎳 Laydown point at the foul line: slide board minus your laydown offset (Bowler page).
+    function updateLayPt() {
+      const box = BT.$('#layPt'); if (!box) return;
+      const sl = Number(el.feet.value), off0 = Number((BT.lsGet(BT.KEYS.BOWLER, {}) || {}).laydownOffset), set = Number.isFinite(off0) && off0 > 0, off = set ? off0 : 5;
+      if (el.feet.value === '' || !Number.isFinite(sl)) { box.innerHTML = ''; return; }
+      const lay = Math.round((sl - off) * 2) / 2;
+      box.innerHTML = `🎳 Laydown at the foul line: <b>board ${lay}</b> <span class="small">(slide ${sl} − ${off}¹)</span><div class="small gd-layfoot">¹ Laydown offset ${off}${set ? '' : ' (not measured yet, so Coach uses 5)'}: from your <a href="bowler.html">Bowler page</a>.</div>`;
+    }
+    el.feet.addEventListener('input', updateLayPt); el.feet.addEventListener('change', updateLayPt);
+    document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('[data-step="feet"]')) setTimeout(updateLayPt, 0); });
+    window.addEventListener('pageshow', () => setTimeout(updateLayPt, 300));
+    setTimeout(updateLayPt, 450);
     ['feet', 'arrows', 'bp', 'pattern'].forEach(k => { if (el[k]) { el[k].addEventListener('input', updateLineMath); el[k].addEventListener('change', updateLineMath); } });
     // 📏 Rule of 31 checkbox (shared with the angle page and the Game Plan)
     function r31Checked() { const c = BT.$('#r31On'); return c ? c.checked : true; }
