@@ -1448,6 +1448,7 @@
       sel.innerHTML = [['all', 'My whole arsenal'], ...sets.map(st => ['set:' + st.name, 'Bag: ' + st.name])].map(([v, t]) => `<option value="${escH(v)}">${escH(t)}</option>`).join('');
       if (keep && Array.from(sel.options).some(o => o.value === keep)) sel.value = keep;
     }
+    let mxQuery = '';
     function renderChart() {
       const box = BT.$('#barnesChart'); if (!box || !window.BTChart) return;
       renderChartScopes();
@@ -1489,20 +1490,20 @@
           <div class="mx-names">${top || `<div class="small" style="opacity:.8">${escH(row.job || '')}</div>`}${more}</div><span class="mx-dt">double-tap ⤢</span></div>`;
       };
       const extra = ['URETHANE', 'SPARE'].map(k => { const L = inBox(k); const lbl = k === 'URETHANE' ? 'Urethane' : 'Spare'; return `<span><b>${lbl}</b>: ${L.length ? L.map(chipOf).join(' ') : (k === 'URETHANE' ? 'none yet' : 'none')}</span>`; }).join(' · ');
-      box.innerHTML = `<div class="chart-key small"><span class="kd cv-s"></span>solid <span class="kd cv-h"></span>hybrid <span class="kd cv-p"></span>pearl <span class="kd cv-o"></span>other <span class="kd ghost"></span>thinking of buying <b class="ctuned-t">*</b> your slider adjustments</div>
+      box.innerHTML = `<div class="mx-search"><input class="input" id="mxSearch" type="text" placeholder="Find a ball (name, brand, cover…)" autocomplete="off" enterkeyhint="search" /><button type="button" class="btn secondary" id="mxSearchClear" aria-label="Clear search">✕</button></div><div id="mxResults" class="mx-results"></div><div class="chart-key small"><span class="kd cv-s"></span>solid <span class="kd cv-h"></span>hybrid <span class="kd cv-p"></span>pearl <span class="kd cv-o"></span>other <span class="kd ghost"></span>thinking of buying <b class="ctuned-t">*</b> your slider adjustments</div>
         <div class="mx"><div></div><div class="mx-colh">Smooth</div><div class="mx-colh">Sharp</div>
         ${['STRONG', 'MEDIUM', 'WEAK'].map(sx => `<div class="mx-rowh">${sx}</div>${cellOf(sx + '|SMOOTH')}${cellOf(sx + '|SHARP')}`).join('')}</div>
         <div class="mx-foot"><span>dots: reads early ←</span><span>→ late</span></div>
         <div class="mx-extra small">${extra}</div>
         <div class="small dim" style="margin-top:6px">Tap a ball name to tune it. Double-tap a box (or tap its number) to see every ball in it.</div>`;
       // Full-page view of one box: every ball, where it reads, its specs, and Tune.
-      const openBox = (k) => {
+      const openBox = (k, focus) => {
         const L = inBox(k), row = BTChart.ROWS.find(r => r.key === k) || {};
         const n = stackL(L, 6, 12), h = n * 26 + 10;
         const dots = L.map(b => `<button type="button" class="mx-bd cv-${cvc(b)} ${b.proposed ? 'ghost' : ''} ${b.retired ? 'retired' : ''}" style="left:${3 + b.x * 0.94}%;top:${5 + b.lane * 26}px" data-cball="${escH(b.name)}">${b.n}${tunedB(b.name) ? '<span class="ctuned">*</span>' : ''}</button>`).join('');
         const bar = (v, c) => `<i><b style="width:${Math.round(Math.max(0, Math.min(1, v || 0)) * 100)}%;background:${c}"></b></i>`;
         const rows = L.map(b => { const r0 = b.row || {}; const surf = BT.ballSurface(r0); const rg = BT.ballRG(r0), df = BT.ballDiff(r0);
-          return `<div class="mx-br"><span class="mx-num cv-${cvc(b)}">${b.n}${tunedB(b.name) ? '<span class="ctuned">*</span>' : ''}</span>
+          return `<div class="mx-br" data-name="${escH(b.name)}"><span class="mx-num cv-${cvc(b)}">${b.n}${tunedB(b.name) ? '<span class="ctuned">*</span>' : ''}</span>
           <div style="min-width:0"><div class="mx-bn">${escH(b.name)}${tunedB(b.name) ? ' <b class="ctuned-t">*</b>' : ''}${b.proposed ? ' <span class="dim">(what-if)</span>' : b.retired ? ' <span class="dim">(retired)</span>' : ''}</div>
           <div class="small dim">${[BT.getField(r0, ['Brand'], ''), b.cover, surf && (/^\d+$/.test(String(surf)) ? surf + ' grit' : surf), rg && 'RG ' + rg, df && 'Diff ' + df].filter(Boolean).map(escH).join(' · ')}</div>
           <div class="mx-mt"><span>Hook</span>${bar(b.hook, '#6b5ce7')}<span>Backend</span>${bar(b.backend, '#e7a35c')}<span>Reads</span>${bar(b.x / 100, '#63e6d2')}</div></div>
@@ -1513,12 +1514,36 @@
           <h2 style="margin:6px 0 2px">${escH(row.label || (k === 'SPARE' ? 'Spare' : k))}</h2><div class="small dim" style="margin-bottom:12px">${escH(row.job || '')}</div>
           ${L.length ? `<div class="mx-big"><div class="mx-bar" style="height:${h}px">${dots}</div><div class="mx-ax"><span>Early</span><span>Mid</span><span>Late</span></div></div>${rows}` : `<div class="list-item">❌ No balls in this box yet. Look for: ${escH((BTChart.SPEC || {})[k] || '')}</div>`}</div>`;
         dd.classList.add('on'); document.body.classList.add('mx-lock'); dd.scrollTop = 0;
+        if (focus) { const fr = Array.from(dd.querySelectorAll('.mx-br')).find(x => x.dataset.name === focus); if (fr) { fr.classList.add('focus'); setTimeout(() => { fr.scrollIntoView({ block: 'center' }); }, 60); } const fd = Array.from(dd.querySelectorAll('.mx-bd')).find(x => x.getAttribute('data-cball') === focus); if (fd) fd.classList.add('focus'); }
         const close = () => { dd.classList.remove('on'); document.body.classList.remove('mx-lock'); if (history.state && history.state.mx) history.back(); };
         BT.$('#mxBack').addEventListener('click', close);
         try { history.pushState({ mx: 1 }, ''); window.onpopstate = () => { dd.classList.remove('on'); document.body.classList.remove('mx-lock'); }; } catch (_e) {}
         BT.$all('[data-cball]', dd).forEach(x => x.addEventListener('click', () => { const nm = x.getAttribute('data-cball'); const r = viewRowsAll().find(rr => BT.ballName(rr) === nm); if (r && r.__proposed) return; openTune(nm); }));
       };
       BT.$all('[data-mxopen]', box).forEach(x => x.addEventListener('click', (e) => { e.stopPropagation(); openBox(x.getAttribute('data-mxopen')); }));
+      // 🔎 Search: type part of a name, brand or cover; matching boxes and dots light up, results list below.
+      const sIn = BT.$('#mxSearch'), sOut = BT.$('#mxResults');
+      const timingWord = (x) => x < 34 ? 'reads early' : x > 66 ? 'reads late' : 'mid';
+      const runSearch = () => {
+        const q = String(sIn.value || '').trim().toLowerCase(); mxQuery = sIn.value;
+        BT.$all('.mx-cell', box).forEach(c => c.classList.remove('dimmed', 'hit'));
+        if (!q) { sOut.innerHTML = ''; return; }
+        const hits = balls.filter(b => [b.name, BT.getField(b.row || {}, ['Brand'], ''), b.cover, BT.ballSurface(b.row || {})].join(' ').toLowerCase().includes(q)).sort((a, b) => a.name.localeCompare(b.name));
+        const keys = new Set(hits.map(b => b.rowKey));
+        BT.$all('.mx-cell', box).forEach(c => c.classList.add(keys.has(c.dataset.mxbox) ? 'hit' : 'dimmed'));
+        const lab = (k) => k === 'SPARE' ? 'Spare' : k === 'URETHANE' ? 'Urethane' : BTChart.label(k);
+        sOut.innerHTML = hits.length ? hits.slice(0, 12).map(b => `<div class="mx-res"><button type="button" class="mx-res-n" data-mxfind="${escH(b.name)}" data-mxk="${escH(b.rowKey)}"><b>${escH(b.name)}</b>${tunedB(b.name) ? '<b class="ctuned-t">*</b>' : ''}<span class="small dim"> · ${escH(lab(b.rowKey))} · ${timingWord(b.x)}${b.retired ? ' · retired' : b.proposed ? ' · what-if' : ''}</span></button><button type="button" class="mx-res-t" data-cball="${escH(b.name)}">Tune ›</button></div>`).join('') + (hits.length > 12 ? `<div class="small dim">+${hits.length - 12} more: keep typing.</div>` : '')
+          : `<div class="small dim">No ball matches "${escH(sIn.value)}".${!BT.$('#chartShowRetired')?.checked ? ' Retired balls are hidden: tick "show retired".' : ''}</div>`;
+        BT.$all('[data-mxfind]', sOut).forEach(x => x.addEventListener('click', () => openBox(x.getAttribute('data-mxk'), x.getAttribute('data-mxfind'))));
+        BT.$all('[data-cball]', sOut).forEach(x => x.addEventListener('click', () => openTune(x.getAttribute('data-cball'))));
+      };
+      if (sIn) {
+        sIn.value = mxQuery || '';
+        sIn.addEventListener('input', runSearch);
+        sIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); const f = BT.$('[data-mxfind]', sOut); if (f) f.click(); sIn.blur(); } });
+        BT.$('#mxSearchClear').addEventListener('click', () => { sIn.value = ''; runSearch(); sIn.focus(); });
+        if (sIn.value) runSearch();
+      }
       let lastTap = { t: 0, k: '' };
       BT.$all('.mx-cell', box).forEach(c => c.addEventListener('click', (e) => {
         if (e.target.closest('[data-cball],[data-mxopen]')) return;
