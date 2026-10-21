@@ -26,7 +26,7 @@
     <div class="panel" id="angForm">
       <div class="pl-row">
         <div><label for="aSlide">Slide board <span class="small">(foul line)</span></label><input id="aSlide" class="input" type="number" step="0.5" inputmode="decimal" /></div>
-        <input type="hidden" id="aOff" />
+        <div><label>Laydown point</label><div id="aLayBox" class="input ang-laybox" aria-live="polite">—</div><input type="hidden" id="aOff" /></div>
       </div>
       <div class="small" id="aLayTxt" style="margin-top:4px"></div>
 
@@ -279,7 +279,7 @@
       const c = compute();
       const save = { rf: $('#aRF').checked, pocket: $('#aPocket').checked, slide: $('#aSlide').value, off: $('#aOff').value, target: $('#aTarget').value, mode, pin, spot, len: $('#aLen').value, more: $('#aMore').value, pattern: ($('#aPat').selectedOptions[0] || {}).value ? (BT.lsGet(BT.KEYS.OIL_PATTERNS, [])[Number($('#aPat').value)] || {}).name : '' };
       try { BT.lsSet(LAST, save); } catch (_e) {}
-      { const offB = Number(bowler.laydownOffset), set = Number.isFinite(offB) && offB > 0; $('#aLayTxt').innerHTML = c ? `Laydown: board ${fmt(c.lay)} (slide ${fmt(c.slide)} − ${fmt(c.off)}¹).<span class="ang-foot"> ¹ Laydown offset ${fmt(c.off)}${set ? '' : ' (not measured yet, so Coach uses 5)'}: from your <a href="bowler.html">Bowler page</a>.</span>` : ''; }
+      { const offB = Number(bowler.laydownOffset), set = Number.isFinite(offB) && offB > 0; $('#aLayBox').innerHTML = c ? `board ${fmt(c.lay)}<sup>¹</sup>` : '—'; $('#aLayTxt').innerHTML = `<span class="ang-foot">¹ Slide${c ? ' ' + fmt(c.slide) : ''} − your laydown offset ${fmt(Number($('#aOff').value) || 5)}${set ? '' : ' (not measured yet, so Coach uses 5)'}, from your <a href="bowler.html">Bowler page</a>.</span>`; }
       { const el = document.getElementById('aRatioTxt'); if (el) el.textContent = c && c.ratio != null ? `Ratio ${r1(c.ratio)}:1 · ${c.rc === 'sport' ? 'sport pattern (USBC: 3:1 or less): little room to miss' : c.rc === 'mid' ? 'medium ratio: some room to miss' : 'house shot: drier outside, room to miss'}` : (c ? 'No ratio on this pattern: the alerts assume a house shot.' : ''); }
       { const el = $('#aR31Txt'); el.textContent = c && c.r31 ? (c.exit31 != null ? `Exit point about board ${c.exit31} on ${c.len} ft. A rule of thumb, not your breakpoint.${c.rc === 'sport' ? ' Sport pattern, so it\'s on.' : ''}` : 'Pick a pattern length to see the exit point.') : (c && c.rc === 'sport' ? 'Off by your choice. Sport patterns usually play best near the exit point.' : ''); el.style.display = el.textContent ? '' : 'none'; }
       $('#aPocketLbl').style.display = mode === 'pin' ? 'none' : '';
