@@ -195,6 +195,11 @@
               <div id="faultWrap" class="gd-fault" style="display:none">
                 <div class="gd-rl">What do you think happened? <span class="small">(optional, one tap)</span></div>
                 <div id="readsFault" class="gd-r1"></div>
+                <div class="gd-myfault"><button type="button" class="gd-addfault" id="addFaultBtn">+ Add your own</button></div>
+                <div id="myFaultBox" style="display:none;margin-top:8px">
+                  <div style="display:flex;gap:8px"><input id="myFaultIn" class="input" maxlength="40" placeholder="What it felt like" style="flex:1" /><button type="button" class="btn" id="myFaultAdd">Add</button></div>
+                  <div id="myFaultList" class="small" style="margin-top:6px"></div>
+                </div>
               </div>
               <div class="gd-rl">Ball reaction</div>
               <div id="readsBallObs" class="gd-r1"></div>
@@ -664,6 +669,17 @@ function selectedPills(container) {
       });
     }
 
+    function renderFaultPills(select) {
+      if (!el.readsFault || !window.BTCoach || !BTCoach.allFaults) return;
+      const cur = select || singlePillValue(el.readsFault, '');
+      pillButtonsCustom(el.readsFault, BTCoach.allFaults().map(f => ({ val: escapeHtml(f.v), label: f.mine ? '✍️ ' + escapeHtml(f.l) : f.l })));
+      wireQualityPills(el.readsFault);
+      if (cur) { const b = BT.$all('button[data-pill]', el.readsFault).find(x => x.getAttribute('data-pill') === cur); if (b) { b.classList.add('active'); b.style.outline = '2px solid rgba(80,227,194,0.45)'; } }
+    }
+    function renderMyFaultList() {
+      const box = BT.$('#myFaultList'); if (!box) return; const mine = BTCoach.myFaults();
+      box.innerHTML = mine.length ? `Your reasons: ${mine.map(t => `<span class="gd-mychip">${escapeHtml(t)} <button type="button" data-rmfault="${escapeHtml(t)}" aria-label="Remove">✕</button></span>`).join(' ')}` : 'Your reasons stay on the list for every shot. Coach learns their pattern like the others.';
+    }
     // 🤔 The reason list only shows once you tap Poor.
     function updateFaultVis() { const w = BT.$('#faultWrap'); if (!w) return; const on = selectedPills(el.readsQuality).includes('Poor execution'); w.style.display = on ? '' : 'none'; if (!on && el.readsFault) BT.$all('button[data-pill]', el.readsFault).forEach(b => { b.classList.remove('active'); b.style.outline = 'none'; }); }
     function clearPills() {
@@ -2465,7 +2481,13 @@ function sessionSummary(shots) {
       wireQualityPills(el.readsPocket);
       wireQualityPills(el.readsExit);
       wireQualityPills(el.readsSpeed);
-      if (el.readsFault && window.BTCoach && BTCoach.FAULTS) { pillButtonsCustom(el.readsFault, BTCoach.FAULTS.map(f => ({ val: f.v, label: f.l }))); wireQualityPills(el.readsFault); }
+      renderFaultPills();
+      // + Add your own reason: saved on this phone and kept on the list
+      BT.$('#addFaultBtn').addEventListener('click', () => { const b = BT.$('#myFaultBox'); b.style.display = b.style.display === 'none' ? '' : 'none'; renderMyFaultList(); if (b.style.display === '') BT.$('#myFaultIn').focus(); });
+      const addMine = () => { const t = BT.$('#myFaultIn').value.trim(); if (!t) return; BTCoach.setMyFaults([...BTCoach.myFaults(), t]); BT.$('#myFaultIn').value = ''; renderFaultPills('my:' + t); renderMyFaultList(); };
+      BT.$('#myFaultAdd').addEventListener('click', addMine);
+      BT.$('#myFaultIn').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addMine(); } });
+      BT.$('#myFaultList').addEventListener('click', (e) => { const x = e.target.closest('[data-rmfault]'); if (!x) return; const t = x.getAttribute('data-rmfault'); if (!confirm(`Take "${t}" off your list? Shots already tagged with it keep it.`)) return; BTCoach.setMyFaults(BTCoach.myFaults().filter(y => y !== t)); renderFaultPills(); renderMyFaultList(); });
       el.readsQuality.addEventListener('click', () => setTimeout(updateFaultVis, 0));
 
       renderHouses();
@@ -2868,7 +2890,7 @@ function sessionSummary(shots) {
       esPills(BT.$('#esMiss'), missObs, shot.miss || '');
       esPills(BT.$('#esPocket'), pocketObs.map(o => o), shot.pocket || '');
       esPills(BT.$('#esTag'), quickResults.map(t => ({ val: t, label: t })), shot.leaveTag || ((shot.leavePins || []).length ? '' : 'Strike'));
-      { const fw = BT.$('#esFaultWrap'), poor = Number(shot.executionQuality) === 1 && window.BTCoach && BTCoach.FAULTS; fw.style.display = poor ? '' : 'none'; if (poor) esPills(BT.$('#esFault'), BTCoach.FAULTS.map(f => ({ val: f.v, label: f.l })), shot.fault || ''); }
+      { const fw = BT.$('#esFaultWrap'), poor = Number(shot.executionQuality) === 1 && window.BTCoach && BTCoach.FAULTS; fw.style.display = poor ? '' : 'none'; if (poor) { const L = BTCoach.allFaults(); if (shot.fault && !L.some(f => f.v === shot.fault)) L.push({ v: shot.fault, l: BTCoach.faultLabel(shot.fault) }); esPills(BT.$('#esFault'), L.map(f => ({ val: f.v, label: f.l })), shot.fault || ''); } }
       BT.$('#esPins').value = (shot.leavePins || []).join('-');
       BT.$('#esFeet').value = shot.feet ?? ''; BT.$('#esArrows').value = shot.arrows ?? ''; BT.$('#esBp').value = shot.bp ?? '';
       const balls = Array.from(el.ball.options).map(o => o.value).filter(Boolean);

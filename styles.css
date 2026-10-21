@@ -763,3 +763,6 @@ select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }
 .gd-faultsum ul{margin:6px 0 0;padding-left:18px}
 #readsFault{display:flex;flex-wrap:wrap;gap:6px;overflow:visible}
 #readsFault button{flex:0 0 auto;min-width:0;width:auto;white-space:nowrap;font-size:14px}
+.gd-addfault{all:unset;cursor:pointer;margin-top:8px;display:inline-block;padding:6px 12px;border-radius:999px;border:1px dashed rgba(255,179,92,.6);color:#ffb35c;font-weight:700;font-size:14px}
+.gd-mychip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;margin:2px 2px 0 0;border-radius:999px;background:rgba(255,255,255,.08)}
+.gd-mychip button{all:unset;cursor:pointer;opacity:.7;padding:0 2px}

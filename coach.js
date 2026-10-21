@@ -1501,7 +1501,13 @@
     { v: 'balance', l: 'Fell off the shot' }, { v: 'well', l: 'Released it well' }, { v: 'unsure', l: 'Not sure' },
   ];
   // Physical feelings only: where the ball went (missed the mark) is already logged under Your mark.
-  const faultLabel = (v) => (FAULTS.find(f => f.v === v) || {}).l || ({ target: 'Missed my target' }[v]) || v;
+  // Your own reasons are saved as 'my:<text>' and learned like the others.
+  const faultLabel = (v) => /^my:/.test(String(v || '')) ? String(v).slice(3) : (FAULTS.find(f => f.v === v) || {}).l || ({ target: 'Missed my target' }[v]) || v;
+  const MY_FAULTS_KEY = 'bt_my_faults_v1';
+  const myFaults = () => { try { const a = JSON.parse(localStorage.getItem(MY_FAULTS_KEY) || '[]'); return Array.isArray(a) ? a.filter(x => typeof x === 'string' && x.trim()) : []; } catch (_e) { return []; } };
+  const setMyFaults = (a) => { try { localStorage.setItem(MY_FAULTS_KEY, JSON.stringify([...new Set(a.map(x => String(x).trim()).filter(Boolean))].slice(0, 20))); } catch (_e) {} };
+  // Built-in list (Not sure last) with your own reasons before Not sure.
+  const allFaults = () => { const base = FAULTS.filter(f => f.v !== 'unsure'); return [...base, ...myFaults().map(t => ({ v: 'my:' + t, l: t, mine: true })), FAULTS.find(f => f.v === 'unsure')]; };
   // s: a logged shot; lefty: boolean. Returns { fit: 'fits'|'off'|'learn'|'na', side, room, text }.
   function faultRead(s, lefty) {
     if (!s || !s.fault) return null;
@@ -1519,7 +1525,7 @@
       case 'target': fit = side === 'in' || side === 'out' ? 'fits' : side === 'hit' ? 'off' : 'na'; break;
       case 'squeezed': fit = fast || obs.includes('Too early') || pk === 'Pocket high' ? 'fits' : 'learn'; break;
       case 'dropped': case 'early': case 'late': case 'balance': fit = 'learn'; break;
-      default: fit = 'na';
+      default: fit = /^my:/.test(String(s.fault)) ? 'learn' : 'na';
     }
     // Coach's call: change the bowler or the line?
     let call = '';
@@ -1553,5 +1559,5 @@
     });
   }
 
-  root.BTCoach = { FAULTS, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
+  root.BTCoach = { FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
 })(typeof window !== 'undefined' ? window : globalThis);
