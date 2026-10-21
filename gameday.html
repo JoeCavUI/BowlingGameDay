@@ -2477,7 +2477,7 @@ function sessionSummary(shots) {
       el.pattern.addEventListener('change', () => { updatePrep(); markCoachDirty(); });
       // Open the Angle calculator with tonight's line and pattern filled in.
       const angA = document.getElementById('gdAngle');
-      if (angA) angA.addEventListener('click', () => { const q = new URLSearchParams(); if (el.feet.value) q.set('slide', el.feet.value); if (el.arrows.value) q.set('target', el.arrows.value); if (el.tdist && el.tdist.value && el.tdist.value !== '15') q.set('tft', el.tdist.value); if (el.bp && el.bp.value) q.set('bp', el.bp.value); if (el.pattern.value) q.set('pattern', el.pattern.value); angA.href = 'angle.html?' + q.toString(); });
+      if (angA) angA.addEventListener('click', () => { const q = new URLSearchParams(); q.set('from', 'gameday'); if (el.feet.value) q.set('slide', el.feet.value); if (el.arrows.value) q.set('target', el.arrows.value); if (el.tdist && el.tdist.value && el.tdist.value !== '15') q.set('tft', el.tdist.value); if (el.bp && el.bp.value) q.set('bp', el.bp.value); if (el.pattern.value) q.set('pattern', el.pattern.value); angA.href = 'angle.html?' + q.toString(); });
       el.league.addEventListener('change', () => { syncLeagueWear(); updatePrep(); markCoachDirty(); });
       // How the inside plays on this league: saved on the league, used by Coach and the Game Plan.
       const wearSel = document.getElementById('leagueWear');

@@ -17,6 +17,7 @@
 <body data-page="angle">
   <div class="navlinks"></div>
   <div class="container">
+    <a class="ang-back" id="aBack" href="gameday.html" style="display:none">← Back to Game Day</a>
     <div class="header">
       <h1>📐 Angle</h1>
       <div class="small">Slide, laydown and one aim point give you a straight line down the lane. See which board the ball is on at any distance, where it leaves the oil, and what a perfectly straight shot would hit at the pins.</div>
@@ -85,6 +86,7 @@
       <table class="ang-tbl" id="aTbl"></table>
       <div id="aAlerts"></div>
       <div id="aFix"></div>
+      <a class="btn secondary ang-back2" id="aBack2" href="gameday.html" style="display:none;margin-top:12px;text-align:center">← Back to Game Day</a>
       <div class="small" style="margin-top:10px;opacity:.75">A straight line, no hook: it shows where you're sending the ball, not where it turns. Arrows are taken at 15 ft (they're staggered 12–16 ft on a real lane, so set the distance if you use one arrow's exact spot). Board 1 is your outside board.</div>
     </div>
   </div>
@@ -93,6 +95,8 @@
   <script>
   (function () {
     BT.renderNav('angle');
+    // Opened from Game Day: a way back (history keeps Game Day where you left it).
+    if (new URLSearchParams(location.search).get('from') === 'gameday') ['#aBack', '#aBack2'].forEach(id => { const a = document.querySelector(id); a.style.display = ''; a.addEventListener('click', (e) => { if (/gameday\.html/.test(document.referrer) && history.length > 1) { e.preventDefault(); history.back(); } }); });
     const $ = (q) => document.querySelector(q);
     const LAST = 'bt_angle_last_v1';
     const BW_IN = 41.5 / 39;            // one board, inches
