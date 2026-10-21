@@ -20,21 +20,24 @@
     <div class="header">
       <h1>Arsenal</h1>
     </div>
-    <div class="panel setup-banner" style="margin-top:0">
+    <div class="ar-hub" id="arHub"></div>
+    <div class="ar-nav" id="arNav" style="display:none"></div>
+    <div class="ar-filteron small" id="arFilterOn" style="display:none"></div>
+    <div class="panel setup-banner" style="margin-top:0" data-arpage="add">
       <b>Your arsenal = every ball you own.</b>
       <div class="small" style="margin-top:4px;opacity:1"><span class="gd-qnum" style="display:inline-flex;margin-right:4px">1</span> Add your balls: <b>upload your ball spreadsheet</b> (CSV) or tap <b>+ Add a ball → Save to Arsenal</b> one at a time.<br>
-      <span class="gd-qnum" style="display:inline-flex;margin:6px 4px 0 0">2</span> Then pack tonight's bag on <a href="analyze.html"><b>Bag →</b></a>, or let Coach pick one in <a href="#rolePlannerPanel"><b>Role Planner</b></a> below.</div>
+      <span class="gd-qnum" style="display:inline-flex;margin:6px 4px 0 0">2</span> Then pack tonight's bag on <a href="analyze.html"><b>Bag →</b></a>, or let Coach pick one in <a href="#bag"><b>Coach picks my bag</b></a>.</div>
       <div class="btn-row"><button class="btn" id="addWhatIf">+ Add a ball</button><button class="btn secondary" id="uploadSheet" type="button">Upload ball spreadsheet</button><a class="btn secondary" href="analyze.html">Pack my bag →</a></div>
       <input id="sheetFile" type="file" accept=".csv,text/csv" style="display:none" />
       <div class="small" style="margin-top:6px;opacity:1">Spreadsheet in Excel or Numbers? Save/export it as <b>CSV</b> first. <a href="#" id="downloadTemplate">Download a blank template</a>.</div>
     </div>
 
-    <div class="panel" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+    <div class="panel" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center" data-arpage="list">
       <input class="input" id="filter" placeholder="Search (ball, brand, cover, core, surface)…" style="flex:1;min-width:200px" />
       <button class="btn secondary" id="clearFilter">Clear</button>
     </div>
 
-    <div class="panel" id="barnesPanel">
+    <div class="panel" id="barnesPanel" data-arpage="barnes">
       <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap">
         <div>
           <h2 style="margin:0">🎳 Your Barnes chart</h2>
@@ -47,16 +50,21 @@
       </div>
       <div id="chartSummary" style="margin-top:10px"></div>
       <div id="barnesChart" style="margin-top:8px"></div>
+    </div>
+
+    <div class="panel" data-arpage="gaps">
+      <h2 style="margin:0">🧩 Gaps, duplicates and ideas</h2>
+      <div class="small">What your Barnes chart says: empty boxes, crowded boxes, near-duplicates, big steps, and resurface-before-you-buy ideas.</div>
       <div id="chartFindings" style="margin-top:12px"></div>
     </div>
 
-    <details class="panel gd-fold">
+    <details class="panel gd-fold" data-arpage="barnes">
       <summary><span class="gd-fold-title">Matrix list view</span> <span class="small">(the same six boxes as a list)</span></summary>
       <div id="matrix" class="grid-2" style="margin-top:10px"></div>
     </details>
 
 
-    <div class="panel" id="arsenalCheckPanel">
+    <div class="panel" id="arsenalCheckPanel" data-arpage="check">
       <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap">
         <div>
           <h2 style="margin:0">🩺 Arsenal check</h2>
@@ -68,10 +76,10 @@
       <div id="arsenalCheck"></div>
     </div>
 
-    <div class="panel" id="rolePlannerPanel">
+    <div class="panel" id="rolePlannerPanel" data-arpage="bag">
       <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap">
         <div>
-          <h2 style="margin:0">Role Planner: let Coach pick my bag</h2>
+          <h2 style="margin:0">🎒 Coach picks my bag</h2>
           <div class="small">Shows the best matches for each coach role from the balls currently visible on this page. Use the filter first if you want to plan from a subset.</div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -101,18 +109,23 @@
         </div>
       </div>
       <div class="hr-split"></div>
-      <div class="setup-banner small" style="margin:0 0 10px"><b>Suggest my bag</b> uses the same pick as your Game Plan and Game Day Coach: your record at that house and pair (weighted for sample size and recent form), your cover / core / layout patterns there, and balls spread from earlier to later. With no history for the house, it falls back to ball motion (the same ratings as Lane conditions below).</div>
-<div id="rolePlanner"></div>
+      <div class="setup-banner small" style="margin:0 0 10px"><b>Suggest my bag</b> uses the same pick as your Game Plan and Game Day Coach: your record at that house and pair (weighted for sample size and recent form), your cover / core / layout patterns there, and balls spread from earlier to later. With no history for the house, it falls back to ball motion (the same ratings as the Lane conditions page).</div>
       <div id="roleSuggestion" style="margin-top:12px"></div>
     </div>
 
-    <div class="panel">
+    <div class="panel" data-arpage="lanes">
+      <h2 style="margin:0">🛣️ Lane conditions</h2>
+      <div class="small" style="margin-bottom:8px">Pick a lane condition: your best balls for it, rated on paper, plus resurface tips.</div>
+      <div id="rolePlanner"></div>
+    </div>
+
+    <div class="panel" data-arpage="list">
       <h2>Ball list</h2>
       <div class="small">Tap a matrix ball or use Tune in the list to open tuning.</div>
       <div class="hr-split"></div>
       <div class="list" id="table"></div>
     </div>
-    <details class="panel gd-fold">
+    <details class="panel gd-fold" data-arpage="add">
       <summary><span class="small">Ball list file (advanced)</span> <span class="small" id="csvStatus">CSV: not loaded</span> <span class="small dim" id="buildStamp"></span></summary>
       <div class="btn-row">
         <button class="btn secondary" id="reloadAuto">Load the sample arsenal (35 balls)</button>
@@ -1148,6 +1161,7 @@
     function selectRoleSuggestion(name) {
       const nm = String(name || '').trim();
       if (!nm) return;
+      if (location.hash !== '#list') location.hash = 'list';
       el.filter.value = nm;
       lastPlannerFilter = nm;
       applyFilter();
@@ -2141,6 +2155,44 @@ function removeRowByName(name, type) {
 
 
     init();
+  </script>
+
+  <script>
+  // 🗂️ Arsenal sub-pages: a menu first, then one page at a time with a nav bar to the others. #barnes, #bag … work as links and with Back.
+  (function () {
+    const PAGES = [
+      { id: 'add', icon: '➕', t: 'Add a ball', d: 'Add one ball or upload your spreadsheet' },
+      { id: 'barnes', icon: '🎳', t: 'Barnes chart', d: 'Your six boxes, early → late, with search' },
+      { id: 'bag', icon: '🎒', t: 'Coach picks my bag', d: 'Same bag as your Game Plan and Game Day' },
+      { id: 'check', icon: '🩺', t: 'Arsenal check', d: 'How your equipment fits your game' },
+      { id: 'gaps', icon: '🧩', t: 'Gaps, duplicates & ideas', d: 'Empty boxes, look-alikes, resurface ideas' },
+      { id: 'lanes', icon: '🛣️', t: 'Lane conditions', d: 'Best balls per condition, resurface tips' },
+      { id: 'list', icon: '📋', t: 'Ball list', d: 'Every ball, with search and Tune' },
+    ];
+    const OLD = { rolePlannerPanel: 'bag', arsenalCheckPanel: 'check', barnesPanel: 'barnes' };
+    const hub = document.getElementById('arHub'), nav = document.getElementById('arNav'), fon = document.getElementById('arFilterOn');
+    const counts = () => { try { const c = BT.lsGet(BT.KEYS.CSV_CACHE, null); return BT.withCustomBalls((c && c.rows) || []).filter(r => BT.ballName(r) && !BT.isRetired(r)).length; } catch (_e) { return 0; } };
+    hub.innerHTML = `<div class="small dim" style="margin:6px 0 8px" id="arHubSub"></div>` + PAGES.map(p => `<a class="ar-card" href="#${p.id}"><span class="ar-ic">${p.icon}</span><span><b>${p.t}</b><span class="small dim">${p.d}</span></span><span class="ar-go">›</span></a>`).join('');
+    nav.innerHTML = `<a class="ar-home" href="#">☰ Arsenal</a><div class="ar-chips">${PAGES.map(p => `<a class="ar-chip" data-p="${p.id}" href="#${p.id}">${p.icon} ${p.t.replace(' & ideas', '')}</a>`).join('')}</div>`;
+    function show() {
+      try { const nl = document.querySelector('.navlinks'); if (nl) document.documentElement.style.setProperty('--nav-h', nl.offsetHeight + 'px'); } catch (_e) {}
+      let id = (location.hash || '').slice(1); id = OLD[id] || id;
+      const page = PAGES.find(p => p.id === id);
+      document.querySelectorAll('[data-arpage]').forEach(el => { el.style.display = page && el.dataset.arpage === page.id ? '' : 'none'; });
+      hub.style.display = page ? 'none' : '';
+      nav.style.display = page ? '' : 'none';
+      const n = counts(); const sub = document.getElementById('arHubSub'); if (sub) sub.textContent = n ? `${n} balls in your arsenal. Pick what you want to do:` : 'Start with ➕ Add a ball.';
+      nav.querySelectorAll('.ar-chip').forEach(c => { const on = page && c.dataset.p === page.id; c.classList.toggle('on', !!on); if (on) c.scrollIntoView({ inline: 'center', block: 'nearest' }); });
+      // A list filter quietly narrows the chart and bag picks: say so on the other pages.
+      const f = document.getElementById('filter'), q = f ? f.value.trim() : '';
+      fon.style.display = page && q && page.id !== 'list' ? '' : 'none';
+      if (q) fon.innerHTML = `🔎 Ball list filter is on: <b>${q.replace(/[&<>"]/g, '')}</b>. <a href="#" id="arClearF">Clear</a>`;
+      const cf = document.getElementById('arClearF'); if (cf) cf.onclick = (e) => { e.preventDefault(); const b = document.getElementById('clearFilter'); if (b) b.click(); show(); };
+      window.scrollTo(0, 0);
+    }
+    window.addEventListener('hashchange', show);
+    show();
+  })();
   </script>
 </body>
 </html>

@@ -81,7 +81,7 @@
         <h2 style="margin:0 0 4px 0">The Five Elements: your profile</h2>
         <div class="small">Direction, angle, speed, rev rate and roll. Every Coach suggestion is a change to one of these. Updates when you save.</div>
         <div id="fiveElements" style="display:grid;gap:8px;margin-top:10px"></div>
-        <div class="small" style="margin-top:10px"><a href="arsenal.html#arsenalCheckPanel" style="color:var(--accent);font-weight:700">🩺 See how your equipment matches your game: Arsenal check →</a></div>
+        <div class="small" style="margin-top:10px"><a href="arsenal.html#check" style="color:var(--accent);font-weight:700">🩺 See how your equipment matches your game: Arsenal check →</a></div>
       </div>
 
       <div class="panel" style="margin-top:16px;padding:14px;background:#0f172a;border:1px solid #243041">
@@ -251,7 +251,7 @@
         const an = BTChart.analyze(BTChart.place(rows, bowler));
         els.equipScore.value = `${an.covered.length} of 6 Barnes boxes${an.urethane ? ' + urethane' : ''}`;
         const missing = an.empty.map(k => BTChart.label(k));
-        els.equipNote.innerHTML = (missing.length ? `Missing: ${missing.join(', ')}. ` : 'Every box has at least one ball. ') + `<a href="arsenal.html#barnesPanel">See your Barnes chart →</a>`;
+        els.equipNote.innerHTML = (missing.length ? `Missing: ${missing.join(', ')}. ` : 'Every box has at least one ball. ') + `<a href="arsenal.html#barnes">See your Barnes chart →</a>`;
       } catch (e) {
         console.error(e);
         els.equipScore.value = '';
