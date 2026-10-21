@@ -58,6 +58,10 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v116-beta53: Focal point
+
+- **🎯 Angle → Focal point** at the bottom of the board list: where your line would be at the pins (60 ft) if the ball went straight (Kegel three-point targeting: laydown → target → focal point), plus a marker on the lane. Shown with Pocket on or off.
+
 ## Changes in v115-beta52: Pocket line, Rule of 31 checkbox, house drop-down
 
 - **🎳 Angle → Pocket** (1-3, or 1-2 for a lefty): draws the hook from your breakpoint (or an estimated turn) into the pocket, lists the boards down to 60 ft, and shows a **Will this line work?** card: Baker Box / rule of 31, breakpoint fit, channel, recovery boards and an entry angle estimate (USBC: 4–6° carries best).
