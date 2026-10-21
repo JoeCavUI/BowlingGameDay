@@ -62,6 +62,10 @@
                 <option value="left">Start on left lane</option>
                 <option value="right">Start on right lane</option>
               </select>
+              <select id="gameLane" class="input" style="margin-top:6px" aria-label="Next game starts on">
+                <option value="other">Each new game starts on the other lane</option>
+                <option value="same">Each new game starts on the same lane</option>
+              </select>
             </div>
             <div>
               <label>Oil pattern</label>
@@ -178,6 +182,7 @@
               <div id="pinDeckWrap" style="display:flex;justify-content:center;flex:1 1 auto;min-width:0;max-width:250px"></div>
               <div id="deckLblR" class="deck-lbl"></div>
             </div>
+            <div id="frameFixBox" class="gd-framefix" style="display:none"></div>
             <div class="small" style="text-align:center;margin-top:6px" id="pinDeckHint">Tap the pins still standing.</div>
           </div>
 
@@ -334,6 +339,7 @@
       house: BT.$('#house'),
       lanes: BT.$('#lanes'),
       startLane: BT.$('#startLane'),
+      gameLane: BT.$('#gameLane'),
       pattern: BT.$('#pattern'),
       league: BT.$('#league'),
       addLeagueBtn: BT.$('#addLeagueBtn'),
@@ -370,6 +376,8 @@
 
     let selectedSetBalls = []; // names
     let sessionShots = [];
+    // Per-game fixes from tapping the lane / frame beside the pin deck: { [gameNo]: { off: frames skipped (+) or extra (−), flip: start on the other lane } }
+    let frameAdj = {};
 
     let selectedPins = new Set(); // pins left standing
     let resultTag = ''; // Strike / Brooklyn / Flat 10 / Ringing 10 (optional)
@@ -834,11 +842,10 @@ function selectedPills(container) {
       const pair = parseLanePair(el.lanes.value);
       if (pair.length !== 2) return '';
       const [leftLane, rightLane] = pair;
-      const start = el.startLane.value || 'left';
-      const first = (start === 'left') ? leftLane : rightLane;
-      const second = (start === 'left') ? rightLane : leftLane;
-
       const info = computeFrameInfo();
+      const left = gameStartsLeft(info.gameNo);
+      const first = left ? leftLane : rightLane;
+      const second = left ? rightLane : leftLane;
 
       // If we're logging 10th-frame fill shots, stay on the 10th-frame lane (do not alternate).
       if (info.defaultFill) {
@@ -850,6 +857,50 @@ function selectedPills(container) {
 
       // Alternate lanes based on number of non-fill (frame) shots already logged.
       return String((info.nonFillCount % 2 === 0) ? first : second);
+    }
+
+    // Which lane a game starts on: your starting lane for game 1, then (by default) the other lane each new game,
+    // because frame 10 ends on the other lane. A fix from the lane / frame editor flips that game.
+    function gameStartsLeft(g) {
+      let left = (el.startLane.value || 'left') === 'left';
+      if ((el.gameLane ? el.gameLane.value : 'other') !== 'same' && g % 2 === 0) left = !left;
+      if ((frameAdj[g] || {}).flip) left = !left;
+      return left;
+    }
+
+    function openFrameFix() {
+      const box = BT.$('#frameFixBox'); if (!box) return;
+      if (box.style.display !== 'none') { box.style.display = 'none'; return; }
+      const info = computeFrameInfo(), pair = parseLanePair(el.lanes.value), lane = nextLaneNumber();
+      const logged = currentGameShotsChron().filter(x => !x.isFill).length;
+      box.innerHTML = `<div class="gd-ff-h"><b>Fix lane or frame</b> <span class="small">Game ${info.gameNo}</span></div>
+        <div class="gd-ff-row"><label>Next frame<select id="ffFrame" class="input">${Array.from({ length: 10 }, (_, i) => `<option value="${i + 1}"${i + 1 === info.frame ? ' selected' : ''}>${i + 1}</option>`).join('')}</select></label>
+        ${pair.length === 2 ? `<label>On lane<select id="ffLane" class="input">${pair.map(n => `<option value="${n}"${String(n) === String(lane) ? ' selected' : ''}>${n}</option>`).join('')}</select></label>` : ''}</div>
+        ${pair.length === 2 && logged ? `<label class="small gd-ff-chk"><input type="checkbox" id="ffRelane" checked /> Also move this game's ${logged} logged shot${logged === 1 ? '' : 's'} to the matching lanes</label>` : ''}
+        <div class="small" style="margin:6px 0">Skipped a shot? Set the frame you're on now. Started the game on the other lane? Pick that lane; the rest of the game follows it.</div>
+        <div style="display:flex;gap:8px"><button type="button" class="btn" id="ffSave">Save</button><button type="button" class="btn secondary" id="ffCancel">Cancel</button>${(frameAdj[info.gameNo] && (frameAdj[info.gameNo].off || frameAdj[info.gameNo].flip)) ? '<button type="button" class="btn secondary" id="ffReset">Undo fixes</button>' : ''}</div>`;
+      box.style.display = '';
+      BT.$('#ffCancel').onclick = () => { box.style.display = 'none'; };
+      const rs = BT.$('#ffReset'); if (rs) rs.onclick = () => { delete frameAdj[info.gameNo]; afterFix(); };
+      BT.$('#ffSave').onclick = () => {
+        const g = info.gameNo, want = Number(BT.$('#ffFrame').value), cur = frameAdj[g] || {};
+        const adj = { off: want - 1 - info.rawCount, flip: !!cur.flip };
+        frameAdj[g] = adj;
+        const ffl = BT.$('#ffLane');
+        if (ffl && pair.length === 2) {
+          // Lane for the chosen frame with the current start; flip the game's start if it should be the other lane.
+          if (String(nextLaneNumber()) !== String(ffl.value)) adj.flip = !adj.flip;
+          const rl = BT.$('#ffRelane');
+          if (rl && rl.checked) {
+            const left = gameStartsLeft(g), first = String(left ? pair[0] : pair[1]), second = String(left ? pair[1] : pair[0]);
+            const gs = currentGameShotsChron(); let n = 0, tenthLane = '';
+            gs.forEach(x => { if (x.isFill) { if (tenthLane) x.lane = tenthLane; return; } const fr = Number(x.frame) || (n + 1); x.lane = fr % 2 === 1 ? first : second; if (fr === 10) tenthLane = x.lane; n++; });
+          }
+        }
+        if (!adj.off && !adj.flip) delete frameAdj[g];
+        afterFix();
+      };
+      function afterFix() { box.style.display = 'none'; saveCurrentSessionDraft(); renderLog(); syncNextLane(); updateFrameUI(); markCoachDirty(); toast(`Next: frame ${computeFrameInfo().frame}${nextLaneNumber() ? ` on lane ${nextLaneNumber()}` : ''}.`); }
     }
 
     function syncNextLane() {
@@ -875,7 +926,7 @@ function selectedPills(container) {
       const pair = parseLanePair(el.lanes.value);
       const info = computeFrameInfo();
       const fr = info.defaultFill ? '10th, fill' : `Frame ${info.frame}`;
-      const html = `${lane ? `<div class="deck-lane-k">Lane</div><div class="deck-lane">${lane}</div>` : ''}<div class="deck-frame">${fr}</div><div class="deck-frame">Game ${info.gameNo}</div>`;
+      const html = `<button type="button" class="deck-fix" data-deckfix="1" aria-label="Change lane or frame">${lane ? `<div class="deck-lane-k">Lane</div><div class="deck-lane">${lane}</div>` : ''}<div class="deck-frame">${fr}</div><div class="deck-frame">Game ${info.gameNo}</div><div class="deck-edit">✎ fix</div></button>`;
       const right = pair.length === 2 && lane && Number(lane) === Number(pair[1]);
       L.innerHTML = right ? '' : html;
       R.innerHTML = right ? html : '';
@@ -885,10 +936,12 @@ function selectedPills(container) {
     function computeFrameInfo() {
       // Count non-fill first-ball shots only within the current game.
       const gameShots = currentGameShotsChron();
-      const nonFillCount = gameShots.filter(s => !s || s.isFill !== true).length;
+      const g = currentGameNumber(), off = Number((frameAdj[g] || {}).off) || 0;
+      const rawCount = gameShots.filter(s => !s || s.isFill !== true).length;
+      const nonFillCount = Math.max(0, rawCount + off); // frames bowled this game, counting any you fixed
       const frame = Math.min(10, nonFillCount + 1);
       const defaultFill = (frame === 10 && nonFillCount >= 10);
-      return { frame, defaultFill, nonFillCount, gameNo: currentGameNumber() };
+      return { frame, defaultFill, nonFillCount, rawCount, gameNo: g };
     }
 
     function updateFrameUI() {
@@ -1214,6 +1267,7 @@ function isStrike(shot) {
 function saveCurrentSessionDraft() {
       BT.lsSet(SESSION_KEY, {
         shots: sessionShots,
+        adj: frameAdj,
         meta: collectMeta(),
         savedAt: Date.now(),
       });
@@ -1222,6 +1276,7 @@ function saveCurrentSessionDraft() {
     function loadCurrentSessionDraft() {
       const d = BT.lsGet(SESSION_KEY, null);
       if (d && Array.isArray(d.shots)) sessionShots = d.shots;
+      frameAdj = (d && d.adj && typeof d.adj === 'object') ? d.adj : {};
     }
 
     function collectMeta() {
@@ -2345,7 +2400,7 @@ function sessionSummary(shots) {
 
     function resetSession() {
       if (!confirm('Clear the current session log?')) return;
-      sessionShots = [];
+      sessionShots = []; frameAdj = {};
       lastCoachRead = null; lastCoachBall = '';
       localStorage.removeItem(SESSION_KEY);
       renderLog();
@@ -2397,6 +2452,14 @@ function sessionSummary(shots) {
       // Starting lane preference (league)
       const savedStart = BT.lsGet(START_LANE_KEY, 'left');
       if (savedStart === 'right') el.startLane.value = 'right';
+      // Next game: other lane (default) or same lane
+      const GL_KEY = 'bt_gameday_game_lane_v1';
+      if (el.gameLane) {
+        el.gameLane.value = BT.lsGet(GL_KEY, 'other') === 'same' ? 'same' : 'other';
+        el.gameLane.addEventListener('change', () => { BT.lsSet(GL_KEY, el.gameLane.value); syncNextLane(); markCoachDirty(); });
+      }
+      // ✎ Fix the lane / frame (a skipped or missed shot, or the game started on the other lane)
+      document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('[data-deckfix]')) openFrameFix(); });
       el.startLane.addEventListener('change', () => {
         BT.lsSet(START_LANE_KEY, el.startLane.value || 'left');
         syncNextLane();
@@ -2615,8 +2678,10 @@ function sessionSummary(shots) {
     function gameState() {
       const g = currentGameShotsChron();
       const nf = g.filter(x => !x.isFill), fills = g.filter(x => x.isFill);
-      if (nf.length < 10) return { phase: nf.length === 9 ? 'tenth' : 'play', frame: nf.length + 1 };
-      const tenth = nf[9];
+      const off = Number((frameAdj[currentGameNumber()] || {}).off) || 0, cnt = Math.max(0, nf.length + off);
+      if (cnt < 10) return { phase: cnt === 9 ? 'tenth' : 'play', frame: cnt + 1 };
+      const tenth = nf[Math.min(nf.length - 1, Math.max(0, 9 - off))];
+      if (!tenth) return { phase: 'done', frame: 10 };
       if (tenth.noFill) return { phase: 'done', frame: 10 };
       if (isStrikeShot(tenth)) {
         const need = fills.length === 0 || (fills.length === 1 && isStrikeShot(fills[0]));

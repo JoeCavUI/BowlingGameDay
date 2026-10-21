@@ -747,3 +747,10 @@ select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }
 .ang-vl{display:flex;gap:8px;font-size:14px;line-height:1.35;margin-top:4px}
 .ang-vl.na{opacity:.7}
 .ang-focrow td{color:var(--accent);border-top:2px solid rgba(99,230,210,.35)}
+/* ✎ Lane / frame fix beside the pin deck */
+.deck-fix{all:unset;cursor:pointer;display:block;text-align:center;padding:4px 2px;border-radius:10px;border:1px dashed rgba(255,255,255,.18)}
+.deck-fix:active{background:rgba(255,255,255,.06)}
+.deck-edit{font-size:11px;opacity:.7;margin-top:3px}
+.gd-framefix{margin:10px 0 0;padding:12px;border-radius:12px;border:1px solid rgba(99,230,210,.35);background:rgba(99,230,210,.06)}
+.gd-ff-row{display:flex;gap:10px;margin-top:8px}.gd-ff-row label{flex:1}
+.gd-ff-chk{display:flex;gap:8px;align-items:center;margin-top:8px}.gd-ff-chk input{width:20px;height:20px}
