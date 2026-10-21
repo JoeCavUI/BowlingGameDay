@@ -58,6 +58,13 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v113-beta50: Spare balls
+
+- **🎯 Spare ball setting** (Arsenal → tap a ball → Tune): Not a spare ball / My spare ball (spares only) / Strike ball and spare ball (e.g. a Level that doubles as burn ball and spare). Plastic / polyester count as spare balls automatically.
+- **Game Day → Tonight:** "Bringing my spare ball tonight" with a dropdown of spare balls, strike balls that double as spare, and any other ball in tonight's bag. Bags remember their spare.
+- **Coach names your spare ball:** "Use your TZone: straight, flat release"; for a reactive or urethane spare, flat release with a board or two more angle; no spare tonight: flatten your release with your strike ball.
+- **Game Plan:** "Plus your spare ball: TZone", or "Level doubles as your spare ball, so you can leave TZone home".
+
 ## Changes in v112-beta49: Barnes search, one bag everywhere
 
 - **🔎 Search on the Barnes matrix:** type a name, brand, cover or surface; matching boxes light up, results show box and early / mid / late, tap one (or Enter) to open its box page at that ball, or Tune ›.
