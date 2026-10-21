@@ -247,6 +247,7 @@
           const tp = H.est || { b: H.bp != null ? H.bp : H.b0, ft: H.ft };
           g.push(`<circle cx="${L(xBoard(tp.b))}" cy="${L(yF(tp.ft))}" r="4" fill="var(--ang-hook)"/>`);
         }
+        { const fb = c.at(60); if (fb >= 0.5 && fb <= 39.5) g.push(`<rect x="${L(xBoard(fb) - 4)}" y="${L(yPin(60) - 4)}" width="8" height="8" transform="rotate(45 ${L(xBoard(fb))} ${L(yPin(60))})" fill="none" stroke="var(--accent)" stroke-width="1.5"/>`); }
         if (c.rec && !c.hook) g.push(`<line x1="${L(xBoard(c.rec.from))}" y1="${yF(c.rec.ft)}" x2="${L(xBoard(pocketBoard))}" y2="${yPin(60.4)}" stroke="var(--ang-exit)" stroke-width="1.6" stroke-dasharray="4 3"/>`);
         g.push(`<line x1="${L(xBoard(c.lay))}" y1="${yF(0)}" x2="${L(xBoard(c.at(endFt)))}" y2="${L(yPin(endFt))}" stroke="var(--accent)" stroke-width="${c.hook && c.hook.ok ? 1.2 : 2.6}" stroke-linecap="round"${c.hook && c.hook.ok ? ' stroke-dasharray="3 4" opacity=".45"' : ''}/>`);
         if (c.bp != null && c.bpFt != null && c.bpFt > 0 && c.bpFt < 62.6) g.push(`<rect x="${L(xBoard(c.bp) - 3.5)}" y="${L(yF(c.bpFt) - 3.5)}" width="7" height="7" fill="none" stroke="var(--accent)" stroke-width="1.5"/>`);
@@ -280,7 +281,7 @@
       if (!c) { $('#aVerdict').innerHTML = ''; $('#aHead').innerHTML = 'Fill in your slide and an aim point.'; $('#aTbl').innerHTML = ''; $('#aAlerts').innerHTML = ''; $('#aFix').innerHTML = ''; draw(null, []); return; }
       const extra = String($('#aMore').value || '').split(/[^0-9.]+/).map(Number).filter(x => isFinite(x) && x > 0 && x <= 62.6);
       const set = new Map(); c.pos = null;
-      const add = (ft, lbl) => { const k = r1(ft); if (!set.has(k)) set.set(k, { ft: k, lbl, b: (c.pos || c.at)(k) }); else if (lbl && !set.get(k).lbl.includes(lbl)) set.get(k).lbl += ' · ' + lbl; };
+      const add = (ft, lbl) => { const k = r1(ft); if (!set.has(k)) set.set(k, { ft: k, lbl, b: (c.pos || c.at)(k) }); else if (lbl && !set.get(k).lbl.includes(lbl)) set.get(k).lbl = set.get(k).lbl ? set.get(k).lbl + ' · ' + lbl : lbl; };
       add(0, 'Foul line (laydown)'); add(7, 'Dots'); add(15, 'Arrows'); add(30, ''); add(45, ''); add(60, 'Head pin');
       if (c.len) add(c.len, 'End of oil');
       if ($('#aRF').checked) { add(34, 'Tracers 15/25 start'); add(37, 'Tracers 15/25 end'); add(40, 'Tracers 10/30 start'); add(43, 'Tracers 10/30 end'); }
@@ -313,7 +314,11 @@
         const boards = Math.abs(pocketBoard - c.rec.from), ft = Math.max(1, 60 - c.rec.ft);
         const from = c.rec.what.startsWith('your breakpoint') ? 'from your breakpoint' : c.rec.what.startsWith('where') ? 'from where it turns' : 'from the oil exit';
         return `<tr class="ang-recrow"><td>Back to pocket</td><td><b>${fmt(boards)} boards</b></td><td class="small">${from}, board ${fmt(c.rec.from)} → ${pocketBoard} in ${r1(ft)} ft</td></tr>`;
-      })() : '');
+      })() : '') + (() => {
+        // 🎯 Kegel three-point targeting: laydown, target, and the focal point, where the line would be at the pins if the ball went straight.
+        const fb = c.at(60), offL = fb < 0.5 || fb > 39.5;
+        return `<tr class="ang-focrow"><td>🎯 Focal point</td><td><b>${offL ? 'channel' : fmt(fb)}</b></td><td class="small">where this line is at the pins (60 ft) if the ball went straight: laydown ${fmt(c.lay)} → ${mode === 'target' ? 'target' : 'aim'} ${fmt(c.aim)} → ${offL ? 'off the lane' : 'board ' + fmt(fb)}</td></tr>`;
+      })();
       draw(c, rows);
       $('#aVerdict').innerHTML = c.hook ? verdictHTML(c) : '';
       $('#aAlerts').innerHTML = alerts(c).map(a => `<div class="ang-alert ${a[0]}">${a[1]}</div>`).join('');

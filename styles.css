@@ -746,3 +746,4 @@ select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }
 .ang-vh{font-weight:800;font-size:16px;margin-bottom:6px}
 .ang-vl{display:flex;gap:8px;font-size:14px;line-height:1.35;margin-top:4px}
 .ang-vl.na{opacity:.7}
+.ang-focrow td{color:var(--accent);border-top:2px solid rgba(99,230,210,.35)}
