@@ -1311,6 +1311,7 @@
     }
 
     function buildSuggestedSet(rows, targetCount) {
+      rows = (rows || []).filter(r => !/polyester|plastic|spare/i.test(String(BT.ballCover(r) || ''))); // spare balls aren't strike balls
       const count = Math.max(1, Math.min(15, Number(targetCount) || 9));
       const roleData = bestRoleCandidates(rows, 10);
       const used = new Set();
@@ -1788,12 +1789,16 @@
       const res = BTPlan.forContext(Object.assign({}, cx, { count: Math.min(6, n) }));
       if (!res || !res.recBag || !res.recBag.length) return false;
       const esc = (t) => String(t ?? '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
-      const byName = {}; rows.forEach(r => { byName[BT.ballName(r)] = r; });
+      // Look the plan's balls up in your whole active arsenal, not just the balls the list filter is showing,
+      // so the bag here is always the same bag as the Game Plan and Game Day.
+      const byName = {}; viewRowsAll().filter(r => !r.__proposed && !BT.isRetired(r)).forEach(r => { byName[BT.ballName(r)] = r; }); rows.forEach(r => { byName[BT.ballName(r)] = r; });
+      const shown = new Set(rows.map(r => BT.ballName(r)));
       const chosen = res.recBag.filter(nm => byName[nm]).map(nm => ({ name: nm, row: byName[nm] }));
+      const hiddenPicks = chosen.filter(ch => !shown.has(ch.name)).map(ch => ch.name);
       const roleMap = {}; chosen.forEach(ch => { roleMap[ch.name] = [res.recRoles && res.recRoles[ch.name] ? res.recRoles[ch.name] : 'Game Plan pick']; });
       // More than 6 asked for: fill with the balls that add the most motion separation.
       const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
-      const all = rows.map(r => ({ row: r, name: BT.ballName(r), vec: BT.motionVector(r, bowler) })).filter(b => b.name);
+      const all = rows.filter(r => !/polyester|plastic|spare/i.test(String(BT.ballCover(r) || ''))).map(r => ({ row: r, name: BT.ballName(r), vec: BT.motionVector(r, bowler) })).filter(b => b.name);
       const used = new Set(chosen.map(x => x.name));
       while (chosen.length < n) {
         let best = null;
@@ -1807,7 +1812,7 @@
       const why = [...(ball ? ball.items.slice(0, 1) : []), ...(sec ? sec.items.filter(t => !/^<b>(Start with|Earlier|Later|Fresh|Transition|Burn)/.test(t) && !/The bag \(Early|<b>The bag<\/b>|class="pl-h"/.test(t) && !/Plus your spare/.test(t)).slice(0, 4) : [])];
       const where = [res.house, res.sub && res.sub[0] && /^Lanes/.test(res.sub[0]) ? res.sub[0] : '', cx.league, cx.patternName].filter(Boolean).map(esc).join(' · ');
       const body = chosen.map((x, i) => `<div class="list-item" style="margin-bottom:8px"><b>${i + 1}. ${esc(x.name)}</b><div class="small dim">${esc((roleMap[x.name] || []).join(' • '))}</div></div>`).join('');
-      el.roleSuggestion.innerHTML = `<div class="panel" style="padding:12px;background:#111"><div style="font-weight:900">${chosen.length}-ball bag: ${where}</div><div class="small dim" style="margin-top:4px">Same pick as your Game Plan and Game Day for this house and pair.</div><ul class="small" style="margin:8px 0 0;padding-left:18px">${why.map(t => `<li>${t}</li>`).join('')}</ul><div style="margin-top:10px">${body}</div>${renderSaveBagBox(chosen.length)}</div>`;
+      el.roleSuggestion.innerHTML = `<div class="panel" style="padding:12px;background:#111"><div style="font-weight:900">${chosen.length}-ball bag: ${where}</div><div class="small dim" style="margin-top:4px">Same pick as your Game Plan and Game Day for this house and pair.</div>${hiddenPicks.length ? `<div class="small" style="margin-top:4px;color:#ffd166">Includes ${hiddenPicks.map(esc).join(', ')}, which your list filter or "Only balls I added" is hiding.</div>` : ''}<ul class="small" style="margin:8px 0 0;padding-left:18px">${why.map(t => `<li>${t}</li>`).join('')}</ul><div style="margin-top:10px">${body}</div>${renderSaveBagBox(chosen.length)}</div>`;
       const bn = BT.$('#bagName'); if (bn) bn.value = `${res.house.replace(/ Lanes?$/i, '')}${res.sub && /^Lanes/.test(res.sub[0] || '') ? ' ' + res.sub[0].replace('Lanes ', '') : ''} bag`;
       wireSaveBagBox();
       try { BT.lsSet('bt_plan_last_v1', Object.assign(BT.lsGet('bt_plan_last_v1', {}) || {}, cx, { count: Math.min(6, n) })); } catch (_e) {}

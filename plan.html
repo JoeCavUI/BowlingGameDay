@@ -172,7 +172,7 @@
     $('#pSaveBag').addEventListener('click', () => {
       if (!plan || !plan.recBag || !plan.recBag.length) return;
       const o = BT.lsGet(LAST, {}) || {};
-      const def = `${(o.house || 'My').replace(/ Lanes?$/i, '')}${o.lanes ? ' ' + o.lanes.replace('-', ' & ') : ''} bag`;
+      const def = `${(o.house || 'My').replace(/ Lanes?$/i, '')}${o.lanes ? ' ' + o.lanes : ''} bag`;
       const name = (prompt(`Name this ${plan.recBag.length}-ball bag:`, def) || '').trim(); if (!name) return;
       const sets = BT.lsGet(BT.KEYS.ARSENAL_SETS, []) || [];
       const ex = sets.find(x => String(x.name || '').toLowerCase() === name.toLowerCase());
