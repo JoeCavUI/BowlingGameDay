@@ -2174,7 +2174,7 @@ function removeRowByName(name, type) {
       hub.style.display = page ? 'none' : '';
       nav.style.display = page ? '' : 'none';
       const n = counts(); const sub = document.getElementById('arHubSub'); if (sub) sub.textContent = n ? `${n} balls in your arsenal. Pick what you want to do:` : 'Start with ➕ Add a ball.';
-      nav.querySelectorAll('.ar-chip').forEach(c => { const on = page && c.dataset.p === page.id; c.classList.toggle('on', !!on); if (on) c.scrollIntoView({ inline: 'center', block: 'nearest' }); });
+      nav.querySelectorAll('.ar-chip').forEach(c => { const on = page && c.dataset.p === page.id; c.classList.toggle('on', !!on); });
       // A list filter quietly narrows the chart and bag picks: say so on the other pages.
       const f = document.getElementById('filter'), q = f ? f.value.trim() : '';
       fon.style.display = page && q && page.id !== 'list' ? '' : 'none';
