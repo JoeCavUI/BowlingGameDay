@@ -225,7 +225,7 @@
     if (sport) {
       const items = [];
       items.push(out.sportFrom ? `Records below come from ${esc(out.sportFrom)}, not the house shot here.` : `No PinPal games on sport patterns to plan from, so the records below are from the <b>house shot</b> here: they show which balls you like at this house, not how they play on a sport shot.`);
-      items.push('Little room to miss: start with your <b>smoothest, most controllable</b> ball, play close to the exit point (rule of 31), and make <b>smaller moves</b> (1-and-1 or 2-and-1, not big jumps).');
+      items.push('Little room to miss: start with your <b>smoothest, most controllable</b> ball, ' + (opts.r31 === false ? 'stay on your mark' : 'play close to the exit point (rule of 31)') + ', and make <b>smaller moves</b> (1-and-1 or 2-and-1, not big jumps).');
       items.push('A miss outside won\'t come back and a miss inside won\'t hook: hitting your mark matters more than the ball.');
       sec('🏁', `Sport pattern (${Math.round(ratioP * 10) / 10}:1)`, items);
     }
@@ -396,10 +396,11 @@
         const yr = lines[0].d.slice(0, 4);
         items.push(`Lines in your PinPal notes here (latest ${yr}): ${seen.map(x => `${x.l[0]} over ${x.l[1]}`).join(', ')}.${Number(yr) < Number(today.slice(0, 4)) - 1 ? ' Older lines with different balls: use them as a reference only.' : ''}`);
       }
-      if (len) items.push(`Rule of 31: a ${len} ft pattern${patSrc ? ` (${esc(patSrc)})` : ''} puts the exit area near <b>board ${Math.max(1, Math.round(len - 31))}</b>. It's an estimate of where the ball should leave the pattern, not a required breakpoint; let practice confirm it.`);
-      else items.push('Rule of 31: pattern length − 31 ≈ exit board. No pattern length is saved for this house. Pick or save one on the Oil page (e.g. 43 ft → about board 12) and confirm it in practice.');
+      const r31 = opts.r31 !== false || (sport && !opts.patternName); // unchecked = no exit-point advice (a sport pattern found for the house still turns it on)
+      if (r31 && len) items.push(`Rule of 31: a ${len} ft pattern${patSrc ? ` (${esc(patSrc)})` : ''} puts the exit area near <b>board ${Math.max(1, Math.round(len - 31))}</b>. It's an estimate of where the ball should leave the pattern, not a required breakpoint; let practice confirm it.`);
+      else if (r31) items.push('Rule of 31: pattern length − 31 ≈ exit board. No pattern length is saved for this house. Pick or save one on the Oil page (e.g. 43 ft → about board 12) and confirm it in practice.');
       const lay = Number(b.laydownOffset);
-      items.push(`Alignment check before shot 1: your slide foot is offset from the ball's path${Number.isFinite(lay) && lay > 0 ? ` (your laydown is about ${lay} boards)` : ' by your laydown'}. Line up the <b>ball's path</b> (about slide board − laydown), your target and the exit area, not your foot.`);
+      items.push(`Alignment check before shot 1: your slide foot is offset from the ball's path${Number.isFinite(lay) && lay > 0 ? ` (your laydown is about ${lay} boards)` : ' by your laydown'}. Line up the <b>ball's path</b> (about slide board − laydown), your target and ${r31 ? 'the exit area' : 'your breakpoint'}, not your foot.`);
       sec('🎯', 'Starting line', items);
     }
 

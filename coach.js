@@ -200,12 +200,13 @@
       mid: ratio != null && ratio > 3 && ratio < 7, // challenge / medium ratio: some room, less than a house shot
       house: ratio != null && ratio >= 7,      // typical house shot: forgiving
       box: (p.box && !p.box.off && p.box.b1 != null) ? p.box : null, // 📦 Baker Box, decided by BT.boxFor
+      r31: p.r31 !== false, // 📏 Rule of 31 checkbox (off = no exit-point advice)
     };
   }
 
   // Rule of 31: estimated board where the ball EXITS the pattern (length − 31). Not the breakpoint.
   function exitBoardFor(pat) {
-    if (!pat || pat.length == null) return null;
+    if (!pat || pat.length == null || pat.r31 === false) return null;
     return clamp(Math.round(pat.length - 31), 3, 20);
   }
 
@@ -1153,7 +1154,7 @@
             : `Try slide ${lm0.slide}, target ${tgt}.`));
         }
         else lines.push(`📐 Line: slide ${lm0.slide}, target ${lm0.target} heads through the exit point (about board ${lm0.focal}).`);
-      } else if (pat && pat.length) lines.push(`📐 Line: aim to leave the oil around board ${exitBoardFor(pat)}, not inside it.`);
+      } else if (pat && pat.length && exitBoardFor(pat) != null) lines.push(`📐 Line: aim to leave the oil around board ${exitBoardFor(pat)}, not inside it.`);
       if (!pat) lines.push('📐 Pick tonight\'s oil pattern so Coach can check your line.');
       const lean = ctx.plan ? Number(ctx.plan.lean) || 0 : 0;
       const wr = ctx.wear, dIn = prof.deeper || 'left';

@@ -71,6 +71,7 @@
               </div>
               <div class="small" id="patternSummary" style="margin-top:6px"></div>
               <div class="small" id="patternHint" style="margin-top:6px">Pulled from Oil → Patterns.</div>
+              <label class="small gd-r31"><input type="checkbox" id="r31On" style="width:20px;height:20px" /> 📏 Rule of 31: check my line against the exit point (on by itself for sport patterns)</label>
             </div>
             <div class="gd-tstep" style="grid-column:1/-1"><span class="gd-step-n" id="step2n">2</span><span><b>Your bag</b><span class="gd-tstep-sub">bags built for this house are listed first</span></span><span class="gd-step-st small" id="step2st"></span></div>
             <div style="grid-column:1/-1">
@@ -1917,7 +1918,7 @@ function saveCurrentSessionDraft() {
       return {
         shots: chron,
         bowler: BT.lsGet(BT.KEYS.BOWLER, {}) || {},
-        pattern: (() => { const p0 = (Array.isArray(pats) ? pats : []).find(p => patternName(p) === el.pattern.value) || null; return p0 ? Object.assign({}, p0, { box: boxForPattern(p0) }) : null; })(),
+        pattern: (() => { const p0 = (Array.isArray(pats) ? pats : []).find(p => patternName(p) === el.pattern.value) || null; return p0 ? Object.assign({}, p0, { box: boxForPattern(p0), r31: r31Checked() }) : null; })(),
         setBalls: names.map(n => ({ name: n, row: map.get(n) })).filter(b => b.row),
         currentBall: el.ball ? el.ball.value : '',
         gameNow: currentGameNumber(),
@@ -2692,7 +2693,7 @@ function sessionSummary(shots) {
       if (!box || !window.BTCoach || !BTCoach.lineCheck) return;
       const pats = BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || [];
       const pat0 = (Array.isArray(pats) ? pats : []).find(p => patternName(p) === el.pattern.value) || null;
-      const pat = pat0 ? Object.assign({}, pat0, { box: boxForPattern(pat0) }) : null;
+      const pat = pat0 ? Object.assign({}, pat0, { box: boxForPattern(pat0), r31: r31Checked() }) : null;
       const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
       // Starting line = game 1 and no move yet (current line equals every logged line). After that, only "usable".
       const shots = sessionShots.filter(x => x && x.type !== 'gameStart');
@@ -2702,6 +2703,7 @@ function sessionSummary(shots) {
       const firstBp = (shots.slice().reverse().find(x => x.bp != null && x.bp !== '') || {}).bp; // sessionShots is newest-first
       try { r = BTCoach.lineCheck({ feet: el.feet.value, arrows: el.arrows.value, bp: el.bp.value, bp0: firstBp, pattern: pat, bowler, phase, targetFt: el.tdist ? Number(el.tdist.value) || 15 : 15 }); } catch (_e) {}
       if (phase === 'start' && (!pat || pat.length == null || pat.length === '')) { box.style.display = ''; box.className = 'gd-linemath'; box.textContent = '📐 Pick an oil pattern with a length to check your starting line against the exit point.'; return; }
+      if (!r && pat && pat.length && !(pat.box && !pat.box.off) && !pat.r31) { box.style.display = ''; box.className = 'gd-linemath'; box.textContent = '📐 Line check is off for this pattern: the Baker Box doesn\'t apply here. Check 📏 Rule of 31 under the oil pattern to check your line against the exit point.'; return; }
       if (!r) { if (phase === 'later') { box.style.display = ''; box.className = 'gd-linemath'; box.textContent = '📐 Log your breakpoint on each shot so Coach can follow how far the exit point has moved.'; } else box.style.display = 'none'; return; }
       box.style.display = '';
       box.className = 'gd-linemath ' + (r.status === 'on' ? 'ok' : r.status ? 'off' : '');
@@ -2710,6 +2712,11 @@ function sessionSummary(shots) {
         .replace(/^(✅ Starting line checks out:|✅ Usable line:|⚠️ Starting-line heads-up:|⚠️ Usable-line heads-up:|Starting line through the rule-of-31 exit point:)/, '<b>$1</b>');
     }
     ['feet', 'arrows', 'bp', 'pattern'].forEach(k => { if (el[k]) { el[k].addEventListener('input', updateLineMath); el[k].addEventListener('change', updateLineMath); } });
+    // 📏 Rule of 31 checkbox (shared with the angle page and the Game Plan)
+    function r31Checked() { const c = BT.$('#r31On'); return c ? c.checked : true; }
+    const r31Sync = BT.wireRule31(BT.$('#r31On'), () => { const p = (BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || []).find(x => patternName(x) === el.pattern.value); return p && p.ratio; }, () => { try { updateLineMath(); } catch (_e) {} try { markCoachDirty(); } catch (_e) {} });
+    if (el.pattern) el.pattern.addEventListener('change', () => { r31Sync(); try { updateLineMath(); } catch (_e) {} });
+    setTimeout(r31Sync, 400);
     setTimeout(updateLineMath, 450);
     BT.$('#nextGame').addEventListener('click', () => setTimeout(updateLineMath, 200));
     window.addEventListener('pageshow', () => setTimeout(updateLineMath, 350));

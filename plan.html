@@ -37,6 +37,7 @@
         <div><label for="pSet">Bag <span class="small">(optional)</span></label><select id="pSet" class="input"></select></div>
         <div><label for="pPat">Pattern <span class="small">(optional)</span></label><select id="pPat" class="input"></select></div>
       </div>
+      <label class="small pl-r31"><input type="checkbox" id="pR31" /> 📏 Rule of 31: include the exit point in my starting line (on by itself for sport patterns)</label>
       <div class="pl-row">
         <div><label for="pCount">How many balls?</label><select id="pCount" class="input"><option value="0">Don't recommend a bag</option><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option></select></div>
         <div class="small" style="align-self:end;padding-bottom:6px">Coach picks them from your arsenal for this house and pair.</div>
@@ -110,12 +111,15 @@
       const l = $('#pLeague').value ? BT.getLeagueById($('#pLeague').value) : null;
       $('#pWear').disabled = !l; $('#pWear').value = (l && l.wear) || '';
     }
+    const r31Sync = BT.wireRule31($('#pR31'), () => (BTPlan.patterns().find(p => p.name === $('#pPat').value) || {}).ratio);
+    $('#pPat').addEventListener('change', () => r31Sync());
     $('#pHouse').addEventListener('change', () => {
       fillLeagues($('#pLeague').value);
       // Oil follows the house: swap a pattern saved for another house for this house's one (or House shot / not sure).
       const h = hk($('#pHouse').value), same = (c) => { const x = hk(c); return !x || !h || x === h || x.startsWith(h) || h.startsWith(x); };
       const pats = BTPlan.patterns(), cur = pats.find(p => p.name === $('#pPat').value);
       if (cur && cur.center && !same(cur.center)) { const m = pats.filter(p => p.center && same(p.center)).sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0))[0]; $('#pPat').value = m ? m.name : ''; }
+      r31Sync();
     });
     $('#pLeague').addEventListener('change', () => {
       if ($('#pLeague').value === '__add') {
@@ -186,7 +190,7 @@
 
     function buildNow() {
       const lgO = $('#pLeague').value ? BT.getLeagueById($('#pLeague').value) : null;
-      const opts = { house: $('#pHouse').value.trim(), lanes: BT.formatLanes($('#pLanes').value), event: $('#pEvent').value, leagueId: lgO ? lgO.id : '', league: lgO ? lgO.name : '', wear: (lgO && lgO.wear) || '', setName: $('#pSet').value, patternName: $('#pPat').value, count: Number($('#pCount').value) };
+      const opts = { house: $('#pHouse').value.trim(), lanes: BT.formatLanes($('#pLanes').value), event: $('#pEvent').value, leagueId: lgO ? lgO.id : '', league: lgO ? lgO.name : '', wear: (lgO && lgO.wear) || '', setName: $('#pSet').value, patternName: $('#pPat').value, r31: $('#pR31').checked, count: Number($('#pCount').value) };
       if (!opts.house) { $('#pStatus').textContent = 'Type or pick where you\'re bowling.'; $('#pHouse').focus(); return; }
       try { plan = BTPlan.build(opts); } catch (e) { console.error(e); $('#pStatus').textContent = 'Could not build the plan: ' + (e && e.message ? e.message : e); return; }
       BT.lsSet(LAST, opts);

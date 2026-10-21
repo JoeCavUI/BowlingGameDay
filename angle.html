@@ -257,7 +257,7 @@
     // ---------- output ----------
     function render() {
       const c = compute();
-      const save = { rf: $('#aRF').checked, r31: r31Pref, slide: $('#aSlide').value, off: $('#aOff').value, target: $('#aTarget').value, mode, pin, spot, len: $('#aLen').value, more: $('#aMore').value, pattern: ($('#aPat').selectedOptions[0] || {}).value ? (BT.lsGet(BT.KEYS.OIL_PATTERNS, [])[Number($('#aPat').value)] || {}).name : '' };
+      const save = { rf: $('#aRF').checked, slide: $('#aSlide').value, off: $('#aOff').value, target: $('#aTarget').value, mode, pin, spot, len: $('#aLen').value, more: $('#aMore').value, pattern: ($('#aPat').selectedOptions[0] || {}).value ? (BT.lsGet(BT.KEYS.OIL_PATTERNS, [])[Number($('#aPat').value)] || {}).name : '' };
       try { BT.lsSet(LAST, save); } catch (_e) {}
       $('#aLayTxt').textContent = c ? `Laydown: board ${fmt(c.lay)} (slide ${fmt(c.slide)} − ${fmt(c.off)}).` : '';
       { const el = document.getElementById('aRatioTxt'); if (el) el.textContent = c && c.ratio != null ? `Ratio ${r1(c.ratio)}:1 · ${c.rc === 'sport' ? 'sport pattern (USBC: 3:1 or less): little room to miss' : c.rc === 'mid' ? 'medium ratio: some room to miss' : 'house shot: drier outside, room to miss'}` : (c ? 'No ratio on this pattern: the alerts assume a house shot.' : ''); }
@@ -420,18 +420,16 @@
     document.querySelectorAll('#aSpot button').forEach(b => b.addEventListener('click', () => { spot = Number(b.dataset.s); paintPicks(); render(); }));
     $('#aPat').addEventListener('change', () => { const p = (BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || [])[Number($('#aPat').value)]; if (p && p.length) $('#aLen').value = p.length; render(); });
     $('#aRF').addEventListener('change', render);
-    // 📏 Rule of 31: your choice is remembered; a sport pattern (3:1 or less) turns it on by itself.
-    let r31Pref = !!(BT.lsGet(LAST, null) || {}).r31, r31Sport = null;
-    function patSport() { const p = (BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || [])[Number($('#aPat').value)] || null; const m = String((p && p.ratio) || '').match(/(\d+(?:\.\d+)?)\s*(?::|to|-|\/)\s*(\d+(?:\.\d+)?)/i); return !!m && Number(m[1]) / (Number(m[2]) || 1) <= 3; }
-    function r31Sync() { const sp = patSport(); if (sp !== r31Sport) { r31Sport = sp; $('#aR31').checked = sp ? true : r31Pref; } }
-    $('#aR31').addEventListener('change', () => { if (!r31Sport) r31Pref = $('#aR31').checked; render(); });
+    // 📏 Rule of 31 (shared with Game Day and the Game Plan): sport patterns turn it on by itself.
+    const patRatio = () => ((BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || [])[Number($('#aPat').value)] || {}).ratio;
+    let r31Sync = () => {};
     $('#aPat').addEventListener('change', () => { r31Sync(); render(); });
     ['#aSlide', '#aOff', '#aTarget', '#aTargetFt', '#aCBoard', '#aCFt', '#aLen', '#aBp', '#aMore'].forEach(id => $(id).addEventListener('input', render));
     // 📦 Target box (shared with Game Day's Coach)
     function boxInit() { const b = BT.targetBox(); $('#aBox').checked = b.on; $('#aBoxB1').value = b.b1; $('#aBoxB2').value = b.b2; $('#aBoxF1').value = b.f1; $('#aBoxF2').value = b.f2; $('#aBoxRow').style.display = b.on ? '' : 'none'; }
     ['#aBox', '#aBoxB1', '#aBoxB2', '#aBoxF1', '#aBoxF2'].forEach(id => $(id).addEventListener('change', () => { BT.setTargetBox({ on: $('#aBox').checked, b1: Number($('#aBoxB1').value), b2: Number($('#aBoxB2').value), f1: Number($('#aBoxF1').value), f2: Number($('#aBoxF2').value) }); boxInit(); render(); }));
     boxInit();
-    init(); r31Sync(); render();
+    init(); r31Sync = BT.wireRule31($('#aR31'), patRatio, render); render();
   })();
   </script>
 </body>

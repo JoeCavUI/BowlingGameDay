@@ -734,3 +734,7 @@ select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }
 .ar-chip .i{font-size:20px;line-height:1.1}
 .ar-chip.on{background:var(--accent);color:#0f1116;border-color:var(--accent);font-weight:800}
 .ar-filteron{margin:0 0 10px;padding:7px 10px;border-radius:10px;background:rgba(255,209,102,.1);border:1px solid rgba(255,209,102,.35)}
+/* 📏 Rule of 31 checkbox on Game Day and the Game Plan */
+.gd-r31, .pl-r31 { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0 0; line-height: 1.35; }
+.gd-r31 input, .pl-r31 input { flex: 0 0 auto; width: 20px; height: 20px; margin: 0; }
+.pl-r31 { margin: 10px 0 2px; }

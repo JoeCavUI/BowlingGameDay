@@ -1655,6 +1655,23 @@
     return { b1: b.b1, b2: b.b2, f1: b.f1, f2: b.f2, early38: early ? Math.min(38, b.f1) : null, house };
   }
 
+  // 📏 Rule of 31 (exit point = pattern length − 31): a checkbox shared by the angle page, Game Day and the Game Plan.
+  // Your choice is remembered; a sport pattern (USBC: 3:1 or less) turns it on by itself (you can still uncheck it).
+  const R31_KEY = 'bt_rule31_v1';
+  function rule31Pref() { return !!(lsGet(R31_KEY, null) || {}).on; }
+  function setRule31Pref(on) { lsSet(R31_KEY, { on: !!on }); }
+  function ratioNum(r) { if (typeof r === 'number') return r; const m = String(r || '').match(/(\d+(?:\.\d+)?)\s*(?::|to|-|\/)\s*(\d+(?:\.\d+)?)/i); return m ? Number(m[1]) / (Number(m[2]) || 1) : null; }
+  function isSportRatio(r) { const x = ratioNum(r); return x != null && x <= 3; }
+  // chk: the checkbox; getRatio(): the picked pattern's ratio. Returns sync(), to call when the pattern changes.
+  function wireRule31(chk, getRatio, onChange) {
+    if (!chk) return () => {};
+    let sport = null;
+    const sync = () => { const sp = isSportRatio(getRatio ? getRatio() : null); if (sp !== sport) { sport = sp; chk.checked = sp ? true : rule31Pref(); } };
+    chk.addEventListener('change', () => { if (!sport) setRule31Pref(chk.checked); if (onChange) onChange(); });
+    sync();
+    return sync;
+  }
+
   function buildBackup() {
     const data = {};
     appDataKeys().forEach(k => { data[k] = localStorage.getItem(k); });
@@ -1747,7 +1764,7 @@
     APP_VERSION,
     KEYS,
     $, $all,
-    lsGet, lsSet, localDate, targetBox, setTargetBox, boxFor,
+    lsGet, lsSet, localDate, targetBox, setTargetBox, boxFor, rule31Pref, setRule31Pref, isSportRatio, wireRule31,
     getLeagues, addLeague, getLeagueById, setLeague, leagueByName,
     parseCSV,
     ensureCSVLoaded, loadSampleArsenal, isRetired, activeOnly, arsenalTemplateCSV,
