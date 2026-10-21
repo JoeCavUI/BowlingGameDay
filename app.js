@@ -1606,7 +1606,7 @@
       { key: 'plan', label: 'Plan', href: 'plan.html' },
       { key: 'gameday', label: 'Game Day', href: 'gameday.html' },
       { key: 'scores', label: 'Scores', href: 'scores.html' },
-      { key: 'angle', label: 'Angle', href: 'angle.html' },
+      { key: 'angle', label: 'Angles', href: 'angle.html' },
       { key: 'guide', label: 'Guide', href: 'guide.html' },
     ];
     const act = active === 'analyze' ? 'arsenal' : active; // Create your own bag lives under Arsenal

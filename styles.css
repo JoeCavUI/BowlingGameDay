@@ -785,3 +785,4 @@ select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }
   body.print-review .small, body.print-review .dim{color:#333 !important;opacity:1 !important}
   body.print-review .nr-note, body.print-review .nr-mv{color:#0b6b5f !important}
 }
+.ang-foot{display:block;margin-top:2px;opacity:.75;font-size:12px}.ang-foot a{color:var(--accent)}

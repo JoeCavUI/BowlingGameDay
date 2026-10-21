@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
-  <title>Angle Calculator</title>
+  <title>Angles</title>
   <link rel="stylesheet" href="styles.css?v=118" />
 </head>
 <body data-page="angle">
@@ -19,14 +19,14 @@
   <div class="container">
     <a class="ang-back" id="aBack" href="gameday.html" style="display:none">← Back to Game Day</a>
     <div class="header">
-      <h1>📐 Angle</h1>
+      <h1>📐 Angles</h1>
       <div class="small">Slide, laydown and one aim point give you a straight line down the lane. See which board the ball is on at any distance, where it leaves the oil, and what a perfectly straight shot would hit at the pins.</div>
     </div>
 
     <div class="panel" id="angForm">
       <div class="pl-row">
         <div><label for="aSlide">Slide board <span class="small">(foul line)</span></label><input id="aSlide" class="input" type="number" step="0.5" inputmode="decimal" /></div>
-        <div><label for="aOff">Laydown offset <span class="small">(boards)</span></label><select id="aOff" class="input"><option value="2">2</option><option value="2.5">2.5</option><option value="3">3</option><option value="3.5">3.5</option><option value="4">4</option><option value="4.5">4.5</option><option value="5">5</option><option value="5.5">5.5</option><option value="6">6</option><option value="6.5">6.5</option><option value="7">7</option><option value="7.5">7.5</option><option value="8">8</option><option value="8.5">8.5</option><option value="9">9</option><option value="9.5">9.5</option><option value="10">10</option></select></div>
+        <input type="hidden" id="aOff" />
       </div>
       <div class="small" id="aLayTxt" style="margin-top:4px"></div>
 
@@ -125,7 +125,8 @@
       const q = new URLSearchParams(location.search);
       $('#aSlide').value = q.get('slide') || line.feet || last.slide || 20;
       $('#aTarget').value = q.get('target') || line.arrows || last.target || 12;
-      $('#aOff').value = last.off != null ? last.off : (bowler.laydownOffset != null ? bowler.laydownOffset : 5);
+      // Laydown offset comes from the Bowler page (Coach uses 5 until you measure it).
+      const offB = Number(bowler.laydownOffset); $('#aOff').value = Number.isFinite(offB) && offB > 0 ? offB : 5;
       if (q.get('bp') || line.bp) $('#aBp').value = q.get('bp') || line.bp;
       if (last.more) $('#aMore').value = last.more;
       $('#aRF').checked = !!last.rf;
@@ -278,7 +279,7 @@
       const c = compute();
       const save = { rf: $('#aRF').checked, pocket: $('#aPocket').checked, slide: $('#aSlide').value, off: $('#aOff').value, target: $('#aTarget').value, mode, pin, spot, len: $('#aLen').value, more: $('#aMore').value, pattern: ($('#aPat').selectedOptions[0] || {}).value ? (BT.lsGet(BT.KEYS.OIL_PATTERNS, [])[Number($('#aPat').value)] || {}).name : '' };
       try { BT.lsSet(LAST, save); } catch (_e) {}
-      $('#aLayTxt').textContent = c ? `Laydown: board ${fmt(c.lay)} (slide ${fmt(c.slide)} − ${fmt(c.off)}).` : '';
+      { const offB = Number(bowler.laydownOffset), set = Number.isFinite(offB) && offB > 0; $('#aLayTxt').innerHTML = c ? `Laydown: board ${fmt(c.lay)} (slide ${fmt(c.slide)} − ${fmt(c.off)}¹).<span class="ang-foot"> ¹ Laydown offset ${fmt(c.off)}${set ? '' : ' (not measured yet, so Coach uses 5)'}: from your <a href="bowler.html">Bowler page</a>.</span>` : ''; }
       { const el = document.getElementById('aRatioTxt'); if (el) el.textContent = c && c.ratio != null ? `Ratio ${r1(c.ratio)}:1 · ${c.rc === 'sport' ? 'sport pattern (USBC: 3:1 or less): little room to miss' : c.rc === 'mid' ? 'medium ratio: some room to miss' : 'house shot: drier outside, room to miss'}` : (c ? 'No ratio on this pattern: the alerts assume a house shot.' : ''); }
       { const el = $('#aR31Txt'); el.textContent = c && c.r31 ? (c.exit31 != null ? `Exit point about board ${c.exit31} on ${c.len} ft. A rule of thumb, not your breakpoint.${c.rc === 'sport' ? ' Sport pattern, so it\'s on.' : ''}` : 'Pick a pattern length to see the exit point.') : (c && c.rc === 'sport' ? 'Off by your choice. Sport patterns usually play best near the exit point.' : ''); el.style.display = el.textContent ? '' : 'none'; }
       $('#aPocketLbl').style.display = mode === 'pin' ? 'none' : '';
@@ -360,7 +361,7 @@
       // 4. Parallel: feet and target the same: moves it by d.
       opts.push({ key: 'par', title: `Parallel: feet and ${T} ${n(need)} ${side(need)}`, sub: `Slide ${fmt(half(c.slide + need))}, ${T} ${fmt(half(c.aim + need))}. Same angle, whole line moves.`, set: { slide: half(c.slide + need), target: half(c.aim + need) } });
       // 5. Laydown check: what offset would make your line already fit.
-      { const layNeed = (k * c.aim - G.goal) / (k - 1), off = c.slide - layNeed; if (off >= 1 && off <= 12) opts.push({ key: 'off', title: `Check your laydown: is it really ${fmt(half(off))} boards?`, sub: `With a ${fmt(half(off))}-board offset (not ${fmt(c.off)}), slide ${fmt(c.slide)} over ${fmt(c.aim)} already works. Measure it before you move.`, set: { off: half(off) } }); }
+      { const layNeed = (k * c.aim - G.goal) / (k - 1), off = c.slide - layNeed; if (off >= 1 && off <= 12) opts.push({ key: 'off', title: `Check your laydown: is it really ${fmt(half(off))} boards?`, sub: `With a ${fmt(half(off))}-board offset (not ${fmt(c.off)}), slide ${fmt(c.slide)} over ${fmt(c.aim)} already works. Measure it, then set it on your Bowler page (tap to open).`, set: {}, href: 'bowler.html' }); }
       // 6. The breakpoint is really where the line goes.
       if (c.bp != null && G.goal === c.bp) opts.push({ key: 'bp', title: `My breakpoint is really about board ${fmt(half(G.here))}`, sub: `Keep this line and log the breakpoint where it actually turns.`, set: { bp: half(G.here) } });
       // Drop moves nobody would make on the lane (feet more than 12 boards, or off the approach).
@@ -375,11 +376,11 @@
         + (undo ? `<button type="button" class="btn secondary ang-undo" id="aUndo">↩ Undo last fix</button>` : '') + `</div>`;
       box.querySelectorAll('.ang-opt').forEach(b => b.addEventListener('click', () => {
         const o = F.opts[Number(b.dataset.i)];
+        if (o.href) { location.href = o.href; return; }
         const tf = mode === 'target' ? '#aTarget' : '#aCBoard';
         undo = { tf, slide: $('#aSlide').value, target: $(tf).value, off: $('#aOff').value, bp: $('#aBp').value };
         if (o.set.slide != null) $('#aSlide').value = o.set.slide;
         if (o.set.target != null) $(tf).value = o.set.target;
-        if (o.set.off != null) { const v = String(o.set.off); if (![...$('#aOff').options].some(x => x.value === v)) $('#aOff').add(new Option(v, v)); $('#aOff').value = v; }
         if (o.set.bp != null) $('#aBp').value = o.set.bp;
         render(); $('#aHead').scrollIntoView({ behavior: 'smooth', block: 'start' });
       }));
@@ -387,7 +388,7 @@
     }
     function wireUndo() {
       const u = document.getElementById('aUndo'); if (!u) return;
-      u.addEventListener('click', () => { if (!undo) return; $('#aSlide').value = undo.slide; $(undo.tf).value = undo.target; $('#aOff').value = undo.off; $('#aBp').value = undo.bp; undo = null; render(); });
+      u.addEventListener('click', () => { if (!undo) return; $('#aSlide').value = undo.slide; $(undo.tf).value = undo.target; $('#aBp').value = undo.bp; undo = null; render(); });
     }
 
     // ---------- 🎳 Pocket ----------

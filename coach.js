@@ -1529,7 +1529,7 @@
     }
     // Coach's call: change the bowler or the line?
     let call = '';
-    if (s.fault === 'well') call = side === 'in' || side === 'out' ? `You released it well but ${dirTxt}: that's launch angle or alignment, not the release. Check your slide and target (📐 Angle).` : side === 'hit' ? 'Good release and you hit your mark: the reaction is the lane or the ball, so read it like a good shot.' : '';
+    if (s.fault === 'well') call = side === 'in' || side === 'out' ? `You released it well but ${dirTxt}: that's launch angle or alignment, not the release. Check your slide and target (📐 Angles page).` : side === 'hit' ? 'Good release and you hit your mark: the reaction is the lane or the ball, so read it like a good shot.' : '';
     else if (room === 'room') call = `It ${m === 'leftHeld' ? 'held' : 'recovered'} anyway, so your line has room: fix the release, don't move.`;
     else if (room === 'tight') call = 'It didn\'t come back. Don\'t move off one bad shot; if it keeps happening, find a line with more room.';
     const spd = (fast || slow) && s.fault !== 'squeezed' ? ` It was also ${fast ? 'faster' : 'slower'} than normal, which adds to the miss.` : '';
