@@ -766,3 +766,22 @@ select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }
 .gd-addfault{all:unset;cursor:pointer;margin-top:8px;display:inline-block;padding:6px 12px;border-radius:999px;border:1px dashed rgba(255,179,92,.6);color:#ffb35c;font-weight:700;font-size:14px}
 .gd-mychip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;margin:2px 2px 0 0;border-radius:999px;background:rgba(255,255,255,.08)}
 .gd-mychip button{all:unset;cursor:pointer;opacity:.7;padding:0 2px}
+/* 📝 Night review (Scores → Game Day nights) */
+.nr-tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}.nr-tools .btn{flex:1 1 auto;min-width:0}
+.nr-title{font-weight:900;font-size:17px}
+.nr-scores{font-weight:800;font-size:20px;margin-top:6px}
+.nr-line{margin-top:8px;font-size:16px;line-height:1.4;font-weight:600}
+.nr-list{margin:6px 0 0;padding-left:20px}.nr-list li{margin-top:6px;line-height:1.4}
+.nr-row{margin-top:8px}.nr-note{margin-top:8px;opacity:1;color:var(--accent)}
+.nr-gh{margin:12px 0 4px;font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.5px;opacity:.8}
+.nr-mv{color:var(--accent)}.nr-flag{color:#ffb35c}
+.nr-head{cursor:pointer;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+@media print{
+  body.print-review .header, body.print-review #scHub, body.print-review #scNav, body.print-review #histPanel,
+  body.print-review [data-secpage="nights"] > .panel:first-child, body.print-review [data-secpage="nights"] .grid-2 > .panel:first-child,
+  body.print-review #detailHint, body.print-review .hr-split{display:none !important}
+  body.print-review .grid-2{display:block !important}
+  body.print-review .panel{background:#fff !important;color:#000 !important;border:1px solid #ccc !important;box-shadow:none !important;break-inside:avoid}
+  body.print-review .small, body.print-review .dim{color:#333 !important;opacity:1 !important}
+  body.print-review .nr-note, body.print-review .nr-mv{color:#0b6b5f !important}
+}
