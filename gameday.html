@@ -54,7 +54,7 @@
             </div>
             <div>
               <label>Lanes / Pair</label>
-              <input id="lanes" class="input" placeholder="e.g., 23-24" inputmode="text" />
+              <input id="lanes" class="input" placeholder="e.g. 23-24" inputmode="numeric" />
             </div>
             <div>
               <label>Starting lane</label>
@@ -2461,6 +2461,7 @@ function sessionSummary(shots) {
       loadCurrentSessionDraft();
       restoreTonight();
       applyHandoff();
+      BT.wireLanesInput(el.lanes);
       restoreLastLineDraft();
       renderLog();
       renderLaneGeometry();

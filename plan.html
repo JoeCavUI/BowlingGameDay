@@ -24,10 +24,9 @@
 
     <div class="panel no-print" id="planForm">
       <label for="pHouse">Where are you bowling?</label>
-      <input id="pHouse" class="input" list="pHouseList" placeholder="e.g. Imperial" autocomplete="off" />
-      <datalist id="pHouseList"></datalist>
+      <select id="pHouse" class="input"></select>
       <div class="pl-row">
-        <div><label for="pLanes">Lanes <span class="small">(optional)</span></label><input id="pLanes" class="input" placeholder="e.g. 1314 = lanes 13 & 14" inputmode="numeric" /></div>
+        <div><label for="pLanes">Lanes <span class="small">(optional)</span></label><input id="pLanes" class="input" placeholder="e.g. 7-8" inputmode="numeric" /></div>
         <div><label for="pEvent">Event</label><select id="pEvent" class="input"><option value="league">League night</option><option value="tournament">Tournament</option></select></div>
       </div>
       <div class="pl-row">
@@ -76,7 +75,6 @@
 
     async function init() {
       try { await BT.ensureCSVLoaded(); } catch (_e) {}
-      $('#pHouseList').innerHTML = BTPlan.houseOptions().map(h => `<option value="${esc(h.name)}">${h.n ? h.n + ' games' : ''}</option>`).join('');
       const sets = BTPlan.sets();
       $('#pSet').innerHTML = `<option value="">${sets.length ? 'Whole arsenal' : 'No saved bags yet'}</option>` + sets.map(s => `<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('');
       const pats = BTPlan.patterns();
@@ -84,8 +82,9 @@
       // Start from the last plan, or from Game Day's "Tonight".
       const last = BT.lsGet(LAST, null) || {};
       const tonight = BT.lsGet('bt_gameday_tonight_v1', null) || {};
-      $('#pHouse').value = last.house || tonight.house || '';
+      BT.fillHouseSelect($('#pHouse'), last.house || tonight.house || '');
       $('#pLanes').value = last.lanes || '';
+      BT.wireLanesInput($('#pLanes'));
       if (last.event) $('#pEvent').value = last.event;
       if (last.count != null) $('#pCount').value = String(last.count);
       const setPick = last.setName || tonight.set || BT.lsGet('bt_gameday_preferred_set_v1', '');
@@ -187,7 +186,7 @@
 
     function buildNow() {
       const lgO = $('#pLeague').value ? BT.getLeagueById($('#pLeague').value) : null;
-      const opts = { house: $('#pHouse').value.trim(), lanes: $('#pLanes').value.trim(), event: $('#pEvent').value, leagueId: lgO ? lgO.id : '', league: lgO ? lgO.name : '', wear: (lgO && lgO.wear) || '', setName: $('#pSet').value, patternName: $('#pPat').value, count: Number($('#pCount').value) };
+      const opts = { house: $('#pHouse').value.trim(), lanes: BT.formatLanes($('#pLanes').value), event: $('#pEvent').value, leagueId: lgO ? lgO.id : '', league: lgO ? lgO.name : '', wear: (lgO && lgO.wear) || '', setName: $('#pSet').value, patternName: $('#pPat').value, count: Number($('#pCount').value) };
       if (!opts.house) { $('#pStatus').textContent = 'Type or pick where you\'re bowling.'; $('#pHouse').focus(); return; }
       try { plan = BTPlan.build(opts); } catch (e) { console.error(e); $('#pStatus').textContent = 'Could not build the plan: ' + (e && e.message ? e.message : e); return; }
       BT.lsSet(LAST, opts);

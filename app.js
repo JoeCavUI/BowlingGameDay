@@ -1520,6 +1520,59 @@
     return `<a class="ar-home" href="${onArsenal ? '#' : 'arsenal.html'}">☰ Arsenal</a><div class="ar-chips">${ARSENAL_PAGES.map(p => `<a class="ar-chip${p.id === activeId ? ' on' : ''}" data-p="${p.id}" href="${arsenalPageHref(p, onArsenal)}"><span class="i">${p.icon}</span>${p.s || p.t}</a>`).join('')}</div>`;
   }
 
+  // Lanes as a pair with a dash: "78" → "7-8", "1314" → "13-14", "13 & 14" / "13/14" → "13-14", "23" → "23-24".
+  function formatLanes(v) {
+    const k = String(v || '').trim().replace(/\s*(?:[\/&,.]|and)\s*|\s+/gi, '-').replace(/[^0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    if (!k) return '';
+    if (!/^\d+$/.test(k)) return k;
+    // A pair is odd-even (7-8, 13-14), so "23" is lane 23 (23-24), not 2-3.
+    for (let i = 1; i < k.length; i++) { const a = Number(k.slice(0, i)), b = Number(k.slice(i)); if (k[i] !== '0' && b === a + 1 && a % 2 === 1) return `${a}-${b}`; }
+    const n = Number(k); if (k.length <= 3 && n > 0) return n % 2 ? `${n}-${n + 1}` : `${n - 1}-${n}`;
+    return k;
+  }
+  // Tidy a lanes box when you leave it (and right away for a saved value).
+  function wireLanesInput(inp) {
+    if (!inp || inp.__lanesWired) return; inp.__lanesWired = true;
+    const fix = () => { const f = formatLanes(inp.value); if (f && f !== inp.value) { inp.value = f; inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true })); } };
+    inp.addEventListener('blur', fix); inp.addEventListener('change', () => { const f = formatLanes(inp.value); if (f && f !== inp.value) inp.value = f; });
+    if (inp.value) { const f = formatLanes(inp.value); if (f) inp.value = f; }
+  }
+  // Every house the app knows: the ones you saved (Oil → Houses) and every house in your PinPal history.
+  function allHouses() {
+    const saved = (lsGet(KEYS.HOUSES, []) || []).map(String);
+    const key = (t) => String(t || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const by = {};
+    try { const h = JSON.parse(localStorage.getItem('bt_history_v1') || 'null'); (h && h.games || []).forEach(g => { if (g.h) { const o = by[g.h] = by[g.h] || { n: 0, last: '' }; o.n++; if (g.d > o.last) o.last = g.d; } }); } catch (_e) {}
+    const pin = Object.keys(by).filter(n => !saved.some(x => key(x) === key(n))).sort((a, b) => by[b].last.localeCompare(by[a].last));
+    const games = (n) => { const k = Object.keys(by).find(x => key(x) === key(n)); return k ? by[k].n : 0; };
+    return { saved: saved.map(n => ({ name: n, n: games(n) })), pinpal: pin.map(n => ({ name: n, n: by[n].n })) };
+  }
+  // A house drop-down (your houses, then PinPal houses, then "+ Add a house…"); keeps a value that isn't listed.
+  function fillHouseSelect(sel, current, opts) {
+    if (!sel) return; opts = opts || {};
+    const esc = (t) => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const A = allHouses(), all = [...A.saved, ...A.pinpal].map(x => x.name);
+    const o = (x) => `<option value="${esc(x.name)}">${esc(x.name)}${x.n ? ` (${x.n} games)` : ''}</option>`;
+    const extra = current && !all.some(n => n.toLowerCase() === String(current).toLowerCase()) ? `<option value="${esc(current)}">${esc(current)}</option>` : '';
+    sel.innerHTML = `<option value="">${esc(opts.placeholder || '— Pick a house —')}</option>${extra}`
+      + (A.saved.length ? `<optgroup label="Your houses">${A.saved.map(o).join('')}</optgroup>` : '')
+      + (A.pinpal.length ? `<optgroup label="From your PinPal history">${A.pinpal.map(o).join('')}</optgroup>` : '')
+      + `<option value="__addhouse">+ Add a house…</option>`;
+    const match = all.find(n => n.toLowerCase() === String(current || '').toLowerCase());
+    sel.value = match || current || '';
+    if (!sel.__houseWired) {
+      sel.__houseWired = true; sel.__last = sel.value;
+      sel.addEventListener('change', (e) => {
+        if (sel.value !== '__addhouse') { sel.__last = sel.value; return; }
+        e.stopImmediatePropagation();
+        const nm = (prompt('New bowling center name:') || '').trim();
+        if (!nm) { sel.value = sel.__last || ''; return; }
+        const hs = lsGet(KEYS.HOUSES, []) || []; if (!hs.some(x => String(x).toLowerCase() === nm.toLowerCase())) { hs.push(nm); lsSet(KEYS.HOUSES, hs); }
+        fillHouseSelect(sel, nm, opts); sel.__last = nm; sel.dispatchEvent(new Event('change'));
+      }, true);
+    }
+  }
+
   // Generic section with sub-pages (used by Oil; Arsenal has its own copy above). pages: [{id, icon, t, s?, d}]
   function sectionPages(o) {
     const { pages, hub, nav, homeLabel, cols, onShow } = o;
@@ -1726,7 +1779,7 @@
     clearBallTweaks,
     setBallSurfaceOverride,
     ballCareFor, isSpareBall, spareBallNames, dualSpareNames,
-    ARSENAL_PAGES, arsenalPageHref, arsenalNavHTML, sectionPages,
+    ARSENAL_PAGES, arsenalPageHref, arsenalNavHTML, sectionPages, formatLanes, wireLanesInput, allHouses, fillHouseSelect,
     setBallCare,
     clearBallSurfaceOverride,
     surfaceToGrit,
