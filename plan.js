@@ -148,7 +148,7 @@
     const whyList = (p) => why(p).split('; ').filter(Boolean).map(w => `<li>${w}</li>`).join('');
     ordered.forEach(p => items.push(`<b>${role(p)}: ${esc(p.n)}</b><ul class="pl-sub"><li class="dim">${[p.t.cover, p.t.core && p.t.core + ' core', p.t.layout, p.t.box].filter(Boolean).map(esc).join(' · ')}</li>${whyList(p)}</ul>`));
     if (picked.length < count) items.push(`Only ${picked.length} of your balls read far enough apart to be worth bringing; more would overlap.`);
-    { const sp = spareBalls(); items.push(sp.length ? `Plus your spare ball: <b>${esc(sp[0])}</b>.` : 'Plus a spare ball (none marked yet: a plastic / polyester ball makes 10 and 7 pins much easier. Mark yours in Arsenal → tap the ball → 🎯 My spare ball).'); }
+    { const sp = spareBalls(); const dual = (BT().dualSpareNames ? BT().dualSpareNames() : []).filter(n => ordered.some(p => p.n === n)); if (dual.length) items.push(`<b>${esc(dual[0])}</b> doubles as your spare ball${sp.length ? `, so you can leave ${esc(sp[0])} home` : ''}.`); else items.push(sp.length ? `Plus your spare ball: <b>${esc(sp[0])}</b>.` : 'Plus a spare ball (none marked yet: a plastic / polyester ball makes 10 and 7 pins much easier. Mark yours in Arsenal → tap the ball → 🎯 My spare ball).'); }
     const roles = {}; ordered.forEach(q => { roles[q.n] = role(q); });
     return { items, picked: ordered.map(p => p.n), first: first.n, roles, why: scored.map(s => ({ n: s.n, score: Math.round(s.score * 10) / 10, pred: Math.round(s.pred * 10) / 10, predK: s.predK, own: s.os ? [s.os.avg, s.os.n] : null, pair: s.po ? [s.po.avg, s.po.n] : null, t: s.t, cond: s.cond, job: job.get(s) || "" })), traits: { house: H.eff, pair: P ? P.eff : null, base: H.base } };
   }

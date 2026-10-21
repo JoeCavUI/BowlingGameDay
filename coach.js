@@ -1165,7 +1165,7 @@
         const sp = ((ctx.history && ctx.history.lines) || []).find(l => /Spare to practice/.test(l));
         const m = sp && sp.match(/Spare to practice: (?:the )?([^.]+)\. You've made (\d+%)/);
         const SP = ctx.spare || {};
-        const how = SP.on && SP.name ? ` Use your ${SP.name}: straight, flat release.` : SP.asked && !SP.on && !SP.none ? ' No spare ball tonight: flatten your release (no rotation) and play straighter at corner pins.' : SP.none ? ' A plastic spare ball would make corner pins easier: flatten your release with your strike ball for now.' : '';
+        const how = SP.on && SP.name ? (SP.kind === 'plastic' ? ` Use your ${SP.name}: straight, flat release.` : ` Use your ${SP.name} with a flat release (no rotation): it still hooks a little, so give corner pins a board or two more angle than with plastic.`) : SP.asked && !SP.on && !SP.none ? ' No spare ball tonight: flatten your release (no rotation) and play straighter at corner pins.' : SP.none ? ' A plastic spare ball would make corner pins easier: flatten your release with your strike ball for now.' : '';
         if (m) lines.push(`🎯 Spare: the ${m[1]} (${m[2]} here).${how}`);
         else if (how) lines.push(`🎯 Spares:${how}`);
       } catch (_e) {}

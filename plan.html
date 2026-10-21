@@ -178,7 +178,7 @@
       const ex = sets.find(x => String(x.name || '').toLowerCase() === name.toLowerCase());
       if (ex && !confirm(`Replace your saved bag "${ex.name}"?`)) return;
       const ctx = { house: o.house || '', lanes: o.lanes || '', leagueId: o.leagueId || '', patternName: o.patternName || '' };
-      const payload = { id: ex ? ex.id : `set_${Math.random().toString(36).slice(2, 10)}`, name, balls: plan.recBag.slice(), roles: plan.recRoles || {}, spare: (BT.spareBallNames ? BT.spareBallNames()[0] : '') || '', savedAt: Date.now(), source: 'plan', ctx };
+      const payload = { id: ex ? ex.id : `set_${Math.random().toString(36).slice(2, 10)}`, name, balls: plan.recBag.slice(), roles: plan.recRoles || {}, spare: ((BT.dualSpareNames ? BT.dualSpareNames() : []).find(n => plan.recBag.includes(n)) || (BT.spareBallNames ? BT.spareBallNames()[0] : '')) || '', savedAt: Date.now(), source: 'plan', ctx };
       BT.lsSet(BT.KEYS.ARSENAL_SETS, ex ? sets.map(x => x.id === ex.id ? payload : x) : [payload, ...sets]);
       BT.lsSet('bt_gameday_preferred_set_v1', name);
       BT.lsSet('bt_gameday_handoff_v1', Object.assign({}, ctx, { set: name, at: Date.now() }));

@@ -324,7 +324,9 @@
           </select>
           <button class="btn secondary" id="tuneResurfaced" type="button">Just resurfaced</button>
           <button class="btn danger" id="tuneRetire" type="button">Retire this ball</button>
-          <label class="small" style="display:flex;gap:6px;align-items:center;margin:0;flex-basis:100%"><input type="checkbox" id="tuneSpare" style="width:20px;height:20px" /> 🎯 <b>My spare ball</b> <span class="dim">(kept out of strike-ball picks; Game Day asks if you're bringing it)</span></label>
+          <div style="flex-basis:100%"><label class="small" for="tuneSpare" style="margin:0">🎯 <b>Spare ball</b></label>
+            <select class="input" id="tuneSpare" style="margin-top:4px"><option value="no">Not a spare ball</option><option value="only">My spare ball (spares only)</option><option value="dual">Strike ball and spare ball (doubles as both)</option></select>
+            <div class="small dim" style="margin-top:3px">Spares only: kept out of strike-ball picks. Doubles as both: stays in strike-ball picks, and Game Day can pick it as tonight's spare ball.</div></div>
           <button class="btn secondary" id="tuneDelete" type="button">🗑 Delete</button>
         </div>
         <div class="small dim" id="tuneCareInfo" style="margin-top:6px"></div>
@@ -881,7 +883,7 @@
       const care = BT.ballCareFor(nm);
       const rb = BT.$('#tuneRetire'); if (rb) { rb.textContent = care.retired ? 'Bring back (un-retire)' : 'Retire this ball'; rb.className = care.retired ? 'btn secondary' : 'btn danger'; }
       const w = BT.$('#tuneWeight'); if (w) w.value = care.weight ? String(care.weight) : '';
-      const sp = BT.$('#tuneSpare'); if (sp) sp.checked = BT.isSpareBall(rowByName(nm) || nm);
+      const sp = BT.$('#tuneSpare'); if (sp) { const mk = care.spare; sp.value = mk === 'dual' ? 'dual' : (mk === true || (mk == null && BT.isSpareBall(rowByName(nm) || nm))) ? 'only' : 'no'; }
       const info = BT.$('#tuneCareInfo'); if (!info) return;
       let games = null;
       try { if (window.BTCoach) games = BTCoach.ballGames(BT.lsGet(BT.KEYS.GAME_SESSIONS, []), nm, care.resurfacedAt); } catch (_e) {}
@@ -925,7 +927,7 @@
     });
     BT.$('#tuneSpare')?.addEventListener('change', (e) => {
       const nm = tune.currentName; if (!nm) return;
-      BT.setBallCare(nm, { spare: !!e.target.checked });
+      BT.setBallCare(nm, { spare: e.target.value === 'only' ? true : e.target.value === 'dual' ? 'dual' : false });
       applyFilter(); try { renderArsenalCheck(); } catch (_e) {}
     });
     BT.$('#tuneRetire')?.addEventListener('click', () => {
@@ -1402,7 +1404,7 @@
       if (existing && !confirm(`Replace your saved bag "${existing.name}"?`)) return null;
       const cx = ctxValue(); const lgId = BT.$('#ctxLeague') ? BT.$('#ctxLeague').value : '';
       const ctx = cx.house ? { house: cx.house, lanes: cx.lanes, leagueId: lgId, patternName: cx.patternName } : null;
-      const payload = { id: existing ? existing.id : `set_${Math.random().toString(36).slice(2, 10)}`, name, balls: names, savedAt: Date.now(), source: 'coach', ctx, spare: (BT.spareBallNames ? BT.spareBallNames()[0] : '') || '', roles: Object.fromEntries((lastSuggestion.chosen || []).map(c => [c.name, (c.roles || [])[0] || ''])) };
+      const payload = { id: existing ? existing.id : `set_${Math.random().toString(36).slice(2, 10)}`, name, balls: names, savedAt: Date.now(), source: 'coach', ctx, spare: ((BT.dualSpareNames ? BT.dualSpareNames() : []).find(n => names.includes(n)) || (BT.spareBallNames ? BT.spareBallNames()[0] : '')) || '', roles: Object.fromEntries((lastSuggestion.chosen || []).map(c => [c.name, (c.roles || [])[0] || ''])) };
       const next = existing ? list.map(x => x.id === payload.id ? payload : x) : [payload, ...list];
       BT.lsSet(BT.KEYS.ARSENAL_SETS, next);
       BT.lsSet(PREFERRED_SET_KEY, name);

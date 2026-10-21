@@ -2473,28 +2473,40 @@ function sessionSummary(shots) {
     const SPARE_KEY = 'bt_gameday_spare_v1';
     function renderSpare() {
       const on = BT.$('#spareOn'), sel = BT.$('#spareBall'), note = BT.$('#spareNote'); if (!on || !sel) return;
-      const names = BT.spareBallNames ? BT.spareBallNames() : [];
+      const O = spareOptions(), names = O.all;
       const saved = BT.lsGet(SPARE_KEY, null) || {};
       const setObj = (BT.lsGet(BT.KEYS.ARSENAL_SETS, []) || []).find(x => x.name === el.set.value) || {};
-      if (!names.length) { sel.style.display = 'none'; on.checked = false; on.disabled = true; note.innerHTML = 'No spare ball marked yet. In <b>Arsenal</b>, tap your spare ball and tick <b>🎯 My spare ball</b> (plastic / polyester balls count automatically).'; return; }
+      if (!names.length) { sel.style.display = 'none'; on.checked = false; on.disabled = true; note.innerHTML = 'No spare ball marked yet. In <b>Arsenal</b>, tap your spare ball and set <b>🎯 Spare ball</b> (plastic / polyester balls count automatically).'; return; }
       on.disabled = false; sel.style.display = '';
-      sel.innerHTML = names.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
-      const pick = [saved.date === BT.localDate() && saved.name, setObj.spare, names[0]].find(n => n && names.includes(n));
+      const og = (lbl, L) => L.length ? `<optgroup label="${lbl}">${L.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('')}</optgroup>` : '';
+      sel.innerHTML = og('Spare balls', O.only) + og('Strike balls that double as spare', O.dual) + og("Another ball from tonight's bag", O.bag);
+      const pick = [saved.date === BT.localDate() && saved.name, setObj.spare, O.dualInBag[0], O.only[0], names[0]].find(n => n && names.includes(n));
       sel.value = pick;
-      on.checked = saved.date === BT.localDate() ? saved.on !== false : true;
+      on.checked = saved.date === BT.localDate() ? saved.on !== false : !!(O.only.length || O.dualInBag.length);
       sel.disabled = !on.checked;
-      note.textContent = on.checked ? 'Coach will say when to use it (10s, 7s and other corner pins).' : 'Not bringing it: Coach adjusts its spare advice for your strike ball.';
+      const k = on.checked && sel.value ? spareKind(sel.value) : '';
+      note.textContent = !on.checked ? 'No spare ball tonight: Coach adjusts its spare advice for your strike ball.' : k === 'strike' ? `${sel.value} does double duty tonight: strike ball and spare ball. Coach will remind you to flatten your release with it on corner pins.` : 'Coach will say when to use it (10s, 7s and other corner pins).';
     }
+    // Spare choices: spare-only balls, strike balls marked "doubles as spare", then any other ball in tonight's bag.
+    function spareOptions() {
+      const only = BT.spareBallNames ? BT.spareBallNames() : [];
+      const dual = BT.dualSpareNames ? BT.dualSpareNames() : [];
+      const setObj = (BT.lsGet(BT.KEYS.ARSENAL_SETS, []) || []).find(x => x.name === el.set.value) || null;
+      const bagNames = setObj ? setBallNames(setObj) : [];
+      const bag = bagNames.filter(n => !only.includes(n) && !dual.includes(n));
+      return { only, dual, bag, dualInBag: dual.filter(n => bagNames.includes(n)), all: [...only, ...dual, ...bag] };
+    }
+    function spareKind(name) { const O = spareOptions(); return O.only.includes(name) ? (/plastic|poly/i.test(String((BALL_ROW_MAP && BALL_ROW_MAP.get(name) && BT.ballCover(BALL_ROW_MAP.get(name))) || 'plastic')) ? 'plastic' : 'spare') : 'strike'; }
     function saveSpare() { BT.lsSet(SPARE_KEY, { date: BT.localDate(), on: !!BT.$('#spareOn').checked, name: BT.$('#spareBall').value || '' }); renderSpare(); markCoachDirty(); }
     // From saved choices (not the screen), so Coach is right even before Tonight has drawn.
     function spareCtx() {
-      const names = BT.spareBallNames ? BT.spareBallNames() : [];
+      const O = spareOptions(), names = O.all;
       if (!names.length) return { asked: true, on: false, name: '', none: true };
       const saved = BT.lsGet(SPARE_KEY, null) || {}, today = saved.date === BT.localDate();
       const setObj = (BT.lsGet(BT.KEYS.ARSENAL_SETS, []) || []).find(x => x.name === el.set.value) || {};
-      const on = today ? saved.on !== false : true;
-      const name = [today && saved.name, setObj.spare, names[0]].find(n => n && names.includes(n)) || '';
-      return { asked: true, on, name: on ? name : '' };
+      const on = today ? saved.on !== false : !!(O.only.length || O.dualInBag.length);
+      const name = [today && saved.name, setObj.spare, O.dualInBag[0], O.only[0], names[0]].find(n => n && names.includes(n)) || '';
+      return { asked: true, on, name: on ? name : '', kind: on && name ? spareKind(name) : '' };
     }
     { const on = BT.$('#spareOn'), sel = BT.$('#spareBall'); if (on) on.addEventListener('change', saveSpare); if (sel) sel.addEventListener('change', saveSpare); }
     el.set.addEventListener('change', () => setTimeout(renderSpare, 0));

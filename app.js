@@ -589,20 +589,25 @@
   function ballCareFor(name) {
     const c = ballCareAll()[String(name || '').trim()] || {};
     const w = Number(c.weight);
-    return { weight: Number.isFinite(w) && w >= 6 && w <= 16 ? w : null, resurfacedAt: Number(c.resurfacedAt) || 0, retired: c.retired === true, retiredAt: Number(c.retiredAt) || 0, spare: c.spare === true ? true : c.spare === false ? false : null };
+    return { weight: Number.isFinite(w) && w >= 6 && w <= 16 ? w : null, resurfacedAt: Number(c.resurfacedAt) || 0, retired: c.retired === true, retiredAt: Number(c.retiredAt) || 0, spare: c.spare === true ? true : c.spare === 'dual' ? 'dual' : c.spare === false ? false : null };
   }
   // 🎯 Spare ball: what you marked in Tune wins; otherwise plastic / polyester covers count as spare balls.
   function isSpareBall(rowOrName) {
     const row = typeof rowOrName === 'string' ? null : rowOrName;
     const n = typeof rowOrName === 'string' ? rowOrName : ballName(row);
     const mk = ballCareFor(n).spare;
-    if (mk === true || mk === false) return mk;
+    if (mk === true) return true;
+    if (mk === false || mk === 'dual') return false; // 'dual' = strike ball that doubles as your spare ball
     return !!row && /polyester|plastic|spare/i.test(String(ballCover(row) || ''));
   }
   // Your active spare balls (marked first, then plastic / polyester), from your whole list.
   function spareBallNames() {
     try { const c = lsGet(KEYS.CSV_CACHE, null); const rows = withCustomBalls((c && c.rows) || []).filter(r => ballName(r) && !isRetired(r) && isSpareBall(r));
       return rows.sort((a, b) => (ballCareFor(ballName(b)).spare === true) - (ballCareFor(ballName(a)).spare === true)).map(r => ballName(r)).filter((x, i, a) => a.indexOf(x) === i); } catch (_e) { return []; }
+  }
+  // Strike balls you also shoot spares with (e.g. a urethane or a weak solid).
+  function dualSpareNames() {
+    try { const c = lsGet(KEYS.CSV_CACHE, null); return withCustomBalls((c && c.rows) || []).filter(r => ballName(r) && !isRetired(r) && ballCareFor(ballName(r)).spare === 'dual').map(r => ballName(r)); } catch (_e) { return []; }
   }
   function setBallCare(name, patch) {
     const nm = String(name || '').trim(); if (!nm) return;
@@ -1685,7 +1690,7 @@
     setBallTweaks,
     clearBallTweaks,
     setBallSurfaceOverride,
-    ballCareFor, isSpareBall, spareBallNames,
+    ballCareFor, isSpareBall, spareBallNames, dualSpareNames,
     setBallCare,
     clearBallSurfaceOverride,
     surfaceToGrit,
