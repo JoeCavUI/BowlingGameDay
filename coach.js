@@ -1491,5 +1491,66 @@
     return res;
   }
 
-  root.BTCoach = { moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
+  // ---------- 🤔 Poor-shot reasons: your read of a poor shot, checked against what the ball did ----------
+  // Known signatures (Bowling This Month): a sticking thumb lofts the ball and usually misses inside;
+  // chicken winging veers the swing and usually pulls the follow-through. The rest are learned from your own tags.
+  const FAULTS = [
+    { v: 'thumb', l: 'Thumb stuck / hung' }, { v: 'chicken', l: 'Chicken wing / came around it' }, { v: 'dropped', l: 'Dropped it' },
+    { v: 'squeezed', l: 'Squeezed / muscled it' }, { v: 'pulled', l: 'Pulled it' }, { v: 'pushed', l: 'Pushed it' },
+    { v: 'target', l: 'Missed my target' }, { v: 'early', l: 'Timing early' }, { v: 'late', l: 'Timing late' },
+    { v: 'balance', l: 'Fell off the shot' }, { v: 'well', l: 'Released it well' }, { v: 'unsure', l: 'Not sure' },
+  ];
+  const faultLabel = (v) => (FAULTS.find(f => f.v === v) || {}).l || v;
+  // s: a logged shot; lefty: boolean. Returns { fit: 'fits'|'off'|'learn'|'na', side, room, text }.
+  function faultRead(s, lefty) {
+    if (!s || !s.fault) return null;
+    const m = String(s.miss || 'didntTrack'), pk = String(s.pocket || ''), obs = Array.isArray(s.obs) ? s.obs : [];
+    const IN = lefty ? 'right' : 'left';
+    const side = /^left/.test(m) ? (IN === 'left' ? 'in' : 'out') : /^right/.test(m) ? (IN === 'right' ? 'in' : 'out') : m === 'noMiss' ? 'hit' : '';
+    const room = m === 'leftHeld' || m === 'rightRecovered' ? 'room' : m === 'leftMiss' || m === 'rightMiss' ? 'tight' : m === 'noMiss' ? 'hit' : '';
+    const sp = String(s.speedTrend || ''), fast = sp === 'faster', slow = sp === 'slower';
+    const dirTxt = side === 'in' ? `missed ${IN} (inside)` : side === 'out' ? `missed ${IN === 'left' ? 'right' : 'left'} (outside)` : side === 'hit' ? 'hit your mark' : '';
+    let fit = 'na';
+    switch (s.fault) {
+      case 'thumb': case 'pulled': fit = side === 'in' ? 'fits' : side === 'out' ? 'off' : 'na'; break;
+      case 'chicken': fit = side === 'in' || pk === 'Pocket light' ? 'fits' : side === 'out' ? 'off' : 'na'; break;
+      case 'pushed': fit = side === 'out' ? 'fits' : side === 'in' ? 'off' : 'na'; break;
+      case 'target': fit = side === 'in' || side === 'out' ? 'fits' : side === 'hit' ? 'off' : 'na'; break;
+      case 'squeezed': fit = fast || obs.includes('Too early') || pk === 'Pocket high' ? 'fits' : 'learn'; break;
+      case 'dropped': case 'early': case 'late': case 'balance': fit = 'learn'; break;
+      default: fit = 'na';
+    }
+    // Coach's call: change the bowler or the line?
+    let call = '';
+    if (s.fault === 'well') call = side === 'in' || side === 'out' ? `You released it well but ${dirTxt}: that's launch angle or alignment, not the release. Check your slide and target (📐 Angle).` : side === 'hit' ? 'Good release and you hit your mark: the reaction is the lane or the ball, so read it like a good shot.' : '';
+    else if (room === 'room') call = `It ${m === 'leftHeld' ? 'held' : 'recovered'} anyway, so your line has room: fix the release, don't move.`;
+    else if (room === 'tight') call = 'It didn\'t come back. Don\'t move off one bad shot; if it keeps happening, find a line with more room.';
+    const spd = (fast || slow) && s.fault !== 'squeezed' ? ` It was also ${fast ? 'faster' : 'slower'} than normal, which adds to the miss.` : '';
+    const why = s.fault === 'squeezed' ? [fast && 'it was faster than normal', obs.includes('Too early') && 'it read early', pk === 'Pocket high' && 'it hit high'].filter(Boolean).join(' and ') : s.fault === 'chicken' && side !== 'in' && pk === 'Pocket light' ? 'it hit light' : dirTxt;
+    const fitTxt = fit === 'fits' ? ` That fits: ${why || 'it reacted that way'}.` : fit === 'off' ? ` That doesn't match: it ${dirTxt}. Check alignment too.` : '';
+    return { fault: s.fault, label: faultLabel(s.fault), fit, side, room, fast, slow, text: `${faultLabel(s.fault)}.${fitTxt}${spd} ${call}`.trim() };
+  }
+  // Across shots: counts per reason, how often your read fit, the miss pattern per reason, and how often misses held / recovered.
+  function faultSummary(shots, lefty) {
+    const R = (shots || []).filter(s => s && s.type !== 'gameStart' && s.fault).map(s => ({ s, r: faultRead(s, lefty) })).filter(x => x.r);
+    const by = {};
+    R.forEach(({ r }) => { const b = by[r.fault] = by[r.fault] || { fault: r.fault, label: r.label, n: 0, fits: 0, off: 0, in: 0, out: 0, hit: 0, room: 0, tight: 0, fast: 0, slow: 0 };
+      b.n++; if (r.fit === 'fits') b.fits++; if (r.fit === 'off') b.off++; if (r.side) b[r.side]++; if (r.room === 'room') b.room++; if (r.room === 'tight') b.tight++; if (r.fast) b.fast++; if (r.slow) b.slow++; });
+    const rows = Object.values(by).sort((a, b) => b.n - a.n);
+    const misses = R.filter(x => x.r.room === 'room' || x.r.room === 'tight');
+    return { n: R.length, rows, room: misses.filter(x => x.r.room === 'room').length, tight: misses.filter(x => x.r.room === 'tight').length, speedOff: R.filter(x => x.r.fast || x.r.slow).length };
+  }
+  // One line per reason, plain words. min: tags needed before a learned pattern is reported.
+  function faultLines(sum, lefty, min) {
+    min = min || 5; const IN = lefty ? 'right' : 'left', OUT = lefty ? 'left' : 'right';
+    return sum.rows.filter(b => b.fault !== 'unsure').map(b => {
+      const checked = b.fits + b.off;
+      if (b.fault === 'well') return `<b>${b.label}</b> ×${b.n}: ${b.in + b.out ? `${b.in + b.out} still missed the mark (alignment or launch angle, not the release)` : 'all hit the mark (those were lane reads)'}.`;
+      if (checked >= 2) return `<b>${b.label}</b> ×${b.n}: your read fit ${b.fits} of ${checked}${b.off ? ` (${b.off} went the other way: check alignment)` : ''}.`;
+      if (b.n >= min && b.in + b.out >= 3) { const dir = b.in > b.out * 1.5 ? `you usually miss ${IN}` : b.out > b.in * 1.5 ? `you usually miss ${OUT}` : 'your misses go both ways'; return `<b>${b.label}</b> ×${b.n}: ${dir}.`; }
+      return `<b>${b.label}</b> ×${b.n}${b.n < min ? ` (not enough yet: ${checked === 1 ? (b.fits ? 'the one so far fit' : "the one so far didn't fit") : `${min}+ tags to see your pattern`})` : ''}.`;
+    });
+  }
+
+  root.BTCoach = { FAULTS, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
 })(typeof window !== 'undefined' ? window : globalThis);

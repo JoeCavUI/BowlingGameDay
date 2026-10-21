@@ -756,3 +756,10 @@ select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }
 .gd-ff-chk{display:flex;gap:8px;align-items:center;margin-top:8px}.gd-ff-chk input{width:20px;height:20px}
 .ang-back{display:inline-block;margin:6px 0 4px;padding:8px 12px;border-radius:999px;border:1px solid rgba(99,230,210,.45);color:var(--accent);font-weight:700;text-decoration:none}
 .ang-back2{display:block}
+/* 🤔 Poor-shot reasons */
+.gd-fault{margin-top:8px;padding:8px 10px;border-radius:12px;background:rgba(255,179,92,.07);border:1px solid rgba(255,179,92,.3)}
+.gd-faultnote{margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(255,179,92,.1);font-size:14px;line-height:1.35}
+.gd-faultsum{margin:10px 0 4px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);font-size:14px}
+.gd-faultsum ul{margin:6px 0 0;padding-left:18px}
+#readsFault{display:flex;flex-wrap:wrap;gap:6px;overflow:visible}
+#readsFault button{flex:0 0 auto;min-width:0;width:auto;white-space:nowrap;font-size:14px}

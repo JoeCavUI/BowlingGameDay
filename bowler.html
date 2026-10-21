@@ -148,6 +148,12 @@
       </div>
     </div>
 
+    <div class="panel" id="faultPanel" style="margin-top:16px;padding:14px;display:none">
+      <h2 style="margin:0 0 4px 0">🤔 Your read vs. the result</h2>
+      <div class="small">From the reasons you tap after a Poor shot in Game Day, checked against where the ball went. A theory test, not proof: it can only see what you log.</div>
+      <div id="faultBody" style="margin-top:8px"></div>
+    </div>
+
     <div class="panel" id="progressPanel" style="width:100%;max-width:100%;margin-top:16px">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
         <div>
@@ -180,6 +186,21 @@
   <script src="chart.js?v=116"></script>
   <script>
     BT.renderNav('bowler');
+    // 🤔 Poor-shot reasons across every saved night plus tonight
+    (function faultPanel() {
+      try {
+        const lefty = /^l/i.test(String((BT.lsGet(BT.KEYS.BOWLER, {}) || {}).handedness || ''));
+        const saved = BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || [], cur = (BT.lsGet('bt_current_session_v1', null) || {}).shots || [];
+        const shots = [...saved.flatMap(x => x.shots || []), ...cur];
+        const sum = BTCoach.faultSummary(shots, lefty); if (!sum.n) return;
+        const nights = saved.filter(x => (x.shots || []).some(q => q && q.fault)).length + (cur.some(q => q && q.fault) ? 1 : 0);
+        const top = sum.rows.filter(r => r.fault !== 'unsure' && r.fault !== 'well')[0];
+        const lines = BTCoach.faultLines(sum, lefty, 5);
+        const room = sum.room + sum.tight ? `<li>Misses on poor shots: <b>${sum.room}</b> held or recovered, <b>${sum.tight}</b> didn't. ${sum.room + sum.tight < 8 ? '' : sum.room >= sum.tight ? 'Your lines usually give you room: on a poor shot, fix the release before moving.' : 'Your lines are often tight: look for a line where a miss in holds and a miss out recovers.'}</li>` : '';
+        document.getElementById('faultBody').innerHTML = `<div class="small" style="margin-bottom:6px">${sum.n} poor shot${sum.n === 1 ? '' : 's'} with a reason over ${nights} night${nights === 1 ? '' : 's'}.${top && top.n >= 3 ? ` Most common: <b>${top.label}</b> (${top.n}).` : ''}</div><ul class="small" style="margin:0;padding-left:18px;opacity:1">${lines.map(l => `<li>${l}</li>`).join('')}${room}${sum.speedOff ? `<li>${sum.speedOff} were also off your normal speed (from Speed vs normal).</li>` : ''}</ul>`;
+        document.getElementById('faultPanel').style.display = '';
+      } catch (e) { console.error(e); }
+    })();
 
     const els = {
       name: BT.$('#name'),

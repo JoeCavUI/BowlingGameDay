@@ -192,6 +192,10 @@
               <div class="small" style="margin-bottom:6px">Skip any you didn't notice. Tap again to clear.</div>
               <div class="gd-rl">Execution</div>
               <div id="readsQuality" class="gd-r1"></div>
+              <div id="faultWrap" class="gd-fault" style="display:none">
+                <div class="gd-rl">What do you think happened? <span class="small">(optional, one tap)</span></div>
+                <div id="readsFault" class="gd-r1"></div>
+              </div>
               <div class="gd-rl">Ball reaction</div>
               <div id="readsBallObs" class="gd-r1"></div>
               <div class="gd-rl">Exit off the deck</div>
@@ -204,6 +208,7 @@
           </details>
 
           <button class="btn gd-log" id="log">Log this shot</button>
+          <div id="faultNote" class="gd-faultnote" style="display:none"></div>
         </div>
 
         <div class="panel">
@@ -227,6 +232,7 @@
         <div class="panel">
           <h2>Current session log</h2>
           <div class="small">Tap any shot to fix it or delete it. “Save session” stores the night in Scores.</div>
+          <div id="faultSum"></div>
           <div class="hr-split"></div>
           <div class="list" id="logList" style="max-height:80vh"></div>
         </div>
@@ -266,6 +272,7 @@
         <div><label>Target</label><input id="esArrows" class="input" type="number" inputmode="numeric" /></div>
         <div><label>Breakpoint</label><input id="esBp" class="input" type="number" inputmode="numeric" /></div>
       </div>
+      <div id="esFaultWrap" style="display:none"><label style="margin-top:10px;display:block">🤔 What do you think happened? <span class="small">(poor shot)</span></label><div id="esFault" class="es-pills"></div></div>
       <label style="margin-top:10px;display:block">Ball</label><select id="esBall" class="input"></select>
       <div class="btn-row" style="margin-top:14px">
         <button class="btn" id="editShotSave" type="button">Save changes</button>
@@ -360,6 +367,7 @@
       readsPocket: BT.$('#readsPocket'),
       readsExit: BT.$('#readsExit'),
       readsSpeed: BT.$('#readsSpeed'),
+      readsFault: BT.$('#readsFault'),
       lanePick: BT.$('#lanePick'),
       adjust: BT.$('#adjust'),
       frame: BT.$('#frame'),
@@ -656,9 +664,11 @@ function selectedPills(container) {
       });
     }
 
+    // 🤔 The reason list only shows once you tap Poor.
+    function updateFaultVis() { const w = BT.$('#faultWrap'); if (!w) return; const on = selectedPills(el.readsQuality).includes('Poor execution'); w.style.display = on ? '' : 'none'; if (!on && el.readsFault) BT.$all('button[data-pill]', el.readsFault).forEach(b => { b.classList.remove('active'); b.style.outline = 'none'; }); }
     function clearPills() {
       try { changedSel.clear(); paintChanged(); } catch (_e) {}
-	      [el.readsQuality, el.readsMiss, el.readsBallObs, el.readsPocket, el.readsExit, el.readsSpeed].forEach(c => {
+	      [el.readsQuality, el.readsMiss, el.readsBallObs, el.readsPocket, el.readsExit, el.readsSpeed, el.readsFault].forEach(c => {
 	        if (!c) return;
         BT.$all('button[data-pill]', c).forEach(b => {
           b.classList.remove('active');
@@ -1215,7 +1225,17 @@ function isStrike(shot) {
       el.laneGeometry.innerHTML = `${summary}<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th>Feet</th><th>Arrow</th><th>BP</th><th>Pocket</th><th>Out</th><th>Recovery</th><th>Demand</th><th>Leave</th><th>Ball</th><th>Read</th></tr></thead><tbody>${trs}</tbody></table></div>`;
     }
 
+    function renderFaultSum() {
+      const box = BT.$('#faultSum'); if (!box || !window.BTCoach || !BTCoach.faultSummary) return;
+      const lefty = /^l/i.test(String((BT.lsGet(BT.KEYS.BOWLER, {}) || {}).handedness || ''));
+      const sum = BTCoach.faultSummary(sessionShots, lefty);
+      if (!sum.n) { box.innerHTML = ''; return; }
+      const lines = BTCoach.faultLines(sum, lefty, 5);
+      const roomTxt = sum.room + sum.tight ? `Of the misses, <b>${sum.room}</b> held or recovered (your line had room) and <b>${sum.tight}</b> didn't.` : '';
+      box.innerHTML = `<div class="gd-faultsum"><b>🤔 Poor shots tonight: ${sum.n} with a reason</b><ul>${lines.map(l => `<li>${l}</li>`).join('')}${roomTxt ? `<li>${roomTxt}</li>` : ''}${sum.speedOff ? `<li>${sum.speedOff} ${sum.speedOff === 1 ? 'was' : 'were'} also off your normal speed.</li>` : ''}</ul></div>`;
+    }
     function renderLog() {
+      try { renderFaultSum(); } catch (_e) {}
       el.logList.innerHTML = sessionShots.map(s => {
         if (s && s.type === 'gameStart') {
           return `<div class="list-item" style="background:rgba(255,255,255,.04)"><div><b>— Game ${s.gameNo} —</b></div><div class="small">${new Date(s.at).toLocaleString()}</div></div>`;
@@ -1259,7 +1279,7 @@ function isStrike(shot) {
         return `<div class="list-item gd-shot" data-shot="${s.id}" role="button" tabindex="0">
           <div class="small">✏️ ${dt}${gameTxt || frameTxt ? ' • ' : ''}${[gameTxt, frameTxt].filter(Boolean).join(' ')}</div>
           <div><b>${s.ball || 'Ball?'}</b> • ${reads}</div>
-          <div class="small">Line: ${s.feet}/${s.arrows}/${s.bp}${Number.isFinite(Number(s.pocketBoard)) ? '/' + s.pocketBoard : ''}${laneTxt} • Pocket: ${s.pocket} • Exit: ${s.exit}${missTxt}</div>
+          <div class="small">Line: ${s.feet}/${s.arrows}/${s.bp}${Number.isFinite(Number(s.pocketBoard)) ? '/' + s.pocketBoard : ''}${laneTxt} • Pocket: ${s.pocket} • Exit: ${s.exit}${missTxt}${s.fault && window.BTCoach ? ` • 🤔 ${BTCoach.faultLabel(s.fault)}` : ''}</div>
           ${s.notes ? `<div class="small">Notes: ${s.notes}</div>` : ''}
         </div>`;
       }).join('') || `<div class="list-item small">No shots logged yet.</div>`;
@@ -2196,6 +2216,7 @@ function saveCurrentSessionDraft() {
 
         // New coaching layers
         speedTrend: singlePillValue(el.readsSpeed, 'unknown'),
+        fault: execQuality === 1 ? singlePillValue(el.readsFault, '') : '',
         adjust: null,
 
         pocket: singlePillValue(el.readsPocket, 'Unknown'),
@@ -2222,11 +2243,13 @@ function saveCurrentSessionDraft() {
 if (!shot.ball) return alert('Pick a current ball (open Tonight at the top and pick a bag).');
 
       sessionShots.unshift(shot);
+      // 🤔 Coach's take on your read of a poor shot (stays until the next shot)
+      { const fn = BT.$('#faultNote'); if (fn) { let r = null; try { r = shot.fault && BTCoach.faultRead(shot, /^l/i.test(String((BT.lsGet(BT.KEYS.BOWLER, {}) || {}).handedness || ''))); } catch (_e) {} fn.innerHTML = r ? `🤔 <b>${r.label}:</b> ${r.text.slice(r.label.length + 1).trim() || 'Noted. Coach learns your pattern from a few of these.'}` : ''; fn.style.display = r ? '' : 'none'; } }
 
       // Persist the current line/ball for the next shot.
       saveLastLineDraft();
 
-      resetSection3AfterLog();
+      resetSection3AfterLog(); updateFaultVis();
       keyPinRead = ''; keyPinAsked = false;
 
       renderLog();
@@ -2442,6 +2465,8 @@ function sessionSummary(shots) {
       wireQualityPills(el.readsPocket);
       wireQualityPills(el.readsExit);
       wireQualityPills(el.readsSpeed);
+      if (el.readsFault && window.BTCoach && BTCoach.FAULTS) { pillButtonsCustom(el.readsFault, BTCoach.FAULTS.map(f => ({ val: f.v, label: f.l }))); wireQualityPills(el.readsFault); }
+      el.readsQuality.addEventListener('click', () => setTimeout(updateFaultVis, 0));
 
       renderHouses();
       renderPatterns();
@@ -2843,6 +2868,7 @@ function sessionSummary(shots) {
       esPills(BT.$('#esMiss'), missObs, shot.miss || '');
       esPills(BT.$('#esPocket'), pocketObs.map(o => o), shot.pocket || '');
       esPills(BT.$('#esTag'), quickResults.map(t => ({ val: t, label: t })), shot.leaveTag || ((shot.leavePins || []).length ? '' : 'Strike'));
+      { const fw = BT.$('#esFaultWrap'), poor = Number(shot.executionQuality) === 1 && window.BTCoach && BTCoach.FAULTS; fw.style.display = poor ? '' : 'none'; if (poor) esPills(BT.$('#esFault'), BTCoach.FAULTS.map(f => ({ val: f.v, label: f.l })), shot.fault || ''); }
       BT.$('#esPins').value = (shot.leavePins || []).join('-');
       BT.$('#esFeet').value = shot.feet ?? ''; BT.$('#esArrows').value = shot.arrows ?? ''; BT.$('#esBp').value = shot.bp ?? '';
       const balls = Array.from(el.ball.options).map(o => o.value).filter(Boolean);
@@ -2859,6 +2885,7 @@ function sessionSummary(shots) {
       const shot = sessionShots.find(x => x && x.id === editingId); if (!shot) return closeEditShot();
       const miss = esVal(BT.$('#esMiss')); if (miss) shot.miss = miss;
       const pocket = esVal(BT.$('#esPocket')); if (pocket) shot.pocket = pocket;
+      if (BT.$('#esFaultWrap').style.display !== 'none') shot.fault = esVal(BT.$('#esFault')) || '';
       let tag = esVal(BT.$('#esTag'));
       const pins = BT.$('#esPins').value.split(/[^0-9]+/).map(Number).filter(n => n >= 1 && n <= 10);
       if (pins.length && (tag === 'Strike' || tag === 'Brooklyn')) tag = ''; // typed pins win over a strike tag
