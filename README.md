@@ -58,6 +58,14 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v118-beta55: Scores sections and the night review
+
+- **Scores opens to a menu:** 📚 History (search your PinPal games) and 🎳 Game Day nights (review each night), with a tile bar to switch.
+- **New night review:** the scores and one line on what the night meant, then What tonight says (what worked, what cost pins, try next time), game by game, lanes by number, balls with results, your moves, poor-shot reasons, More details folded, and a shot log grouped by game with moves and flush-but-left flags.
+- **Double tap** a night (or its top card) for the shot log. **📄 Save as PDF** and **🔊 Read aloud** for the review.
+- The night list uses the same numbers as the review (10th-frame fill balls left out).
+- **🐎 Dark horse:** no predicted score; only your past results.
+
 ## Changes in v117-beta54: Poor-shot reasons, lane fixes, dark horse
 
 - **🤔 Poor-shot reasons** (Game Day → More reads): tap **Poor** and pick what it felt like (thumb stuck, chicken wing, dropped it, squeezed, pulled / pushed, timing early / late, fell off the shot, released it well) or **+ Add your own**. Coach checks your read against Your mark, pocket, reaction and Speed vs normal, says whether the line had room (miss held / recovered), and sums it up tonight and on the Bowler page (Your read vs. the result).
