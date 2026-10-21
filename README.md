@@ -58,6 +58,13 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v117-beta54: Poor-shot reasons, lane fixes, dark horse
+
+- **🤔 Poor-shot reasons** (Game Day → More reads): tap **Poor** and pick what it felt like (thumb stuck, chicken wing, dropped it, squeezed, pulled / pushed, timing early / late, fell off the shot, released it well) or **+ Add your own**. Coach checks your read against Your mark, pocket, reaction and Speed vs normal, says whether the line had room (miss held / recovered), and sums it up tonight and on the Bowler page (Your read vs. the result).
+- **Lanes:** each new game starts on the other lane by default (setting: same lane). Tap the lane / frame beside the pin deck (✎ fix) to fix a skipped shot or the starting lane, and move this game's logged shots to match.
+- **📐 Angle → Back to Game Day** when you opened it from Game Day.
+- **🐎 Dark horse** (Game Plan, Coach picks my bag): a ball you've hardly thrown at this house whose cover / core / layout / Barnes box match what has worked there, with a surface suggestion. A theory to test in practice.
+
 ## Changes in v116-beta53: Focal point
 
 - **🎯 Angle → Focal point** at the bottom of the board list: where your line would be at the pins (60 ft) if the ball went straight (Kegel three-point targeting: laydown → target → focal point), plus a marker on the lane. Shown with Pocket on or off.
