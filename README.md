@@ -58,6 +58,14 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v114-beta51: Arsenal and Oil as sections
+
+- **Arsenal opens to a menu** of 8 pages: Add a ball, Barnes chart, Coach picks my bag, Create your own bag, Arsenal check, Gaps / duplicates / ideas, Lane conditions, Ball list. Each page shows a 4 × 2 icon grid to jump to the others; "☰ Arsenal" returns to the menu; Back works.
+- **Create your own bag** (the old Bag page) now lives under Arsenal; Bag is gone from the main tabs.
+- **Oil & houses opens to a menu:** Add an oil pattern, Saved patterns (Load opens it for editing), Houses.
+- **Houses** shows your houses plus every house in your PinPal history (games, last bowled), with + Add, Remove and Add all.
+- Old links (e.g. Arsenal check from Bowler) land on the right page; a notice shows when the Ball list filter is narrowing other Arsenal pages.
+
 ## Changes in v113-beta50: Spare balls
 
 - **🎯 Spare ball setting** (Arsenal → tap a ball → Tune): Not a spare ball / My spare ball (spares only) / Strike ball and spare ball (e.g. a Level that doubles as burn ball and spare). Plastic / polyester count as spare balls automatically.
