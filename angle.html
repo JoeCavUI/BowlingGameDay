@@ -72,6 +72,8 @@
         <span>Boards</span><select id="aBoxB1" class="input"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option></select><span>to</span><select id="aBoxB2" class="input"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option></select>
         <span>at</span><select id="aBoxF1" class="input"><option value="34">34</option><option value="35">35</option><option value="36">36</option><option value="37">37</option><option value="38">38</option><option value="39">39</option><option value="40">40</option><option value="41">41</option><option value="42">42</option><option value="43">43</option><option value="44">44</option><option value="45">45</option><option value="46">46</option><option value="47">47</option><option value="48">48</option><option value="49">49</option><option value="50">50</option></select><span>to</span><select id="aBoxF2" class="input"><option value="34">34</option><option value="35">35</option><option value="36">36</option><option value="37">37</option><option value="38">38</option><option value="39">39</option><option value="40">40</option><option value="41">41</option><option value="42">42</option><option value="43">43</option><option value="44">44</option><option value="45">45</option><option value="46">46</option><option value="47">47</option><option value="48">48</option><option value="49">49</option><option value="50">50</option><option value="51">51</option><option value="52">52</option></select><span>ft</span>
       </div>
+      <label class="ang-chk"><input type="checkbox" id="aR31" /> 📏 Rule of 31: exit point = pattern length − 31 (on by itself for sport patterns, 3:1 or less)</label>
+      <div class="small" id="aR31Txt" style="margin:-2px 0 8px 34px"></div>
       <label class="ang-chk"><input type="checkbox" id="aRF" /> Downlane range finders (boards 15 &amp; 25 at 34–37 ft, boards 10 &amp; 30 at 40–43 ft), if your house has them</label>
     </div>
 
@@ -163,7 +165,8 @@
       const rm = String((patO && patO.ratio) || '').match(/(\d+(?:\.\d+)?)\s*(?::|to|-|\/)\s*(\d+(?:\.\d+)?)/i);
       const ratio = rm ? Number(rm[1]) / (Number(rm[2]) || 1) : null;
       const rc = ratio == null ? '' : ratio <= 3 ? 'sport' : ratio < 7 ? 'mid' : 'house';
-      const exit = len ? Math.max(3, Math.min(20, Math.round(len - 31))) : null;
+      const exit31 = len ? Math.max(3, Math.min(20, Math.round(len - 31))) : null;
+      const r31 = $('#aR31').checked, exit = r31 ? exit31 : null;
       const deg = Math.atan((slope * BW_IN) / 12) * 180 / Math.PI;
       const gutterFt = slope < 0 ? (lay - 0.5) / -slope : slope > 0 ? (39.5 - lay) / slope : Infinity;
       const bp = Number($('#aBp').value); const hasBp = isFinite(bp) && $('#aBp').value !== '';
@@ -179,7 +182,7 @@
         const f1 = zone1 ? bf.early38 : bf.f1;
         box = { b1: bf.b1, b2: bf.b2, f1, f2: bf.f2, fm: (f1 + bf.f2) / 2, bm: (bf.b1 + bf.b2) / 2, zone1 };
       }
-      return { box, boxOff, ratio, rc, slide, off, lay, aim, aimFt, aimLbl, slope, at, len, exit, deg, gutterFt, bp: $('#aBp').value !== '' ? bp : null, bpFt };
+      return { box, boxOff, r31, exit31, ratio, rc, slide, off, lay, aim, aimFt, aimLbl, slope, at, len, exit, deg, gutterFt, bp: $('#aBp').value !== '' ? bp : null, bpFt };
     }
 
     // ---------- drawing ----------
@@ -254,10 +257,11 @@
     // ---------- output ----------
     function render() {
       const c = compute();
-      const save = { rf: $('#aRF').checked, slide: $('#aSlide').value, off: $('#aOff').value, target: $('#aTarget').value, mode, pin, spot, len: $('#aLen').value, more: $('#aMore').value, pattern: ($('#aPat').selectedOptions[0] || {}).value ? (BT.lsGet(BT.KEYS.OIL_PATTERNS, [])[Number($('#aPat').value)] || {}).name : '' };
+      const save = { rf: $('#aRF').checked, r31: r31Pref, slide: $('#aSlide').value, off: $('#aOff').value, target: $('#aTarget').value, mode, pin, spot, len: $('#aLen').value, more: $('#aMore').value, pattern: ($('#aPat').selectedOptions[0] || {}).value ? (BT.lsGet(BT.KEYS.OIL_PATTERNS, [])[Number($('#aPat').value)] || {}).name : '' };
       try { BT.lsSet(LAST, save); } catch (_e) {}
       $('#aLayTxt').textContent = c ? `Laydown: board ${fmt(c.lay)} (slide ${fmt(c.slide)} − ${fmt(c.off)}).` : '';
       { const el = document.getElementById('aRatioTxt'); if (el) el.textContent = c && c.ratio != null ? `Ratio ${r1(c.ratio)}:1 · ${c.rc === 'sport' ? 'sport pattern (USBC: 3:1 or less): little room to miss' : c.rc === 'mid' ? 'medium ratio: some room to miss' : 'house shot: drier outside, room to miss'}` : (c ? 'No ratio on this pattern: the alerts assume a house shot.' : ''); }
+      { const el = $('#aR31Txt'); el.textContent = c && c.r31 ? (c.exit31 != null ? `Exit point about board ${c.exit31} on ${c.len} ft. A rule of thumb, not your breakpoint.${c.rc === 'sport' ? ' Sport pattern, so it\'s on.' : ''}` : 'Pick a pattern length to see the exit point.') : (c && c.rc === 'sport' ? 'Off by your choice. Sport patterns usually play best near the exit point.' : ''); el.style.display = el.textContent ? '' : 'none'; }
       if (!c) { $('#aHead').innerHTML = 'Fill in your slide and an aim point.'; $('#aTbl').innerHTML = ''; $('#aAlerts').innerHTML = ''; $('#aFix').innerHTML = ''; draw(null, []); return; }
       const extra = String($('#aMore').value || '').split(/[^0-9.]+/).map(Number).filter(x => isFinite(x) && x > 0 && x <= 62.6);
       const set = new Map();
@@ -374,7 +378,8 @@
         else { const off = hb < c.box.b1 ? c.box.b1 - hb : hb - c.box.b2; A.push(['warn', `📦 ⚠️ Misses your Baker Box by ${fmt(half(off))} board${half(off) === 1 ? '' : 's'} to the ${hb < c.box.b1 ? OUT : IN}: ${where} (box: boards ${c.box.b1}–${c.box.b2}). See <b>Ways to fix it</b> below.`]); }
         if (c.exit != null) { const dx = c.box.bm - c.exit; A.push(['info', `📏 Rule of 31 (a suggestion here): exit point about board ${c.exit} on ${c.len} ft. The Baker Box is ${fmt(Math.abs(dx))} boards ${dx < 0 ? 'outside' : 'inside'} it${c.rc === 'sport' || c.rc === 'mid' ? ', and on this ratio small misses cost more, so stay on your mark' : ''}.`]); }
       }
-      // End of oil vs the rule-of-31 exit point
+      else if (c.len && !c.r31 && c.boxOff === 'sport') A.push(['info', `📦 The Baker Box is for house shots and sport shots 38–43 ft, so it's off for this ${c.len} ft pattern (${r1(c.ratio)}:1). Check <b>Rule of 31</b> above for an exit-point check.`]);
+      // End of oil vs the rule-of-31 exit point (only when Rule of 31 is checked)
       else if (c.len && c.exit != null) {
         if (c.boxOff === 'sport') A.push(['info', `📦 The Baker Box is for house shots and sport shots 38–43 ft. This is a ${c.len} ft ${c.rc === 'sport' ? 'sport pattern' : 'pattern'} (${r1(c.ratio)}:1), so the rule of 31 leads: aim to leave the oil near board ${c.exit}.`]);
         const eb = c.at(c.len), d = eb - c.exit; // + = inside the exit point (still in the oil)
@@ -415,12 +420,18 @@
     document.querySelectorAll('#aSpot button').forEach(b => b.addEventListener('click', () => { spot = Number(b.dataset.s); paintPicks(); render(); }));
     $('#aPat').addEventListener('change', () => { const p = (BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || [])[Number($('#aPat').value)]; if (p && p.length) $('#aLen').value = p.length; render(); });
     $('#aRF').addEventListener('change', render);
+    // 📏 Rule of 31: your choice is remembered; a sport pattern (3:1 or less) turns it on by itself.
+    let r31Pref = !!(BT.lsGet(LAST, null) || {}).r31, r31Sport = null;
+    function patSport() { const p = (BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || [])[Number($('#aPat').value)] || null; const m = String((p && p.ratio) || '').match(/(\d+(?:\.\d+)?)\s*(?::|to|-|\/)\s*(\d+(?:\.\d+)?)/i); return !!m && Number(m[1]) / (Number(m[2]) || 1) <= 3; }
+    function r31Sync() { const sp = patSport(); if (sp !== r31Sport) { r31Sport = sp; $('#aR31').checked = sp ? true : r31Pref; } }
+    $('#aR31').addEventListener('change', () => { if (!r31Sport) r31Pref = $('#aR31').checked; render(); });
+    $('#aPat').addEventListener('change', () => { r31Sync(); render(); });
     ['#aSlide', '#aOff', '#aTarget', '#aTargetFt', '#aCBoard', '#aCFt', '#aLen', '#aBp', '#aMore'].forEach(id => $(id).addEventListener('input', render));
     // 📦 Target box (shared with Game Day's Coach)
     function boxInit() { const b = BT.targetBox(); $('#aBox').checked = b.on; $('#aBoxB1').value = b.b1; $('#aBoxB2').value = b.b2; $('#aBoxF1').value = b.f1; $('#aBoxF2').value = b.f2; $('#aBoxRow').style.display = b.on ? '' : 'none'; }
     ['#aBox', '#aBoxB1', '#aBoxB2', '#aBoxF1', '#aBoxF2'].forEach(id => $(id).addEventListener('change', () => { BT.setTargetBox({ on: $('#aBox').checked, b1: Number($('#aBoxB1').value), b2: Number($('#aBoxB2').value), f1: Number($('#aBoxF1').value), f2: Number($('#aBoxF2').value) }); boxInit(); render(); }));
     boxInit();
-    init(); render();
+    init(); r31Sync(); render();
   })();
   </script>
 </body>
