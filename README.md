@@ -58,6 +58,13 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v112-beta49: Barnes search, one bag everywhere
+
+- **🔎 Search on the Barnes matrix:** type a name, brand, cover or surface; matching boxes light up, results show box and early / mid / late, tap one (or Enter) to open its box page at that ball, or Tune ›.
+- **Spare balls are never strike balls:** plastic / polyester balls are left out of every bag pick; the bag names your spare ("Plus your spare ball: TZone").
+- **Arsenal's Suggest my bag = the Game Plan bag,** even with "Only balls I added" or the list filter on; it says which balls the filter is hiding instead of swapping them.
+- **Lanes shown as 77-78** everywhere.
+
 ## Changes in v111-beta48: Lane conditions, cleaner Game Plan
 
 - **🛣️ Lane conditions** (Arsenal, replaces the role list): pick a condition (fresh / heavy oil, typical house shot, carrydown, moving left, lanes burning up, wet / dry, early friction) and see your top 3 balls rated Great / OK / Weak fit. Resurface tips only when a new surface moves the ball up a level, with warnings if it would then play like another ball or leave another job uncovered; "Best resurface option" when nothing you own fits well; "Use this ball on Game Day". Plastic spare balls are left out.
