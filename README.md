@@ -58,6 +58,13 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v115-beta52: Pocket line, Rule of 31 checkbox, house drop-down
+
+- **🎳 Angle → Pocket** (1-3, or 1-2 for a lefty): draws the hook from your breakpoint (or an estimated turn) into the pocket, lists the boards down to 60 ft, and shows a **Will this line work?** card: Baker Box / rule of 31, breakpoint fit, channel, recovery boards and an entry angle estimate (USBC: 4–6° carries best).
+- **📏 Rule of 31 is a checkbox** on the angle page, Game Day and the Game Plan (one shared setting). Unchecked = no exit-point advice; sport patterns (3:1 or less) check it by themselves.
+- **House drop-down** on Coach picks my bag and the Game Plan: your houses, houses from your PinPal history, and + Add a house.
+- **Lanes tidy to 7-8** everywhere ("78", "13 & 14", "23" → 23-24).
+
 ## Changes in v114-beta51: Arsenal and Oil as sections
 
 - **Arsenal opens to a menu** of 8 pages: Add a ball, Barnes chart, Coach picks my bag, Create your own bag, Arsenal check, Gaps / duplicates / ideas, Lane conditions, Ball list. Each page shows a 4 × 2 icon grid to jump to the others; "☰ Arsenal" returns to the menu; Back works.
