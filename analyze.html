@@ -11,15 +11,16 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
-  <title>Bag</title>
+  <title>Create your own bag</title>
   <link rel="stylesheet" href="styles.css?v=113" />
 </head>
 <body data-page="analyze">
   <div class="navlinks"></div>
   <div class="container">
     <div class="header">
-      <h1>Bag</h1>
+      <h1>Create your own bag</h1>
     </div>
+    <div class="ar-nav" id="arNav"></div>
     <div class="panel setup-banner" style="margin-top:0">
       <b>Your bag = the balls you take to the lanes.</b>
       <div class="small" style="margin-top:4px;opacity:1">Game Day and Coach only suggest balls that are in tonight's bag. Don't see one of your balls? Add it on <a href="arsenal.html">Arsenal → + Add a ball</a> first. Want Coach to pick? <a href="arsenal.html#bag">Let Coach pick my bag →</a></div>
@@ -79,7 +80,8 @@
   <script src="app.js?v=113"></script>
   <script>
     BT.renderNav('analyze');
-    document.title = 'Bag';
+    try { const an = document.getElementById('arNav'); if (an) { an.innerHTML = BT.arsenalNavHTML('build', false); const nl = document.querySelector('.navlinks'); if (nl) document.documentElement.style.setProperty('--nav-h', nl.offsetHeight + 'px'); const on = an.querySelector('.ar-chip.on'); if (on) on.scrollIntoView({ inline: 'center', block: 'nearest' }); } } catch (_e) {}
+    document.title = 'Create your own bag';
 
     const el = {
       csvStatus: BT.$('#csvStatus'),

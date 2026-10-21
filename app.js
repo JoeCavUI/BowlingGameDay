@@ -1503,6 +1503,23 @@
     window.addEventListener('pagehide', stopSpeaking);
   }
 
+  // --- Arsenal section: its sub-pages (menu cards + the sticky bar on each page) ---
+  const ARSENAL_PAGES = [
+    { id: 'add', icon: '➕', t: 'Add a ball', d: 'Add one ball or upload your spreadsheet' },
+    { id: 'barnes', icon: '🎳', t: 'Barnes chart', d: 'Your six boxes, early → late, with search' },
+    { id: 'bag', icon: '🎒', t: 'Coach picks my bag', d: 'Same bag as your Game Plan and Game Day' },
+    { id: 'build', icon: '🧺', t: 'Create your own bag', d: 'Tap the balls you\'re bringing and save the bag', href: 'analyze.html' },
+    { id: 'check', icon: '🩺', t: 'Arsenal check', d: 'How your equipment fits your game' },
+    { id: 'gaps', icon: '🧩', t: 'Gaps, duplicates & ideas', d: 'Empty boxes, look-alikes, resurface ideas' },
+    { id: 'lanes', icon: '🛣️', t: 'Lane conditions', d: 'Best balls per condition, resurface tips' },
+    { id: 'list', icon: '📋', t: 'Ball list', d: 'Every ball, with search and Tune' },
+  ];
+  // onArsenal: true on arsenal.html (links are #id); false on another page (links go to arsenal.html#id).
+  function arsenalPageHref(p, onArsenal) { return p.href ? p.href : (onArsenal ? '#' : 'arsenal.html#') + p.id; }
+  function arsenalNavHTML(activeId, onArsenal) {
+    return `<a class="ar-home" href="${onArsenal ? '#' : 'arsenal.html'}">☰ Arsenal</a><div class="ar-chips">${ARSENAL_PAGES.map(p => `<a class="ar-chip${p.id === activeId ? ' on' : ''}" data-p="${p.id}" href="${arsenalPageHref(p, onArsenal)}">${p.icon} ${p.t.replace(' & ideas', '')}</a>`).join('')}</div>`;
+  }
+
   // --- Navbar injection ---
   function renderNav(active) {
     if (isTestMode() && !document.getElementById('btTestBanner')) {
@@ -1516,14 +1533,14 @@
       { key: 'arsenal', label: 'Arsenal', href: 'arsenal.html' },
       { key: 'oil', label: 'Oil', href: 'oil.html' },
       { key: 'plan', label: 'Plan', href: 'plan.html' },
-      { key: 'analyze', label: 'Bag', href: 'analyze.html' },
       { key: 'gameday', label: 'Game Day', href: 'gameday.html' },
       { key: 'scores', label: 'Scores', href: 'scores.html' },
       { key: 'angle', label: 'Angle', href: 'angle.html' },
       { key: 'guide', label: 'Guide', href: 'guide.html' },
     ];
+    const act = active === 'analyze' ? 'arsenal' : active; // Create your own bag lives under Arsenal
     nav.innerHTML = items.map(i => {
-      const cls = i.key === active ? 'navbtn active' : 'navbtn';
+      const cls = i.key === act ? 'navbtn active' : 'navbtn';
       return `<a class="${cls}" href="${i.href}">${i.label}</a>`;
     }).join('');
   }
@@ -1691,6 +1708,7 @@
     clearBallTweaks,
     setBallSurfaceOverride,
     ballCareFor, isSpareBall, spareBallNames, dualSpareNames,
+    ARSENAL_PAGES, arsenalPageHref, arsenalNavHTML,
     setBallCare,
     clearBallSurfaceOverride,
     surfaceToGrit,

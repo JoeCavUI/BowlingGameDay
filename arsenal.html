@@ -26,8 +26,8 @@
     <div class="panel setup-banner" style="margin-top:0" data-arpage="add">
       <b>Your arsenal = every ball you own.</b>
       <div class="small" style="margin-top:4px;opacity:1"><span class="gd-qnum" style="display:inline-flex;margin-right:4px">1</span> Add your balls: <b>upload your ball spreadsheet</b> (CSV) or tap <b>+ Add a ball → Save to Arsenal</b> one at a time.<br>
-      <span class="gd-qnum" style="display:inline-flex;margin:6px 4px 0 0">2</span> Then pack tonight's bag on <a href="analyze.html"><b>Bag →</b></a>, or let Coach pick one in <a href="#bag"><b>Coach picks my bag</b></a>.</div>
-      <div class="btn-row"><button class="btn" id="addWhatIf">+ Add a ball</button><button class="btn secondary" id="uploadSheet" type="button">Upload ball spreadsheet</button><a class="btn secondary" href="analyze.html">Pack my bag →</a></div>
+      <span class="gd-qnum" style="display:inline-flex;margin:6px 4px 0 0">2</span> Then pack tonight's bag in <a href="analyze.html"><b>Create your own bag</b></a>, or let Coach pick one in <a href="#bag"><b>Coach picks my bag</b></a>.</div>
+      <div class="btn-row"><button class="btn" id="addWhatIf">+ Add a ball</button><button class="btn secondary" id="uploadSheet" type="button">Upload ball spreadsheet</button><a class="btn secondary" href="analyze.html">Create your own bag →</a></div>
       <input id="sheetFile" type="file" accept=".csv,text/csv" style="display:none" />
       <div class="small" style="margin-top:6px;opacity:1">Spreadsheet in Excel or Numbers? Save/export it as <b>CSV</b> first. <a href="#" id="downloadTemplate">Download a blank template</a>.</div>
     </div>
@@ -2160,24 +2160,16 @@ function removeRowByName(name, type) {
   <script>
   // 🗂️ Arsenal sub-pages: a menu first, then one page at a time with a nav bar to the others. #barnes, #bag … work as links and with Back.
   (function () {
-    const PAGES = [
-      { id: 'add', icon: '➕', t: 'Add a ball', d: 'Add one ball or upload your spreadsheet' },
-      { id: 'barnes', icon: '🎳', t: 'Barnes chart', d: 'Your six boxes, early → late, with search' },
-      { id: 'bag', icon: '🎒', t: 'Coach picks my bag', d: 'Same bag as your Game Plan and Game Day' },
-      { id: 'check', icon: '🩺', t: 'Arsenal check', d: 'How your equipment fits your game' },
-      { id: 'gaps', icon: '🧩', t: 'Gaps, duplicates & ideas', d: 'Empty boxes, look-alikes, resurface ideas' },
-      { id: 'lanes', icon: '🛣️', t: 'Lane conditions', d: 'Best balls per condition, resurface tips' },
-      { id: 'list', icon: '📋', t: 'Ball list', d: 'Every ball, with search and Tune' },
-    ];
+    const PAGES = BT.ARSENAL_PAGES;
     const OLD = { rolePlannerPanel: 'bag', arsenalCheckPanel: 'check', barnesPanel: 'barnes' };
     const hub = document.getElementById('arHub'), nav = document.getElementById('arNav'), fon = document.getElementById('arFilterOn');
     const counts = () => { try { const c = BT.lsGet(BT.KEYS.CSV_CACHE, null); return BT.withCustomBalls((c && c.rows) || []).filter(r => BT.ballName(r) && !BT.isRetired(r)).length; } catch (_e) { return 0; } };
-    hub.innerHTML = `<div class="small dim" style="margin:6px 0 8px" id="arHubSub"></div>` + PAGES.map(p => `<a class="ar-card" href="#${p.id}"><span class="ar-ic">${p.icon}</span><span><b>${p.t}</b><span class="small dim">${p.d}</span></span><span class="ar-go">›</span></a>`).join('');
-    nav.innerHTML = `<a class="ar-home" href="#">☰ Arsenal</a><div class="ar-chips">${PAGES.map(p => `<a class="ar-chip" data-p="${p.id}" href="#${p.id}">${p.icon} ${p.t.replace(' & ideas', '')}</a>`).join('')}</div>`;
+    hub.innerHTML = `<div class="small dim" style="margin:6px 0 8px" id="arHubSub"></div>` + PAGES.map(p => `<a class="ar-card" href="${BT.arsenalPageHref(p, true)}"><span class="ar-ic">${p.icon}</span><span><b>${p.t}</b><span class="small dim">${p.d}</span></span><span class="ar-go">›</span></a>`).join('');
+    nav.innerHTML = BT.arsenalNavHTML('', true);
     function show() {
       try { const nl = document.querySelector('.navlinks'); if (nl) document.documentElement.style.setProperty('--nav-h', nl.offsetHeight + 'px'); } catch (_e) {}
       let id = (location.hash || '').slice(1); id = OLD[id] || id;
-      const page = PAGES.find(p => p.id === id);
+      const page = PAGES.find(p => p.id === id && !p.href);
       document.querySelectorAll('[data-arpage]').forEach(el => { el.style.display = page && el.dataset.arpage === page.id ? '' : 'none'; });
       hub.style.display = page ? 'none' : '';
       nav.style.display = page ? '' : 'none';
