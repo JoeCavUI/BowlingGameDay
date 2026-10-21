@@ -18,11 +18,13 @@
   <div class="navlinks"></div>
   <div class="container">
     <div class="header">
-      <h1>Scores / History</h1>
-      <div class="small">Game Day sessions, plus your imported PinPal history.</div>
+      <h1>Scores</h1>
+      <div class="small">Your Game Day nights, plus your imported PinPal history.</div>
     </div>
+    <div class="ar-hub" id="scHub"></div>
+    <div class="ar-nav" id="scNav" style="display:none"></div>
 
-    <div class="panel" id="histPanel">
+    <div class="panel" id="histPanel" data-secpage="history">
       <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap">
         <div>
           <h2 style="margin:0">📚 History</h2>
@@ -62,6 +64,7 @@
       </div>
     </div>
 
+    <div data-secpage="nights">
     <div class="panel" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       <button class="btn secondary" id="refresh">Refresh</button>
       <button class="btn danger" id="clearAll">Clear all sessions</button>
@@ -79,6 +82,7 @@
         <div class="hr-split"></div>
         <div id="details"></div>
       </div>
+    </div>
     </div>
   </div>
 
@@ -114,6 +118,22 @@
   <script src="history.js?v=117"></script>
   <script>
     BT.renderNav('scores');
+    // 🗂️ Scores: menu first, then History (search your PinPal games) or Game Day nights (review each night).
+    const oldHash = () => { if (location.hash === '#histPanel') history.replaceState(null, '', '#history'); };
+    oldHash(); window.addEventListener('hashchange', oldHash);
+    window.__scSec = BT.sectionPages({
+      hub: BT.$('#scHub'), nav: BT.$('#scNav'), homeLabel: 'Scores', cols: 2,
+      pages: [
+        { id: 'history', icon: '📚', t: 'History', d: 'Search your PinPal games: houses, pairs, balls, years, leaves' },
+        { id: 'nights', icon: '🎳', t: 'Game Day nights', s: 'Nights', d: 'Review each night: lanes, shots, what Coach saw' },
+      ],
+      onShow: (id, hub) => {
+        let n = 0; try { n = (BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || []).length; } catch (_e) {}
+        const d = hub.querySelector('[data-hubd="nights"]'); if (d) d.textContent = `${n} night${n === 1 ? '' : 's'} saved · review lanes, shots and what Coach saw`;
+        const sub = hub.querySelector('[data-hubsub]'); if (sub) sub.textContent = 'Pick what you want to see:';
+      },
+    });
+
 
     const el = {
       list: BT.$('#list'),
