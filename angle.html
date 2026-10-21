@@ -67,6 +67,7 @@
         <div><label for="aBp">Breakpoint board <span class="small">(optional)</span></label><input id="aBp" class="input" type="number" step="0.5" inputmode="decimal" /></div>
         <div><label for="aMore">Also show at <span class="small">(ft)</span></label><input id="aMore" class="input" placeholder="e.g. 32, 43" inputmode="text" /></div>
       </div>
+      <label class="ang-chk" id="aPocketLbl"><input type="checkbox" id="aPocket" /> <span id="aPocketTxt">🎳 Pocket: show the hook from your breakpoint into the 1-3</span></label>
       <label class="ang-chk"><input type="checkbox" id="aBox" /> 📦 Baker Box: where the ball splits the 8-9 (house shots, sport shots 38–43 ft)</label>
       <div class="ang-boxrow" id="aBoxRow">
         <span>Boards</span><select id="aBoxB1" class="input"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option></select><span>to</span><select id="aBoxB2" class="input"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option></select>
@@ -79,6 +80,7 @@
 
     <div class="panel" id="angOut">
       <div class="ang-head" id="aHead"></div>
+      <div id="aVerdict"></div>
       <div class="ang-wrap"><svg id="aLane" viewBox="0 0 330 632" role="img" aria-label="Lane with the ball's straight line"></svg></div>
       <table class="ang-tbl" id="aTbl"></table>
       <div id="aAlerts"></div>
@@ -102,7 +104,8 @@
     const R = 10.392 / 12;              // row spacing in ft
     const PINS_R = { 1: [20, 60], 2: [20 + S, 60 + R], 3: [20 - S, 60 + R], 4: [20 + 2 * S, 60 + 2 * R], 5: [20, 60 + 2 * R], 6: [20 - 2 * S, 60 + 2 * R], 7: [20 + 3 * S, 60 + 3 * R], 8: [20 + S, 60 + 3 * R], 9: [20 - S, 60 + 3 * R], 10: [20 - 3 * S, 60 + 3 * R] };
     const pinPos = (n) => { const p = PINS_R[n]; return lefty ? [40 - p[0], p[1]] : p; };
-    const pocketBoard = 17.5;
+    const pocketBoard = 17.5;           // the pocket, counted from your outside channel (USBC pin carry study: 17.5)
+    const POCKET = lefty ? '1-2' : '1-3';
 
     let mode = 'target', pin = 1, spot = 0;
     const r1 = (x) => Math.round(x * 10) / 10;
@@ -122,6 +125,8 @@
       if (q.get('bp') || line.bp) $('#aBp').value = q.get('bp') || line.bp;
       if (last.more) $('#aMore').value = last.more;
       $('#aRF').checked = !!last.rf;
+      $('#aPocket').checked = last.pocket !== false;
+      $('#aPocketTxt').textContent = `🎳 Pocket: show the hook from your breakpoint into the ${POCKET}`;
       const pi = pats.findIndex(p => p.name === (q.get('pattern') || tonight.pattern || last.pattern));
       if (pi >= 0) { $('#aPat').value = String(pi); $('#aLen').value = pats[pi].length || ''; } else $('#aLen').value = last.len || 42;
       if (last.mode && !q.get('slide')) setMode(last.mode);
@@ -233,15 +238,24 @@
         const endFt = Math.min(isFinite(c.gutterFt) ? c.gutterFt : FT_MAX, mode === 'pin' ? c.aimFt : 62.6);
         if (c.exit != null && c.len) g.push(`<circle cx="${L(xBoard(c.exit))}" cy="${yF(c.len)}" r="5" fill="none" stroke="var(--ang-exit)" stroke-width="1.8"/>`);
         // recovery: exit / breakpoint back to the pocket (dashed)
-        if (c.rec) g.push(`<line x1="${L(xBoard(c.rec.from))}" y1="${yF(c.rec.ft)}" x2="${L(xBoard(pocketBoard))}" y2="${yPin(60.4)}" stroke="var(--ang-exit)" stroke-width="1.6" stroke-dasharray="4 3"/>`);
-        g.push(`<line x1="${L(xBoard(c.lay))}" y1="${yF(0)}" x2="${L(xBoard(c.at(endFt)))}" y2="${L(yPin(endFt))}" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round"/>`);
+        if (c.hook && c.hook.ok) {
+          const H = c.hook, pts = [];
+          for (let i = 0; i <= 24; i++) { const ft = H.ft + (60 - H.ft) * i / 24; pts.push(`${L(xBoard(H.b(ft)))} ${L(yPin(ft))}`); }
+          g.push(`<line x1="${L(xBoard(c.lay))}" y1="${yF(0)}" x2="${L(xBoard(c.at(H.ft)))}" y2="${L(yF(H.ft))}" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round"/>`);
+          g.push(`<path d="M${pts.join(' L')}" fill="none" stroke="var(--ang-hook)" stroke-width="2.6" stroke-linecap="round"/>`);
+          g.push(`<circle cx="${L(xBoard(pocketBoard))}" cy="${L(yPin(60))}" r="7" fill="none" stroke="var(--ang-hook)" stroke-width="1.6" stroke-dasharray="2 2"/>`);
+          const tp = H.est || { b: H.bp != null ? H.bp : H.b0, ft: H.ft };
+          g.push(`<circle cx="${L(xBoard(tp.b))}" cy="${L(yF(tp.ft))}" r="4" fill="var(--ang-hook)"/>`);
+        }
+        if (c.rec && !c.hook) g.push(`<line x1="${L(xBoard(c.rec.from))}" y1="${yF(c.rec.ft)}" x2="${L(xBoard(pocketBoard))}" y2="${yPin(60.4)}" stroke="var(--ang-exit)" stroke-width="1.6" stroke-dasharray="4 3"/>`);
+        g.push(`<line x1="${L(xBoard(c.lay))}" y1="${yF(0)}" x2="${L(xBoard(c.at(endFt)))}" y2="${L(yPin(endFt))}" stroke="var(--accent)" stroke-width="${c.hook && c.hook.ok ? 1.2 : 2.6}" stroke-linecap="round"${c.hook && c.hook.ok ? ' stroke-dasharray="3 4" opacity=".45"' : ''}/>`);
         if (c.bp != null && c.bpFt != null && c.bpFt > 0 && c.bpFt < 62.6) g.push(`<rect x="${L(xBoard(c.bp) - 3.5)}" y="${L(yF(c.bpFt) - 3.5)}" width="7" height="7" fill="none" stroke="var(--accent)" stroke-width="1.5"/>`);
         // ball board at each row, on the right side
         let lastY = -99;
         rows.forEach(r => {
-          if (r.ft <= endFt) g.push(`<circle cx="${L(xBoard(r.b))}" cy="${L(yPin(r.ft))}" r="2.6" fill="var(--accent)"/>`);
+          if (r.ft <= endFt || (c.hook && c.hook.ok)) g.push(`<circle cx="${L(xBoard(r.b))}" cy="${L(yPin(r.ft))}" r="2.6" fill="var(--accent)"/>`);
           const y = yPin(r.ft); if (Math.abs(y - lastY) < 11) return; lastY = y;
-          const off = r.b < 0.5 || r.b > 39.5 || r.ft > endFt + 0.01;
+          const off = r.b < 0.5 || r.b > 39.5 || (!(c.hook && c.hook.ok) && r.ft > endFt + 0.01);
           g.push(`<text x="${rightX + 6}" y="${L(y + 3)}" class="ang-t ang-rb">${off ? 'channel' : 'board ' + fmt(r.b)}</text>`);
         });
         if (isFinite(c.gutterFt) && c.gutterFt < (mode === 'pin' ? c.aimFt : 62.6)) g.push(`<text x="${rightX + 6}" y="${L(yF(c.gutterFt) + 3)}" class="ang-t" fill="var(--ang-exit)">channel ${r1(c.gutterFt)} ft</text>`);
@@ -257,15 +271,16 @@
     // ---------- output ----------
     function render() {
       const c = compute();
-      const save = { rf: $('#aRF').checked, slide: $('#aSlide').value, off: $('#aOff').value, target: $('#aTarget').value, mode, pin, spot, len: $('#aLen').value, more: $('#aMore').value, pattern: ($('#aPat').selectedOptions[0] || {}).value ? (BT.lsGet(BT.KEYS.OIL_PATTERNS, [])[Number($('#aPat').value)] || {}).name : '' };
+      const save = { rf: $('#aRF').checked, pocket: $('#aPocket').checked, slide: $('#aSlide').value, off: $('#aOff').value, target: $('#aTarget').value, mode, pin, spot, len: $('#aLen').value, more: $('#aMore').value, pattern: ($('#aPat').selectedOptions[0] || {}).value ? (BT.lsGet(BT.KEYS.OIL_PATTERNS, [])[Number($('#aPat').value)] || {}).name : '' };
       try { BT.lsSet(LAST, save); } catch (_e) {}
       $('#aLayTxt').textContent = c ? `Laydown: board ${fmt(c.lay)} (slide ${fmt(c.slide)} − ${fmt(c.off)}).` : '';
       { const el = document.getElementById('aRatioTxt'); if (el) el.textContent = c && c.ratio != null ? `Ratio ${r1(c.ratio)}:1 · ${c.rc === 'sport' ? 'sport pattern (USBC: 3:1 or less): little room to miss' : c.rc === 'mid' ? 'medium ratio: some room to miss' : 'house shot: drier outside, room to miss'}` : (c ? 'No ratio on this pattern: the alerts assume a house shot.' : ''); }
       { const el = $('#aR31Txt'); el.textContent = c && c.r31 ? (c.exit31 != null ? `Exit point about board ${c.exit31} on ${c.len} ft. A rule of thumb, not your breakpoint.${c.rc === 'sport' ? ' Sport pattern, so it\'s on.' : ''}` : 'Pick a pattern length to see the exit point.') : (c && c.rc === 'sport' ? 'Off by your choice. Sport patterns usually play best near the exit point.' : ''); el.style.display = el.textContent ? '' : 'none'; }
-      if (!c) { $('#aHead').innerHTML = 'Fill in your slide and an aim point.'; $('#aTbl').innerHTML = ''; $('#aAlerts').innerHTML = ''; $('#aFix').innerHTML = ''; draw(null, []); return; }
+      $('#aPocketLbl').style.display = mode === 'pin' ? 'none' : '';
+      if (!c) { $('#aVerdict').innerHTML = ''; $('#aHead').innerHTML = 'Fill in your slide and an aim point.'; $('#aTbl').innerHTML = ''; $('#aAlerts').innerHTML = ''; $('#aFix').innerHTML = ''; draw(null, []); return; }
       const extra = String($('#aMore').value || '').split(/[^0-9.]+/).map(Number).filter(x => isFinite(x) && x > 0 && x <= 62.6);
-      const set = new Map();
-      const add = (ft, lbl) => { const k = r1(ft); if (!set.has(k)) set.set(k, { ft: k, lbl, b: c.at(k) }); else if (lbl && !set.get(k).lbl.includes(lbl)) set.get(k).lbl += ' · ' + lbl; };
+      const set = new Map(); c.pos = null;
+      const add = (ft, lbl) => { const k = r1(ft); if (!set.has(k)) set.set(k, { ft: k, lbl, b: (c.pos || c.at)(k) }); else if (lbl && !set.get(k).lbl.includes(lbl)) set.get(k).lbl += ' · ' + lbl; };
       add(0, 'Foul line (laydown)'); add(7, 'Dots'); add(15, 'Arrows'); add(30, ''); add(45, ''); add(60, 'Head pin');
       if (c.len) add(c.len, 'End of oil');
       if ($('#aRF').checked) { add(34, 'Tracers 15/25 start'); add(37, 'Tracers 15/25 end'); add(40, 'Tracers 10/30 start'); add(43, 'Tracers 10/30 end'); }
@@ -275,6 +290,17 @@
         if (c.bp != null && bpFits(c)) c.rec = { from: c.bp, ft: c.bpFt, what: `your breakpoint (board ${fmt(c.bp)} at ${r1(c.bpFt)} ft)` };
         else if (c.len && c.at(c.len) >= 0.5 && c.at(c.len) <= 39.5) c.rec = { from: c.at(c.len), ft: c.len, what: `the end of the oil (board ${fmt(c.at(c.len))} at ${c.len} ft)` };
       }
+      // 🎳 Pocket: straight to the turn, then a hook into the pocket (an estimate: a smooth curve, not a ball-motion model).
+      c.hook = pocketOn() ? hookFor(c) : null;
+      if (c.hook) {
+        c.pos = c.hook.ok ? (ft) => ft <= c.hook.ft ? c.at(ft) : c.hook.b(ft) : c.at;
+        set.forEach(r => { r.b = c.pos(r.ft); });
+        add(c.hook.ft, c.hook.bp != null ? 'Breakpoint (turns)' : c.hook.est ? '' : 'Turns (end of oil)');
+        if (c.hook.est) add(c.hook.est.ft, 'Turns (estimate)');
+        [50, 55].forEach(ft => { if (ft > c.hook.ft + 1) add(ft, ''); });
+        const h = set.get(60); if (h && c.hook.ok) h.lbl = `Pocket (${POCKET})`;
+        c.rec = { from: c.hook.tb, ft: c.hook.tf, what: c.hook.bp != null ? `your breakpoint (board ${fmt(c.hook.bp)} at ${r1(c.hook.tf)} ft)` : c.hook.est ? `where it turns (about board ${fmt(c.hook.tb)} at ${r1(c.hook.tf)} ft)` : `the end of the oil (board ${fmt(c.hook.tb)} at ${r1(c.hook.tf)} ft)` };
+      } else c.pos = c.at;
       extra.forEach(ft => add(ft, 'Your pick'));
       if (mode !== 'target') add(c.aimFt, 'Aim point');
       const rows = [...set.values()].sort((a, b) => a.ft - b.ft);
@@ -285,10 +311,11 @@
         return `<tr${r.lbl === 'End of oil' ? ' class="ang-oilrow"' : ''}><td>${r.ft} ft</td><td><b>${off ? 'channel' : fmt(r.b)}</b></td><td class="small">${r.lbl || ''}</td></tr>`;
       }).join('') + (c.rec ? (() => {
         const boards = Math.abs(pocketBoard - c.rec.from), ft = Math.max(1, 60 - c.rec.ft);
-        const from = c.rec.what.startsWith('your breakpoint') ? 'from your breakpoint' : 'from the oil exit';
+        const from = c.rec.what.startsWith('your breakpoint') ? 'from your breakpoint' : c.rec.what.startsWith('where') ? 'from where it turns' : 'from the oil exit';
         return `<tr class="ang-recrow"><td>Back to pocket</td><td><b>${fmt(boards)} boards</b></td><td class="small">${from}, board ${fmt(c.rec.from)} → ${pocketBoard} in ${r1(ft)} ft</td></tr>`;
       })() : '');
       draw(c, rows);
+      $('#aVerdict').innerHTML = c.hook ? verdictHTML(c) : '';
       $('#aAlerts').innerHTML = alerts(c).map(a => `<div class="ang-alert ${a[0]}">${a[1]}</div>`).join('');
       renderFixes(c);
     }
@@ -352,6 +379,53 @@
     function wireUndo() {
       const u = document.getElementById('aUndo'); if (!u) return;
       u.addEventListener('click', () => { if (!undo) return; $('#aSlide').value = undo.slide; $(undo.tf).value = undo.target; $('#aOff').value = undo.off; $('#aBp').value = undo.bp; undo = null; render(); });
+    }
+
+    // ---------- 🎳 Pocket ----------
+    const pocketOn = () => mode !== 'pin' && $('#aPocket').checked;
+    const degOf = (bpf) => Math.atan((bpf * BW_IN) / 12) * 180 / Math.PI; // boards per foot → degrees
+    // Turn point: your breakpoint if this line reaches it near the end of the oil, otherwise the end of the oil.
+    // Breakpoint given: the ball is moving straight down the board there (farthest out), then a smooth curve to the pocket at 60 ft.
+    // No breakpoint: the curve starts with the straight line's direction (so no entry-angle estimate).
+    function hookFor(c) {
+      const len = c.len || 45;
+      const useBp = c.bp != null && bpFits(c);
+      const ft = useBp ? c.bpFt : len, b0 = useBp ? c.bp : c.at(len), s0 = useBp ? 0 : c.slope, T = Math.max(4, 60 - ft);
+      // Still heading out at the end of the oil: a short curve to its farthest-out point (the estimated breakpoint).
+      const a = (pocketBoard - b0 - s0 * T) / (T * T);
+      const par = (x) => { const t = Math.max(0, x - ft); return b0 + s0 * t + a * t * t; };
+      let est = null; if (!useBp && s0 < 0 && a > 0) { const tv = -s0 / (2 * a); if (tv > 0.5 && tv < T - 2) est = { ft: ft + tv, b: par(ft + tv) }; }
+      // From the turn (moving straight down the board) into the pocket: it hooks harder at first, then rolls out.
+      // Curve shape t^1.6, so the entry angle is about 1.6 × the average angle from the turn (an estimate).
+      const tf = est ? est.ft : ft, tb = est ? est.b : b0, TT = Math.max(4, 60 - tf), D = pocketBoard - tb, P = 1.6;
+      const b = (x) => x <= tf ? par(x) : tb + D * Math.pow((x - tf) / TT, P);
+      const entry = D > 0.5 ? degOf(P * D / TT) : null;
+      return { ok: D > 0.5, ft, b0, bp: useBp ? c.bp : null, est, b, tf, tb, boards: Math.abs(D), T: TT, entry };
+    }
+    function verdict(c) {
+      const H = c.hook, C = []; // [status 'ok'|'warn'|'bad'|'na', text]
+      // 1. Through the Baker Box or the rule-of-31 exit point
+      if (c.box) { const hb = c.at(c.box.fm), inB = hb >= c.box.b1 - 0.5 && hb <= c.box.b2 + 0.5; C.push([inB ? 'ok' : 'warn', inB ? `Goes through your Baker Box (board ${fmt(hb)} at ${r1(c.box.fm)} ft)` : `Misses your Baker Box: board ${fmt(hb)} at ${r1(c.box.fm)} ft (box ${c.box.b1}–${c.box.b2})`]); }
+      if (c.exit != null && c.len) { const eb = c.at(c.len), d = eb - c.exit, tol = c.rc === 'sport' ? 1 : 2; C.push([Math.abs(d) <= tol ? 'ok' : 'warn', Math.abs(d) <= tol ? `Leaves the oil at the exit point (board ${fmt(eb)}, rule of 31 says ${c.exit})` : `Leaves the oil on board ${fmt(eb)}, ${fmt(Math.abs(d))} boards ${d < 0 ? 'outside' : 'inside'} the exit point (${c.exit})`]); }
+      if (!c.box && c.exit == null) C.push(['na', 'No Baker Box or Rule of 31 check here: check one above']);
+      // 2. Breakpoint
+      if (c.bp == null) C.push(['na', H.est ? `No breakpoint entered: this line would turn about board ${fmt(half(H.est.b))} at ${Math.round(H.est.ft)} ft (estimate). Enter yours to check it` : 'No breakpoint entered: the turn is set at the end of the oil']);
+      else if (!bpFits(c)) C.push(['warn', `Your breakpoint (board ${fmt(c.bp)}) doesn't fit this line: it turns at the end of the oil instead`]);
+      else C.push(['ok', `Breakpoint fits: board ${fmt(c.bp)} at ${r1(c.bpFt)} ft`]);
+      // 3. Room: never in the channel before it turns, and the turn has to be outside the pocket
+      if (isFinite(c.gutterFt) && c.gutterFt < H.ft) C.push(['bad', `Reaches the channel at ${r1(c.gutterFt)} ft, before it can turn. Move your feet ${c.slope < 0 ? IN : OUT}`]);
+      if (H.tb >= pocketBoard - 0.5) C.push(['bad', `Turns on board ${fmt(H.tb)}, already inside the pocket: a hook can't bring it back to ${pocketBoard}. Expect a Brooklyn or a high hit`]);
+      // 4. Back end: boards to recover
+      else { const bd = H.boards; C.push([bd >= 8 && bd <= 13 ? 'ok' : 'warn', bd < 8 ? `Recovers only ${fmt(bd)} boards: a direct line, more deflection (watch for 10s)` : bd > 13 ? `Recovers ${fmt(bd)} boards in ${r1(H.T)} ft: a big swing, over/under if the lane changes` : `Recovers ${fmt(bd)} boards in ${r1(H.T)} ft: a normal back end`]); }
+      // 5. Entry angle (USBC pin carry study: carry is best around 4–6°)
+      if (H.entry != null) { const e = H.entry; C.push([e >= 4 && e <= 7 ? 'ok' : 'warn', e < 4 ? `Entry angle about ${r1(e)}°: below the 4–6° that carries best. Expect more 10s and weak 8s` : e > 7 ? `Entry angle about ${r1(e)}°: more than the 4–6° that carries best. Can leave 4s and splits if it hits high` : `Entry angle about ${r1(e)}°: ${e <= 6.2 ? 'in' : 'close to'} the 4–6° range that carries best`]); }
+      const bad = C.some(x => x[0] === 'bad'), warn = C.filter(x => x[0] === 'warn').length;
+      const head = bad ? ['bad', `❌ Won't get to the ${POCKET} pocket`] : warn ? ['warn', `⚠️ Could work: ${warn} thing${warn === 1 ? '' : 's'} to watch`] : ['ok', `✅ Logical line: in theory it gets to the ${POCKET} and carries`];
+      return { head, C };
+    }
+    function verdictHTML(c) {
+      const V = verdict(c), ic = { ok: '✅', warn: '⚠️', bad: '❌', na: '•' };
+      return `<div class="ang-verdict ${V.head[0]}"><div class="ang-vh">${V.head[1]}</div>${V.C.map(x => `<div class="ang-vl ${x[0]}"><span>${ic[x[0]]}</span><span>${x[1]}.</span></div>`).join('')}<div class="small" style="margin-top:6px;opacity:.75">The pink hook is a rough estimate: a smooth curve from where the ball turns into the pocket (board ${pocketBoard}), not a ball-motion model. Entry angle comes from that curve.</div></div>`;
     }
 
     function alerts(c) {
@@ -420,6 +494,7 @@
     document.querySelectorAll('#aSpot button').forEach(b => b.addEventListener('click', () => { spot = Number(b.dataset.s); paintPicks(); render(); }));
     $('#aPat').addEventListener('change', () => { const p = (BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || [])[Number($('#aPat').value)]; if (p && p.length) $('#aLen').value = p.length; render(); });
     $('#aRF').addEventListener('change', render);
+    $('#aPocket').addEventListener('change', render);
     // 📏 Rule of 31 (shared with Game Day and the Game Plan): sport patterns turn it on by itself.
     const patRatio = () => ((BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || [])[Number($('#aPat').value)] || {}).ratio;
     let r31Sync = () => {};
