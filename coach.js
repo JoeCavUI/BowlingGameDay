@@ -733,7 +733,7 @@
     const isSolid = (b) => /solid/i.test(info(b).cover || '');
     const isPolished = (b) => (Number(info(b).grit) || 4000) >= 4500;
     const isSanded = (b) => (Number(info(b).grit) || 4000) <= 3000;
-    const isSpare = (b) => /plastic|poly(ester)?/i.test(info(b).cover || '');
+    const isSpare = (b) => { try { if (typeof BT !== 'undefined' && BT.isSpareBall && b.row) return BT.isSpareBall(b.row); } catch (_e) {} return /plastic|poly(ester)?/i.test(info(b).cover || ''); };
     const play = balls.filter(b => !isSpare(b));
     const n = play.length;
 
@@ -1164,7 +1164,10 @@
       try {
         const sp = ((ctx.history && ctx.history.lines) || []).find(l => /Spare to practice/.test(l));
         const m = sp && sp.match(/Spare to practice: (?:the )?([^.]+)\. You've made (\d+%)/);
-        if (m) lines.push(`🎯 Spare: the ${m[1]} (${m[2]} here).`);
+        const SP = ctx.spare || {};
+        const how = SP.on && SP.name ? ` Use your ${SP.name}: straight, flat release.` : SP.asked && !SP.on && !SP.none ? ' No spare ball tonight: flatten your release (no rotation) and play straighter at corner pins.' : SP.none ? ' A plastic spare ball would make corner pins easier: flatten your release with your strike ball for now.' : '';
+        if (m) lines.push(`🎯 Spare: the ${m[1]} (${m[2]} here).${how}`);
+        else if (how) lines.push(`🎯 Spares:${how}`);
       } catch (_e) {}
       try { const T = ctx.traffic; if (T && T.carry >= 2) lines.push(`🛢️ ${T.carry} on the pair throw urethane or plastic${T.plastic ? ` (${T.plastic} plastic, usually down the middle)` : ''}. They push oil down the lane: as the night goes the back end gets weaker and the lane plays longer, sometimes with an early read in front. Before moving in, try a stronger solid ball, a touch less speed or more rotation. Tap Carrydown when you see it.`); } catch (_e) {}
       if (pat && pat.volumeClass === 'light') lines.push('🛢️ Light oil: watch for high hits by game 2.');

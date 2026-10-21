@@ -76,6 +76,7 @@
             <div style="grid-column:1/-1">
               <select id="set" class="input"></select>
               <div id="bagWarn" class="gd-bagwarn" style="display:none"></div>
+              <div class="gd-spare" id="spareRow"><label class="small" style="display:flex;gap:8px;align-items:center;margin:0"><input type="checkbox" id="spareOn" style="width:20px;height:20px" /> 🎯 Bringing my spare ball tonight</label><select class="input" id="spareBall" style="margin-top:6px"></select><div class="small dim" id="spareNote" style="margin-top:4px"></div></div>
             </div>
             <div class="gd-tstep" style="grid-column:1/-1"><span class="gd-step-n" id="step3n">3</span><span><b>Who's on the pair</b><span class="gd-tstep-sub">your team and tonight's opponent</span></span><span class="gd-step-st small" id="step3st"></span></div>
             <div class="gd-lineup" style="grid-column:1/-1">
@@ -1921,6 +1922,7 @@ function saveCurrentSessionDraft() {
         currentBall: el.ball ? el.ball.value : '',
         gameNow: currentGameNumber(),
         traffic: trafficInfo(),
+        spare: (() => { try { return spareCtx(); } catch (_e) { return null; } })(),
         pastMoves: pastMovesHere(),
         line: { feet: el.feet.value, arrows: el.arrows.value, bp: el.bp.value, targetFt: el.tdist ? Number(el.tdist.value) || 15 : 15 },
         history: historyFor(),
@@ -2466,6 +2468,37 @@ function sessionSummary(shots) {
       updateFrameUI();
       autoCoach();
     }
+
+    // 🎯 Spare ball tonight: on by default when you have one; the bag's spare is preselected. Coach names it on spare advice.
+    const SPARE_KEY = 'bt_gameday_spare_v1';
+    function renderSpare() {
+      const on = BT.$('#spareOn'), sel = BT.$('#spareBall'), note = BT.$('#spareNote'); if (!on || !sel) return;
+      const names = BT.spareBallNames ? BT.spareBallNames() : [];
+      const saved = BT.lsGet(SPARE_KEY, null) || {};
+      const setObj = (BT.lsGet(BT.KEYS.ARSENAL_SETS, []) || []).find(x => x.name === el.set.value) || {};
+      if (!names.length) { sel.style.display = 'none'; on.checked = false; on.disabled = true; note.innerHTML = 'No spare ball marked yet. In <b>Arsenal</b>, tap your spare ball and tick <b>🎯 My spare ball</b> (plastic / polyester balls count automatically).'; return; }
+      on.disabled = false; sel.style.display = '';
+      sel.innerHTML = names.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+      const pick = [saved.date === BT.localDate() && saved.name, setObj.spare, names[0]].find(n => n && names.includes(n));
+      sel.value = pick;
+      on.checked = saved.date === BT.localDate() ? saved.on !== false : true;
+      sel.disabled = !on.checked;
+      note.textContent = on.checked ? 'Coach will say when to use it (10s, 7s and other corner pins).' : 'Not bringing it: Coach adjusts its spare advice for your strike ball.';
+    }
+    function saveSpare() { BT.lsSet(SPARE_KEY, { date: BT.localDate(), on: !!BT.$('#spareOn').checked, name: BT.$('#spareBall').value || '' }); renderSpare(); markCoachDirty(); }
+    // From saved choices (not the screen), so Coach is right even before Tonight has drawn.
+    function spareCtx() {
+      const names = BT.spareBallNames ? BT.spareBallNames() : [];
+      if (!names.length) return { asked: true, on: false, name: '', none: true };
+      const saved = BT.lsGet(SPARE_KEY, null) || {}, today = saved.date === BT.localDate();
+      const setObj = (BT.lsGet(BT.KEYS.ARSENAL_SETS, []) || []).find(x => x.name === el.set.value) || {};
+      const on = today ? saved.on !== false : true;
+      const name = [today && saved.name, setObj.spare, names[0]].find(n => n && names.includes(n)) || '';
+      return { asked: true, on, name: on ? name : '' };
+    }
+    { const on = BT.$('#spareOn'), sel = BT.$('#spareBall'); if (on) on.addEventListener('change', saveSpare); if (sel) sel.addEventListener('change', saveSpare); }
+    el.set.addEventListener('change', () => setTimeout(renderSpare, 0));
+    setTimeout(renderSpare, 300);
 
     // Bag ↔ house. Coming from "Save & go to Game Day", the bag's house, lanes, league and oil fill in Tonight.
     // Oil follows the house: a pattern saved for another house is swapped for this house's newest one, or cleared.

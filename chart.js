@@ -31,7 +31,7 @@
   const SURFACES = ['1000', '1500', '2000', '3000', '4000', 'Polish'];
 
   function coverOf(row) { return String(BT.ballCover(row) || '').toLowerCase(); }
-  function isSpare(row) { const c = coverOf(row); return /polyester|plastic|spare/.test(c); }
+  function isSpare(row) { if (BT.isSpareBall) return BT.isSpareBall(row); const c = coverOf(row); return /polyester|plastic|spare/.test(c); }
   function isUrethane(row) { return /urethane/.test(coverOf(row)); }
 
   // Timing for this bowler: 0 = reads very early, 1 = reads very late (motion model length).

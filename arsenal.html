@@ -324,6 +324,7 @@
           </select>
           <button class="btn secondary" id="tuneResurfaced" type="button">Just resurfaced</button>
           <button class="btn danger" id="tuneRetire" type="button">Retire this ball</button>
+          <label class="small" style="display:flex;gap:6px;align-items:center;margin:0;flex-basis:100%"><input type="checkbox" id="tuneSpare" style="width:20px;height:20px" /> 🎯 <b>My spare ball</b> <span class="dim">(kept out of strike-ball picks; Game Day asks if you're bringing it)</span></label>
           <button class="btn secondary" id="tuneDelete" type="button">🗑 Delete</button>
         </div>
         <div class="small dim" id="tuneCareInfo" style="margin-top:6px"></div>
@@ -880,6 +881,7 @@
       const care = BT.ballCareFor(nm);
       const rb = BT.$('#tuneRetire'); if (rb) { rb.textContent = care.retired ? 'Bring back (un-retire)' : 'Retire this ball'; rb.className = care.retired ? 'btn secondary' : 'btn danger'; }
       const w = BT.$('#tuneWeight'); if (w) w.value = care.weight ? String(care.weight) : '';
+      const sp = BT.$('#tuneSpare'); if (sp) sp.checked = BT.isSpareBall(rowByName(nm) || nm);
       const info = BT.$('#tuneCareInfo'); if (!info) return;
       let games = null;
       try { if (window.BTCoach) games = BTCoach.ballGames(BT.lsGet(BT.KEYS.GAME_SESSIONS, []), nm, care.resurfacedAt); } catch (_e) {}
@@ -920,6 +922,11 @@
       tune.modal.classList.add('hidden'); tune.currentName = '';
       setStatus(); applyFilter(); try { renderArsenalCheck(); } catch (_e) {}
       alert(r.duplicateLeft ? `Deleted one "${nm}". The other one stays.` : `Deleted "${nm}".`);
+    });
+    BT.$('#tuneSpare')?.addEventListener('change', (e) => {
+      const nm = tune.currentName; if (!nm) return;
+      BT.setBallCare(nm, { spare: !!e.target.checked });
+      applyFilter(); try { renderArsenalCheck(); } catch (_e) {}
     });
     BT.$('#tuneRetire')?.addEventListener('click', () => {
       const nm = tune.currentName; if (!nm) return;
@@ -1311,7 +1318,7 @@
     }
 
     function buildSuggestedSet(rows, targetCount) {
-      rows = (rows || []).filter(r => !/polyester|plastic|spare/i.test(String(BT.ballCover(r) || ''))); // spare balls aren't strike balls
+      rows = (rows || []).filter(r => !BT.isSpareBall(r)); // spare balls aren't strike balls
       const count = Math.max(1, Math.min(15, Number(targetCount) || 9));
       const roleData = bestRoleCandidates(rows, 10);
       const used = new Set();
@@ -1395,7 +1402,7 @@
       if (existing && !confirm(`Replace your saved bag "${existing.name}"?`)) return null;
       const cx = ctxValue(); const lgId = BT.$('#ctxLeague') ? BT.$('#ctxLeague').value : '';
       const ctx = cx.house ? { house: cx.house, lanes: cx.lanes, leagueId: lgId, patternName: cx.patternName } : null;
-      const payload = { id: existing ? existing.id : `set_${Math.random().toString(36).slice(2, 10)}`, name, balls: names, savedAt: Date.now(), source: 'coach', ctx, roles: Object.fromEntries((lastSuggestion.chosen || []).map(c => [c.name, (c.roles || [])[0] || ''])) };
+      const payload = { id: existing ? existing.id : `set_${Math.random().toString(36).slice(2, 10)}`, name, balls: names, savedAt: Date.now(), source: 'coach', ctx, spare: (BT.spareBallNames ? BT.spareBallNames()[0] : '') || '', roles: Object.fromEntries((lastSuggestion.chosen || []).map(c => [c.name, (c.roles || [])[0] || ''])) };
       const next = existing ? list.map(x => x.id === payload.id ? payload : x) : [payload, ...list];
       BT.lsSet(BT.KEYS.ARSENAL_SETS, next);
       BT.lsSet(PREFERRED_SET_KEY, name);
@@ -1798,7 +1805,7 @@
       const roleMap = {}; chosen.forEach(ch => { roleMap[ch.name] = [res.recRoles && res.recRoles[ch.name] ? res.recRoles[ch.name] : 'Game Plan pick']; });
       // More than 6 asked for: fill with the balls that add the most motion separation.
       const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
-      const all = rows.filter(r => !/polyester|plastic|spare/i.test(String(BT.ballCover(r) || ''))).map(r => ({ row: r, name: BT.ballName(r), vec: BT.motionVector(r, bowler) })).filter(b => b.name);
+      const all = rows.filter(r => !BT.isSpareBall(r)).map(r => ({ row: r, name: BT.ballName(r), vec: BT.motionVector(r, bowler) })).filter(b => b.name);
       const used = new Set(chosen.map(x => x.name));
       while (chosen.length < n) {
         let best = null;

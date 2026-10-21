@@ -718,3 +718,5 @@ select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }
 .mx-cell.dimmed{opacity:.28}.mx-cell.hit{border-color:rgba(99,230,210,.7);box-shadow:0 0 0 1px rgba(99,230,210,.35)}
 .mx-br.focus{background:rgba(99,230,210,.10);border-radius:12px;box-shadow:inset 0 0 0 1px rgba(99,230,210,.5)}
 .mx-bd.focus{box-shadow:0 0 0 3px #ffd166;z-index:2}
+
+.gd-spare{margin-top:10px;padding:9px 10px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}

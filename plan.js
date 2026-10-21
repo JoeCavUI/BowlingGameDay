@@ -30,9 +30,9 @@
     try { const c = BT().lsGet(BT().KEYS.CSV_CACHE, null); return BT().withCustomBalls((c && c.rows) || []).map(r => BT().ballName(r)).filter(Boolean); } catch (_e) { return []; }
   }
   // Plastic / polyester spare balls are never strike-ball picks (bag, first ball, lane conditions).
-  const isSpareBall = (r) => { try { return /polyester|plastic|spare/i.test(String(BT().ballCover(r) || '')); } catch (_e) { return false; } };
+  const isSpareBall = (r) => { try { return BT().isSpareBall ? BT().isSpareBall(r) : /polyester|plastic|spare/i.test(String(BT().ballCover(r) || '')); } catch (_e) { return false; } };
   function spareBalls() {
-    try { const c = BT().lsGet(BT().KEYS.CSV_CACHE, null); return BT().withCustomBalls((c && c.rows) || []).filter(r => BT().ballName(r) && !BT().isRetired(r) && isSpareBall(r)).map(r => BT().ballName(r)); } catch (_e) { return []; }
+    try { if (BT().spareBallNames) return BT().spareBallNames(); const c = BT().lsGet(BT().KEYS.CSV_CACHE, null); return BT().withCustomBalls((c && c.rows) || []).filter(r => BT().ballName(r) && !BT().isRetired(r) && isSpareBall(r)).map(r => BT().ballName(r)); } catch (_e) { return []; }
   }
   function arsenalRows() {
     try { const c = BT().lsGet(BT().KEYS.CSV_CACHE, null); return BT().withCustomBalls((c && c.rows) || []).filter(r => BT().ballName(r) && !BT().isRetired(r) && !isSpareBall(r)); } catch (_e) { return []; }
@@ -148,7 +148,7 @@
     const whyList = (p) => why(p).split('; ').filter(Boolean).map(w => `<li>${w}</li>`).join('');
     ordered.forEach(p => items.push(`<b>${role(p)}: ${esc(p.n)}</b><ul class="pl-sub"><li class="dim">${[p.t.cover, p.t.core && p.t.core + ' core', p.t.layout, p.t.box].filter(Boolean).map(esc).join(' · ')}</li>${whyList(p)}</ul>`));
     if (picked.length < count) items.push(`Only ${picked.length} of your balls read far enough apart to be worth bringing; more would overlap.`);
-    { const sp = spareBalls(); items.push(sp.length ? `Plus your spare ball: <b>${esc(sp[0])}</b>.` : 'Plus a spare ball (none in your arsenal yet: a plastic / polyester ball makes 10 and 7 pins much easier).'); }
+    { const sp = spareBalls(); items.push(sp.length ? `Plus your spare ball: <b>${esc(sp[0])}</b>.` : 'Plus a spare ball (none marked yet: a plastic / polyester ball makes 10 and 7 pins much easier. Mark yours in Arsenal → tap the ball → 🎯 My spare ball).'); }
     const roles = {}; ordered.forEach(q => { roles[q.n] = role(q); });
     return { items, picked: ordered.map(p => p.n), first: first.n, roles, why: scored.map(s => ({ n: s.n, score: Math.round(s.score * 10) / 10, pred: Math.round(s.pred * 10) / 10, predK: s.predK, own: s.os ? [s.os.avg, s.os.n] : null, pair: s.po ? [s.po.avg, s.po.n] : null, t: s.t, cond: s.cond, job: job.get(s) || "" })), traits: { house: H.eff, pair: P ? P.eff : null, base: H.base } };
   }
