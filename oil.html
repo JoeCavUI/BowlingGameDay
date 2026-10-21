@@ -18,11 +18,14 @@
   <div class="navlinks"></div>
   <div class="container">
     <div class="header">
-      <h1>Oil / Pattern</h1>
-      <div class="small">Saved locally on this device. Use this on Game Day.</div>
+      <h1>Oil &amp; houses</h1>
+      <div class="small">Saved on this phone. Game Day, the Game Plan and Coach use these.</div>
     </div>
+    <div class="ar-hub" id="oilHub"></div>
+    <div class="ar-nav" id="oilNav" style="display:none"></div>
 
-    <div class="panel">
+    <div class="panel" data-secpage="pattern">
+      <h2 style="margin:0 0 8px" id="pFormTitle">✏️ Add an oil pattern</h2>
       <div class="grid-2">
         <div>
           <label>Pattern Name</label>
@@ -57,14 +60,14 @@
       </div>
     </div>
 
-    <div class="panel">
-      <h2>Saved patterns</h2>
+    <div class="panel" data-secpage="saved">
+      <h2>📚 Saved patterns</h2>
       <div class="list" id="patterns"></div>
     </div>
 
-    <div class="panel">
-      <h2>Houses</h2>
-      <div class="small">Game Day uses this list for the House dropdown.</div>
+    <div class="panel" data-secpage="houses">
+      <h2>🏠 Houses</h2>
+      <div class="small">Your houses are the House list in Game Day, the Game Plan and Arsenal.</div>
       <div class="hr-split"></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <input class="input" id="houseName" placeholder="Add a bowling center" style="max-width:320px" />
@@ -75,6 +78,8 @@
   </div>
 
   <script src="app.js?v=113"></script>
+  <script src="pinpal.js?v=113"></script>
+  <script src="history.js?v=113"></script>
   <script>
     BT.renderNav('oil');
 
@@ -123,7 +128,9 @@
           el.pVol.value = p.volume ?? '';
           el.pRatio.value = p.ratio || '';
           el.pNotes.value = p.notes || '';
-          el.status.textContent = 'Loaded pattern into form.';
+          el.status.textContent = 'Loaded. Change anything and tap Save pattern.';
+          const ft = BT.$('#pFormTitle'); if (ft) ft.textContent = '✏️ Edit: ' + (p.name || 'pattern');
+          if (window.__oilSec) __oilSec.go('pattern');
         });
       });
 
@@ -138,25 +145,28 @@
       });
     }
 
-    function renderHouses() {
-      const houses = BT.lsGet(BT.KEYS.HOUSES, []);
-      el.houses.innerHTML = houses.map((h, idx) => {
-        return `<div class="list-item" style="display:flex;justify-content:space-between;gap:10px;align-items:center">
-          <div><b>${h}</b></div>
-          <button class="btn danger" data-hdel="${idx}" style="min-width:110px">Remove</button>
-        </div>`;
-      }).join('') || `<div class="list-item small">No houses yet. Add one above.</div>`;
-
-      BT.$all('button[data-hdel]', el.houses).forEach(b => {
-        b.addEventListener('click', () => {
-          const idx = Number(b.getAttribute('data-hdel'));
-          const houses = BT.lsGet(BT.KEYS.HOUSES, []);
-          houses.splice(idx, 1);
-          BT.lsSet(BT.KEYS.HOUSES, houses);
-          renderHouses();
-        });
-      });
-    }
+    // 🏠 One list: your houses plus every house in your PinPal history (games, last bowled). Add or remove each.
+    let renderHouses = function () {
+      const hs = BT.lsGet(BT.KEYS.HOUSES, []) || [];
+      const H = window.BTHistory, h = H && H.has && H.has() ? H.load() : null;
+      const by = {}; if (h) (h.games || []).forEach(g => { if (!g.h) return; const o = by[g.h] = by[g.h] || { n: 0, last: '' }; o.n++; if (g.d > o.last) o.last = g.d; });
+      const key = (t) => String(t || '').toLowerCase();
+      const inList = (n) => hs.some(x => key(x) === key(n));
+      const names = [...hs, ...Object.keys(by).filter(n => !inList(n))];
+      const stat = (n) => by[Object.keys(by).find(k => key(k) === key(n))] || null;
+      names.sort((x, y) => (inList(y) - inList(x)) || String((stat(y) || {}).last || '').localeCompare(String((stat(x) || {}).last || '')));
+      const fmt = (d) => { if (!d) return ''; const [yy, m] = d.split('-'); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Number(m) - 1] + ' ' + yy; };
+      const esc = (t) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      const notYet = names.filter(n => !inList(n));
+      el.houses.innerHTML = (h ? `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px"><span class="small dim">${hs.length} in your list · ${Object.keys(by).length} in your PinPal history</span>${notYet.length ? `<button class="btn secondary" id="ppAddAll" type="button">Add all (${notYet.length})</button>` : ''}</div>` : '<div class="small dim" style="margin-bottom:6px">Import your PinPal backup (Scores → History) to list every house you\'ve bowled.</div>')
+        + (names.map(n => { const st = stat(n), mine = inList(n);
+          return `<div class="list-item" style="display:flex;justify-content:space-between;gap:10px;align-items:center"><div><b>${esc(n)}</b>${mine ? ' <span class="small" style="color:var(--accent);font-weight:800">✓</span>' : ''}<div class="small dim">${st ? `${st.n} PinPal game${st.n === 1 ? '' : 's'} · last ${fmt(st.last)}` : 'Not in your PinPal history'}</div></div>
+            ${mine ? `<button class="btn danger" data-hdel="${esc(n)}" style="min-width:96px">Remove</button>` : `<button class="btn" data-hadd="${esc(n)}" style="min-width:96px">+ Add</button>`}</div>`; }).join('') || '<div class="list-item small">No houses yet. Add one above.</div>');
+      BT.$all('button[data-hdel]', el.houses).forEach(b => b.addEventListener('click', () => { const n = b.getAttribute('data-hdel'); BT.lsSet(BT.KEYS.HOUSES, (BT.lsGet(BT.KEYS.HOUSES, []) || []).filter(x => key(x) !== key(n))); renderHouses(); }));
+      const add = (L) => { const cur = BT.lsGet(BT.KEYS.HOUSES, []) || []; L.forEach(n => { if (!cur.some(x => key(x) === key(n))) cur.push(n); }); BT.lsSet(BT.KEYS.HOUSES, cur); renderHouses(); };
+      BT.$all('button[data-hadd]', el.houses).forEach(b => b.addEventListener('click', () => add([b.getAttribute('data-hadd')])));
+      const all = BT.$('#ppAddAll'); if (all) all.addEventListener('click', () => add(notYet));
+    };
 
     function save() {
       const name = el.pName.value.trim();
@@ -175,7 +185,7 @@
       };
       const next = existing ? patterns.map(p => p.id === payload.id ? payload : p) : [payload, ...patterns];
       BT.lsSet(BT.KEYS.OIL_PATTERNS, next);
-      el.status.textContent = 'Saved.';
+      el.status.innerHTML = 'Saved. <a href="#saved">See saved patterns →</a>';
       renderPatterns();
     }
 
@@ -188,6 +198,7 @@
       el.pRatio.value = '';
       el.pNotes.value = '';
       el.status.textContent = '';
+      const ft = BT.$('#pFormTitle'); if (ft) ft.textContent = '✏️ Add an oil pattern';
     });
 
     BT.$('#addHouse').addEventListener('click', () => {
@@ -202,6 +213,22 @@
 
     renderPatterns();
     renderHouses();
+
+    // 🗂️ Oil section: menu first, then one page at a time with a tile bar.
+    window.__oilSec = BT.sectionPages({
+      hub: BT.$('#oilHub'), nav: BT.$('#oilNav'), homeLabel: 'Oil & houses', cols: 3,
+      pages: [
+        { id: 'pattern', icon: '✏️', t: 'Add an oil pattern', s: 'Add pattern', d: 'Length, volume, ratio and notes' },
+        { id: 'saved', icon: '📚', t: 'Saved patterns', d: 'Load, edit or remove a pattern' },
+        { id: 'houses', icon: '🏠', t: 'Houses', d: 'Your houses, plus every house in your PinPal history' },
+      ],
+      onShow: (id, hub) => {
+        const pats = (BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || []).length, hs = (BT.lsGet(BT.KEYS.HOUSES, []) || []).length;
+        const sp = hub.querySelector('[data-hubd="saved"]'); if (sp) sp.textContent = `${pats} saved · load, edit or remove a pattern`;
+        const sh = hub.querySelector('[data-hubd="houses"]'); if (sh) sh.textContent = `${hs} in your list · plus every house in your PinPal history`;
+        const sub = hub.querySelector('[data-hubsub]'); if (sub) sub.textContent = 'Pick what you want to do:';
+      },
+    });
   </script>
 </body>
 </html>

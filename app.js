@@ -1520,6 +1520,24 @@
     return `<a class="ar-home" href="${onArsenal ? '#' : 'arsenal.html'}">☰ Arsenal</a><div class="ar-chips">${ARSENAL_PAGES.map(p => `<a class="ar-chip${p.id === activeId ? ' on' : ''}" data-p="${p.id}" href="${arsenalPageHref(p, onArsenal)}"><span class="i">${p.icon}</span>${p.s || p.t}</a>`).join('')}</div>`;
   }
 
+  // Generic section with sub-pages (used by Oil; Arsenal has its own copy above). pages: [{id, icon, t, s?, d}]
+  function sectionPages(o) {
+    const { pages, hub, nav, homeLabel, cols, onShow } = o;
+    const tile = (p) => `<a class="ar-chip" data-p="${p.id}" href="#${p.id}"><span class="i">${p.icon}</span>${p.s || p.t}</a>`;
+    hub.innerHTML = `<div class="small dim" style="margin:6px 0 8px" data-hubsub></div>` + pages.map(p => `<a class="ar-card" href="#${p.id}"><span class="ar-ic">${p.icon}</span><span><b>${p.t}</b><span class="small dim" data-hubd="${p.id}">${p.d}</span></span><span class="ar-go">›</span></a>`).join('');
+    nav.innerHTML = `<a class="ar-home" href="#">☰ ${homeLabel}</a><div class="ar-chips" style="grid-template-columns:repeat(${cols || 4},1fr)">${pages.map(tile).join('')}</div>`;
+    function show() {
+      const id = (location.hash || '').slice(1), page = pages.find(p => p.id === id);
+      document.querySelectorAll('[data-secpage]').forEach(el => { el.style.display = page && el.dataset.secpage === page.id ? '' : 'none'; });
+      hub.style.display = page ? 'none' : ''; nav.style.display = page ? '' : 'none';
+      nav.querySelectorAll('.ar-chip').forEach(c => c.classList.toggle('on', !!page && c.dataset.p === page.id));
+      try { if (onShow) onShow(page ? page.id : '', hub); } catch (_e) {}
+      window.scrollTo(0, 0);
+    }
+    window.addEventListener('hashchange', show); show();
+    return { show, go: (id) => { if (location.hash === '#' + id) show(); else location.hash = id; } };
+  }
+
   // --- Navbar injection ---
   function renderNav(active) {
     if (isTestMode() && !document.getElementById('btTestBanner')) {
@@ -1708,7 +1726,7 @@
     clearBallTweaks,
     setBallSurfaceOverride,
     ballCareFor, isSpareBall, spareBallNames, dualSpareNames,
-    ARSENAL_PAGES, arsenalPageHref, arsenalNavHTML,
+    ARSENAL_PAGES, arsenalPageHref, arsenalNavHTML, sectionPages,
     setBallCare,
     clearBallSurfaceOverride,
     surfaceToGrit,

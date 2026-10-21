@@ -785,7 +785,7 @@ function selectedPills(container) {
       const hint = BT.$('#patternHint');
       if (hint) hint.innerHTML = names.length
         ? 'Pulled from Oil → Patterns.'
-        : 'No patterns on this device yet. Tap <b>Add</b>, or save one on <a href="oil.html" style="color:var(--accent)">Oil</a>.';
+        : 'No patterns on this device yet. Tap <b>Add</b>, or save one on <a href="oil.html#pattern" style="color:var(--accent)">Oil</a>.';
       updatePatternSummary();
     }
 
@@ -2360,7 +2360,7 @@ function sessionSummary(shots) {
       if (!box) return;
       const st = BT.setupStatus();
       const missing = [];
-      if (!st.houses) missing.push('<a href="oil.html">add your house on Oil</a>');
+      if (!st.houses) missing.push('<a href="oil.html#houses">add your house on Oil</a>');
       if (!st.sets) missing.push('<a href="analyze.html">pack a bag on the Bag page</a>');
       if (!missing.length) { box.style.display = 'none'; return; }
       box.innerHTML = `<b>Before you bowl:</b> ${missing.join(' and ')}. Then come back here to log shots.`;
