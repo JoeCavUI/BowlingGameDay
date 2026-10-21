@@ -1497,10 +1497,11 @@
   const FAULTS = [
     { v: 'thumb', l: 'Thumb stuck / hung' }, { v: 'chicken', l: 'Chicken wing / came around it' }, { v: 'dropped', l: 'Dropped it' },
     { v: 'squeezed', l: 'Squeezed / muscled it' }, { v: 'pulled', l: 'Pulled it' }, { v: 'pushed', l: 'Pushed it' },
-    { v: 'target', l: 'Missed my target' }, { v: 'early', l: 'Timing early' }, { v: 'late', l: 'Timing late' },
+    { v: 'early', l: 'Timing early' }, { v: 'late', l: 'Timing late' },
     { v: 'balance', l: 'Fell off the shot' }, { v: 'well', l: 'Released it well' }, { v: 'unsure', l: 'Not sure' },
   ];
-  const faultLabel = (v) => (FAULTS.find(f => f.v === v) || {}).l || v;
+  // Physical feelings only: where the ball went (missed the mark) is already logged under Your mark.
+  const faultLabel = (v) => (FAULTS.find(f => f.v === v) || {}).l || ({ target: 'Missed my target' }[v]) || v;
   // s: a logged shot; lefty: boolean. Returns { fit: 'fits'|'off'|'learn'|'na', side, room, text }.
   function faultRead(s, lefty) {
     if (!s || !s.fault) return null;
