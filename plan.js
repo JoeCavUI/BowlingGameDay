@@ -150,7 +150,61 @@
     if (picked.length < count) items.push(`Only ${picked.length} of your balls read far enough apart to be worth bringing; more would overlap.`);
     { const sp = spareBalls(); const dual = (BT().dualSpareNames ? BT().dualSpareNames() : []).filter(n => ordered.some(p => p.n === n)); if (dual.length) items.push(`<b>${esc(dual[0])}</b> doubles as your spare ball${sp.length ? `, so you can leave ${esc(sp[0])} home` : ''}.`); else items.push(sp.length ? `Plus your spare ball: <b>${esc(sp[0])}</b>.` : 'Plus a spare ball (none marked yet: a plastic / polyester ball makes 10 and 7 pins much easier. Mark yours in Arsenal → tap the ball → 🎯 My spare ball).'); }
     const roles = {}; ordered.forEach(q => { roles[q.n] = role(q); });
-    return { items, picked: ordered.map(p => p.n), first: first.n, roles, why: scored.map(s => ({ n: s.n, score: Math.round(s.score * 10) / 10, pred: Math.round(s.pred * 10) / 10, predK: s.predK, own: s.os ? [s.os.avg, s.os.n] : null, pair: s.po ? [s.po.avg, s.po.n] : null, t: s.t, cond: s.cond, job: job.get(s) || "" })), traits: { house: H.eff, pair: P ? P.eff : null, base: H.base } };
+    // 🐎 Dark horse: a ball you've hardly thrown here whose cover / core / layout match what has worked here,
+    // with a surface change toward the grit your best balls here are on. A theory to test in practice, not a pick.
+    let dark = null;
+    try { dark = darkHorse({ hist, G, H, P, scored, picked: ordered, byName, map, b }); } catch (e) { console.error(e); }
+    if (dark) items.push(dark.head, dark.body);
+    return { dark, items, picked: ordered.map(p => p.n), first: first.n, roles, why: scored.map(s => ({ n: s.n, score: Math.round(s.score * 10) / 10, pred: Math.round(s.pred * 10) / 10, predK: s.predK, own: s.os ? [s.os.avg, s.os.n] : null, pair: s.po ? [s.po.avg, s.po.n] : null, t: s.t, cond: s.cond, job: job.get(s) || "" })), traits: { house: H.eff, pair: P ? P.eff : null, base: H.base } };
+  }
+
+  // ---------- 🐎 Dark horse ----------
+  const GRIT_BANDS = [
+    { k: '1000–1500 grit', lo: 0, hi: 1750, to: '1500 Abralon' },
+    { k: '2000 grit', lo: 1750, hi: 2500, to: '2000 Abralon' },
+    { k: '3000 grit', lo: 2500, hi: 3500, to: '3000 Abralon' },
+    { k: '4000 grit', lo: 3500, hi: 4999, to: '4000 Abralon' },
+    { k: 'polished', lo: 5000, hi: 1e9, to: 'a polish over 1500–2000 grit' },
+  ];
+  // Polished only when the surface says polish (a 5000 Abralon finish is still a sanded 4000+ surface).
+  const bandOf = (g, surf) => /polish/i.test(String(surf || '')) ? GRIT_BANDS[4] : g == null ? null : GRIT_BANDS.slice(0, 4).find(x => g >= x.lo && g < x.hi) || GRIT_BANDS[3];
+  function darkHorse(ctx) {
+    const { hist, G, H, P, scored, picked, byName, map } = ctx;
+    if (!H || H.base == null || H.tg.length < 12) return null;
+    const MAX_OWN = 5; // a dark horse has fewer than 6 games here
+    const pickedN = new Set(picked.map(p => p.n));
+    const ownG = (n) => { const pps = Object.keys(map).filter(p => map[p] === n); return G.filter(g => pps.includes(hist.mainBall(g))); };
+    const ownN = (n) => ownG(n).length;
+    const ownAvg = (n) => { const gs = ownG(n); return gs.length ? hist.summary(gs).avg : null; };
+    // Traits of this ball that beat the house average here (house, then the pair when it has data).
+    const good = (t) => ['cover', 'core', 'layout', 'box'].map(tr => { const pe = P && P.eff[tr] && P.eff[tr][t[tr]], e = pe || (H.eff[tr] && H.eff[tr][t[tr]]), base = pe ? P.base : H.base; return e && e.eff > 0 && e.avg - base >= 1 ? { tr, k: t[tr], avg: e.avg, n: e.n, strike: e.strike, pair: !!pe, base } : null; }).filter(Boolean);
+    const cands = scored.filter(s => !pickedN.has(s.n) && ownN(s.n) <= MAX_OWN).map(s => ({ s, g: good(s.t), own: ownN(s.n), oa: ownAvg(s.n) })).filter(x => x.g.length >= 2 && Math.max(x.s.pred, x.s.score) > H.base + 0.5 && !(x.own >= 2 && x.oa < H.base - 8)) // a ball that already struggled here isn't a dark horse
+      .sort((a, z) => (Math.max(z.s.pred, z.s.score) + z.g.length) - (Math.max(a.s.pred, a.s.score) + a.g.length));
+    const c = cands[0]; if (!c) return null;
+    // Surface: which grit band have your games here gone best on (the balls' surfaces as they are now in the app)?
+    const surfOf = (n) => { const r = byName[n] && byName[n].row; return r ? String(BT().ballSurface(r) || '') : ''; };
+    const bandFor = (n) => { const sf = surfOf(n); return sf ? bandOf(BT().surfaceToGrit(sf), sf) : null; };
+    const bands = {}; H.tg.forEach(x => { const bd = bandFor(x.ar); if (bd) (bands[bd.k] = bands[bd.k] || []).push(x.g); });
+    const bandRows = Object.entries(bands).filter(([, gs]) => gs.length >= 8).map(([k, gs]) => { const sm = hist.summary(gs); return { k, n: gs.length, avg: sm.avg, strike: sm.strike }; }).sort((a, z) => z.avg - a.avg);
+    const myBand = bandFor(c.s.n);
+    const row = byName[c.s.n] && byName[c.s.n].row, surfNow = row ? (BT().ballSurface(row) || '') : '';
+    let surf = '';
+    const best = bandRows[0];
+    if (best && bandRows.length >= 2 && best.avg - bandRows[bandRows.length - 1].avg >= 4) {
+      if (myBand && myBand.k !== best.k) { const to = GRIT_BANDS.find(x => x.k === best.k); surf = `<li><b>Surface: take it to ${esc(to.to)}</b> (it's ${esc(surfNow || myBand.k)} now). Your balls on ${esc(best.k)} have averaged <b>${best.avg}</b> here over ${best.n} games${bandRows.find(r => r.k === myBand.k) ? ` vs ${bandRows.find(r => r.k === myBand.k).avg} on ${esc(myBand.k)}` : ''} (surfaces as they're set in the app now; PinPal doesn't record surface). A pro shop operator can do it, or use pads at home.</li><li class="dim">A surface change moves it on the Barnes chart (${best.k === 'polished' || (myBand && GRIT_BANDS.indexOf(GRIT_BANDS.find(x => x.k === best.k)) > GRIT_BANDS.indexOf(myBand)) ? 'higher grit or polish: later and sharper' : 'lower grit: earlier and smoother'}), so check it doesn't overlap the bag afterward.</li>`; }
+      else if (myBand) surf = `<li>Surface: keep it at ${esc(surfNow || myBand.k)}; ${esc(best.k)} has been your best surface here (${best.avg} over ${best.n} games).</li>`;
+    }
+    const nm = { cover: (k) => `${k} covers`, core: (k) => `${k} cores`, layout: (k) => `${k} layouts`, box: (k) => `Balls in the ${k} Barnes box` };
+    const traitLis = c.g.map(x => `<li>${esc(nm[x.tr](x.k))}: <b>${x.avg}</b> average over ${x.n} games ${x.pair ? 'on this pair' : 'here'}, ${Math.round(x.strike)}% strikes (your ${x.pair ? 'pair' : 'house'} average: ${x.base}).</li>`).join('');
+    // Where it sits next to tonight's bag on the Early → Late scale
+    const near = picked.filter(p => p.t.x != null && c.s.t.x != null).map(p => ({ p, d: Math.abs(p.t.x - c.s.t.x) })).sort((a, z) => a.d - z.d)[0];
+    const fit = near ? (near.d < 10 ? `<li>It reads close to <b>${esc(near.p.n)}</b>, so try it <b>in place of</b> that ball rather than as an extra.</li>` : `<li>It reads ${c.s.t.x < near.p.t.x ? 'earlier' : 'later'} than ${esc(near.p.n)}, so it could fill a gap in the bag.</li>`) : '';
+    const top = Math.max(...c.g.map(x => x.avg - x.base));
+    const odds = top < 3 ? `<li class="dim">The edges here are small (${c.g.map(x => '+' + r1(x.avg - x.base)).join(', ')} pins over your average), so it's a long shot.</li>` : '';
+    const head = `<span class="pl-h"><b>🐎 Dark horse</b> · a theory, not a pick</span>`;
+    const body = `<b>${esc(c.s.n)}</b><ul class="pl-sub"><li class="dim">${[c.s.t.cover, c.s.t.core && c.s.t.core + ' core', c.s.t.layout, c.s.t.box].filter(Boolean).map(esc).join(' · ')}</li><li>${c.own ? `Only ${c.own} game${c.own === 1 ? '' : 's'} on it here (${c.oa} avg)` : 'You haven\'t thrown it here'}, but it shares what has worked here:</li>${traitLis}${surf}${fit}${odds}<li class="dim">In theory it should score about <b>${Math.round(Math.max(c.s.pred, c.s.score))}</b> here (balls with its traits, not its own record). Try it in practice or for a few frames before trusting it.</li></ul>`;
+    const html = `<div style="font-weight:900;margin-bottom:4px">🐎 Dark horse <span class="small dim">· a theory, not a pick</span></div>${body}`;
+    return { head, body, n: c.s.n, pred: Math.round(c.s.pred), own: c.own, traits: c.g, surface: surf ? surf.replace(/<[^>]+>/g, '') : '', html };
   }
 
   function sets() { try { return BT().lsGet(BT().KEYS.ARSENAL_SETS, []) || []; } catch (_e) { return []; } }
@@ -351,7 +405,7 @@
     if (opts.count && G.length >= MIN_HOUSE && hist) {
       try {
         const rb = recommendBag({ hist, G, lanes, S, b, count: Math.max(1, Math.min(6, Number(opts.count) || 3)), lean, today, firstBall: out.firstBall });
-        if (rb) { out.recWhy = rb.why; out.recTraits = rb.traits; out.recRoles = rb.roles; out.recFirst = rb.first; sec('🎒', `Your ${Math.max(1, Math.min(6, Number(opts.count) || 3))}-ball bag for ${lanes ? 'lanes ' + lanes : 'this house'}`, rb.items); out.recBag = rb.picked; }
+        if (rb) { out.darkHorse = rb.dark; out.recWhy = rb.why; out.recTraits = rb.traits; out.recRoles = rb.roles; out.recFirst = rb.first; sec('🎒', `Your ${Math.max(1, Math.min(6, Number(opts.count) || 3))}-ball bag for ${lanes ? 'lanes ' + lanes : 'this house'}`, rb.items); out.recBag = rb.picked; }
       } catch (e) { console.error(e); }
     }
 
