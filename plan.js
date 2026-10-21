@@ -202,7 +202,7 @@
     const top = Math.max(...c.g.map(x => x.avg - x.base));
     const odds = top < 3 ? `<li class="dim">The edges here are small (${c.g.map(x => '+' + r1(x.avg - x.base)).join(', ')} pins over your average), so it's a long shot.</li>` : '';
     const head = `<span class="pl-h"><b>🐎 Dark horse</b> · a theory, not a pick</span>`;
-    const body = `<b>${esc(c.s.n)}</b><ul class="pl-sub"><li class="dim">${[c.s.t.cover, c.s.t.core && c.s.t.core + ' core', c.s.t.layout, c.s.t.box].filter(Boolean).map(esc).join(' · ')}</li><li>${c.own ? `Only ${c.own} game${c.own === 1 ? '' : 's'} on it here (${c.oa} avg)` : 'You haven\'t thrown it here'}, but it shares what has worked here:</li>${traitLis}${surf}${fit}${odds}<li class="dim">In theory it should score about <b>${Math.round(Math.max(c.s.pred, c.s.score))}</b> here (balls with its traits, not its own record). Try it in practice or for a few frames before trusting it.</li></ul>`;
+    const body = `<b>${esc(c.s.n)}</b><ul class="pl-sub"><li class="dim">${[c.s.t.cover, c.s.t.core && c.s.t.core + ' core', c.s.t.layout, c.s.t.box].filter(Boolean).map(esc).join(' · ')}</li><li>${c.own ? `Only ${c.own} game${c.own === 1 ? '' : 's'} on it here (${c.oa} avg)` : 'You haven\'t thrown it here'}, but it shares what has worked here:</li>${traitLis}${surf}${fit}${odds}</ul>`;
     const html = `<div style="font-weight:900;margin-bottom:4px">🐎 Dark horse <span class="small dim">· a theory, not a pick</span></div>${body}`;
     return { head, body, n: c.s.n, pred: Math.round(c.s.pred), own: c.own, traits: c.g, surface: surf ? surf.replace(/<[^>]+>/g, '') : '', html };
   }
