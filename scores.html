@@ -24,6 +24,23 @@
     <div class="ar-hub" id="scHub"></div>
     <div class="ar-nav" id="scNav" style="display:none"></div>
 
+    <div data-secpage="stats" id="statsPage">
+      <div class="panel st-filters">
+        <div class="st-frow">
+          <label>Period<select class="input" id="sfPeriod"><option value="">All time</option><option value="season">This season (10 months)</option><option value="365">Last 12 months</option><option value="90">Last 90 days</option></select></label>
+          <label>House<select class="input" id="sfHouse"></select></label>
+          <label>Lane pair<select class="input" id="sfLanes"></select></label>
+          <label>League<select class="input" id="sfLeague"></select></label>
+          <label>Ball<select class="input" id="sfBall"></select></label>
+          <label>Pattern<select class="input" id="sfPattern"></select></label>
+          <label>Game #<select class="input" id="sfGn"><option value="">Any</option><option value="1">Game 1</option><option value="2">Game 2</option><option value="3">Game 3</option></select></label>
+          <label>From<select class="input" id="sfSrc"><option value="">PinPal + Game Day</option><option value="pp">PinPal only</option><option value="gd">Game Day only</option></select></label>
+        </div>
+        <div class="st-fnote small" id="sfNote"></div>
+      </div>
+      <div id="stBody"></div>
+    </div>
+
     <div class="panel" id="histPanel" data-secpage="history">
       <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap">
         <div>
@@ -117,14 +134,16 @@
   <script src="coach.js?v=120"></script>
   <script src="pinpal.js?v=120"></script>
   <script src="history.js?v=120"></script>
+  <script src="stats.js?v=120"></script>
   <script>
     BT.renderNav('scores');
     // 🗂️ Scores: menu first, then History (search your PinPal games) or Game Day nights (review each night).
     const oldHash = () => { if (location.hash === '#histPanel') history.replaceState(null, '', '#history'); };
     oldHash(); window.addEventListener('hashchange', oldHash);
     window.__scSec = BT.sectionPages({
-      hub: BT.$('#scHub'), nav: BT.$('#scNav'), homeLabel: 'Scores', cols: 2,
+      hub: BT.$('#scHub'), nav: BT.$('#scNav'), homeLabel: 'Scores', cols: 3,
       pages: [
+        { id: 'stats', icon: '📊', t: 'Stats', d: 'Every number on one page: average, strikes, spares, splits, by house, ball, game and frame' },
         { id: 'history', icon: '📚', t: 'History', d: 'Search your PinPal games: houses, pairs, balls, years, leaves' },
         { id: 'nights', icon: '🎳', t: 'Game Day nights', s: 'Nights', d: 'Review each night: lanes, shots, what Coach saw' },
       ],
@@ -132,6 +151,8 @@
         let n = 0; try { n = (BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || []).length; } catch (_e) {}
         const d = hub.querySelector('[data-hubd="nights"]'); if (d) d.textContent = `${n} night${n === 1 ? '' : 's'} saved · review lanes, shots and what Coach saw`;
         const sub = hub.querySelector('[data-hubsub]'); if (sub) sub.textContent = 'Pick what you want to see:';
+        if (id === 'stats') setTimeout(() => { try { renderStats(); } catch (e) { console.error(e); } }, 0);
+        else { try { const all = window.BTStats ? BTStats.allGames() : []; const sd = hub.querySelector('[data-hubd="stats"]'); if (sd && all.length) { const S = BTStats.summarize(all); sd.textContent = `${S.n} games · ${S.avg} average · ${S.strike}% strikes · ${S.spare}% spares`; } } catch (_e) {} }
       },
     });
 
@@ -584,6 +605,78 @@
         row.style.cursor='pointer'; row.addEventListener('click', () => openEditShot(activeSessionId, Number(row.getAttribute('data-shot-index'))));
       });
     }
+
+    // ---------- 📊 Stats dashboard ----------
+    const SF_KEY = 'bt_stats_filters_v1';
+    const SF = { period: '#sfPeriod', house: '#sfHouse', lanes: '#sfLanes', league: '#sfLeague', ball: '#sfBall', pattern: '#sfPattern', gn: '#sfGn', src: '#sfSrc' };
+    let stAll = null, stGroup = 'house', stShowGames = false;
+    function stFilters() { const f = {}; Object.entries(SF).forEach(([k, id]) => { const v = BT.$(id).value; if (v) f[k] = v; }); return f; }
+    function stOpts(sel, vals, cur, any) { sel.innerHTML = `<option value="">${any || 'Any'}</option>` + vals.map(v => `<option value="${String(v).replace(/"/g, '&quot;')}">${String(v).replace(/</g, '&lt;')}</option>`).join(''); sel.value = vals.includes(cur) ? cur : ''; }
+    function renderStats() {
+      if (!window.BTStats) return;
+      stAll = BTStats.allGames();
+      const saved = BT.lsGet(SF_KEY, {}) || {};
+      const cnt = (key) => { const m = {}; stAll.forEach(g => { const k = key(g); if (k) m[k] = (m[k] || 0) + 1; }); return Object.entries(m).sort((a, b) => b[1] - a[1]).map(e => e[0]); };
+      const years = [...new Set(stAll.map(g => (g.d || '').slice(0, 4)).filter(Boolean))].sort().reverse();
+      const pSel = BT.$('#sfPeriod'); [...pSel.querySelectorAll('option[data-y]')].forEach(o => o.remove()); years.forEach(y => { const o = new Option(y, y); o.dataset.y = '1'; pSel.add(o); });
+      pSel.value = saved.period || '';
+      stOpts(BT.$('#sfHouse'), cnt(g => g.h), saved.house);
+      stOpts(BT.$('#sfLanes'), cnt(g => (!saved.house || g.h === saved.house) ? g.lanes : ''), saved.lanes);
+      stOpts(BT.$('#sfLeague'), cnt(g => g.lg), saved.league);
+      stOpts(BT.$('#sfBall'), cnt(g => g.ball), saved.ball);
+      stOpts(BT.$('#sfPattern'), cnt(g => g.p), saved.pattern);
+      BT.$('#sfGn').value = saved.gn || ''; BT.$('#sfSrc').value = saved.src || '';
+      drawStats();
+    }
+    function drawStats() {
+      const f = stFilters(); try { BT.lsSet(SF_KEY, f); } catch (_e) {}
+      const G = BTStats.filter(stAll, f), S = BTStats.summarize(G), esc = (t) => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      const on = Object.keys(f).length, gdN = G.filter(g => g.src === 'gd').length;
+      BT.$('#sfNote').innerHTML = `${S.n || 0} games${gdN ? ` (${gdN} scored in Game Day)` : ''}${on ? ` · <button type="button" class="cl-link" id="sfClear">Clear filters</button>` : ''} · a Game Day night that's also in PinPal counts once.`;
+      const cl = BT.$('#sfClear'); if (cl) cl.onclick = () => { Object.values(SF).forEach(id => { BT.$(id).value = ''; }); drawStats(); };
+      if (!S.n) { BT.$('#stBody').innerHTML = '<div class="panel small">No games match these filters. Import your PinPal history (Scores → History) or keep score in Game Day.</div>'; return; }
+      const tile = (v, l, sub, key) => `<button type="button" class="st-tile"${key ? ` data-why="${key}"` : ''}><div class="v">${v ?? '—'}</div><div class="l">${l}</div>${sub ? `<div class="s">${sub}</div>` : ''}</button>`;
+      const hiTxt = S.highG ? `${S.highG.d} · ${esc(S.highG.h)}` : '';
+      const tiles = [
+        tile(S.avg, 'Average', `${S.n} games`), tile(S.high, 'High game', hiTxt), tile(S.series ?? '—', 'High series', S.bestNight ? `${S.bestNight.d} · ${esc(S.bestNight.h)}` : 'needs 3-game nights'), tile(S.seriesAvg ?? '—', 'Series average', S.seriesN ? `${S.seriesN} nights` : ''),
+        tile(S.strike + '%', 'Strikes', `first ball avg ${S.firstBall}`), tile(S.spare + '%', 'Spares', `${S.opens} opens a game`), tile(S.single + '%', 'Single-pin spares', `${S.singlesMissed} missed`), tile(S.splitConv != null ? S.splitConv + '%' : '—', 'Splits made', `${S.splitsPer} splits a game`),
+        tile(S.clean + '%', 'Clean games', `${S.cleanN} with no open`), tile(S.p200 + '%', '200+ games', ''), tile(S.whatIf, 'If every single pin', `+${Math.round((S.whatIf - S.avg) * 10) / 10} a game`, 'whatif'), tile(S.low, 'Low game', ''),
+      ].join('');
+      // Charts: score distribution, average by game #, average by frame, monthly trend
+      // base: bars start from just under the lowest value so small differences show (labelled values stay exact).
+      const bars = (rows, lab, val, fmt, base, every) => { const vs = rows.map(val), lo = base ? Math.min(...vs) - Math.max(1, (Math.max(...vs) - Math.min(...vs)) * 0.6) : 0, mx = Math.max(...vs.map(v => v - lo), 0.001); return `<div class="st-bars">${rows.map((r, i) => `<div class="st-bar"><div class="st-bv">${!every || i % every === 0 || i === rows.length - 1 ? (fmt ? fmt(r) : val(r)) : ''}</div><div class="st-bb" style="height:${Math.max(3, Math.round((val(r) - lo) / mx * 70))}px"></div><div class="st-bl">${!every || i % every === 0 || i === rows.length - 1 ? lab(r) : ''}</div></div>`).join('')}</div>`; };
+      const dist = BTStats.distribution(G);
+      const gnRows = BTStats.groupBy(G, 'gn').filter(r => /^Game [123]$/.test(r.key)).sort((a, b) => a.key.localeCompare(b.key));
+      const bf = BTStats.byFrame(G), tr = BTStats.trend(G, 18);
+      const minAvg = tr.length ? Math.min(...tr.map(t => t.avg)) - 5 : 0;
+      const chart = (title, body, note) => `<div class="panel st-chart"><b>${title}</b>${body}${note ? `<div class="small" style="margin-top:4px">${note}</div>` : ''}</div>`;
+      const charts = chart('Scores', bars(dist, r => r.from >= 280 ? '280+' : r.from, r => r.n), `How often you land in each 20-pin range.`)
+        + (gnRows.length >= 2 ? chart('By game', bars(gnRows, r => r.key.replace('Game ', 'G'), r => r.avg, r => r.avg, true), `${gnRows.map(r => `${r.key}: ${r.strike}% strikes, ${r.spare}% spares`).join(' · ')}`) : '')
+        + (bf.some(v => v != null) ? chart('By frame', bars(bf.map((v, i) => ({ i, v: v || 0 })), r => r.i + 1, r => r.v, r => r.v, true), 'Average pins scored in each frame (with bonuses). The 10th includes fill balls.') : '')
+        + (tr.length >= 3 ? chart('By month', bars(tr, r => { const [y, m] = r.k.split('-'); return `${Number(m)}/${y.slice(2)}`; }, r => r.avg, r => Math.round(r.avg), true, 3), `Average each month, the newest ${tr.length}: ${tr[0].k.replace('-', '/')} → ${tr[tr.length - 1].k.replace('-', '/')}.`) : '');
+      // Breakdown with drill-down
+      const DIM = BTStats.DIM, min = stGroup === 'month' || stGroup === 'year' ? 1 : 3;
+      let rows = BTStats.groupBy(G, stGroup).filter(r => r.n >= min);
+      rows.sort(stGroup === 'month' || stGroup === 'year' || stGroup === 'gn' ? (a, b) => b.key.localeCompare(a.key) * (stGroup === 'gn' ? -1 : 1) : (a, b) => b.n - a.n);
+      const best = rows.length ? Math.max(...rows.filter(r => r.n >= 6).map(r => r.avg), 0) : 0;
+      const drill = { house: 'house', lanes: 'lanes', league: 'league', ball: 'ball', pattern: 'pattern', gn: 'gn', src: 'src', year: 'period' };
+      const table = `<div class="panel"><div class="st-thead"><b>Break down by</b><select class="input" id="stGroup">${Object.entries(DIM).map(([k, d]) => `<option value="${k}"${k === stGroup ? ' selected' : ''}>${d.label}</option>`).join('')}</select></div>
+        <div style="overflow-x:auto"><table class="st-table st-tbl"><tr><th>${DIM[stGroup].label}</th><th>Gms</th><th>Avg</th><th>X%</th><th>/%</th><th>1-pin</th></tr>
+        ${rows.map(r => `<tr${drill[stGroup] ? ` data-drill="${esc(r.key)}"` : ''}><td class="st-k">${esc(r.key)}</td><td>${r.n}</td><td class="${r.avg === best && r.n >= 6 ? 'good' : ''}"><b>${r.avg}</b></td><td>${Math.round(r.strike)}</td><td>${Math.round(r.spare)}</td><td>${r.single != null ? Math.round(r.single) : '—'}</td></tr>`).join('')}</table></div>
+        <div class="small" style="margin-top:4px">X% strikes · /% spares · 1-pin = single-pin spares made. ${drill[stGroup] ? 'Tap a row to filter by it.' : ''} ${min > 1 ? `Rows with fewer than ${min} games are hidden.` : ''}</div></div>`;
+      // Spare leaves
+      const lv = S.leaves.filter(l => l.leave !== '—').slice(0, 15);
+      const leaves = `<div class="panel"><b>Spare leaves</b> <span class="small">(most common first)</span><div><table class="st-tbl"><tr><th>Leave</th><th>Times</th><th>Made</th><th>%</th></tr>${lv.map(l => `<tr><td>${esc(l.leave)}${l.split ? ' <span class="sb-split">split</span>' : ''}</td><td>${l.n}</td><td>${l.made}</td><td class="${l.n >= 5 && l.made / l.n < 0.7 && !l.split ? 'bad' : ''}">${Math.round(l.made / l.n * 100)}%</td></tr>`).join('')}</table></div></div>`;
+      // Games behind the numbers
+      const list = G.slice().reverse();
+      const games = `<div class="panel"><button type="button" class="cl-link" id="stGames">${stShowGames ? '▾' : '▸'} The ${S.n} games behind these numbers</button>${stShowGames ? `<div class="st-games">${list.slice(0, 120).map(g => `<div class="st-g"><span>${esc(g.d)} · G${g.gn}</span><span>${esc(g.h)}${g.lanes ? ' ' + esc(g.lanes) : ''}</span><b>${g.s}</b><span class="small">${g.src === 'gd' ? 'Game Day' : 'PinPal'}</span></div>`).join('')}${list.length > 120 ? `<div class="small">…and ${list.length - 120} more. Narrow the filters to see them.</div>` : ''}</div>` : ''}</div>`;
+      BT.$('#stBody').innerHTML = `<div class="st-tiles">${tiles}</div>${charts}${table}${leaves}${games}`;
+      BT.$('#stGroup').onchange = (e) => { stGroup = e.target.value; drawStats(); };
+      BT.$all('#stBody [data-drill]').forEach(tr => tr.addEventListener('click', () => { const k = drill[stGroup], v = tr.dataset.drill; const sel = BT.$(SF[k]); if (!sel) return; let val = v; if (k === 'gn') val = v.replace('Game ', ''); if (k === 'src') val = v === 'Game Day' ? 'gd' : 'pp'; if (![...sel.options].some(o => o.value === val)) sel.add(new Option(val, val)); sel.value = val; drawStats(); BT.$('#statsPage').scrollIntoView({ behavior: 'smooth', block: 'start' }); }));
+      BT.$('#stGames').onclick = () => { stShowGames = !stShowGames; drawStats(); };
+      const wi = BT.$('#stBody [data-why="whatif"]'); if (wi) wi.onclick = () => alert(`If you had made all ${S.singlesMissed} single-pin spares you missed, your average would be about ${S.whatIf} instead of ${S.avg}. It counts the pin you missed plus the spare bonus from your next ball.`);
+    }
+    Object.values(SF).forEach(id => BT.$(id).addEventListener('change', () => { if (id === '#sfHouse') BT.$('#sfLanes').value = ''; drawStats(); }));
 
     function refresh() {
       sessions = BT.lsGet(BT.KEYS.GAME_SESSIONS, []);

@@ -4,7 +4,7 @@
 const CACHE = 'bowling-tool-v120-beta57';
 const SHELL = [
   './', 'index.html', 'bowler.html', 'arsenal.html', 'analyze.html', 'lane.html',
-  'oil.html', 'gameday.html', 'plan.html', 'angle.html', 'scores.html', 'guide.html', 'styles.css?v=120', 'app.js?v=120', 'coach.js?v=120', 'chart.js?v=120', 'pinpal.js?v=120', 'history.js?v=120', 'plan.js?v=120', 'insight.js?v=120', 'cloud.js?v=120',
+  'oil.html', 'gameday.html', 'plan.html', 'angle.html', 'scores.html', 'guide.html', 'styles.css?v=120', 'app.js?v=120', 'coach.js?v=120', 'chart.js?v=120', 'pinpal.js?v=120', 'history.js?v=120', 'plan.js?v=120', 'insight.js?v=120', 'cloud.js?v=120', 'stats.js?v=120',
   'databalls.csv', 'manifest.webmanifest',
   'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png'
 ];
