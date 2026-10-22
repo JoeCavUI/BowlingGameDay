@@ -58,6 +58,10 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v120-beta57: Home without the Go to tiles
+
+- **Home** opens straight to its five cards (Get set up, Every league night, Your data, Send feedback, Testing tools); the tab bar at the top goes to every page.
+
 ## Changes in v119-beta56: Home menu, Angles, laydown point
 
 - **Home is condensed** like Arsenal: Go to tiles for every page, then Get set up, Every league night, Your data, Send feedback and Testing tools, one at a time.
