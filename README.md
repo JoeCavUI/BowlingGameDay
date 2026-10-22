@@ -58,6 +58,13 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v121-beta58: Full scoring, Stats dashboard, cloud backup
+
+- **🎳 Full scoring in Game Day:** after each non-strike, tap the pins still standing after your 2nd ball (or Spare); splits flagged; 10th frame and fill balls; live 10-frame scorecard and running score; scores fill in on save. Setting: keep score here, or first ball only (scoring in PinPal).
+- **📊 Scores → Stats:** one page for PinPal + Game Day games (a night in both counts once): average, high game/series, strikes, spares, single pins, splits made, clean games, the "every single pin" average, charts by score / game / frame / month, breakdowns with tap-to-filter, spare leaves, and the games behind the numbers.
+- **Night review:** frame-by-frame scorecard per game; 2nd ball in the shot log and editors.
+- **☁️ Cloud backup** (Home → Your data): sign in (Netlify Identity), back up now or after each saved night, restore on a new phone. The app still works offline as before.
+
 ## Changes in v120-beta57: Home without the Go to tiles
 
 - **Home** opens straight to its five cards (Get set up, Every league night, Your data, Send feedback, Testing tools); the tab bar at the top goes to every page.
