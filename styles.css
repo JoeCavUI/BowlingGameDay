@@ -832,3 +832,4 @@ select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }
 .nr-subs{margin:4px 0 0;padding-left:22px;font-size:13px;line-height:1.4;opacity:.92}.nr-subs li{margin-top:3px}
 .st-tbl tr.st-avg td{border-bottom:2px solid rgba(255,255,255,.18)}
 .st-tbl tr[data-night]{cursor:pointer}
+.st-thead{flex-wrap:wrap}.st-thead .input{max-width:none;flex:1 1 140px}.st-thead .st-min{flex:0 0 150px}
