@@ -58,6 +58,12 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v119-beta56: Home menu, Angles, laydown point
+
+- **Home is condensed** like Arsenal: Go to tiles for every page, then Get set up, Every league night, Your data, Send feedback and Testing tools, one at a time.
+- **📐 Angles** (renamed from Angle): the laydown offset field is gone; **Laydown point** shows in its place (slide − your laydown offset from the Bowler page, footnoted).
+- **Game Day** shows your laydown point at the foul line under Slide / Target / Breakpoint.
+
 ## Changes in v118-beta55: Scores sections and the night review
 
 - **Scores opens to a menu:** 📚 History (search your PinPal games) and 🎳 Game Day nights (review each night), with a tile bar to switch.
