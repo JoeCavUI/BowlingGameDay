@@ -828,3 +828,7 @@ select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }
 .st-k{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .st-tbl td.good{color:var(--accent)}.st-tbl td.bad{color:#ff8a80}
 .st-tbl tr[data-drill]{cursor:pointer}.st-tbl tr[data-drill]:active{background:rgba(255,255,255,.05)}
+/* 🎳 5 Scoring Elements: sub-grades + Stats night table */
+.nr-subs{margin:4px 0 0;padding-left:22px;font-size:13px;line-height:1.4;opacity:.92}.nr-subs li{margin-top:3px}
+.st-tbl tr.st-avg td{border-bottom:2px solid rgba(255,255,255,.18)}
+.st-tbl tr[data-night]{cursor:pointer}

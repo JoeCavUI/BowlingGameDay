@@ -325,10 +325,10 @@
     return `Make a small parallel move: feet and eyes 1–2 boards ${prof.deeper} to give yourself more room.`;
   }
 
-  // The Five Elements of scoring: every suggestion is a change to one of them.
+  // Del Warren's 5 Scoring Elements (Kegel): every suggestion is a change to one of them.
   const ELEMENT = {
-    Aim: '🎯 Direction', Angle: '📐 Angle', Speed: '⚡ Speed', Release: '🌀 Rev rate & roll',
-    Loft: '🎯 Direction (loft)', Equipment: '🎳 Equipment',
+    Aim: '🎯 Direction', Angle: '📐 Angle', Speed: '⚡ Speed', Release: '🔄 Revs',
+    Loft: '🎯 Direction (ball placement)', Equipment: '🎳 Equipment',
   };
   // More angle = feet move, eyes stay (more swing). Less angle = eyes move more than feet (straighter).
   function angleWant(sit, angleClass) {
@@ -637,71 +637,132 @@
     const sideOf = p.lefty ? 'right' : 'left';
     return [
       { key: 'Direction', icon: '🎯', value: `Aim ${L.Aim}/5 (${conf(L.Aim)})`,
-        meaning: 'Where you stand, what you aim at, and where the ball goes. Every "feet 2, eyes 1" move is a direction change.',
+        meaning: 'Four parts: geometry (a line that works on this pattern), targeting (hitting your mark), ball placement (laying it down on your spot) and posture (staying balanced through the finish). Every "feet 2, eyes 1" move is a direction change.',
         tip: L.Aim >= 4 ? 'Moving your feet and target is your best tool. Coach will lead with it.' : 'Direction moves aren\'t your strength yet, so Coach will lean on equipment and speed first.' },
+      { key: 'Speed', icon: '⚡', value: p.mph ? `${p.mph} mph at the foul line${L.Speed ? ` · speed changes ${conf(L.Speed)}` : ''}` : 'Not entered yet',
+        meaning: 'Two parts: total speed (your normal speed, and repeating it) and versatility (changing speed on purpose). Faster = the ball goes longer and hooks later; slower = it reads sooner.',
+        tip: p.dom < -0.3 ? 'You\'re speed-dominant: your speed outruns your revs, so the ball can skid long. A touch less speed, or earlier-reading equipment, helps it finish.' : p.dom > 0.3 ? 'You\'re rev-dominant: a touch more speed keeps the ball from hooking too early.' : 'Your speed and revs are matched, so small speed changes are a fine-tuning tool.' },
       { key: 'Angle', icon: '📐', value: 'From your feet, target and breakpoint',
         meaning: 'How much the ball has to come back from the breakpoint to the pocket. More angle = more swing; less angle = a straighter line.',
         tip: p.dom < -0.3 ? `As a speed-dominant bowler you usually create angle with lane position (feet ${sideOf}, eyes stay) or equipment, more than with your hand.` : 'Angle comes from where you stand vs. where you aim.' },
-      { key: 'Speed', icon: '⚡', value: p.mph ? `${p.mph} mph at the foul line${L.Speed ? ` · speed changes ${conf(L.Speed)}` : ''}` : 'Not entered yet',
-        meaning: 'Faster = the ball goes longer and hooks later; slower = it reads sooner.',
-        tip: p.dom < -0.3 ? 'You\'re speed-dominant: your speed outruns your revs, so the ball can skid long. A touch less speed, or earlier-reading equipment, helps it finish.' : p.dom > 0.3 ? 'You\'re rev-dominant: a touch more speed keeps the ball from hooking too early.' : 'Your speed and revs are matched, so small speed changes are a fine-tuning tool.' },
-      { key: 'Rev rate', icon: '🔄', value: p.rpm ? `${p.rpm} rpm (${p.lowRev ? 'lower rev' : p.highRev ? 'high rev' : 'medium rev'})` : 'Not entered yet',
-        meaning: 'How fast the ball spins. More revs = more hook and more pin action; fewer = a straighter, steadier ball.',
+      { key: 'Revs', icon: '🔄', value: p.rpm ? `${p.rpm} rpm (${p.lowRev ? 'lower rev' : p.highRev ? 'high rev' : 'medium rev'})` : 'Not entered yet',
+        meaning: 'How fast the ball spins, and whether you can change it on purpose (more or less hand). More revs = more hook and more pin action; fewer = a straighter, steadier ball.',
         tip: p.lowRev ? 'With lower revs, rely on stronger covers / rougher surfaces to get the ball to finish. Your hand alone won\'t add much hook.' : 'Your revs give you hook. Use smoother equipment when the lanes get dry.' },
-      { key: 'Roll (axis)', icon: '🌀', value: [p.tilt != null ? `${p.tilt}° tilt` : null, p.rotation != null ? `${p.rotation}° rotation` : null].filter(Boolean).join(', ') || 'Not entered yet',
+      { key: 'Roll', icon: '🌀', value: [p.tilt != null ? `${p.tilt}° tilt` : null, p.rotation != null ? `${p.rotation}° rotation` : null].filter(Boolean).join(', ') || 'Not entered yet',
         meaning: 'How the ball goes through skid → hook → roll. Watch the exit off the deck and the 6-pin: they show whether the ball rolled out early or was still turning.',
         tip: [tiltTxt, rotTxt].filter(Boolean).join('; ') + (L.Release ? `. Release changes: ${conf(L.Release)}.` : '') },
     ];
   }
 
-  // End-of-night report: one line per element + one drill for the weakest.
+  // End-of-night report: Del Warren's 5 Scoring Elements (Kegel): Direction, Speed, Angle, Revs, Roll.
+  // Each element has a grade (or null when not enough was logged) and sub-parts; one drill for the weakest.
+  // It grades what you logged tonight. It never predicts.
   function elementsReport(shots, bowler, pattern) {
     const prof = bowlerProfile(bowler);
     const pat = patternProfile(pattern);
     const C = (shots || []).filter(s => s && s.type !== 'gameStart' && !s.isFill).map(s => classify(s, prof.lefty));
     if (C.length < 3) return null;
     const pct = (a, b) => b ? Math.round(a / b * 100) : null;
+    const of = (a, b) => `${a} of ${b}`;
+    const sub = (label, score, text) => ({ label, score, text });
+    const chg = (c, k) => Array.isArray(c.shot.changed) && c.shot.changed.includes(k);
     const out = [];
-    // Direction: hit your mark
+
+    // 1. DIRECTION: Geometry · Targeting · Ball placement · Posture
+    const dSubs = [];
+    { // Geometry: did your opening line (game 1) pass the Rule of 31 / Baker Box?
+      const g1 = C.filter(c => c.gameNo === 1 && c.feet != null && num(c.shot.arrows) != null);
+      const checks = g1.map(c => lineMath(c.feet, c.shot.arrows, pat, prof, 'start', null, null, num(c.shot.targetFt) || 15)).filter(r => r && r.status);
+      if (checks.length) {
+        const on = checks.filter(r => r.status === 'on').length;
+        const basis = checks[0].basis === 'box' ? 'your Baker Box' : 'the Rule of 31';
+        dSubs.push(sub('Geometry', pct(on, checks.length), `Your game 1 line went through ${basis} on ${of(on, checks.length)} shots.`));
+      } else dSubs.push(sub('Geometry', null, pat && pat.length && pat.r31 ? 'Log your slide and target in game 1 to check your line.' : 'Pick a pattern (with Rule of 31 checked) to check your line.'));
+    }
     const trackedMark = C.filter(c => String(c.shot.miss || 'didntTrack') !== 'didntTrack');
     const onMark = trackedMark.filter(c => c.shot.miss === 'noMiss' || c.saved).length;
-    const dirPct = pct(onMark, trackedMark.length);
-    out.push({ key: 'Direction', icon: '🎯', score: dirPct, text: dirPct == null ? 'Track your miss room to grade direction.' : `On your mark (or saved by the lane) on ${onMark} of ${trackedMark.length} tracked shots.` });
-    // Angle: what happened on direct vs steep lines
+    const tgt = pct(onMark, trackedMark.length);
+    dSubs.push(sub('Targeting', tgt, tgt == null ? 'Tap Your mark to grade targeting.' : `On your mark (or saved by the lane) on ${of(onMark, trackedMark.length)} shots.`));
+    { const L = C.filter(c => ['on', 'inside', 'outside'].includes(c.shot.laydown));
+      const on = L.filter(c => c.shot.laydown === 'on').length, ins = L.filter(c => c.shot.laydown === 'inside').length, outs = L.length - on - ins;
+      dSubs.push(sub('Ball placement', pct(on, L.length), L.length ? `On your laydown spot on ${of(on, L.length)} shots${ins ? `, inside ${ins}×` : ''}${outs ? `, outside ${outs}×` : ''}.` : 'Tap Laydown under More reads to grade where the ball lands.'));
+    }
+    { const F = C.filter(c => c.shot.fault && c.shot.fault !== 'unsure' && c.shot.fault !== 'well');
+      const bal = F.filter(c => c.shot.fault === 'balance').length;
+      dSubs.push(sub('Posture', F.length ? pct(C.length - bal, C.length) : null, F.length ? (bal ? `Fell off the shot ${bal}× (${of(bal, F.length)} poor shots with a reason).` : `No balance faults among ${F.length} poor shot${F.length === 1 ? '' : 's'} with a reason.`) : 'Pick a reason on poor shots (like Fell off the shot) to grade posture.'));
+    }
+    const dScored = dSubs.filter(x => x.score != null);
+    const dScore = tgt != null ? tgt : dScored.length ? Math.round(dScored.reduce((a, x) => a + x.score, 0) / dScored.length) : null;
+    const dLeak = dScored.length >= 2 ? dScored.slice().sort((a, b) => a.score - b.score)[0] : null;
+    out.push({ key: 'Direction', icon: '🎯', score: dScore, subs: dSubs,
+      text: dScore == null ? 'Track your mark to grade direction.' : `Targeting ${tgt != null ? tgt + '%' : 'not tracked'}.${dLeak && dLeak.score < 70 ? ` Weakest part: ${dLeak.label.toLowerCase()} (${dLeak.score}%).` : ''}` });
+
+    // 2. SPEED: Total · Versatility (changing speed on purpose)
+    const sp = C.filter(c => c.speed && c.speed !== 'unknown');
+    const planned = sp.filter(c => chg(c, 'speed') && c.speed !== 'same');
+    const unplanned = sp.filter(c => !(chg(c, 'speed') && c.speed !== 'same'));
+    const same = unplanned.filter(c => c.speed === 'same').length;
+    const spCaused = C.filter(c => c.speedCaused && !chg(c, 'speed')).length;
+    const sScore = pct(same, unplanned.length);
+    const sSubs = [
+      sub('Total', sScore, (prof.mph ? `${prof.mph} mph (${prof.label}). ` : '') + (unplanned.length ? `Repeated your normal speed on ${of(same, unplanned.length)} shots${spCaused ? `; ${spCaused} miss${spCaused > 1 ? 'es were' : ' was'} from speed, not the lane` : ''}.` : 'Tap Speed vs normal to grade speed control.')),
+    ];
+    if (planned.length) {
+      const worked = planned.filter(c => c.strike || c.pocketHit).length;
+      sSubs.push(sub('Versatility', pct(worked, planned.length), `You changed speed on purpose ${planned.length}× (${planned.filter(c => c.speed === 'faster').length} faster, ${planned.filter(c => c.speed === 'slower').length} slower); ${of(worked, planned.length)} found the pocket.`));
+    } else sSubs.push(sub('Versatility', null, 'To grade a planned speed change: tap Speed under Changed since last shot, then Faster or Slower.'));
+    out.push({ key: 'Speed', icon: '⚡', score: sScore, subs: sSubs, text: unplanned.length ? `Your normal speed on ${of(same, unplanned.length)} shots.` : 'Tap Speed vs normal to grade speed.' });
+
+    // 3. ANGLE: breakpoint → pocket, and where the ball turns (the mud)
+    const aSubs = [];
     const withGeo = C.filter(c => c.angleClass);
+    let aScore = null, aText = 'Enter your breakpoint to grade angle.';
     if (withGeo.length) {
       const steepBad = withGeo.filter(c => c.angleClass === 'steep' && (c.finish === 'strong' || c.overUnder || c.hit === 'brooklyn')).length;
       const directBad = withGeo.filter(c => c.angleClass === 'direct' && (c.finish === 'weak' || c.shot.leaveTag === 'Flat 10')).length;
       const good = withGeo.filter(c => c.strike || c.finish === 'good').length;
-      out.push({ key: 'Angle', icon: '📐', score: pct(good, withGeo.length), text: `${good} of ${withGeo.length} shots with a breakpoint logged finished well.` + (steepBad ? ` ${steepBad} came in too strong on a big-swing line.` : '') + (directBad ? ` ${directBad} came in weak on a direct line.` : '') });
-    } else out.push({ key: 'Angle', icon: '📐', score: null, text: 'Enter your breakpoint to grade angle.' });
-    // Speed
-    const sp = C.filter(c => c.speed && c.speed !== 'unknown');
-    const same = sp.filter(c => c.speed === 'same').length;
-    const spCaused = C.filter(c => c.speedCaused).length;
-    out.push({ key: 'Speed', icon: '⚡', score: pct(same, sp.length), text: sp.length ? `Normal speed on ${same} of ${sp.length} tracked shots.${spCaused ? ` ${spCaused} miss${spCaused > 1 ? 'es were' : ' was'} from speed, not the lane.` : ''}` : 'Not tracked. That\'s fine at houses with no speed display; otherwise tap "Speed vs normal" (by feel) in More reads.' });
-    // Rev rate & roll: how the ball finished on pocket hits
-    const ph = C.filter(c => c.pocketHit && (c.finish || c.strike));
-    const fin = ph.filter(c => c.strike || c.finish === 'good').length;
-    const weak = ph.filter(c => c.finish === 'weak').length, strong = ph.filter(c => c.finish === 'strong').length;
-    out.push({ key: 'Rev rate & roll', icon: '🌀', score: pct(fin, ph.length), text: ph.length ? `Arrived with the right energy on ${fin} of ${ph.length} pocket hits.${weak ? ` Ran out of rotation (rolled out) ${weak}×.` : ''}${strong ? ` Still turning too hard ${strong}×.` : ''}` : 'Watch the exit and the 6-pin on pocket hits to grade roll and energy.' });
+      aScore = pct(good, withGeo.length);
+      aText = `${of(good, withGeo.length)} shots with a breakpoint logged finished well.` + (steepBad ? ` ${steepBad} came in too strong on a big-swing line.` : '') + (directBad ? ` ${directBad} were weak on a straight-up line.` : '');
+      aSubs.push(sub('Entry', aScore, aText)); aText = `${aScore}% of shots with a breakpoint finished well.`;
+    }
     const exB = exitBoardFor(pat);
     if (exB != null) {
       const withBp = C.filter(c => c.bp != null);
-      const mud = withBp.filter(c => c.bp >= exB);
-      const mudOU = mud.filter(c => c.overUnder || c.lean !== 0 && !c.strike).length;
-      if (withBp.length) out.push({ key: 'Mud', icon: '🏈', score: pct(withBp.length - mud.length, withBp.length), text: mud.length ? `Changed direction in the mud (breakpoint at/inside the exit point, about board ${exB}) on ${mud.length} of ${withBp.length} shots; ${mudOU} of those missed the pocket or read wrong.` : `Your breakpoint stayed outside the exit point (about board ${exB}) all night. The ball turned in clean friction.` });
+      if (withBp.length) {
+        const mud = withBp.filter(c => c.bp >= exB);
+        aSubs.push(sub('Exit point', pct(withBp.length - mud.length, withBp.length), mud.length ? `Turned in the mud (breakpoint at or inside board ${exB}) on ${of(mud.length, withBp.length)} shots.` : `Turned in the dry, outside board ${exB}, on every logged shot.`));
+      }
     }
+    out.push({ key: 'Angle', icon: '📐', score: aScore, subs: aSubs, text: aText });
+
+    // 4. REVS: how much the ball hooked for you, and changing your hand on purpose
+    const rd = C.filter(c => c.early || c.long || c.pocketHit || c.strike);
+    const right = rd.filter(c => (c.pocketHit || c.strike) && !c.early && !c.long).length;
+    const early = rd.filter(c => c.early).length, long = rd.filter(c => c.long).length;
+    const rScore = pct(right, rd.length);
+    const rSubs = [sub('Hook', rScore, rd.length ? `Hooked the right amount on ${of(right, rd.length)} shots${early ? `; hooked early ${early}×` : ''}${long ? `; went long ${long}×` : ''}.` : 'Tap the pocket and ball reaction to grade hook.')];
+    const hand = C.filter(c => chg(c, 'hand'));
+    if (hand.length) { const w = hand.filter(c => c.strike || c.pocketHit).length; rSubs.push(sub('Versatility', pct(w, hand.length), `You changed your hand on purpose ${hand.length}×; ${of(w, hand.length)} found the pocket.`)); }
+    else rSubs.push(sub('Versatility', null, 'To grade a planned rev change: tap Hand under Changed since last shot.'));
+    out.push({ key: 'Revs', icon: '🔄', score: rScore, subs: rSubs, text: (prof.rpm ? `${prof.rpm} rpm. ` : '') + (rd.length ? `The right amount of hook on ${of(right, rd.length)} shots.` : rSubs[0].text) });
+
+    // 5. ROLL: how the ball finished: exit off the deck and the key pin
+    const ph = C.filter(c => c.pocketHit && (c.finish || c.strike));
+    const fin = ph.filter(c => c.strike || c.finish === 'good').length;
+    const weak = ph.filter(c => c.finish === 'weak').length, strong = ph.filter(c => c.finish === 'strong').length;
+    const roScore = pct(fin, ph.length);
+    out.push({ key: 'Roll', icon: '🌀', score: roScore, subs: [], text: ph.length ? `Finished right on ${of(fin, ph.length)} pocket hits.${weak ? ` Rolled out (weak exit) ${weak}×.` : ''}${strong ? ` Still turning too hard ${strong}×.` : ''}` : 'Tap the exit off the deck to grade roll.' });
+
     const scored = out.filter(x => x.score != null);
     const weakest = scored.length ? scored.slice().sort((a, b) => a.score - b.score)[0] : null;
     const DRILL = {
-      Direction: 'Spot drill: 10 shots, same feet and target. Goal: 8 of 10 over your mark.',
+      Direction: 'Spot drill: 10 shots, same feet and target. Goal: 8 of 10 over your mark, laid down on your spot, holding your finish.',
+      Speed: 'Speed ladder: 3 shots at normal speed, 3 a touch slower, 3 a touch faster, same line. Check the monitor and watch where each one turns.',
       Angle: 'Angle drill: keep the same target and try 3 different feet positions, 3 shots each. Watch how the entry and the 6-pin change.',
-      Speed: 'Tempo drill: 10 shots at the same speed. Check the lane monitor and stay within ½ mph.',
-      'Rev rate & roll': 'Finish drill: 10 pocket shots. Call the exit (left / straight / right) and the 6-pin out loud before the pins settle.',
-      Mud: 'Exit-point drill: find your exit board (pattern length − 31). For 10 shots, watch the ball cross that board at the end of the oil, then turn in the dry, not before.',
+      Revs: 'Hand drill: 3 shots with your normal hand, 3 with less (quieter hand), 3 with more. Same line. Watch how much the ball hooks.',
+      Roll: 'Finish drill: 10 pocket shots. Call the exit (left / straight / right) and the 6-pin out loud before the pins settle.',
     };
-    return { elements: out, weakest: weakest ? weakest.key : '', drill: weakest ? DRILL[weakest.key] : '' };
+    return { model: 'kegel5', elements: out, weakest: weakest ? weakest.key : '', drill: weakest ? DRILL[weakest.key] : '' };
   }
 
   // ---------- Arsenal check: bowler ↔ ball, bag shape, history ----------

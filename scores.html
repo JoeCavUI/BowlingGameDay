@@ -450,7 +450,7 @@
         else laneNote = 'Both lanes played about the same.';
       }
       let five = null, moves = null;
-      try { five = (s.summary && s.summary.elements) || (window.BTCoach ? BTCoach.elementsReport(chron, bowler, (BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || []).find(q => q.name === s.pattern) || null) : null); } catch (_e) {}
+      try { five = (window.BTCoach ? BTCoach.elementsReport(chron, bowler, (BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || []).find(q => q.name === s.pattern) || null) : null) || (s.summary && s.summary.elements) || null; } catch (_e) {}
       try { moves = (s.summary && s.summary.moves) || (window.BTCoach && BTCoach.moveSummary ? BTCoach.moveSummary(chron, bowler) : null); } catch (_e) {}
       if (moves && moves.afterPoor >= 2) T.push({ k: 'Try next time', t: `${moves.afterPoor} of your ${moves.made} moves came right after a poor shot. Repeat the shot first; move when two good shots say the same thing.` });
       else if (laneNote && /tougher/.test(laneNote)) T.push({ k: 'Try next time', t: laneNote });
@@ -503,6 +503,11 @@
     // Double tap (works on iPhone, where dblclick isn't reliable): two taps within 350 ms.
     function onDoubleTap(node, fn) { if (!node) return; let t = 0; node.addEventListener('click', (e) => { const now = Date.now(); if (now - t < 350) { t = 0; e.preventDefault(); fn(e); } else t = now; }); }
 
+    // From Stats → open one night's review in Game Day nights.
+    function openNight(id) {
+      location.hash = '#nights';
+      setTimeout(() => { try { showDetails(id); const d = el.details; if (d && d.scrollIntoView) d.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_e) {} }, 60);
+    }
     function showDetails(id) {
       const s = sessions.find(x => x.id === id);
       if (!s) return;
@@ -579,9 +584,9 @@
         ${R.balls.length ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🎳 Balls</b>${R.balls.map(b => `<div class="nr-row"><b>${esc(b.ball)}</b><div class="small">${statLine(b.m)}</div></div>`).join('')}</div>` : ''}
         ${R.moves ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>${R.moves.text}</b>${R.moves.tip ? `<div class="small" style="margin-top:6px;opacity:1">${R.moves.tip}</div>` : ''}</div>` : ''}
         ${R.faults.length ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🤔 Poor shots: what you felt</b><ul class="nr-list">${R.faults.map(l => `<li>${l}</li>`).join('')}</ul></div>` : ''}
+        ${R.five ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🎳 The 5 Scoring Elements tonight</b>${R.five.elements.map(e => `<div class="small" style="margin-top:6px;opacity:1">${e.icon} <b>${e.key}${e.score != null ? ': ' + e.score + '%' : ''}</b>. ${e.text}</div>${(e.subs || []).length ? `<ul class="nr-subs">${e.subs.map(x => `<li><b>${x.label}${x.score != null ? ' ' + x.score + '%' : ''}:</b> ${x.text}</li>`).join('')}</ul>` : ''}`).join('')}<div class="small" style="margin-top:8px">From Del Warren's 5 Scoring Elements (Kegel). Grades only what you logged.</div>${R.five.drill ? `<div class="small" style="margin-top:8px;color:var(--accent);opacity:1"><b>Work on ${R.five.weakest}:</b> ${R.five.drill}</div>` : ''}</div>` : ''}
         <details class="panel gd-subfold no-print" style="padding:12px;margin-top:10px">
-          <summary><b>More details</b> <span class="small">(Five Elements, eyeball score, arsenal audit)</span></summary>
-          ${R.five ? `<div style="margin-top:10px"><b>The Five Elements tonight</b>${R.five.elements.map(e => `<div class="small" style="margin-top:6px;opacity:1">${e.icon} <b>${e.key}${e.score != null ? ': ' + e.score + '%' : ''}</b>. ${e.text}</div>`).join('')}${R.five.drill ? `<div class="small" style="margin-top:8px;color:var(--accent);opacity:1"><b>Work on ${R.five.weakest}:</b> ${R.five.drill}</div>` : ''}</div>` : ''}
+          <summary><b>More details</b> <span class="small">(eyeball score, arsenal audit)</span></summary>
           ${R.eye ? `<div style="margin-top:12px"><b>👁️ Eyeball score: ${R.eye.score} (${R.eye.label})</b><div class="small" style="margin-top:2px">How much of what matters you logged: your mark, the pocket, the exit, the key pin. It grades your reads, not your bowling.</div></div>` : ''}
           ${s.arsenalAudit ? `<div style="margin-top:12px"><b>Arsenal audit</b><div class="small">${esc(s.arsenalAudit.headline || '—')}${s.arsenalAudit.gap ? ' · Gap: ' + esc(s.arsenalAudit.gap) : ''}${s.arsenalAudit.recommendedAdd ? ' · Consider: ' + esc(s.arsenalAudit.recommendedAdd) : ''}</div></div>` : ''}
         </details>
@@ -664,13 +669,37 @@
         <div style="overflow-x:auto"><table class="st-table st-tbl"><tr><th>${DIM[stGroup].label}</th><th>Gms</th><th>Avg</th><th>X%</th><th>/%</th><th>1-pin</th></tr>
         ${rows.map(r => `<tr${drill[stGroup] ? ` data-drill="${esc(r.key)}"` : ''}><td class="st-k">${esc(r.key)}</td><td>${r.n}</td><td class="${r.avg === best && r.n >= 6 ? 'good' : ''}"><b>${r.avg}</b></td><td>${Math.round(r.strike)}</td><td>${Math.round(r.spare)}</td><td>${r.single != null ? Math.round(r.single) : '—'}</td></tr>`).join('')}</table></div>
         <div class="small" style="margin-top:4px">X% strikes · /% spares · 1-pin = single-pin spares made. ${drill[stGroup] ? 'Tap a row to filter by it.' : ''} ${min > 1 ? `Rows with fewer than ${min} games are hidden.` : ''}</div></div>`;
+      // 🎳 5 Scoring Elements, night by night (Game Day nights with shots; follows the house and period filters)
+      const elems = (() => {
+        if (!window.BTCoach) return '';
+        const bw = BT.lsGet(BT.KEYS.BOWLER, {}) || {}, pats = BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || [];
+        const dOf = (x) => { if (x.date) return String(x.date).slice(0, 10); const d = new Date(x.savedAt || 0); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+        const dLbl = (x) => { const [y, m, d] = dOf(x).split('-'); return `${Number(m)}/${Number(d)}/${y.slice(2)}`; };
+        const ss = (Array.isArray(sessions) ? sessions : []).filter(x => x && Array.isArray(x.shots) && x.shots.length >= 3)
+          .filter(x => !f.house || x.house === f.house).filter(x => !f.period || dOf(x).startsWith(f.period))
+          .slice().sort((a, b) => dOf(b).localeCompare(dOf(a)) || (b.savedAt || 0) - (a.savedAt || 0)).slice(0, 10);
+        const rows = ss.map(x => { let r = null; try { r = BTCoach.elementsReport([...x.shots].filter(Boolean).sort((a, b) => (a.at || 0) - (b.at || 0)), bw, (Array.isArray(pats) ? pats : []).find(q => q.name === x.pattern) || null); } catch (_e) {} return r ? { x, r } : null; }).filter(Boolean);
+        if (!rows.length) return '';
+        const K = [['Direction', '🎯'], ['Speed', '⚡'], ['Angle', '📐'], ['Revs', '🔄'], ['Roll', '🌀']];
+        const sc = (r, k) => { const e = r.elements.find(e => e.key === k); return e && e.score != null ? e.score : null; };
+        const avg = K.map(([k]) => { const v = rows.map(o => sc(o.r, k)).filter(v => v != null); return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null; });
+        const scoredAvg = avg.map((v, i) => ({ v, k: K[i][0] })).filter(o => o.v != null);
+        const low = scoredAvg.length >= 2 ? scoredAvg.slice().sort((a, b) => a.v - b.v)[0].k : '';
+        const cell = (v) => `<td class="${v == null ? '' : v >= 75 ? 'good' : v < 50 ? 'bad' : ''}">${v == null ? '—' : v}</td>`;
+        return `<div class="panel"><b>🎳 5 Scoring Elements by night</b> <span class="small">(Game Day nights, newest first)</span>
+          <div style="overflow-x:auto"><table class="st-table st-tbl"><tr><th>Night</th>${K.map(([k, i]) => `<th title="${k}">${i}</th>`).join('')}</tr>
+          <tr class="st-avg"><td class="st-k"><b>Average</b></td>${avg.map(v => cell(v)).join('')}</tr>
+          ${rows.map(o => `<tr data-night="${esc(o.x.id)}"><td class="st-k">${dLbl(o.x)}${o.x.house ? ' · ' + esc(o.x.house) : ''}</td>${K.map(([k]) => cell(sc(o.r, k))).join('')}</tr>`).join('')}</table></div>
+          <div class="small" style="margin-top:4px">🎯 Direction · ⚡ Speed · 📐 Angle · 🔄 Revs · 🌀 Roll (Del Warren's 5 Scoring Elements, Kegel). % of logged shots graded good; — = not enough logged. ${low ? `Lowest on average: <b>${low}</b>. ` : ''}Tap a night to open its review.</div></div>`;
+      })();
       // Spare leaves
       const lv = S.leaves.filter(l => l.leave !== '—').slice(0, 15);
       const leaves = `<div class="panel"><b>Spare leaves</b> <span class="small">(most common first)</span><div><table class="st-tbl"><tr><th>Leave</th><th>Times</th><th>Made</th><th>%</th></tr>${lv.map(l => `<tr><td>${esc(l.leave)}${l.split ? ' <span class="sb-split">split</span>' : ''}</td><td>${l.n}</td><td>${l.made}</td><td class="${l.n >= 5 && l.made / l.n < 0.7 && !l.split ? 'bad' : ''}">${Math.round(l.made / l.n * 100)}%</td></tr>`).join('')}</table></div></div>`;
       // Games behind the numbers
       const list = G.slice().reverse();
       const games = `<div class="panel"><button type="button" class="cl-link" id="stGames">${stShowGames ? '▾' : '▸'} The ${S.n} games behind these numbers</button>${stShowGames ? `<div class="st-games">${list.slice(0, 120).map(g => `<div class="st-g"><span>${esc(g.d)} · G${g.gn}</span><span>${esc(g.h)}${g.lanes ? ' ' + esc(g.lanes) : ''}</span><b>${g.s}</b><span class="small">${g.src === 'gd' ? 'Game Day' : 'PinPal'}</span></div>`).join('')}${list.length > 120 ? `<div class="small">…and ${list.length - 120} more. Narrow the filters to see them.</div>` : ''}</div>` : ''}</div>`;
-      BT.$('#stBody').innerHTML = `<div class="st-tiles">${tiles}</div>${charts}${table}${leaves}${games}`;
+      BT.$('#stBody').innerHTML = `<div class="st-tiles">${tiles}</div>${charts}${elems}${table}${leaves}${games}`;
+      BT.$all('#stBody [data-night]').forEach(tr => tr.addEventListener('click', () => { try { openNight(tr.dataset.night); } catch (_e) {} }));
       BT.$('#stGroup').onchange = (e) => { stGroup = e.target.value; drawStats(); };
       BT.$all('#stBody [data-drill]').forEach(tr => tr.addEventListener('click', () => { const k = drill[stGroup], v = tr.dataset.drill; const sel = BT.$(SF[k]); if (!sel) return; let val = v; if (k === 'gn') val = v.replace('Game ', ''); if (k === 'src') val = v === 'Game Day' ? 'gd' : 'pp'; if (![...sel.options].some(o => o.value === val)) sel.add(new Option(val, val)); sel.value = val; drawStats(); BT.$('#statsPage').scrollIntoView({ behavior: 'smooth', block: 'start' }); }));
       BT.$('#stGames').onclick = () => { stShowGames = !stShowGames; drawStats(); };
