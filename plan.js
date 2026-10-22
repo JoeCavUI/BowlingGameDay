@@ -6,6 +6,9 @@
   'use strict';
   const MIN_HOUSE = 9, MIN_BALL = 6, MIN_PAIR = 6, MIN_SPARE = 15;
   const r1 = (x) => Math.round(x * 10) / 10;
+  // Recency weight of a game: last 12 months 1, 1–2 years ago 0.6, older 0.35.
+  const ageW = (d, today) => { const y = (Date.parse(today) - Date.parse(d)) / (365 * 864e5); return !(y > 1) ? 1 : y <= 2 ? 0.6 : 0.35; };
+  const monYr = (d) => { if (!d) return ''; const [y, m] = d.split('-').map(Number); return `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][m - 1]} ${y}`; };
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const MIRROR = { 1: 1, 2: 3, 3: 2, 4: 6, 5: 5, 6: 4, 7: 10, 8: 9, 9: 8, 10: 7 };
   // Leave signatures for a right-hander (mirrored for lefties).
@@ -90,7 +93,9 @@
       const own = G.filter(g => pps.includes(hist.mainBall(g))), os = own.length >= MIN_OWN ? hist.summary(own) : null;
       const rec = own.filter(g => g.d >= yrCut), rs = rec.length >= MIN_OWN && rec.length < own.length ? hist.summary(rec) : null;
       let score = pred;
-      if (os) { const sh = (os.avg * os.n + pred * K) / (os.n + K); score = rs ? (sh + (rs.avg * rs.n + pred * K) / (rs.n + K)) / 2 : sh; }
+      // Own record here, recency-weighted (see ageW), pulled toward the trait prediction for small samples.
+      if (os) { let w = 0, t = 0; own.forEach(g => { const a = ageW(g.d, today); w += a; t += a * g.s; }); score = (t + pred * K) / (w + K); }
+      const lastD = own.length ? own.reduce((m, g) => g.d > m ? g.d : m, '') : '';
       // Pair adjustment: how this ball (or its traits) did on the pair compared with the pair's own average.
       let pAdj = 0, po = null;
       if (pairG.length >= 6) {
@@ -98,7 +103,7 @@
         if (mine.length >= MIN_OWN) { po = hist.summary(mine); pAdj += (po.avg - pbase) * mine.length / (mine.length + K) * 0.6; }
         const pp = P ? predict(P, t) : null; if (pp && pp.k) pAdj += (pp.v - P.base) * 0.4;
       }
-      return { n, t, os, rs, po, pred, predK: ph ? ph.k : 0, score: score + pAdj };
+      return { n, t, os, rs, po, pred, lastD, ownN: own.length, predK: ph ? ph.k : 0, score: score + pAdj };
     }).sort((p, q) => q.score - p.score);
     if (!scored.length) return null;
     // Pick by job, from your own results here: the start ball (fresh, game 1), then the ball that has scored best
@@ -124,12 +129,14 @@
       if (picked.length >= Math.min(count, scored.length)) break;
       const ok = scored.filter(spaced); if (!ok.length) break;
       const proven = ok.filter(s => s.cond[c] && s.cond[c].rel > 0).sort((p, q) => (q.cond[c].rel + q.score * 0.1) - (p.cond[c].rel + p.score * 0.1));
-      const pick = proven.length ? proven[0] : bySide(order[(picked.length - 1) % 2], ok);
+      const okP = ok.filter(s => s.os); // balls with games here before untested ones
+      const pick = proven.length ? proven[0] : bySide(order[(picked.length - 1) % 2], okP.length ? okP : ok);
       picked.push(pick); job.set(pick, proven.length ? c : c + '?');
     }
     while (picked.length < Math.min(count, scored.length)) {
       const ok = scored.filter(spaced); if (!ok.length) break;
-      picked.push(bySide(order[(picked.length - 1) % 2], ok));
+      const okP = ok.filter(s => s.os);
+      picked.push(bySide(order[(picked.length - 1) % 2], okP.length ? okP : ok));
     }
     const first = picked[0];
     const ordered = picked.slice().sort((p, q) => (p.t.x ?? 50) - (q.t.x ?? 50));
@@ -141,6 +148,7 @@
       if (j === 'transition?') return `Transition (${motion(p)})`;
       if (j === 'burn?') return `Burn (${motion(p)})`;
       return (p.t.x ?? 50) < x0 ? 'Earlier / more ball' : 'Later / cleaner'; };
+    const roleTag = (p) => role(p) + (p.os ? '' : p.ownN ? ` · only ${gm(p.ownN)} here` : ' · untested here');
     const gm = (n) => `${n} game${n === 1 ? '' : 's'}`;
     const condWhy = (p) => { const j = String(job.get(p) || '').replace('?', ''); const c = p.cond && p.cond[j]; return c ? `${CL[j]} here: ${c.avg} over ${gm(c.n)} (your ${CL[j]} here average ${cBase[j]})` : (job.get(p) || '').endsWith('?') ? `no ball that fits the bag has beaten your ${CL[j]} average here (4+ games), so this one is picked for its motion` : ''; };
     const why = (p) => [condWhy(p), p.os ? `${p.os.avg} over ${gm(p.os.n)} here${p.rs ? ` (${p.rs.avg} in the last 12 months)` : ''}` : `${p.predK ? `no games on it here; other balls with its cover / core / layout averaged about ${Math.round(p.pred)} (not this ball's own result)` : 'no record here yet'}`, p.po ? `${p.po.avg} over ${gm(p.po.n)} on this pair` : ''].filter(Boolean).join('; ');
@@ -149,13 +157,33 @@
     ordered.forEach(p => items.push(`<b>${role(p)}: ${esc(p.n)}</b><ul class="pl-sub"><li class="dim">${[p.t.cover, p.t.core && p.t.core + ' core', p.t.layout, p.t.box].filter(Boolean).map(esc).join(' · ')}</li>${whyList(p)}</ul>`));
     if (picked.length < count) items.push(`Only ${picked.length} of your balls read far enough apart to be worth bringing; more would overlap.`);
     { const sp = spareBalls(); const dual = (BT().dualSpareNames ? BT().dualSpareNames() : []).filter(n => ordered.some(p => p.n === n)); if (dual.length) items.push(`<b>${esc(dual[0])}</b> doubles as your spare ball${sp.length ? `, so you can leave ${esc(sp[0])} home` : ''}.`); else items.push(sp.length ? `Plus your spare ball: <b>${esc(sp[0])}</b>.` : 'Plus a spare ball (none marked yet: a plastic / polyester ball makes 10 and 7 pins much easier. Mark yours in Arsenal → tap the ball → 🎯 My spare ball).'); }
-    const roles = {}; ordered.forEach(q => { roles[q.n] = role(q); });
+    const roles = {}; ordered.forEach(q => { roles[q.n] = roleTag(q); });
+    // One short reason per ball for the bag screen.
+    const short = {}; ordered.forEach(q => { const j = String(job.get(q) || '').replace('?', ''), c = q.cond && q.cond[j];
+      short[q.n] = [c ? `${CL[j][0].toUpperCase() + CL[j].slice(1)} here: ${c.avg} over ${gm(c.n)}` : q.os ? `${q.os.avg} over ${gm(q.os.n)} here` : q.ownN ? 'Picked mostly from its cover / core / layout' : 'Picked from its cover / core / layout',
+        q.lastD && q.lastD < yrCut ? `last thrown here ${monYr(q.lastD)}` : ''].filter(Boolean).join(' · '); });
+    // 🏅 Best averages here: your top balls by average at this house, and why any of them isn't in the bag.
+    const best = scored.filter(s => s.os && s.os.n >= 6).sort((p, q) => q.os.avg - p.os.avg).slice(0, 6).map(s => {
+      const inBag = ordered.includes(s);
+      let note = '';
+      if (inBag) note = `In the bag: ${roleTag(s)}`;
+      else {
+        const near = ordered.filter(p => p.t.x != null && s.t.x != null && Math.abs(p.t.x - s.t.x) < 10).sort((a, z) => Math.abs(a.t.x - s.t.x) - Math.abs(z.t.x - s.t.x))[0];
+        const rec = s.rs && s.rs.avg <= s.os.avg - 8;
+        if (s.lastD && s.lastD < yrCut) note = `Not in the bag because of recency: not thrown here since ${monYr(s.lastD)}, so its older games count for less${near ? `, and it plays close to ${esc(near.n)} on the Early → Late scale` : ''}`;
+        else if (near) { const j = String(job.get(near) || '').replace('?', ''), c = near.cond && near.cond[j]; note = `Not in the bag: it plays too close to ${esc(near.n)} on the Early → Late scale, and ${esc(near.n)} got the ${role(near).replace(/:.*$/, '').toLowerCase()} spot${c ? ` (${CL[j]} here: ${c.avg} over ${gm(c.n)})` : ''}`; }
+        else if (rec) note = `Not in the bag because of recency: its last 12 months here are lower (${s.rs.avg} over ${gm(s.rs.n)})`;
+        else note = 'Not in the bag: other balls scored higher for each job';
+      }
+      return { n: s.n, avg: s.os.avg, games: s.os.n, inBag, note };
+    });
+    if (best.length) { items.unshift(`<span class="pl-h"><b>🏅 Best averages here</b> · 6+ games, and whether each made the bag</span>`, ...best.map((x, i) => `${i + 1}. <b>${esc(x.n)}</b>: ${x.avg} over ${gm(x.games)}<ul class="pl-sub"><li class="${x.inBag ? '' : 'dim'}">${x.inBag ? '✅ ' : ''}${x.note}.</li></ul>`)); }
     // 🐎 Dark horse: a ball you've hardly thrown here whose cover / core / layout match what has worked here,
     // with a surface change toward the grit your best balls here are on. A theory to test in practice, not a pick.
     let dark = null;
     try { dark = darkHorse({ hist, G, H, P, scored, picked: ordered, byName, map, b }); } catch (e) { console.error(e); }
     if (dark) items.push(dark.head, dark.body);
-    return { dark, items, picked: ordered.map(p => p.n), first: first.n, roles, why: scored.map(s => ({ n: s.n, score: Math.round(s.score * 10) / 10, pred: Math.round(s.pred * 10) / 10, predK: s.predK, own: s.os ? [s.os.avg, s.os.n] : null, pair: s.po ? [s.po.avg, s.po.n] : null, t: s.t, cond: s.cond, job: job.get(s) || "" })), traits: { house: H.eff, pair: P ? P.eff : null, base: H.base } };
+    return { dark, items, best, short, picked: ordered.map(p => p.n), first: first.n, roles, why: scored.map(s => ({ n: s.n, score: Math.round(s.score * 10) / 10, pred: Math.round(s.pred * 10) / 10, predK: s.predK, own: s.os ? [s.os.avg, s.os.n] : null, pair: s.po ? [s.po.avg, s.po.n] : null, t: s.t, cond: s.cond, job: job.get(s) || "" })), traits: { house: H.eff, pair: P ? P.eff : null, base: H.base } };
   }
 
   // ---------- 🐎 Dark horse ----------
@@ -372,7 +400,9 @@
       const K = 6, shrunk = (avg, n) => (avg * n + S.avg * K) / (n + K);
       const yrCut = new Date(Date.parse(today) - 365 * 864e5).toISOString().slice(0, 10);
       const lately = (r) => { const gs = G.filter(g => g.d >= yrCut && hist.mainBall(g) === r.key); return gs.length >= 3 && gs.length < r.n ? hist.summary(gs) : null; };
-      const score = (r) => { const a = shrunk(r.avg, r.n), l = lately(r); return l ? (a + shrunk(l.avg, l.n)) / 2 : a; };
+      // Recency: games in the last 12 months count fully, 1–2 years ago 0.6, older 0.35 (so a ball you haven't thrown
+      // here in years doesn't lead on old games, and a recent night is evidence, not a penalty).
+      const score = (r) => { let w = 0, t = 0; G.forEach(g => { if (hist.mainBall(g) !== r.key) return; const a = ageW(g.d, today); w += a; t += a * g.s; }); return w ? (t + S.avg * K) / (w + K) : S.avg; };
       const byBall = hist.groupBy(G, 'ball', MIN_BALL).sort((a, b) => score(b) - score(a));
       const items = [];
       let pool = byBall.map(r => ({ ...r, ar: owned(r.key) })).filter(r => r.ar || !arsenal.length);
@@ -380,9 +410,15 @@
       const recentCut = out.season ? out.season.games : [];
       const usedRecently = new Set(recentCut.map(g => hist.mainBall(g)));
       if (pool.length) {
-        const first = pool[0], fl = lately(first);
+        // Fresh lanes: the start ball is the one with the best game 1 record here (4+ game 1s), not just the best overall.
+        const g1All = G.filter(g => g.gn === 1), base1 = g1All.length ? hist.summary(g1All).avg : null;
+        const g1Of = (r) => { const gs = g1All.filter(g => hist.mainBall(g) === r.key); return gs.length >= 4 && base1 != null ? { s: hist.summary(gs), n: gs.length } : null; };
+        const fresh = pool.map(r => ({ r, g1: g1Of(r) })).filter(x => x.g1 && x.g1.s.avg > base1).sort((a, z) => ((z.g1.s.avg - base1) * z.g1.n / (z.g1.n + 8) + (score(z.r) - S.avg) * 0.1) - ((a.g1.s.avg - base1) * a.g1.n / (a.g1.n + 8) + (score(a.r) - S.avg) * 0.1))[0];
+        if (fresh && fresh.r !== pool[0]) { pool = [fresh.r, ...pool.filter(r => r !== fresh.r)]; }
+        const first = pool[0], fl = lately(first), f1 = fresh && fresh.r === first ? fresh.g1 : null;
         out.firstBall = first.ar || first.key;
-        items.push(`<b>First ball: ${esc(first.ar || first.key)}.</b> Top pick on sample-weighted record here (more games and recent form count more than a high average on a few games): ${first.avg} over ${first.n} games, ${first.strike}% strikes${fl ? `; ${fl.avg} in its ${fl.n} games here in the last 12 months` : ''}${recentCut.length && !usedRecently.has(first.key) ? `. <b>You haven't thrown it ${out.season.label.toLowerCase().startsWith('this season') ? 'this season' : 'in the last 12 months'}.</b>` : '.'}`);
+        if (f1) items.push(`<b>First ball: ${esc(first.ar || first.key)}.</b> Best game 1 record here: <b>${f1.s.avg} over ${f1.n} game 1s</b> (your game 1 average here ${base1}). Overall ${first.avg} over ${first.n} games, ${first.strike}% strikes${fl ? `; ${fl.avg} in its ${fl.n} games here in the last 12 months` : ''}${recentCut.length && !usedRecently.has(first.key) ? `. <b>You haven't thrown it ${out.season.label.toLowerCase().startsWith('this season') ? 'this season' : 'in the last 12 months'}.</b>` : '.'}`);
+        else items.push(`<b>First ball: ${esc(first.ar || first.key)}.</b> Top pick on sample-weighted record here (more games and recent form count more than a high average on a few games): ${first.avg} over ${first.n} games, ${first.strike}% strikes${fl ? `; ${fl.avg} in its ${fl.n} games here in the last 12 months` : ''}${recentCut.length && !usedRecently.has(first.key) ? `. <b>You haven't thrown it ${out.season.label.toLowerCase().startsWith('this season') ? 'this season' : 'in the last 12 months'}.</b>` : '.'}`);
         const second = pool[1];
         if (second) {
           const rs = lately(second);
@@ -405,7 +441,7 @@
     if (opts.count && G.length >= MIN_HOUSE && hist) {
       try {
         const rb = recommendBag({ hist, G, lanes, S, b, count: Math.max(1, Math.min(6, Number(opts.count) || 3)), lean, today, firstBall: out.firstBall });
-        if (rb) { out.darkHorse = rb.dark; out.recWhy = rb.why; out.recTraits = rb.traits; out.recRoles = rb.roles; out.recFirst = rb.first; sec('🎒', `Your ${Math.max(1, Math.min(6, Number(opts.count) || 3))}-ball bag for ${lanes ? 'lanes ' + lanes : 'this house'}`, rb.items); out.recBag = rb.picked; }
+        if (rb) { out.darkHorse = rb.dark; out.recWhy = rb.why; out.recTraits = rb.traits; out.recRoles = rb.roles; out.recFirst = rb.first; out.recBest = rb.best; out.recShort = rb.short; sec('🎒', `Your ${Math.max(1, Math.min(6, Number(opts.count) || 3))}-ball bag for ${lanes ? 'lanes ' + lanes : 'this house'}`, rb.items); out.recBag = rb.picked; }
       } catch (e) { console.error(e); }
     }
 
