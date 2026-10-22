@@ -789,3 +789,4 @@ select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }
 .gd-laypt{margin-top:8px;font-size:15px}.gd-layfoot{opacity:.75;font-size:12px;margin-top:2px}.gd-layfoot a{color:var(--accent)}
 .ang-laybox{display:flex;align-items:center;font-weight:800;color:var(--accent);opacity:.95;cursor:default}.ang-laybox sup{font-size:.6em;margin-left:2px;color:inherit}
 .home-go{margin-bottom:6px}
+.cl-msg{margin:4px 0 8px;padding:8px 10px;border-radius:10px;background:rgba(99,230,210,.08);font-size:14px}.cl-chk{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:14px}.cl-chk input{width:20px;height:20px}.cl-link{all:unset;cursor:pointer;color:var(--accent);font-size:13px;margin-top:8px;display:inline-block}

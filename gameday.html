@@ -308,6 +308,7 @@
   <script src="chart.js?v=120"></script>
   <script src="plan.js?v=120"></script>
   <script src="insight.js?v=120"></script>
+  <script src="cloud.js?v=120"></script>
   <script>
     BT.renderNav('gameday');
     BT.wireReadAloud(document.getElementById('coachSpeak'), () => ((document.getElementById('coachText') || {}).innerText || '').split('\n').filter(l => !/^(Why & what's next|What Coach is using)/i.test(l.trim())).join('\n'));
@@ -2436,6 +2437,8 @@ function sessionSummary(shots) {
       } else {
         alert('Saved to Scores.');
       }
+      // ☁️ Signed in to cloud backup: copy tonight to the cloud in the background (works only with a connection).
+      try { if (window.BTCloud && BTCloud.status().signedIn) BTCloud.autoBackup().then(r => { if (r && r.ok) toast('☁️ Backed up to the cloud.'); else if (r && r.error) toast('☁️ Cloud backup didn\'t go through: ' + r.error + ' It will try again after your next night, or back up from Home → Your data.'); }); } catch (_e) {}
     }
 
     function resetSession() {

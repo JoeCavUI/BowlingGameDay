@@ -59,6 +59,9 @@
       <div class="small" style="margin-top:10px">
         Back up after each league night. Save the file to Files or email it to yourself. If you switch phones or clear Safari, use <b>Restore</b> to bring everything back.
       </div>
+      <div class="hr-split" style="margin:14px 0"></div>
+      <h3 style="margin:0">☁️ Cloud backup</h3>
+      <div id="cloudBox" style="margin-top:6px"></div>
     </div>
 
     <div class="panel" id="feedbackPanel" data-secpage="feedback">
@@ -77,6 +80,7 @@
   </div>
 
   <script src="app.js?v=120"></script>
+  <script src="cloud.js?v=120"></script>
   <script>
   // 💬 Feedback: share sheet with version + device filled in (the tester picks Messages / Mail and who to send it to).
   (function () {
@@ -153,6 +157,8 @@
       const at = BT.lastBackupAt();
       const s = BT.setupStatus();
       const box = BT.$('#backupStatus');
+      const cs = window.BTCloud ? BTCloud.status() : {};
+      if (cs.signedIn && cs.lastUp) { box.textContent = `☁️ Backed up to the cloud ${new Date(cs.lastUp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}${at ? ` · last file backup ${new Date(at).toLocaleDateString()}` : ''}.`; box.style.color = ''; return; }
       if (!at) {
         box.textContent = s.sessions ? 'Not backed up yet. Your data is only on this phone.' : 'Everything is saved on this phone only.';
         box.style.color = s.sessions ? 'var(--danger)' : '';
@@ -233,6 +239,68 @@
     }
     renderTestMode();
 
+    // ☁️ Cloud backup UI (Home → Your data)
+    const cEsc = (t) => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    let cloudMode = 'signin', inviteTok = '', cloudMsg = '';
+    function renderCloud() {
+      const box = BT.$('#cloudBox'); if (!box || !window.BTCloud) return;
+      const st = BTCloud.status(), msg = cloudMsg ? `<div class="cl-msg">${cloudMsg}</div>` : '';
+      if (st.signedIn && cloudMode !== 'newpass') {
+        const last = st.lastUp ? new Date(st.lastUp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'not yet';
+        box.innerHTML = `${msg}<div class="small" style="opacity:1">Signed in as <b>${cEsc(st.email || 'you')}</b>. Last cloud backup: <b>${cEsc(last)}</b>.${st.lastErr ? `<div style="color:var(--danger);margin-top:4px">Last try didn't go through: ${cEsc(st.lastErr)}</div>` : ''}</div>
+          <label class="cl-chk"><input type="checkbox" id="clAuto" ${st.auto ? 'checked' : ''} /> Back up to the cloud after each saved night</label>
+          <div class="btn-row"><button class="btn" id="clUp" type="button">☁️ Back up now</button><button class="btn secondary" id="clDown" type="button">Restore from cloud</button></div>
+          <div class="btn-row" style="margin-top:6px"><button class="btn secondary" id="clPass" type="button">Change password</button><button class="btn secondary" id="clOut" type="button">Sign out</button></div>
+          <div class="small" style="margin-top:8px">Your data stays on this phone too, and the app works offline as before. The cloud keeps your latest backup plus one a day for 14 days.</div>`;
+        BT.$('#clAuto').onchange = (e) => BTCloud.setAuto(e.target.checked);
+        BT.$('#clUp').onclick = () => run(async () => { const r = await BTCloud.backupNow(); cloudMsg = `✅ Backed up (${Math.round((r.bytes || 0) / 1024)} KB).`; });
+        BT.$('#clDown').onclick = () => run(async () => {
+          const info = await BTCloud.cloudInfo(); if (!info || !info.backup) throw new Error('No cloud backup yet. Tap Back up now first.');
+          const when = info.savedAt ? new Date(info.savedAt).toLocaleString() : 'unknown';
+          if (!confirm(`Replace everything on this phone with your cloud backup from ${when}?\n\nAnything on this phone that isn't in that backup will be lost.`)) return;
+          const r = await BTCloud.restore(); alert(`Restored ${r.keys} items from your cloud backup. The app will reload.`); location.reload();
+        });
+        BT.$('#clPass').onclick = () => { cloudMode = 'newpass'; cloudMsg = ''; renderCloud(); };
+        BT.$('#clOut').onclick = () => run(async () => { if (!confirm('Sign out of cloud backup on this phone? Your data stays on the phone.')) return; await BTCloud.signOut(); cloudMsg = 'Signed out.'; });
+        return;
+      }
+      if (cloudMode === 'newpass' || cloudMode === 'invite') {
+        box.innerHTML = `${msg}<div class="small">${cloudMode === 'invite' ? 'Welcome! Pick a password for your account.' : 'Pick a new password.'}</div>
+          <input class="input" id="clPw" type="password" autocomplete="new-password" placeholder="New password (8+ characters)" style="margin-top:8px" />
+          <div class="btn-row"><button class="btn" id="clSave" type="button">Save password</button>${cloudMode === 'newpass' && st.signedIn ? '<button class="btn secondary" id="clCancel" type="button">Cancel</button>' : ''}</div>`;
+        BT.$('#clSave').onclick = () => run(async () => { const pw = BT.$('#clPw').value; if (cloudMode === 'invite') await BTCloud.acceptInvite(inviteTok, pw); else await BTCloud.setPassword(pw); cloudMode = 'signin'; cloudMsg = '✅ Password saved.'; });
+        const cc = BT.$('#clCancel'); if (cc) cc.onclick = () => { cloudMode = 'signin'; renderCloud(); };
+        return;
+      }
+      const up = cloudMode === 'signup';
+      box.innerHTML = `${msg}<div class="small">${up ? 'Make an account so your data is backed up off this phone. You\'ll get an email to confirm it.' : 'Sign in to back up to the cloud and restore on a new phone. Optional: the app works the same without it.'}</div>
+        <input class="input" id="clEmail" type="email" autocomplete="email" inputmode="email" placeholder="Email" style="margin-top:8px" />
+        <input class="input" id="clPw" type="password" autocomplete="${up ? 'new-password' : 'current-password'}" placeholder="${up ? 'Password (8+ characters)' : 'Password'}" style="margin-top:8px" />
+        <div class="btn-row"><button class="btn" id="clGo" type="button">${up ? 'Create account' : 'Sign in'}</button><button class="btn secondary" id="clSwitch" type="button">${up ? 'I have an account' : 'Create an account'}</button></div>
+        ${up ? '' : '<button class="cl-link" id="clForgot" type="button">Forgot password?</button>'}`;
+      BT.$('#clSwitch').onclick = () => { cloudMode = up ? 'signin' : 'signup'; cloudMsg = ''; renderCloud(); };
+      BT.$('#clGo').onclick = () => run(async () => {
+        const em = BT.$('#clEmail').value, pw = BT.$('#clPw').value;
+        if (up) { const r = await BTCloud.signUp(em, pw); cloudMsg = r.confirm ? `📧 Check <b>${cEsc(em)}</b> for a confirmation email, then tap the link in it on this phone.` : '✅ Account made and signed in.'; cloudMode = 'signin'; }
+        else { await BTCloud.signIn(em, pw); cloudMsg = '✅ Signed in.'; }
+      });
+      const fg = BT.$('#clForgot'); if (fg) fg.onclick = () => run(async () => { const em = BT.$('#clEmail').value.trim(); if (!em) throw new Error('Type your email first, then tap Forgot password.'); await BTCloud.forgot(em); cloudMsg = `📧 If ${cEsc(em)} has an account, a reset link is on its way.`; });
+    }
+    async function run(fn) {
+      BT.$all('#cloudBox button').forEach(b => { b.disabled = true; });
+      try { await fn(); } catch (e) { cloudMsg = `<span style="color:var(--danger)">${cEsc(e.message || e)}</span>`; }
+      renderCloud(); try { renderBackupStatus(); } catch (_e) {}
+    }
+    // Email links (confirm, reset password, invite) open Home with a token in the address.
+    function cloudLink() { if (!window.BTCloud) return; BTCloud.handleLink().then(r => {
+      if (!r) return renderCloud();
+      if (r.type === 'signup') cloudMsg = '✅ Email confirmed. You\'re signed in: tap Back up now.';
+      if (r.type === 'recovery') { cloudMode = 'newpass'; cloudMsg = 'Signed in from your reset link.'; }
+      if (r.type === 'invite') { cloudMode = 'invite'; inviteTok = r.token; }
+      renderCloud();
+    }).catch(e => { cloudMsg = `<span style="color:var(--danger)">That link didn't work: ${cEsc(e.message || e)}</span>`; renderCloud(); }); }
+    cloudLink(); window.addEventListener('hashchange', () => { if (/_token=/.test(location.hash)) cloudLink(); });
+
     // 🏠 Home menu: a card per section; one section at a time with a tile bar.
     const oldHash = () => { if (location.hash === '#testTools') history.replaceState(null, '', '#tools'); };
     oldHash(); window.addEventListener('hashchange', oldHash);
@@ -252,7 +320,7 @@
         d('setup', done === 4 ? '✓ All 4 done' : `${done} of 4 done · do these once, in order`);
         d('night', st.sessions ? `Plan → Game Day → Scores · ${st.sessions} night${st.sessions === 1 ? '' : 's'} saved` : 'Plan → Game Day → Scores');
         const at = BT.lastBackupAt(), days = at ? Math.floor((Date.now() - at) / 86400000) : null;
-        d('data', at ? `Last backup ${new Date(at).toLocaleDateString()}${days >= 7 ? ` · ${days} days ago, time for a new one` : ''}` : (st.sessions ? 'Not backed up yet: your data is only on this phone' : 'Back up or restore'));
+        const cs = window.BTCloud ? BTCloud.status() : {}; d('data', cs.signedIn ? `☁️ Cloud backup on${cs.lastUp ? ' · last ' + new Date(cs.lastUp).toLocaleDateString() : ''}` : at ? `Last backup ${new Date(at).toLocaleDateString()}${days >= 7 ? ` · ${days} days ago, time for a new one` : ''}` : (st.sessions ? 'Not backed up yet: your data is only on this phone' : 'Back up or restore'));
         d('tools', `You're on ${BT.APP_VERSION} · updates and Test mode`);
         const sub = hub.querySelector('[data-hubsub]'); if (sub) sub.textContent = '';
       },

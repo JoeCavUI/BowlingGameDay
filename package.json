@@ -1,0 +1,8 @@
+{
+  "name": "bowling-game-day",
+  "private": true,
+  "description": "Bowling Tool PWA. The site is static files; this package only lists what the cloud backup function needs.",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}

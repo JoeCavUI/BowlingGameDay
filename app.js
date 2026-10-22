@@ -1819,7 +1819,7 @@
     renderNav,
     speak, stopSpeaking, isSpeaking, wireReadAloud, speechText,
     isTestMode, hasTestData, enterTestMode, exitTestMode, resetTestData, checkForUpdate,
-    exportBackup,
+    exportBackup, buildBackup, appDataKeys,
     importBackupFile,
     lastBackupAt,
     setupStatus,

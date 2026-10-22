@@ -4,7 +4,7 @@
 const CACHE = 'bowling-tool-v120-beta57';
 const SHELL = [
   './', 'index.html', 'bowler.html', 'arsenal.html', 'analyze.html', 'lane.html',
-  'oil.html', 'gameday.html', 'plan.html', 'angle.html', 'scores.html', 'guide.html', 'styles.css?v=120', 'app.js?v=120', 'coach.js?v=120', 'chart.js?v=120', 'pinpal.js?v=120', 'history.js?v=120', 'plan.js?v=120', 'insight.js?v=120',
+  'oil.html', 'gameday.html', 'plan.html', 'angle.html', 'scores.html', 'guide.html', 'styles.css?v=120', 'app.js?v=120', 'coach.js?v=120', 'chart.js?v=120', 'pinpal.js?v=120', 'history.js?v=120', 'plan.js?v=120', 'insight.js?v=120', 'cloud.js?v=120',
   'databalls.csv', 'manifest.webmanifest',
   'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png'
 ];
@@ -27,7 +27,9 @@ function timeout(ms) { return new Promise((_, rej) => setTimeout(() => rej(new E
 
 self.addEventListener('fetch', (e) => {
   const req = e.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  const u = new URL(req.url);
+  // Sign-in and cloud backup always go to the network, never the cache.
+  if (req.method !== 'GET' || u.origin !== self.location.origin || u.pathname.startsWith('/.netlify/') || u.pathname.startsWith('/api/')) return;
   e.respondWith((async () => {
     const cache = await caches.open(CACHE);
     try {
