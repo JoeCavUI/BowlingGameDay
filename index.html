@@ -33,79 +33,47 @@
       </div>
     </div>
 
-    <div class="grid-2" style="margin-top:14px">
-      <div class="panel">
-        <h2>Get set up</h2>
-        <div class="small">Do these once, in order (the tabs at the top run in the same order). New here? <a href="guide.html" style="color:var(--accent);font-weight:700">Read the step-by-step guide →</a></div>
-        <ul class="checklist" id="checklist"></ul>
-        <h2 style="margin-top:16px">Every league night</h2>
-        <ul class="checklist" id="nightlist"></ul>
-      </div>
+    <!-- 🏠 Home: a compact menu (like Arsenal). Go-to tiles for the app pages, then one card per Home section. -->
+    <div id="homeGo" class="home-go"></div>
+    <div class="ar-hub" id="homeHub"></div>
+    <div class="ar-nav" id="homeNav" style="display:none"></div>
 
-      <div class="panel">
-        <h2>Your data</h2>
-        <div class="small" id="backupStatus">Everything is saved on this phone only.</div>
-        <div class="btn-row">
-          <button class="btn" id="exportBtn">Back up my data</button>
-          <label class="btn secondary" for="importFile" style="display:inline-flex;align-items:center">Restore from backup</label>
-          <input id="importFile" type="file" accept=".json,application/json" style="display:none" />
-        </div>
-        <div class="small" style="margin-top:10px">
-          Back up after each league night. Save the file to Files or email it to yourself. If you switch phones or clear Safari, use <b>Restore</b> to bring everything back.
-        </div>
+    <div class="panel" data-secpage="setup">
+      <h2>🏁 Get set up</h2>
+      <div class="small">Do these once, in order (the tabs at the top run in the same order). New here? <a href="guide.html" style="color:var(--accent);font-weight:700">Read the step-by-step guide →</a></div>
+      <ul class="checklist" id="checklist"></ul>
+    </div>
+
+    <div class="panel" data-secpage="night">
+      <h2>🌙 Every league night</h2>
+      <ul class="checklist" id="nightlist"></ul>
+    </div>
+
+    <div class="panel" data-secpage="data">
+      <h2>💾 Your data</h2>
+      <div class="small" id="backupStatus">Everything is saved on this phone only.</div>
+      <div class="btn-row">
+        <button class="btn" id="exportBtn">Back up my data</button>
+        <label class="btn secondary" for="importFile" style="display:inline-flex;align-items:center">Restore from backup</label>
+        <input id="importFile" type="file" accept=".json,application/json" style="display:none" />
+      </div>
+      <div class="small" style="margin-top:10px">
+        Back up after each league night. Save the file to Files or email it to yourself. If you switch phones or clear Safari, use <b>Restore</b> to bring everything back.
       </div>
     </div>
 
-    <div class="panel" id="feedbackPanel" style="margin-top:14px">
+    <div class="panel" id="feedbackPanel" data-secpage="feedback">
       <h2>💬 Send feedback</h2>
       <div class="small">Found something wrong or confusing? Take a screenshot first, then tap below. It opens a message with your app version and phone already filled in: pick Messages or Mail, add the screenshot, and send it to whoever gave you the app.</div>
       <div class="btn-row"><button class="btn" id="feedbackBtn" type="button">💬 Send feedback</button></div>
     </div>
 
-    <div class="panel" id="testTools" style="margin-top:14px">
+    <div class="panel" id="testTools" data-secpage="tools">
       <h2>🛠️ Testing tools</h2>
       <div class="small" id="updateStatus">You're on <b id="verNow"></b>.</div>
       <div class="btn-row"><button class="btn secondary" id="updateBtn">Check for update</button></div>
       <div class="hr-split" style="margin:12px 0"></div>
       <div id="testModeBox"></div>
-    </div>
-
-    <div class="grid-2" style="margin-top:14px">
-      <div class="panel">
-        <h2>📋 Game Plan</h2>
-        <div class="small">Before you bowl: tell Coach the house and lanes, get tonight's plan (ball, line, spares, if/then). Save it as a PDF.</div>
-        <div style="margin-top:10px"><a class="btn" href="plan.html">Build tonight's plan</a></div>
-      </div>
-      <div class="panel">
-        <h2>Game Day</h2>
-        <div class="small">Track shots + coaching + save session to Scores.</div>
-        <div style="margin-top:10px"><a class="btn" href="gameday.html">Open Game Day</a></div>
-      </div>
-      <div class="panel">
-        <h2>Scores</h2>
-        <div class="small">History: sessions by date/house/pattern + summary.</div>
-        <div style="margin-top:10px"><a class="btn" href="scores.html">Open Scores</a></div>
-      </div>
-      <div class="panel">
-        <h2>Bowler</h2>
-        <div class="small">Save your PAP, speed, rev rate, tilt, rotation, etc.</div>
-        <div style="margin-top:10px"><a class="btn" href="bowler.html">Open Bowler Info</a></div>
-      </div>
-      <div class="panel">
-        <h2>Arsenal</h2>
-        <div class="small">Add your balls → matrix + table.</div>
-        <div style="margin-top:10px"><a class="btn" href="arsenal.html">Open Arsenal</a></div>
-      </div>
-      <div class="panel">
-        <h2>Create your own bag</h2>
-        <div class="small">Pick the balls you're bringing tonight (Arsenal → Create your own bag).</div>
-        <div style="margin-top:10px"><a class="btn" href="analyze.html">Create your own bag</a></div>
-      </div>
-      <div class="panel">
-        <h2>Oil</h2>
-        <div class="small">Save houses and oil patterns (length, volume, ratio, notes).</div>
-        <div style="margin-top:10px"><a class="btn" href="oil.html">Open Oil</a></div>
-      </div>
     </div>
   </div>
 
@@ -265,7 +233,37 @@
       }
     }
     renderTestMode();
-    if (location.hash === '#testTools') setTimeout(() => BT.$('#testTools').scrollIntoView({ block: 'start' }), 50);
+
+    // 🏠 Home menu: go-to tiles for every page, then a card per section; one section at a time with a tile bar.
+    const GO = [
+      ['plan.html', '📋', 'Plan'], ['gameday.html', '🎯', 'Game Day'], ['scores.html', '🎳', 'Scores'], ['bowler.html', '🙋', 'Bowler'],
+      ['arsenal.html', '🎒', 'Arsenal'], ['analyze.html', '🧺', 'Build bag'], ['oil.html', '🛢️', 'Oil'], ['angle.html', '📐', 'Angles'],
+    ];
+    BT.$('#homeGo').innerHTML = `<div class="small dim" style="margin:10px 0 6px">Go to</div><div class="ar-chips" style="grid-template-columns:repeat(4,1fr)">${GO.map(([h, i, t]) => `<a class="ar-chip" href="${h}"><span class="i">${i}</span>${t}</a>`).join('')}</div>`;
+    const oldHash = () => { if (location.hash === '#testTools') history.replaceState(null, '', '#tools'); };
+    oldHash(); window.addEventListener('hashchange', oldHash);
+    BT.sectionPages({
+      hub: BT.$('#homeHub'), nav: BT.$('#homeNav'), homeLabel: 'Home', cols: 5,
+      pages: [
+        { id: 'setup', icon: '🏁', t: 'Get set up', s: 'Set up', d: 'Do these once, in order' },
+        { id: 'night', icon: '🌙', t: 'Every league night', s: 'League night', d: 'Plan → Game Day → Scores' },
+        { id: 'data', icon: '💾', t: 'Your data', s: 'Data', d: 'Back up or restore' },
+        { id: 'feedback', icon: '💬', t: 'Send feedback', s: 'Feedback', d: 'Screenshot first, then send' },
+        { id: 'tools', icon: '🛠️', t: 'Testing tools', s: 'Testing', d: 'Updates and Test mode' },
+      ],
+      onShow: (id, hub) => {
+        BT.$('#homeGo').style.display = id ? 'none' : '';
+        const st = BT.setupStatus();
+        const done = [st.bowler, st.customBalls > 0 || st.ballList > 0, st.history, st.houses && st.patterns].filter(Boolean).length;
+        const d = (k, t) => { const e = hub.querySelector(`[data-hubd="${k}"]`); if (e) e.textContent = t; };
+        d('setup', done === 4 ? '✓ All 4 done' : `${done} of 4 done · do these once, in order`);
+        d('night', st.sessions ? `Plan → Game Day → Scores · ${st.sessions} night${st.sessions === 1 ? '' : 's'} saved` : 'Plan → Game Day → Scores');
+        const at = BT.lastBackupAt(), days = at ? Math.floor((Date.now() - at) / 86400000) : null;
+        d('data', at ? `Last backup ${new Date(at).toLocaleDateString()}${days >= 7 ? ` · ${days} days ago, time for a new one` : ''}` : (st.sessions ? 'Not backed up yet: your data is only on this phone' : 'Back up or restore'));
+        d('tools', `You're on ${BT.APP_VERSION} · updates and Test mode`);
+        const sub = hub.querySelector('[data-hubsub]'); if (sub) sub.textContent = '';
+      },
+    });
   </script>
 </body>
 </html>
