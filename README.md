@@ -58,6 +58,13 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v122-beta59: 5 Scoring Elements, smarter bag pick
+- 🎳 Del Warren's 5 Scoring Elements (Kegel): Direction (geometry, targeting, posture), Speed (total, versatility), Angle (entry, exit point), Revs (hook, versatility), Roll. Each graded with its parts in the night review; planned speed / hand changes (Changed since last shot) count as versatility, not misses.
+- 📊 Stats: 5 Scoring Elements by night, with the average and your lowest element; tap a night to open its review.
+- Bowler page and Guide reworded to the new model.
+- 🎒 Bag pick: the start ball is the one with the best game 1 record at the house; records are recency-weighted (last 12 months count fully); balls with games here come before untested ones, which are labeled; one-line reason per ball on the bag screen.
+- 🏅 Best averages here: your top balls at the house, and why any of them didn't make the bag (recency, plays too close to another ball, lower recent form).
+
 ## Changes in v121-beta58: Full scoring, Stats dashboard, cloud backup
 
 - **🎳 Full scoring in Game Day:** after each non-strike, tap the pins still standing after your 2nd ball (or Spare); splits flagged; 10th frame and fill balls; live 10-frame scorecard and running score; scores fill in on save. Setting: keep score here, or first ball only (scoring in PinPal).
