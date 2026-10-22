@@ -33,8 +33,7 @@
       </div>
     </div>
 
-    <!-- 🏠 Home: a compact menu (like Arsenal). Go-to tiles for the app pages, then one card per Home section. -->
-    <div id="homeGo" class="home-go"></div>
+    <!-- 🏠 Home: a compact menu (like Arsenal), one card per Home section. The tab bar at the top goes to the other pages. -->
     <div class="ar-hub" id="homeHub"></div>
     <div class="ar-nav" id="homeNav" style="display:none"></div>
 
@@ -234,12 +233,7 @@
     }
     renderTestMode();
 
-    // 🏠 Home menu: go-to tiles for every page, then a card per section; one section at a time with a tile bar.
-    const GO = [
-      ['plan.html', '📋', 'Plan'], ['gameday.html', '🎯', 'Game Day'], ['scores.html', '🎳', 'Scores'], ['bowler.html', '🙋', 'Bowler'],
-      ['arsenal.html', '🎒', 'Arsenal'], ['analyze.html', '🧺', 'Build bag'], ['oil.html', '🛢️', 'Oil'], ['angle.html', '📐', 'Angles'],
-    ];
-    BT.$('#homeGo').innerHTML = `<div class="small dim" style="margin:10px 0 6px">Go to</div><div class="ar-chips" style="grid-template-columns:repeat(4,1fr)">${GO.map(([h, i, t]) => `<a class="ar-chip" href="${h}"><span class="i">${i}</span>${t}</a>`).join('')}</div>`;
+    // 🏠 Home menu: a card per section; one section at a time with a tile bar.
     const oldHash = () => { if (location.hash === '#testTools') history.replaceState(null, '', '#tools'); };
     oldHash(); window.addEventListener('hashchange', oldHash);
     BT.sectionPages({
@@ -252,7 +246,6 @@
         { id: 'tools', icon: '🛠️', t: 'Testing tools', s: 'Testing', d: 'Updates and Test mode' },
       ],
       onShow: (id, hub) => {
-        BT.$('#homeGo').style.display = id ? 'none' : '';
         const st = BT.setupStatus();
         const done = [st.bowler, st.customBalls > 0 || st.ballList > 0, st.history, st.houses && st.patterns].filter(Boolean).length;
         const d = (k, t) => { const e = hub.querySelector(`[data-hubd="${k}"]`); if (e) e.textContent = t; };
