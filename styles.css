@@ -805,3 +805,4 @@ select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }
 .sc-m span{min-width:9px;text-align:center}.sc-sp{border:1px solid #ffb35c;border-radius:50%;padding:0 2px;color:#ffb35c}
 .sc-c{text-align:center;font-size:12px;padding:1px 0 3px;min-height:18px}
 @media print{.sc-card,.sc-f{border-color:#999 !important}.sc-sp{color:#b35c00 !important;border-color:#b35c00 !important}}
+.sc-live{margin:6px 0 10px}.sc-now{background:rgba(99,230,210,.14)}

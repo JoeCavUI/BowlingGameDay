@@ -66,6 +66,10 @@
                 <option value="other">Each new game starts on the other lane</option>
                 <option value="same">Each new game starts on the same lane</option>
               </select>
+              <select id="scoreMode" class="input" style="margin-top:6px" aria-label="Keep score">
+                <option value="on">Keep score here (2nd ball after each frame)</option>
+                <option value="off">First ball only (I keep score in PinPal)</option>
+              </select>
             </div>
             <div>
               <label>Oil pattern</label>
@@ -168,6 +172,7 @@
         <!-- The shot, in the order you see it -->
         <div class="panel" id="shotPanel">
           <div class="gd-frameline" id="frameLine">Game 1 · Frame 1</div>
+          <div id="liveCard"></div>
           <div id="gameFlow"></div>
           <div class="gd-q"><span class="gd-qnum">1</span><b>Your mark</b></div>
           <div id="readsMiss" style="margin-top:6px"></div>
@@ -355,6 +360,7 @@
       lanes: BT.$('#lanes'),
       startLane: BT.$('#startLane'),
       gameLane: BT.$('#gameLane'),
+      scoreMode: BT.$('#scoreMode'),
       pattern: BT.$('#pattern'),
       league: BT.$('#league'),
       addLeagueBtn: BT.$('#addLeagueBtn'),
@@ -2515,6 +2521,9 @@ function sessionSummary(shots) {
         el.gameLane.value = BT.lsGet(GL_KEY, 'other') === 'same' ? 'same' : 'other';
         el.gameLane.addEventListener('change', () => { BT.lsSet(GL_KEY, el.gameLane.value); syncNextLane(); markCoachDirty(); });
       }
+      // 🎳 Keep score here, or first ball only (scoring in PinPal)
+      const SM_KEY = 'bt_gameday_score_mode_v1';
+      if (el.scoreMode) { el.scoreMode.value = BT.lsGet(SM_KEY, 'on') === 'off' ? 'off' : 'on'; el.scoreMode.addEventListener('change', () => { BT.lsSet(SM_KEY, el.scoreMode.value); updateFrameUI(); renderGameFlow(); }); }
       // ✎ Fix the lane / frame (a skipped or missed shot, or the game started on the other lane)
       document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('[data-deckfix]')) openFrameFix(); });
       el.startLane.addEventListener('change', () => {
@@ -2733,7 +2742,9 @@ function sessionSummary(shots) {
     // ---------- Game flow: 10th frame, fill balls, automatic next game ----------
     function isStrikeShot(x) { const L = (x && x.leaves) || []; return L.includes('Strike') || L.includes('Brooklyn') || x.leaveTag === 'Strike' || x.leaveTag === 'Brooklyn'; }
     // 🎳 2nd ball still to record? (the last first ball wasn't a strike, or the 1st fill after a 10th-frame strike wasn't)
+    const scoringOn = () => !el.scoreMode || el.scoreMode.value !== 'off';
     function pendingSecond() {
+      if (!scoringOn()) return null;
       const g = currentGameShotsChron(); if (!g.length) return null;
       const last = g[g.length - 1], nf = g.filter(x => !x.isFill), fills = g.filter(x => x.isFill);
       const open = (x) => x && !isStrikeShot(x) && !x.second && x.tenthSpare == null && !x.noSecond;
@@ -2769,7 +2780,8 @@ function sessionSummary(shots) {
       const box = BT.$('#gameFlow'), line = BT.$('#frameLine'); if (!box || !line) return;
       const st = gameState(), g = currentGameNumber();
       let sc = null; try { sc = BT.scoreGame(currentGameShotsChron()); } catch (_e) {}
-      const scTxt = sc && sc.complete ? ` · <b>${sc.total}</b>` : sc && sc.thru ? ` · <b>${sc.thru.score}</b> thru ${sc.thru.frame}` : '';
+      const scTxt = !scoringOn() ? '' : sc && sc.complete ? ` · <b>${sc.total}</b>` : sc && sc.thru ? ` · <b>${sc.thru.score}</b> thru ${sc.thru.frame}` : '';
+      { const lc = BT.$('#liveCard'); if (lc) { if (scoringOn() && sc && sc.frames.length) { const fr = sc.frames.slice(); while (fr.length < 10) fr.push({ no: fr.length + 1, marks: [''], cum: null }); lc.innerHTML = `<div class="sc-card sc-live">${fr.map(f => `<div class="sc-f${f.no === 10 ? ' sc-10' : ''}${f.no === st.frame && st.phase !== 'done' ? ' sc-now' : ''}"><div class="sc-m">${f.marks.map((m, i) => `<span${i === 0 && f.split ? ' class="sc-sp"' : ''}>${m === '?' ? '' : m}</span>`).join('')}</div><div class="sc-c">${f.cum ?? ''}</div></div>`).join('')}</div>`; } else lc.innerHTML = ''; } }
       line.innerHTML = (st.phase === 'second' ? `Game ${g} · Frame ${st.frame} · 2nd ball` : st.phase === 'fill' ? `Game ${g} · 10th frame · fill ball ${st.fillNo}` : st.phase === 'done' || st.phase === 'askSpare' ? `Game ${g} · 10th frame` : `Game ${g} · Frame ${st.frame}`) + scTxt;
       let h = '';
       if (st.phase === 'second') {
