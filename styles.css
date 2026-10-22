@@ -798,3 +798,10 @@ select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }
 .sb-down{fill:none;stroke:rgba(255,255,255,.15);stroke-width:1;stroke-dasharray:2 2}
 .sb-t{fill:rgba(255,255,255,.9)}.sb-td{fill:rgba(255,255,255,.25)}
 .sb-split{display:inline-block;padding:0 6px;border-radius:999px;background:rgba(255,179,92,.25);font-size:12px;font-weight:700}
+/* 🎳 Scorecard */
+.sc-card{display:grid;grid-template-columns:repeat(9,1fr) 1.45fr;border:1px solid rgba(255,255,255,.25);border-radius:6px;margin:6px 0;overflow:hidden}
+.sc-f{border-right:1px solid rgba(255,255,255,.2);min-width:0}.sc-f:last-child{border-right:0}
+.sc-m{display:flex;justify-content:flex-end;gap:1px;font-size:12px;font-weight:700;padding:2px 2px 0;min-height:16px}
+.sc-m span{min-width:9px;text-align:center}.sc-sp{border:1px solid #ffb35c;border-radius:50%;padding:0 2px;color:#ffb35c}
+.sc-c{text-align:center;font-size:12px;padding:1px 0 3px;min-height:18px}
+@media print{.sc-card,.sc-f{border-color:#999 !important}.sc-sp{color:#b35c00 !important;border-color:#b35c00 !important}}

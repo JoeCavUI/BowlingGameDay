@@ -102,6 +102,7 @@
         <div><label>Pocket</label><input id="editPocket" class="input" /></div>
         <div><label>Exit</label><input id="editExit" class="input" /></div>
         <div><label>Leave / tag</label><input id="editLeaveTag" class="input" placeholder="Strike / Flat 10 / 4-7"/></div>
+        <div><label>After the 2nd ball</label><input id="editSecond" class="input" placeholder="Pins still standing (blank = spare)"/></div>
         <div><label>Miss room</label><input id="editMiss" class="input" placeholder="na / rightRecovered / leftHeld / rightMiss / leftMiss"/></div>
         <div style="grid-column:1/-1"><label>Notes</label><input id="editNotes" class="input" /></div>
       </div>
@@ -297,6 +298,7 @@
       el.editLeaveTag.value = sh.leaveTag || (Array.isArray(sh.leavePins)&&sh.leavePins.length ? sh.leavePins.join('-') : (Array.isArray(sh.leaves)&&sh.leaves[0]) || '');
       el.editMiss.value = sh.miss || 'na';
       el.editNotes.value = sh.notes || '';
+      BT.$('#editSecond').value = sh.second && Array.isArray(sh.second.left) ? sh.second.left.join('-') : '';
       el.editModal.classList.remove('hidden');
     }
 
@@ -333,6 +335,9 @@
           sh.leaves = [leaveRaw];
         }
       }
+      { const lv = BT.standingPins(sh), sv = BT.$('#editSecond').value.trim();
+        if (!lv.length) delete sh.second;
+        else if (sv || sh.second) { const left = sv.split(/[^0-9]+/).map(Number).filter(p => lv.includes(p)); sh.second = { left: [...new Set(left)].sort((a, z) => a - z), spare: left.length === 0, at: (sh.second && sh.second.at) || Date.now() }; if (Number(sh.frame) === 10 && !sh.isFill) sh.tenthSpare = sh.second.spare; } }
       recomputeSessionSummary(s);
       recomputeLaneStats(s);
       BT.lsSet(BT.KEYS.GAME_SESSIONS, sessions);
@@ -436,7 +441,8 @@
         if (first && last && lineKey(first) !== lineKey(last)) notes.push(`line ${lineKey(first)} → ${lineKey(last)}`);
         const bs = [...new Set(gs.map(x => x.ball).filter(Boolean))]; if (bs.length) notes.push(bs.length === 1 ? bs[0] : `balls: ${bs.join(', ')}`);
         const mv = gs.filter((x, i) => i && (x.feet !== gs[i - 1].feet || x.arrows !== gs[i - 1].arrows)).length; if (mv) notes.push(`${mv} move${mv === 1 ? '' : 's'}`);
-        return { no: g, score: scoreFor(g), m, notes };
+        let card = null; try { const all = chron.filter(x => x.type !== 'gameStart' && (Number(x.gameNo) || 1) === g); const c = BT.scoreGame(all); if (c.frames.some(f => f.shot && (f.shot.second || f.shot.noSecond)) || c.complete) card = c; } catch (_e) {}
+        return { no: g, score: scoreFor(g) ?? (card && card.complete ? card.total : null), m, notes, card };
       });
       const ballsM = {}; real.forEach(x => { const b = x.ball || 'Unknown'; (ballsM[b] = ballsM[b] || []).push(x); });
       const balls = Object.entries(ballsM).map(([ball, arr]) => ({ ball, m: metrics(arr) })).sort((a, z) => z.m.n - a.m.n);
@@ -451,7 +457,7 @@
         return { no: g, score: scoreFor(g), shots: gs.map(x => {
           const moved = !x.isFill && prev && (x.feet !== prev.feet || x.arrows !== prev.arrows) ? `${prev.feet ?? '—'}/${prev.arrows ?? '—'} → ${x.feet ?? '—'}/${x.arrows ?? '—'}` : '';
           if (!x.isFill) prev = x;
-          const res = leaveOf(x), flag = String(x.pocket) === 'Pocket flush' && !isX(x) ? `⚠️ flush, left the ${res}` : '';
+          const res = leaveOf(x) + (x.second && Array.isArray(x.second.left) ? (x.second.left.length ? ` → ${x.second.left.join('-')} left` : ' → spare ✓') : ''), flag = String(x.pocket) === 'Pocket flush' && !isX(x) ? `⚠️ flush, left the ${leaveOf(x)}` : '';
           return { idx: idxOf.get(x), sh: x, result: res, pocket: String(x.pocket || '').replace(/^Pocket /, 'pocket ').replace('Unknown', ''), mark: /^Missed/.test(String(x.pocket || '')) ? '' : (MARK[x.miss] || ''), line: lineKey(x), moved, fault: x.fault && window.BTCoach ? BTCoach.faultLabel(x.fault) : '', flag };
         }) };
       });
@@ -465,6 +471,12 @@
       if (laneNote && !T.some(t => t.t === laneNote)) sp.push(strip(laneNote));
       if (moves && moves.tip && !T.some(t => /poor shot/.test(t.t))) sp.push(strip(moves.tip));
       return { scores, headline, okPct, all, takeaways: T, games, lanes, laneNote, balls, moves, faults, five, eye: eyeballFor(s), log, speech: sp.join(' ').replace(/(\d)%/g, '$1 percent') };
+    }
+    // 🎳 Frame-by-frame scorecard (marks on top, running total under each frame; splits circled)
+    function scorecard(c) {
+      const cell = (f) => `<div class="sc-f${f.no === 10 ? ' sc-10' : ''}"><div class="sc-m">${f.marks.map((m, i) => `<span${i === 0 && f.split ? ' class="sc-sp"' : ''}>${m}</span>`).join('')}</div><div class="sc-c">${f.cum ?? ''}</div></div>`;
+      const fr = c.frames.slice(); while (fr.length < 10) fr.push({ no: fr.length + 1, marks: [''], cum: null });
+      return `<div class="sc-card">${fr.map(cell).join('')}</div>`;
     }
     function jumpToShots() { const L = BT.$('#nrShotLog'); if (L) L.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     // Double tap (works on iPhone, where dblclick isn't reliable): two taps within 350 ms.
@@ -541,7 +553,7 @@
         </div>
         ${pinpalPanel(s, true)}
         ${R.takeaways.length ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>💡 What tonight says</b><ol class="nr-list">${R.takeaways.map(t => `<li><b>${t.k}:</b> ${t.t}</li>`).join('')}</ol></div>` : ''}
-        ${R.games.length > 1 || (R.games[0] && R.games[0].score != null) ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🎯 Game by game</b>${R.games.map(g => `<div class="nr-row"><b>Game ${g.no}${g.score != null ? ': ' + g.score : ''}</b><div class="small">${statLine(g.m)}</div>${g.notes.length ? `<div class="small" style="opacity:1">${g.notes.join(' · ')}</div>` : ''}</div>`).join('')}</div>` : ''}
+        ${R.games.length > 1 || (R.games[0] && R.games[0].score != null) ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🎯 Game by game</b>${R.games.map(g => `<div class="nr-row"><b>Game ${g.no}${g.score != null ? ': ' + g.score : ''}</b>${g.card ? scorecard(g.card) : ''}<div class="small">${statLine(g.m)}</div>${g.notes.length ? `<div class="small" style="opacity:1">${g.notes.join(' · ')}</div>` : ''}</div>`).join('')}</div>` : ''}
         ${R.lanes.length ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>↔️ Lanes</b>${R.lanes.map(l => `<div class="nr-row"><b>Lane ${esc(l.lane)}</b><div class="small">${statLine(l.m)}</div></div>`).join('')}${R.laneNote ? `<div class="small nr-note">${R.laneNote}</div>` : ''}</div>` : ''}
         ${R.balls.length ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🎳 Balls</b>${R.balls.map(b => `<div class="nr-row"><b>${esc(b.ball)}</b><div class="small">${statLine(b.m)}</div></div>`).join('')}</div>` : ''}
         ${R.moves ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>${R.moves.text}</b>${R.moves.tip ? `<div class="small" style="margin-top:6px;opacity:1">${R.moves.tip}</div>` : ''}</div>` : ''}
