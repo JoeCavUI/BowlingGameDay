@@ -268,7 +268,7 @@
         box.innerHTML = `${msg}<div class="small">${cloudMode === 'invite' ? 'Welcome! Pick a password for your account.' : 'Pick a new password.'}</div>
           <input class="input" id="clPw" type="password" autocomplete="new-password" placeholder="New password (8+ characters)" style="margin-top:8px" />
           <div class="btn-row"><button class="btn" id="clSave" type="button">Save password</button>${cloudMode === 'newpass' && st.signedIn ? '<button class="btn secondary" id="clCancel" type="button">Cancel</button>' : ''}</div>`;
-        BT.$('#clSave').onclick = () => run(async () => { const pw = BT.$('#clPw').value; if (cloudMode === 'invite') await BTCloud.acceptInvite(inviteTok, pw); else await BTCloud.setPassword(pw); cloudMode = 'signin'; cloudMsg = '✅ Password saved.'; });
+        BT.$('#clSave').onclick = () => run(async () => { const pw = BT.$('#clPw').value; if (cloudMode === 'invite') await BTCloud.acceptInvite(inviteTok, pw); else await BTCloud.setPassword(pw); cloudMode = 'signin'; cloudMsg = '✅ Password saved. If this opened in Safari, open the app from your Home Screen and sign in with it.'; });
         const cc = BT.$('#clCancel'); if (cc) cc.onclick = () => { cloudMode = 'signin'; renderCloud(); };
         return;
       }
@@ -281,7 +281,7 @@
       BT.$('#clSwitch').onclick = () => { cloudMode = up ? 'signin' : 'signup'; cloudMsg = ''; renderCloud(); };
       BT.$('#clGo').onclick = () => run(async () => {
         const em = BT.$('#clEmail').value, pw = BT.$('#clPw').value;
-        if (up) { const r = await BTCloud.signUp(em, pw); cloudMsg = r.confirm ? `📧 Check <b>${cEsc(em)}</b> for a confirmation email, then tap the link in it on this phone.` : '✅ Account made and signed in.'; cloudMode = 'signin'; }
+        if (up) { const r = await BTCloud.signUp(em, pw); cloudMsg = r.confirm ? `📧 Check <b>${cEsc(em)}</b> for a confirmation email and tap the link (it may open in Safari). Then come back here and sign in.` : '✅ Account made and signed in.'; cloudMode = 'signin'; }
         else { await BTCloud.signIn(em, pw); cloudMsg = '✅ Signed in.'; }
       });
       const fg = BT.$('#clForgot'); if (fg) fg.onclick = () => run(async () => { const em = BT.$('#clEmail').value.trim(); if (!em) throw new Error('Type your email first, then tap Forgot password.'); await BTCloud.forgot(em); cloudMsg = `📧 If ${cEsc(em)} has an account, a reset link is on its way.`; });
@@ -294,7 +294,7 @@
     // Email links (confirm, reset password, invite) open Home with a token in the address.
     function cloudLink() { if (!window.BTCloud) return; BTCloud.handleLink().then(r => {
       if (!r) return renderCloud();
-      if (r.type === 'signup') cloudMsg = '✅ Email confirmed. You\'re signed in: tap Back up now.';
+      if (r.type === 'signup') cloudMsg = '✅ Email confirmed and signed in. If this opened in Safari, go back to the app on your Home Screen and sign in there too.';
       if (r.type === 'recovery') { cloudMode = 'newpass'; cloudMsg = 'Signed in from your reset link.'; }
       if (r.type === 'invite') { cloudMode = 'invite'; inviteTok = r.token; }
       renderCloud();
