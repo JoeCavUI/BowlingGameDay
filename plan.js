@@ -160,10 +160,10 @@
     const roles = {}; ordered.forEach(q => { roles[q.n] = roleTag(q); });
     // One short reason per ball for the bag screen.
     const short = {}; ordered.forEach(q => { const j = String(job.get(q) || '').replace('?', ''), c = q.cond && q.cond[j];
-      short[q.n] = [c ? `${CL[j][0].toUpperCase() + CL[j].slice(1)} here: ${c.avg} over ${gm(c.n)}` : q.os ? `${q.os.avg} over ${gm(q.os.n)} here` : q.ownN ? 'Picked mostly from its cover / core / layout' : 'Picked from its cover / core / layout',
+      const onP = q.po && q.po.n >= 6; short[q.n] = [onP ? `Lanes ${lanes}: ${q.po.avg} over ${gm(q.po.n)}` : '', onP ? '' : c ? `${CL[j][0].toUpperCase() + CL[j].slice(1)} here: ${c.avg} over ${gm(c.n)}` : q.os ? `${q.os.avg} over ${gm(q.os.n)} here` : q.ownN ? 'Picked mostly from its cover / core / layout' : 'Picked from its cover / core / layout',
         q.lastD && q.lastD < yrCut ? `last thrown here ${monYr(q.lastD)}` : ''].filter(Boolean).join(' · '); });
     // 🏅 Best averages here: your top balls by average at this house, and why any of them isn't in the bag.
-    const best = scored.filter(s => s.os && s.os.n >= 6).sort((p, q) => q.os.avg - p.os.avg).slice(0, 6).map(s => {
+    const noteOf = (s) => {
       const inBag = ordered.includes(s);
       let note = '';
       if (inBag) note = `In the bag: ${roleTag(s)}`;
@@ -171,19 +171,27 @@
         const near = ordered.filter(p => p.t.x != null && s.t.x != null && Math.abs(p.t.x - s.t.x) < 10).sort((a, z) => Math.abs(a.t.x - s.t.x) - Math.abs(z.t.x - s.t.x))[0];
         const rec = s.rs && s.rs.avg <= s.os.avg - 8;
         if (s.lastD && s.lastD < yrCut) note = `Not in the bag because of recency: not thrown here since ${monYr(s.lastD)}, so its older games count for less${near ? `, and it plays close to ${esc(near.n)} on the Early → Late scale` : ''}`;
-        else if (near) { const j = String(job.get(near) || '').replace('?', ''), c = near.cond && near.cond[j]; note = `Not in the bag: it plays too close to ${esc(near.n)} on the Early → Late scale, and ${esc(near.n)} got the ${role(near).replace(/:.*$/, '').toLowerCase()} spot${c ? ` (${CL[j]} here: ${c.avg} over ${gm(c.n)})` : ''}`; }
+        else if (near) { const j = String(job.get(near) || '').replace('?', ''), c = near.cond && near.cond[j]; note = `Not in the bag: it plays too close to ${esc(near.n)} on the Early → Late scale, and ${esc(near.n)} got the ${role(near).replace(/:.*$/, '').toLowerCase()} spot${near.po && near.po.n >= 6 ? ` (lanes ${esc(lanes)}: ${near.po.avg} over ${gm(near.po.n)})` : c ? ` (${CL[j]} here: ${c.avg} over ${gm(c.n)})` : ''}`; }
         else if (rec) note = `Not in the bag because of recency: its last 12 months here are lower (${s.rs.avg} over ${gm(s.rs.n)})`;
         else note = 'Not in the bag: other balls scored higher for each job';
       }
-      return { n: s.n, avg: s.os.avg, games: s.os.n, inBag, note };
-    });
-    if (best.length) { items.unshift(`<span class="pl-h"><b>🏅 Best averages here</b> · 6+ games, and whether each made the bag</span>`, ...best.map((x, i) => `${i + 1}. <b>${esc(x.n)}</b>: ${x.avg} over ${gm(x.games)}<ul class="pl-sub"><li class="${x.inBag ? '' : 'dim'}">${x.inBag ? '✅ ' : ''}${x.note}.</li></ul>`)); }
+      return { inBag, note };
+    };
+    // On the pair first (3+ games there), then across the house (6+ games).
+    const pairBase = pairG.length ? hist.summary(pairG).avg : null;
+    const bestPair = lanes ? scored.filter(s => s.po).sort((p, q) => q.po.avg - p.po.avg || q.po.n - p.po.n).slice(0, 6).map(s => Object.assign({ n: s.n, avg: s.po.avg, games: s.po.n }, noteOf(s))) : [];
+    const best = scored.filter(s => s.os && s.os.n >= 6).sort((p, q) => q.os.avg - p.os.avg).slice(0, 6).map(s => Object.assign({ n: s.n, avg: s.os.avg, games: s.os.n, pairN: s.po ? s.po.n : 0 }, noteOf(s)));
+    const bestLi = (x, i) => `${i + 1}. <b>${esc(x.n)}</b>: ${x.avg} over ${gm(x.games)}<ul class="pl-sub"><li class="${x.inBag ? '' : 'dim'}">${x.inBag ? '✅ ' : ''}${x.note}.</li></ul>`;
+    const head = [];
+    if (bestPair.length) head.push(`<span class="pl-h"><b>🏅 Best averages on lanes ${esc(lanes)}</b> · 3+ games there (your pair average ${pairBase})</span>`, ...bestPair.map(bestLi));
+    if (best.length) head.push(`<span class="pl-h"><b>🏅 Best averages across the house</b> · 6+ games, all pairs</span>`, ...best.map(bestLi));
+    if (head.length) items.unshift(...head);
     // 🐎 Dark horse: a ball you've hardly thrown here whose cover / core / layout match what has worked here,
     // with a surface change toward the grit your best balls here are on. A theory to test in practice, not a pick.
     let dark = null;
     try { dark = darkHorse({ hist, G, H, P, scored, picked: ordered, byName, map, b }); } catch (e) { console.error(e); }
     if (dark) items.push(dark.head, dark.body);
-    return { dark, items, best, short, picked: ordered.map(p => p.n), first: first.n, roles, why: scored.map(s => ({ n: s.n, score: Math.round(s.score * 10) / 10, pred: Math.round(s.pred * 10) / 10, predK: s.predK, own: s.os ? [s.os.avg, s.os.n] : null, pair: s.po ? [s.po.avg, s.po.n] : null, t: s.t, cond: s.cond, job: job.get(s) || "" })), traits: { house: H.eff, pair: P ? P.eff : null, base: H.base } };
+    return { dark, items, best, bestPair, pairBase, short, picked: ordered.map(p => p.n), first: first.n, roles, why: scored.map(s => ({ n: s.n, score: Math.round(s.score * 10) / 10, pred: Math.round(s.pred * 10) / 10, predK: s.predK, own: s.os ? [s.os.avg, s.os.n] : null, pair: s.po ? [s.po.avg, s.po.n] : null, t: s.t, cond: s.cond, job: job.get(s) || "" })), traits: { house: H.eff, pair: P ? P.eff : null, base: H.base } };
   }
 
   // ---------- 🐎 Dark horse ----------
@@ -415,9 +423,15 @@
         const g1Of = (r) => { const gs = g1All.filter(g => hist.mainBall(g) === r.key); return gs.length >= 4 && base1 != null ? { s: hist.summary(gs), n: gs.length } : null; };
         const fresh = pool.map(r => ({ r, g1: g1Of(r) })).filter(x => x.g1 && x.g1.s.avg > base1).sort((a, z) => ((z.g1.s.avg - base1) * z.g1.n / (z.g1.n + 8) + (score(z.r) - S.avg) * 0.1) - ((a.g1.s.avg - base1) * a.g1.n / (a.g1.n + 8) + (score(a.r) - S.avg) * 0.1))[0];
         if (fresh && fresh.r !== pool[0]) { pool = [fresh.r, ...pool.filter(r => r !== fresh.r)]; }
-        const first = pool[0], fl = lately(first), f1 = fresh && fresh.r === first ? fresh.g1 : null;
+        // On the pair you're bowling: a ball with 6+ games there, clearly above your average on that pair, leads.
+        const pG = lanes ? G.filter(g => g.lanes === lanes) : [], pBase = pG.length >= 12 ? hist.summary(pG).avg : null;
+        const onPair = pBase == null ? null : pool.map(r => { const gs = pG.filter(g => hist.mainBall(g) === r.key); return gs.length >= 6 ? { r, s: hist.summary(gs), n: gs.length } : null; }).filter(x => x && x.s.avg >= pBase + 5)
+          .sort((a, z) => (z.s.avg - pBase) * z.n / (z.n + 6) - (a.s.avg - pBase) * a.n / (a.n + 6))[0];
+        if (onPair && onPair.r !== pool[0]) { pool = [onPair.r, ...pool.filter(r => r !== onPair.r)]; }
+        const first = pool[0], fl = lately(first), f1 = fresh && fresh.r === first ? fresh.g1 : null, fp = onPair && onPair.r === first ? onPair : null;
         out.firstBall = first.ar || first.key;
-        if (f1) items.push(`<b>First ball: ${esc(first.ar || first.key)}.</b> Best game 1 record here: <b>${f1.s.avg} over ${f1.n} game 1s</b> (your game 1 average here ${base1}). Overall ${first.avg} over ${first.n} games, ${first.strike}% strikes${fl ? `; ${fl.avg} in its ${fl.n} games here in the last 12 months` : ''}${recentCut.length && !usedRecently.has(first.key) ? `. <b>You haven't thrown it ${out.season.label.toLowerCase().startsWith('this season') ? 'this season' : 'in the last 12 months'}.</b>` : '.'}`);
+        if (fp) items.push(`<b>First ball: ${esc(first.ar || first.key)}.</b> Best record on <b>lanes ${esc(lanes)}</b>: <b>${fp.s.avg} over ${fp.n} games</b> (your average on this pair ${pBase}). Across the house: ${first.avg} over ${first.n} games${fl ? `; ${fl.avg} in its ${fl.n} games here in the last 12 months` : ''}.`);
+        else if (f1) items.push(`<b>First ball: ${esc(first.ar || first.key)}.</b> Best game 1 record here: <b>${f1.s.avg} over ${f1.n} game 1s</b> (your game 1 average here ${base1}). Overall ${first.avg} over ${first.n} games, ${first.strike}% strikes${fl ? `; ${fl.avg} in its ${fl.n} games here in the last 12 months` : ''}${recentCut.length && !usedRecently.has(first.key) ? `. <b>You haven't thrown it ${out.season.label.toLowerCase().startsWith('this season') ? 'this season' : 'in the last 12 months'}.</b>` : '.'}`);
         else items.push(`<b>First ball: ${esc(first.ar || first.key)}.</b> Top pick on sample-weighted record here (more games and recent form count more than a high average on a few games): ${first.avg} over ${first.n} games, ${first.strike}% strikes${fl ? `; ${fl.avg} in its ${fl.n} games here in the last 12 months` : ''}${recentCut.length && !usedRecently.has(first.key) ? `. <b>You haven't thrown it ${out.season.label.toLowerCase().startsWith('this season') ? 'this season' : 'in the last 12 months'}.</b>` : '.'}`);
         const second = pool[1];
         if (second) {
@@ -441,7 +455,7 @@
     if (opts.count && G.length >= MIN_HOUSE && hist) {
       try {
         const rb = recommendBag({ hist, G, lanes, S, b, count: Math.max(1, Math.min(6, Number(opts.count) || 3)), lean, today, firstBall: out.firstBall });
-        if (rb) { out.darkHorse = rb.dark; out.recWhy = rb.why; out.recTraits = rb.traits; out.recRoles = rb.roles; out.recFirst = rb.first; out.recBest = rb.best; out.recShort = rb.short; sec('🎒', `Your ${Math.max(1, Math.min(6, Number(opts.count) || 3))}-ball bag for ${lanes ? 'lanes ' + lanes : 'this house'}`, rb.items); out.recBag = rb.picked; }
+        if (rb) { out.darkHorse = rb.dark; out.recWhy = rb.why; out.recTraits = rb.traits; out.recRoles = rb.roles; out.recFirst = rb.first; out.recBest = rb.best; out.recBestPair = rb.bestPair; out.recPairBase = rb.pairBase; out.recShort = rb.short; sec('🎒', `Your ${Math.max(1, Math.min(6, Number(opts.count) || 3))}-ball bag for ${lanes ? 'lanes ' + lanes : 'this house'}`, rb.items); out.recBag = rb.picked; }
       } catch (e) { console.error(e); }
     }
 
