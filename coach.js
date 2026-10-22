@@ -668,7 +668,7 @@
     const chg = (c, k) => Array.isArray(c.shot.changed) && c.shot.changed.includes(k);
     const out = [];
 
-    // 1. DIRECTION: Geometry · Targeting · Ball placement · Posture
+    // 1. DIRECTION: Geometry · Targeting · Posture (ball placement isn't graded: your eyes are on the target, not the foul line)
     const dSubs = [];
     { // Geometry: did your opening line (game 1) pass the Rule of 31 / Baker Box?
       const g1 = C.filter(c => c.gameNo === 1 && c.feet != null && num(c.shot.arrows) != null);
@@ -683,10 +683,6 @@
     const onMark = trackedMark.filter(c => c.shot.miss === 'noMiss' || c.saved).length;
     const tgt = pct(onMark, trackedMark.length);
     dSubs.push(sub('Targeting', tgt, tgt == null ? 'Tap Your mark to grade targeting.' : `On your mark (or saved by the lane) on ${of(onMark, trackedMark.length)} shots.`));
-    { const L = C.filter(c => ['on', 'inside', 'outside'].includes(c.shot.laydown));
-      const on = L.filter(c => c.shot.laydown === 'on').length, ins = L.filter(c => c.shot.laydown === 'inside').length, outs = L.length - on - ins;
-      dSubs.push(sub('Ball placement', pct(on, L.length), L.length ? `On your laydown spot on ${of(on, L.length)} shots${ins ? `, inside ${ins}×` : ''}${outs ? `, outside ${outs}×` : ''}.` : 'Tap Laydown under More reads to grade where the ball lands.'));
-    }
     { const F = C.filter(c => c.shot.fault && c.shot.fault !== 'unsure' && c.shot.fault !== 'well');
       const bal = F.filter(c => c.shot.fault === 'balance').length;
       dSubs.push(sub('Posture', F.length ? pct(C.length - bal, C.length) : null, F.length ? (bal ? `Fell off the shot ${bal}× (${of(bal, F.length)} poor shots with a reason).` : `No balance faults among ${F.length} poor shot${F.length === 1 ? '' : 's'} with a reason.`) : 'Pick a reason on poor shots (like Fell off the shot) to grade posture.'));
@@ -756,7 +752,7 @@
     const scored = out.filter(x => x.score != null);
     const weakest = scored.length ? scored.slice().sort((a, b) => a.score - b.score)[0] : null;
     const DRILL = {
-      Direction: 'Spot drill: 10 shots, same feet and target. Goal: 8 of 10 over your mark, laid down on your spot, holding your finish.',
+      Direction: 'Spot drill: 10 shots, same feet and target. Goal: 8 of 10 over your mark, holding your finish.',
       Speed: 'Speed ladder: 3 shots at normal speed, 3 a touch slower, 3 a touch faster, same line. Check the monitor and watch where each one turns.',
       Angle: 'Angle drill: keep the same target and try 3 different feet positions, 3 shots each. Watch how the entry and the 6-pin change.',
       Revs: 'Hand drill: 3 shots with your normal hand, 3 with less (quieter hand), 3 with more. Same line. Watch how much the ball hooks.',

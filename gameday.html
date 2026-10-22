@@ -193,13 +193,11 @@
           </div>
 
           <details class="gd-subfold" id="moreReads" style="margin-top:12px">
-            <summary><span class="gd-qnum">4</span><b>More reads</b> <span class="small">(optional: execution, laydown, reaction, exit, speed, notes)</span></summary>
+            <summary><span class="gd-qnum">4</span><b>More reads</b> <span class="small">(optional: execution, reaction, exit, speed, notes)</span></summary>
             <div style="margin-top:8px">
               <div class="small" style="margin-bottom:6px">Skip any you didn't notice. Tap again to clear.</div>
               <div class="gd-rl">Execution</div>
               <div id="readsQuality" class="gd-r1"></div>
-              <div class="gd-rl">Laydown <span class="small">(where it landed vs. your laydown point)</span></div>
-              <div id="readsLay" class="gd-r1"></div>
               <div id="faultWrap" class="gd-fault" style="display:none">
                 <div class="gd-rl">What do you think happened? <span class="small">(optional, one tap)</span></div>
                 <div id="readsFault" class="gd-r1"></div>
@@ -346,7 +344,6 @@
       { val: 'Brooklyn', label: 'Brooklyn' },
       { val: 'Unknown', label: "Didn't see" },
     ];
-    const layObs = [{ val: 'on', label: 'On my spot' }, { val: 'inside', label: 'Inside' }, { val: 'outside', label: 'Outside' }];
     const exitObs = [
       { val: 'Exit left', label: 'Left' },
       { val: 'Exit straight', label: 'Straight' },
@@ -383,7 +380,6 @@
       readsBallObs: BT.$('#readsBallObs'),
       readsPocket: BT.$('#readsPocket'),
       readsExit: BT.$('#readsExit'),
-      readsLay: BT.$('#readsLay'),
       readsSpeed: BT.$('#readsSpeed'),
       readsFault: BT.$('#readsFault'),
       lanePick: BT.$('#lanePick'),
@@ -697,7 +693,7 @@ function selectedPills(container) {
     function updateFaultVis() { const w = BT.$('#faultWrap'); if (!w) return; const on = selectedPills(el.readsQuality).includes('Poor execution'); w.style.display = on ? '' : 'none'; if (!on && el.readsFault) BT.$all('button[data-pill]', el.readsFault).forEach(b => { b.classList.remove('active'); b.style.outline = 'none'; }); }
     function clearPills() {
       try { changedSel.clear(); paintChanged(); } catch (_e) {}
-	      [el.readsQuality, el.readsMiss, el.readsBallObs, el.readsPocket, el.readsExit, el.readsSpeed, el.readsFault, el.readsLay].forEach(c => {
+	      [el.readsQuality, el.readsMiss, el.readsBallObs, el.readsPocket, el.readsExit, el.readsSpeed, el.readsFault].forEach(c => {
 	        if (!c) return;
         BT.$all('button[data-pill]', c).forEach(b => {
           b.classList.remove('active');
@@ -2250,7 +2246,6 @@ function saveCurrentSessionDraft() {
 
         pocket: singlePillValue(el.readsPocket, 'Unknown'),
         exit: singlePillValue(el.readsExit, "Didn't notice"),
-        laydown: singlePillValue(el.readsLay, ''),
         keyPin: keyPinRead || (resultTag === 'Flat 10' ? 'weak' : resultTag === 'Ringing 10' ? 'wrap' : ''),
 	        miss: missRead,
         notes: el.notes.value.trim(),
@@ -2495,14 +2490,12 @@ function sessionSummary(shots) {
       pillButtonsCustom(el.readsBallObs, ballObs);
       pillButtonsCustom(el.readsPocket, pocketObs);
       pillButtonsCustom(el.readsExit, exitObs);
-      pillButtonsCustom(el.readsLay, layObs);
       pillButtonsCustom(el.readsSpeed, speedObs);
       wireQualityPills(el.readsQuality);
 	      wireQualityPills(el.readsMiss);
       wirePills(el.readsBallObs);
       wireQualityPills(el.readsPocket);
       wireQualityPills(el.readsExit);
-      wireQualityPills(el.readsLay);
       wireQualityPills(el.readsSpeed);
       renderFaultPills();
       // + Add your own reason: saved on this phone and kept on the list
