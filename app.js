@@ -1672,6 +1672,73 @@
     return sync;
   }
 
+  // ---------- 🎳 Full scoring (Game Day) ----------
+  // A shot is a frame's first ball (or a 10th-frame fill ball). shot.second = { left: [pins], spare } is the 2nd ball.
+  const isStrikeShotX = (x) => { const L = (x && x.leaves) || []; return L.includes('Strike') || L.includes('Brooklyn') || x.leaveTag === 'Strike' || x.leaveTag === 'Brooklyn'; };
+  function standingPins(x) { if (!x || isStrikeShotX(x)) return []; if (Array.isArray(x.leavePins) && x.leavePins.length) return x.leavePins.slice(); const t = String(x.leaveTag || ((x.leaves || [])[0]) || ''); const m = t.match(/\d+/g); return m ? [...new Set(m.map(Number).filter(n => n >= 1 && n <= 10))] : []; }
+  // USBC: a split = headpin down and at least one pin down between (or ahead of and between) the pins left standing.
+  // Same-row pins never touch, so standing pins must connect through the diagonal neighbors to not be a split.
+  const DIAG = [[1, 2], [1, 3], [2, 4], [2, 5], [3, 5], [3, 6], [4, 7], [4, 8], [5, 8], [5, 9], [6, 9], [6, 10]];
+  function isSplit(pins) {
+    const S = new Set((pins || []).map(Number)); if (S.has(1) || S.size < 2) return false;
+    const start = [...S][0], seen = new Set([start]), q = [start];
+    while (q.length) { const p = q.pop(); DIAG.forEach(([a, b]) => { const o = a === p ? b : b === p ? a : null; if (o && S.has(o) && !seen.has(o)) { seen.add(o); q.push(o); } }); }
+    return seen.size < S.size;
+  }
+  // Pins knocked down by the 2nd ball (null = not recorded). Older nights: a 10th-frame "made the spare" counts.
+  function secondPins(x) {
+    const st = standingPins(x).length; if (!st) return null;
+    if (x.second && Array.isArray(x.second.left)) return Math.max(0, st - x.second.left.length);
+    if (x.tenthSpare === true) return st;
+    return null;
+  }
+  // shots: one game's shots, oldest first (no gameStart markers). Returns frames with marks and running totals.
+  function scoreGame(shots) {
+    const all = (shots || []).filter(x => x && x.type !== 'gameStart');
+    const nf = all.filter(x => !x.isFill), fills = all.filter(x => x.isFill);
+    const frames = [], rolls = [];
+    for (let i = 0; i < Math.min(10, nf.length); i++) {
+      const x = nf[i], f = { no: i + 1, shot: x, balls: [], marks: [], leave: standingPins(x), split: false };
+      const s1 = standingPins(x).length, r1 = 10 - s1; f.split = isSplit(f.leave);
+      f.balls.push(r1); f.marks.push(r1 === 10 ? 'X' : r1 === 0 ? '-' : String(r1));
+      if (r1 < 10) { const r2 = secondPins(x); f.balls.push(r2); f.marks.push(r2 == null ? '?' : r1 + r2 === 10 ? '/' : r2 === 0 ? '-' : String(r2)); f.spare = r2 != null && r1 + r2 === 10; f.open = r2 != null && r1 + r2 < 10; }
+      if (i === 9) {
+        // 10th: strike → two fill balls; spare → one.
+        const need = r1 === 10 ? 2 : f.spare ? 1 : 0;
+        if (need) {
+          const f0 = fills[0], s0 = f0 ? standingPins(f0).length : null, b0 = f0 ? 10 - s0 : null;
+          f.balls.push(b0); f.marks.push(b0 == null ? '?' : b0 === 10 ? 'X' : b0 === 0 ? '-' : String(b0));
+          if (need === 2) {
+            let b1 = null;
+            if (f0 && b0 === 10) { const f1 = fills[1]; b1 = f1 ? 10 - standingPins(f1).length : null; f.marks.push(b1 == null ? '?' : b1 === 10 ? 'X' : b1 === 0 ? '-' : String(b1)); }
+            else if (f0) { const sp = f0.second && Array.isArray(f0.second.left) ? s0 - f0.second.left.length : fills[1] ? s0 - standingPins(fills[1]).length : null; b1 = sp; f.marks.push(b1 == null ? '?' : b0 + b1 === 10 ? '/' : b1 === 0 ? '-' : String(b1)); }
+            else f.marks.push('?');
+            f.balls.push(b1);
+          }
+        }
+      }
+      frames.push(f); f.balls.forEach(b => rolls.push(b));
+    }
+    // Running totals; stop at the first frame that needs a ball we don't know yet.
+    let total = 0, ri = 0, ok = true;
+    frames.forEach((f, i) => {
+      const nb = i === 9 ? f.balls.length : f.balls.length, b = rolls.slice(ri, ri + 3);
+      if (ok) {
+        let add = null;
+        if (i === 9) add = f.balls.every(v => v != null) ? f.balls.reduce((a, v) => a + v, 0) : null;
+        else if (f.balls[0] === 10) add = b[1] != null && b[2] != null ? 10 + b[1] + b[2] : null;
+        else if (f.spare) add = b[2] != null ? 10 + b[2] : null;
+        else add = f.balls[1] != null ? f.balls[0] + f.balls[1] : null;
+        if (add == null) ok = false; else { total += add; f.cum = total; }
+      }
+      ri += nb;
+    });
+    const last = frames[frames.length - 1];
+    const complete = frames.length === 10 && last && last.cum != null;
+    const thru = [...frames].reverse().find(f => f.cum != null);
+    return { frames, total: complete ? total : null, thru: thru ? { frame: thru.no, score: thru.cum } : null, complete };
+  }
+
   function buildBackup() {
     const data = {};
     appDataKeys().forEach(k => { data[k] = localStorage.getItem(k); });
@@ -1819,7 +1886,7 @@
     renderNav,
     speak, stopSpeaking, isSpeaking, wireReadAloud, speechText,
     isTestMode, hasTestData, enterTestMode, exitTestMode, resetTestData, checkForUpdate,
-    exportBackup, buildBackup, appDataKeys,
+    exportBackup, buildBackup, appDataKeys, scoreGame, standingPins, isSplit,
     importBackupFile,
     lastBackupAt,
     setupStatus,

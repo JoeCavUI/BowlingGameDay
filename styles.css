@@ -790,3 +790,11 @@ select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }
 .ang-laybox{display:flex;align-items:center;font-weight:800;color:var(--accent);opacity:.95;cursor:default}.ang-laybox sup{font-size:.6em;margin-left:2px;color:inherit}
 .home-go{margin-bottom:6px}
 .cl-msg{margin:4px 0 8px;padding:8px 10px;border-radius:10px;background:rgba(99,230,210,.08);font-size:14px}.cl-chk{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:14px}.cl-chk input{width:20px;height:20px}.cl-link{all:unset;cursor:pointer;color:var(--accent);font-size:13px;margin-top:8px;display:inline-block}
+/* 🎳 2nd ball */
+.gd-second{border-color:rgba(99,230,210,.6);background:rgba(99,230,210,.08)}
+.sb-deck{display:block;width:170px;height:170px;margin:8px auto 4px}
+.sb-pin{fill:rgba(255,255,255,.14);stroke:rgba(255,255,255,.7);stroke-width:2}
+.sb-pin.sb-on{fill:rgba(255,179,92,.45);stroke:#ffb35c}
+.sb-down{fill:none;stroke:rgba(255,255,255,.15);stroke-width:1;stroke-dasharray:2 2}
+.sb-t{fill:rgba(255,255,255,.9)}.sb-td{fill:rgba(255,255,255,.25)}
+.sb-split{display:inline-block;padding:0 6px;border-radius:999px;background:rgba(255,179,92,.25);font-size:12px;font-weight:700}

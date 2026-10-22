@@ -273,6 +273,7 @@
       <label style="margin-top:10px;display:block">Pocket</label><div id="esPocket" class="es-pills"></div>
       <label style="margin-top:10px;display:block">Pins left</label><div id="esTag" class="es-pills"></div>
       <input id="esPins" class="input" placeholder="Pins standing, e.g. 4-9 (blank = strike)" style="margin-top:6px" />
+      <div id="esSecondWrap"><label style="margin-top:10px;display:block">After the 2nd ball</label><input id="esSecond" class="input" placeholder="Pins still standing, e.g. 9 (blank = spare)" /></div>
       <div class="gd-line" style="margin-top:10px">
         <div><label>Slide</label><input id="esFeet" class="input" type="number" inputmode="numeric" /></div>
         <div><label>Target</label><input id="esArrows" class="input" type="number" inputmode="numeric" /></div>
@@ -1261,9 +1262,9 @@ function isStrike(shot) {
         const dt = new Date(s.at).toLocaleString();
 
         const leaveText = (() => {
-          if (s.leaveTag) return s.leaveTag;
-          if (Array.isArray(s.leavePins) && s.leavePins.length) return s.leavePins.join('-');
-          return 'Strike';
+          const first = s.leaveTag ? s.leaveTag : (Array.isArray(s.leavePins) && s.leavePins.length) ? s.leavePins.join('-') : 'Strike';
+          if (s.second && Array.isArray(s.second.left)) return `${first} → ${s.second.left.length ? s.second.left.join('-') + ' left' : 'spare ✓'}`;
+          return first;
         })();
 
         const obsBits = [];
@@ -2407,9 +2408,14 @@ function sessionSummary(shots) {
       let scores = [];
       try {
         const nG = currentGameNumber();
-        const raw = prompt(`Game scores (optional), e.g. ${['222', '186', '203'].slice(0, Math.max(1, Math.min(3, nG))).join(' ')}.\nLeave blank if you keep score in PinPal: they're added when you import it.`, '');
+        const chronAll = sessionShots.slice().reverse().filter(x => x && x.type !== 'gameStart');
+        const gNos = [...new Set(chronAll.map(x => Number(x.gameNo) || 1))].sort((a, b) => a - b);
+        const calc = gNos.map(gn => { try { return BT.scoreGame(chronAll.filter(x => (Number(x.gameNo) || 1) === gn)).total; } catch (_e) { return null; } });
+        if (calc.length && calc.every(v => v != null)) { scores = calc; throw 'scored'; }
+        const raw = prompt(`Game scores (optional), e.g. ${['222', '186', '203'].slice(0, Math.max(1, Math.min(3, nG))).join(' ')}.\nLeave blank if you keep score in PinPal: they're added when you import it.${calc.some(v => v != null) ? '\n\nScored in the app so far: ' + calc.map((v, i) => `G${gNos[i]} ${v ?? '—'}`).join(', ') : ''}`, calc.every(v => v != null) ? calc.join(' ') : '');
         scores = String(raw || '').split(/[^0-9]+/).map(Number).filter(n => Number.isFinite(n) && n > 0 && n <= 300).slice(0, Math.max(nG, 1));
       } catch (_e) {}
+      const scoredInApp = scores.length && sessionShots.some(x => x && x.second);
 
       const payload = {
         id: `sess_${Math.random().toString(36).slice(2,10)}`,
@@ -2419,7 +2425,7 @@ function sessionSummary(shots) {
         laneStats,
         arsenalAudit: audit,
         games: currentGameNumber(),
-        scores,
+        scores, scoredInApp: !!scoredInApp,
         shots: [...sessionShots],
       };
       const sessions = BT.lsGet(BT.KEYS.GAME_SESSIONS, []);
@@ -2726,7 +2732,19 @@ function sessionSummary(shots) {
 
     // ---------- Game flow: 10th frame, fill balls, automatic next game ----------
     function isStrikeShot(x) { const L = (x && x.leaves) || []; return L.includes('Strike') || L.includes('Brooklyn') || x.leaveTag === 'Strike' || x.leaveTag === 'Brooklyn'; }
+    // 🎳 2nd ball still to record? (the last first ball wasn't a strike, or the 1st fill after a 10th-frame strike wasn't)
+    function pendingSecond() {
+      const g = currentGameShotsChron(); if (!g.length) return null;
+      const last = g[g.length - 1], nf = g.filter(x => !x.isFill), fills = g.filter(x => x.isFill);
+      const open = (x) => x && !isStrikeShot(x) && !x.second && x.tenthSpare == null && !x.noSecond;
+      const off = Number((frameAdj[currentGameNumber()] || {}).off) || 0;
+      if (!last.isFill) return open(last) ? { shot: last, frame: Math.min(10, nf.length + off) } : null;
+      const tenth = nf[nf.length - 1];
+      if (fills.length === 1 && tenth && isStrikeShot(tenth) && open(fills[0])) return { shot: fills[0], frame: 10, fill: true };
+      return null;
+    }
     function gameState() {
+      { const p = pendingSecond(); if (p) return { phase: 'second', frame: p.frame, pend: p }; }
       const g = currentGameShotsChron();
       const nf = g.filter(x => !x.isFill), fills = g.filter(x => x.isFill);
       const off = Number((frameAdj[currentGameNumber()] || {}).off) || 0, cnt = Math.max(0, nf.length + off);
@@ -2750,8 +2768,19 @@ function sessionSummary(shots) {
     function renderGameFlow() {
       const box = BT.$('#gameFlow'), line = BT.$('#frameLine'); if (!box || !line) return;
       const st = gameState(), g = currentGameNumber();
-      line.textContent = st.phase === 'fill' ? `Game ${g} · 10th frame · fill ball ${st.fillNo}` : st.phase === 'done' || st.phase === 'askSpare' ? `Game ${g} · 10th frame` : `Game ${g} · Frame ${st.frame}`;
+      let sc = null; try { sc = BT.scoreGame(currentGameShotsChron()); } catch (_e) {}
+      const scTxt = sc && sc.complete ? ` · <b>${sc.total}</b>` : sc && sc.thru ? ` · <b>${sc.thru.score}</b> thru ${sc.thru.frame}` : '';
+      line.innerHTML = (st.phase === 'second' ? `Game ${g} · Frame ${st.frame} · 2nd ball` : st.phase === 'fill' ? `Game ${g} · 10th frame · fill ball ${st.fillNo}` : st.phase === 'done' || st.phase === 'askSpare' ? `Game ${g} · 10th frame` : `Game ${g} · Frame ${st.frame}`) + scTxt;
       let h = '';
+      if (st.phase === 'second') {
+        const sh = st.pend.shot, leave = BT.standingPins(sh), split = BT.isSplit(leave);
+        const POS = { 1: [110, 145], 2: [95, 115], 3: [125, 115], 4: [80, 85], 5: [110, 85], 6: [140, 85], 7: [65, 55], 8: [95, 55], 9: [125, 55], 10: [155, 55] };
+        const deck = Object.entries(POS).map(([n, [x, y]]) => { const on = leave.includes(Number(n)); return `<g ${on ? `data-sb="${n}" style="cursor:pointer"` : ''}><circle cx="${x}" cy="${y}" r="15" class="${on ? 'sb-pin' : 'sb-down'}"/><text x="${x}" y="${y + 5}" text-anchor="middle" font-size="12" class="${on ? 'sb-t' : 'sb-td'}">${n}</text></g>`; }).join('');
+        h = `<div class="gd-flow gd-second">🎳 <b>2nd ball${st.pend.fill ? ' (fill)' : ''}.</b> You left <b>${leave.join('-')}</b>${split ? ' <span class="sb-split">split</span>' : ''}. Tap any pins <b>still standing</b> after your 2nd ball.
+          <svg class="sb-deck" viewBox="44 34 132 132">${deck}</svg>
+          <div class="btn-row"><button class="btn" type="button" id="sbSave">✓ Spare</button><button class="btn secondary" type="button" id="sbSkip">Skip</button></div></div>`;
+      }
+      else
       if (st.phase === 'tenth') h = `<div class="gd-flow warn">🔟 <b>10th frame.</b> After this ball, a strike gets fill balls; otherwise the app asks if you made the spare and starts the next game for you.</div>`;
       else if (st.phase === 'fill') h = `<div class="gd-flow">🔟 <b>Fill ball ${st.fillNo}.</b> Log it like any shot (it's left out of the lane read).${st.spare ? '' : ''} <button class="btn secondary" type="button" id="flowSkipFill" style="margin-left:6px">No fill ball → end game</button></div>`;
       else if (st.phase === 'askSpare') h = `<div class="gd-flow warn">🔟 <b>Did you make the spare?</b><div class="btn-row"><button class="btn" type="button" id="flowSpareYes">Made it → log my fill ball</button><button class="btn secondary" type="button" id="flowSpareNo">Missed → end game ${g}</button></div></div>`;
@@ -2763,6 +2792,20 @@ function sessionSummary(shots) {
       on('flowSpareNo', () => { const t = tenthShot(); if (t) { t.tenthSpare = false; saveCurrentSessionDraft(); } afterGameFlow(true); });
       on('flowSkipFill', () => { const t = tenthShot(); if (t) { t.tenthSpare = false; t.noFill = true; saveCurrentSessionDraft(); } afterGameFlow(true); });
       on('flowSave', () => BT.$('#saveSession').click());
+      if (st.phase === 'second') {
+        const left = new Set(), sh = st.pend.shot, leave = BT.standingPins(sh);
+        const paint = () => { BT.$all('#gameFlow [data-sb]').forEach(gx => gx.querySelector('circle').classList.toggle('sb-on', left.has(Number(gx.dataset.sb)))); const b = BT.$('#sbSave'); if (b) b.textContent = left.size ? `Save: ${[...left].sort((a, z) => a - z).join('-')} left (open)` : '✓ Spare'; };
+        BT.$all('#gameFlow [data-sb]').forEach(gx => gx.addEventListener('click', () => { const n = Number(gx.dataset.sb); if (left.has(n)) left.delete(n); else left.add(n); paint(); }));
+        const finish = (second) => {
+          Object.assign(sh, second);
+          const nf = currentGameShotsChron().filter(x => !x.isFill);
+          if (!sh.isFill && nf[nf.length - 1] === sh && st.frame === 10 && sh.second) sh.tenthSpare = sh.second.spare;
+          if (!sh.isFill && st.frame === 10 && sh.noSecond) sh.tenthSpare = false;
+          saveCurrentSessionDraft(); renderLog(); syncNextLane(); updateFrameUI(); afterGameFlow(false); renderGameFlow();
+        };
+        on('sbSave', () => finish({ second: { left: [...left].sort((a, z) => a - z), spare: left.size === 0, at: Date.now() } }));
+        on('sbSkip', () => { if (confirm('Skip the 2nd ball? This game won\'t have a full score.')) finish({ noSecond: true }); });
+      }
       on('flowNext', () => { startNextGame(); toast(`Game ${currentGameNumber()} started.`); renderGameFlow(); updateLineMath(); });
     }
     // After a game ends: games 1 and 2 roll straight into the next game; after game 3+ we ask (league nights are 3 games).
@@ -2777,6 +2820,7 @@ function sessionSummary(shots) {
 
     BT.$('#log').addEventListener('click', () => {
       // Logging after a finished game (e.g. game 4) starts the next game automatically.
+      if (gameState().phase === 'second') { toast('Record your 2nd ball first (or tap Skip).'); const gf = BT.$('#gameFlow'); if (gf) gf.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
       if (gameState().phase === 'done') { startNextGame(); }
       const sf = BT.$('#setupFold'); if (sf && sessionShots.length === 0) sf.open = false;
       const before = sessionShots.length;
@@ -2908,6 +2952,7 @@ function sessionSummary(shots) {
       esPills(BT.$('#esTag'), quickResults.map(t => ({ val: t, label: t })), shot.leaveTag || ((shot.leavePins || []).length ? '' : 'Strike'));
       { const fw = BT.$('#esFaultWrap'), poor = Number(shot.executionQuality) === 1 && window.BTCoach && BTCoach.FAULTS; fw.style.display = poor ? '' : 'none'; if (poor) { const L = BTCoach.allFaults(); if (shot.fault && !L.some(f => f.v === shot.fault)) L.push({ v: shot.fault, l: BTCoach.faultLabel(shot.fault) }); esPills(BT.$('#esFault'), L.map(f => ({ val: f.v, label: f.l })), shot.fault || ''); } }
       BT.$('#esPins').value = (shot.leavePins || []).join('-');
+      { const w = BT.$('#esSecondWrap'), has = !shot.isFill || (shot.second != null); w.style.display = has ? '' : 'none'; BT.$('#esSecond').value = shot.second && Array.isArray(shot.second.left) ? shot.second.left.join('-') : ''; BT.$('#esSecond').dataset.had = shot.second ? '1' : ''; }
       BT.$('#esFeet').value = shot.feet ?? ''; BT.$('#esArrows').value = shot.arrows ?? ''; BT.$('#esBp').value = shot.bp ?? '';
       const balls = Array.from(el.ball.options).map(o => o.value).filter(Boolean);
       if (shot.ball && !balls.includes(shot.ball)) balls.unshift(shot.ball);
@@ -2930,6 +2975,15 @@ function sessionSummary(shots) {
       shot.leavePins = (tag === 'Strike' || tag === 'Brooklyn') ? [] : [...new Set(pins)].sort((a, b) => a - b);
       shot.leaveTag = tag === 'Strike' ? '' : tag;
       shot.leaves = shot.leaveTag ? [shot.leaveTag] : !shot.leavePins.length ? ['Strike'] : [shot.leavePins.join('-')];
+      // 2nd ball: pins still standing (must be from the leave); blank = spare. A strike has no 2nd ball.
+      { const isX = !shot.leavePins.length && !shot.leaveTag ? true : (shot.leaveTag === 'Brooklyn');
+        const sv = BT.$('#esSecond').value.trim();
+        if (isX) { delete shot.second; }
+        else if (BT.$('#esSecondWrap').style.display !== 'none' && (sv || BT.$('#esSecond').dataset.had || !shot.noSecond)) {
+          const lv = BT.standingPins(shot), left = sv.split(/[^0-9]+/).map(Number).filter(p => lv.includes(p));
+          shot.second = { left: [...new Set(left)].sort((a, z) => a - z), spare: left.length === 0, at: shot.second && shot.second.at || Date.now() }; delete shot.noSecond;
+          if (Number(shot.frame) === 10 && !shot.isFill) shot.tenthSpare = shot.second.spare;
+        } }
       const n = (id) => { const v = BT.$('#' + id).value; return v === '' ? null : Number(v); };
       shot.feet = n('esFeet'); shot.arrows = n('esArrows'); shot.bp = n('esBp');
       shot.ball = BT.$('#esBall').value || shot.ball;
