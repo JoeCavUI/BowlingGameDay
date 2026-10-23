@@ -107,11 +107,11 @@
   <div id="editModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
     <div class="modal-card" style="max-width:760px">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-        <h3 style="margin:0">Edit shot</h3>
+        <h3 style="margin:0" id="editTitle">Edit shot</h3>
         <button class="btn secondary" id="editCancel" type="button">Close</button>
       </div>
       <div class="hr-split"></div>
-      <div class="small" style="margin-bottom:10px">Tap any saved shot to open this editor.</div>
+      <div class="small" style="margin-bottom:10px" id="editHint">Tap any saved shot to open this editor.</div>
       <div class="grid-2">
         <div><label>Ball</label><input id="editBall" class="input" /></div>
         <div><label>Game / Frame</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><input id="editGame" class="input" type="number" min="1"/><input id="editFrame" class="input" type="number" min="1" max="10"/></div></div>
@@ -119,7 +119,7 @@
         <div><label>Execution</label><select id="editExec" class="input"><option value="5">Good</option><option value="3">OK</option><option value="1">Poor</option></select></div>
         <div><label>Pocket</label><input id="editPocket" class="input" /></div>
         <div><label>Exit</label><input id="editExit" class="input" /></div>
-        <div><label>Leave / tag</label><input id="editLeaveTag" class="input" placeholder="Strike / Flat 10 / 4-7"/></div>
+        <div><label>Leave / tag</label><input id="editLeaveTag" class="input" placeholder="Blank = strike · 10 · 4-7"/></div>
         <div><label>After the 2nd ball</label><input id="editSecond" class="input" placeholder="Pins still standing (blank = spare)"/></div>
         <div><label>Miss room</label><input id="editMiss" class="input" placeholder="na / rightRecovered / leftHeld / rightMiss / leftMiss"/></div>
         <div style="grid-column:1/-1"><label>Notes</label><input id="editNotes" class="input" /></div>
@@ -136,6 +136,7 @@
   <script src="pinpal.js?v=122"></script>
   <script src="history.js?v=122"></script>
   <script src="stats.js?v=122"></script>
+  <script src="replay.js?v=122"></script>
   <script>
     BT.renderNav('scores');
     // 🗂️ Scores: menu first, then History (search your PinPal games) or Game Day nights (review each night).
@@ -302,7 +303,48 @@
       s.laneStats = { left:{...by.left, ...stat(by.left.shots)}, right:{...by.right, ...stat(by.right.shots)} };
     }
 
+    // ➕ Add a shot you skipped or missed, after the night is saved.
+    let addCtx = null;
+    const fKey = (x) => x.isFill ? 10.5 : Number(x.frame) || 0;
+    function gameShots(s, g) { return (s.shots || []).filter(x => x && x.type !== 'gameStart' && (Number(x.gameNo) || 1) === g).sort((a, z) => (a.at || 0) - (z.at || 0)); }
+    function missingFrames(s, g) { const gs = gameShots(s, g).filter(x => !x.isFill), have = new Set(gs.map(x => Number(x.frame))); const out = []; for (let f = 1; f <= 10; f++) if (!have.has(f)) out.push(f); return out; }
+    function needsFill(s, g) { try { const gs = gameShots(s, g); if (gs.some(x => x.isFill)) return false; const c = BT.scoreGame(gs); const f10 = c.frames[9]; return !!(f10 && (f10.balls[0] === 10 || f10.spare)); } catch (_e) { return false; } }
+    function openAddShot(sessionId, gameNo, frame, isFill, newGame) {
+      const s = sessions.find(x => x.id === sessionId); if (!s) return;
+      activeSessionId = sessionId; activeShotIndex = -1; addCtx = { gameNo, frame, isFill: !!isFill, newGame: !!newGame };
+      const all = (s.shots || []).filter(x => x && x.type !== 'gameStart').sort((a, z) => (a.at || 0) - (z.at || 0));
+      const key = isFill ? 10.6 : frame;
+      const prev = [...gameShots(s, gameNo)].reverse().find(x => fKey(x) < key) || all[all.length - 1] || {};
+      el.editBall.value = prev.ball || ''; el.editGame.value = gameNo; el.editFrame.value = frame;
+      el.editFeet.value = prev.feet ?? ''; el.editArrows.value = prev.arrows ?? ''; el.editBP.value = prev.bp ?? '';
+      el.editPocket.value = ''; el.editExit.value = ''; el.editExec.value = '3'; el.editLeaveTag.value = ''; el.editMiss.value = ''; el.editNotes.value = '';
+      BT.$('#editSecond').value = '';
+      BT.$('#editTitle').textContent = isFill ? `Add a fill ball · Game ${gameNo}` : `Add Game ${gameNo} · Frame ${frame}`;
+      BT.$('#editHint').textContent = 'For a frame you skipped or missed. Ball and line start from your shot before it; change anything. Leave blank = strike.';
+      el.editDelete.style.display = 'none'; el.editSave.textContent = 'Add shot';
+      el.editModal.classList.remove('hidden');
+    }
+    // Where the new shot goes in time, so the scorecard and the review keep the right order.
+    function atFor(s, g, key) {
+      const gs = gameShots(s, g), before = gs.filter(x => fKey(x) < key), after = gs.filter(x => fKey(x) >= key);
+      const allAt = (s.shots || []).map(x => x && x.at || 0);
+      let lo = before.length ? before[before.length - 1].at : null, hi = after.length ? after[0].at : null;
+      if (lo == null) { const earlier = (s.shots || []).filter(x => x && x.type !== 'gameStart' && (Number(x.gameNo) || 1) < g).map(x => x.at || 0); const st = (s.shots || []).find(x => x && x.type === 'gameStart' && Number(x.gameNo) === g); lo = st ? st.at : earlier.length ? Math.max(...earlier) : null; }
+      if (hi == null) { const later = (s.shots || []).filter(x => x && (Number(x.gameNo) || 1) > g).map(x => x.at || 0); hi = later.length ? Math.min(...later) : null; }
+      if (lo != null && hi != null) return (lo + hi) / 2;
+      if (lo != null) return lo + 30000;
+      if (hi != null) return hi - 30000;
+      return (allAt.length ? Math.max(...allAt) : (s.savedAt || Date.now())) + 30000;
+    }
+    function laneFor(s, g, frame) {
+      const pr = String(s.lanes || '').match(/\d+/g); if (!pr || pr.length < 2) return '';
+      const [a, b] = pr.map(String); const ref = gameShots(s, g).find(x => x.lane && !x.isFill && x.frame);
+      if (!ref) return '';
+      const same = (frame - Number(ref.frame)) % 2 === 0; return same ? String(ref.lane) : (String(ref.lane) === a ? b : a);
+    }
     function openEditShot(sessionId, shotIndex) {
+      addCtx = null; BT.$('#editTitle').textContent = 'Edit shot'; BT.$('#editHint').textContent = 'Tap any saved shot to open this editor.';
+      el.editDelete.style.display = ''; el.editSave.textContent = 'Save changes';
       const s = sessions.find(x => x.id === sessionId);
       if (!s || !s.shots || !s.shots[shotIndex]) return;
       const sh = s.shots[shotIndex];
@@ -326,13 +368,28 @@
 
     function closeEditShot() {
       el.editModal.classList.add('hidden');
-      activeShotIndex = -1;
+      activeShotIndex = -1; addCtx = null;
     }
 
     function saveEditedShot() {
       const s = sessions.find(x => x.id === activeSessionId);
-      if (!s || !s.shots || activeShotIndex < 0 || !s.shots[activeShotIndex]) return;
-      const sh = s.shots[activeShotIndex];
+      if (!s || !s.shots) return;
+      let sh;
+      if (addCtx && activeShotIndex < 0) {
+        const g = Number(el.editGame.value || addCtx.gameNo) || 1, fr = addCtx.isFill ? 10 : Math.max(1, Math.min(10, Number(el.editFrame.value || addCtx.frame) || 1));
+        const desc = s.shots.length < 2 || (s.shots[0].at || 0) >= (s.shots[s.shots.length - 1].at || 0);
+        const at = atFor(s, g, addCtx.isFill ? 10.6 : fr);
+        if (addCtx.newGame && !s.shots.some(x => x && x.type === 'gameStart' && Number(x.gameNo) === g)) s.shots.push({ id: `mk_${Math.random().toString(36).slice(2, 10)}`, at: at - 1, type: 'gameStart', gameNo: g, note: `Start Game ${g}` });
+        const bw = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
+        sh = { id: `add_${Math.random().toString(36).slice(2, 10)}`, at, added: true, house: s.house, lanes: s.lanes, pattern: s.pattern, setName: s.setName, gameNo: g, frame: fr, isFill: addCtx.isFill,
+          lane: laneFor(s, g, fr), targetFt: 15, layOff: Number(bw.laydownOffset) > 0 ? Number(bw.laydownOffset) : 5, obs: [], changed: [], speedTrend: 'unknown', keyPin: '' };
+        s.shots.push(sh);
+        s.shots.sort((a, z) => desc ? (z.at || 0) - (a.at || 0) : (a.at || 0) - (z.at || 0));
+        activeShotIndex = s.shots.indexOf(sh);
+      } else {
+        if (activeShotIndex < 0 || !s.shots[activeShotIndex]) return;
+        sh = s.shots[activeShotIndex];
+      }
       sh.ball = el.editBall.value.trim() || sh.ball || 'Unknown';
       sh.gameNo = Number(el.editGame.value || sh.gameNo || 1);
       sh.frame = Number(el.editFrame.value || sh.frame || 1);
@@ -343,7 +400,7 @@
       sh.exit = el.editExit.value.trim() || "Didn't notice";
       sh.executionQuality = Number(el.editExec.value || 3);
       sh.qualityShot = sh.executionQuality >= 3;
-      sh.miss = el.editMiss.value.trim() || 'na';
+      sh.miss = el.editMiss.value.trim() || (sh.added ? 'didntTrack' : 'na');
       sh.notes = el.editNotes.value.trim();
       const leaveRaw = el.editLeaveTag.value.trim();
       sh.leaveTag = '';
@@ -356,10 +413,10 @@
           sh.leaveTag = leaveRaw;
           sh.leaves = [leaveRaw];
         }
-      }
+      } else { sh.leaveTag = 'Strike'; sh.leaves = ['Strike']; }
       { const lv = BT.standingPins(sh), sv = BT.$('#editSecond').value.trim();
         if (!lv.length) delete sh.second;
-        else if (sv || sh.second) { const left = sv.split(/[^0-9]+/).map(Number).filter(p => lv.includes(p)); sh.second = { left: [...new Set(left)].sort((a, z) => a - z), spare: left.length === 0, at: (sh.second && sh.second.at) || Date.now() }; if (Number(sh.frame) === 10 && !sh.isFill) sh.tenthSpare = sh.second.spare; } }
+        else if (sv || sh.second || (addCtx && sh.added)) { const left = sv.split(/[^0-9]+/).map(Number).filter(p => lv.includes(p)); sh.second = { left: [...new Set(left)].sort((a, z) => a - z), spare: left.length === 0, at: (sh.second && sh.second.at) || Date.now() }; if (Number(sh.frame) === 10 && !sh.isFill) sh.tenthSpare = sh.second.spare; } }
       recomputeSessionSummary(s);
       recomputeLaneStats(s);
       BT.lsSet(BT.KEYS.GAME_SESSIONS, sessions);
@@ -567,6 +624,7 @@
       const statLine = (m) => `${m.n} shot${m.n === 1 ? '' : 's'} · ${m.strikes} strike${m.strikes === 1 ? '' : 's'} (${pct(m.strikes, m.n)}%) · pocket ${pct(m.pocket, m.n)}% · carry ${pct(m.carry, m.pocket)}%`;
       el.details.innerHTML = `
         <div class="nr-tools no-print">
+          <button type="button" class="btn" id="nrReplay">▶ Watch replay</button>
           <button type="button" class="btn secondary" id="nrSpeak">🔊 Read aloud</button>
           <button type="button" class="btn secondary" id="nrPdf">📄 Save as PDF</button>
           <button type="button" class="btn secondary" id="nrShots">📋 Shot log</button>
@@ -594,19 +652,24 @@
         <div class="panel no-print" id="nrShotLog" style="padding:12px;margin-top:10px">
           <b>📋 Shot log</b>
           <div class="small" style="margin-top:4px">By game, in order. 🔁 = you moved · 🤔 = what you felt on a poor shot. Tap a shot to edit it.</div>
-          ${R.log.map(g => `<div class="nr-gh">Game ${g.no}${g.score != null ? ` · ${g.score}` : ''}</div>` + g.shots.map(x => `<div class="list-item nr-shot" data-shot-index="${x.idx}">
-              <div class="small">F${x.sh.frame || '—'}${x.sh.isFill ? ' (fill)' : ''}${x.sh.lane ? ` · lane ${esc(x.sh.lane)}` : ''} · ${esc(x.sh.ball || 'Ball?')}</div>
+          ${R.log.map(g => { const miss = missingFrames(s, g.no), fill = !miss.length && needsFill(s, g.no);
+              return `<div class="nr-gh">Game ${g.no}${g.score != null ? ` · ${g.score}` : ''}</div>${miss.length || fill ? `<div class="nr-add"><span class="small">${miss.length ? `Not logged: frame${miss.length === 1 ? '' : 's'} ${miss.length > 3 && miss.every((f, i) => !i || f === miss[i - 1] + 1) ? `${miss[0]}–${miss[miss.length - 1]}` : miss.join(', ')}` : 'The 10th needs its fill ball'}</span><button type="button" class="btn secondary small" data-add-game="${g.no}" data-add-frame="${miss.length ? miss[0] : 10}"${fill ? ' data-add-fill="1"' : ''}>＋ Add ${fill ? 'fill ball' : `frame ${miss[0]}`}</button></div>` : ''}` + g.shots.map(x => `<div class="list-item nr-shot" data-shot-index="${x.idx}">
+              <div class="small">F${x.sh.frame || '—'}${x.sh.isFill ? ' (fill)' : ''}${x.sh.added ? ' · <span class="nr-added">＋ added later</span>' : ''}${x.sh.lane ? ` · lane ${esc(x.sh.lane)}` : ''} · ${esc(x.sh.ball || 'Ball?')}</div>
               <div><b>${esc(x.result)}</b>${x.pocket ? ` · ${esc(x.pocket)}` : ''}${x.mark ? ` · ${esc(x.mark)}` : ''}</div>
               <div class="small">Line ${x.line}${x.moved ? ` · <span class="nr-mv">🔁 moved ${x.moved}</span>` : ''}${x.fault ? ` · 🤔 ${esc(x.fault)}` : ''}${x.flag ? ` · <span class="nr-flag">${x.flag}</span>` : ''}</div>
-            </div>`).join('')).join('')}
+            </div>`).join(''); }).join('')}
+          <div class="nr-add" style="margin-top:10px"><span class="small">Bowled a game you didn't log?</span><button type="button" class="btn secondary small" id="nrAddGame">＋ Add a game</button></div>
         </div>
       `;
       lastReviewText = R.speech;
       BT.$('#nrShots').onclick = () => jumpToShots();
+      BT.$('#nrReplay').onclick = () => { if (window.BTReplay) BTReplay.open(s); };
       BT.$('#nrPdf').onclick = () => { document.body.classList.add('print-review'); try { window.print(); } catch (_e) { alert('Printing isn\'t available here.'); } setTimeout(() => document.body.classList.remove('print-review'), 800); };
       if (!BT.$('#nrSpeak').dataset.wired) { BT.$('#nrSpeak').dataset.wired = '1'; BT.wireReadAloud(BT.$('#nrSpeak'), () => lastReviewText); }
       onDoubleTap(BT.$('#nrHead'), jumpToShots);
 
+      BT.$all('[data-add-game]', el.details).forEach(b => b.addEventListener('click', (e) => { e.stopPropagation(); openAddShot(activeSessionId, Number(b.dataset.addGame), Number(b.dataset.addFrame), b.dataset.addFill === '1'); }));
+      { const ag = BT.$('#nrAddGame'); if (ag) ag.onclick = () => { const gs = (s.shots || []).filter(x => x && x.type !== 'gameStart').map(x => Number(x.gameNo) || 1); openAddShot(activeSessionId, (gs.length ? Math.max(...gs) : 0) + 1, 1, false, true); }; }
       BT.$all('[data-shot-index]', el.details).forEach(row => {
         row.style.cursor='pointer'; row.addEventListener('click', () => openEditShot(activeSessionId, Number(row.getAttribute('data-shot-index'))));
       });
