@@ -4,13 +4,13 @@
    Exposes window.BTReplay.open(session). */
 (function (root) {
   'use strict';
-  const W = 360, H = 640, X0 = 72, X1 = 288, BW = (X1 - X0) / 39, CX = (X0 + X1) / 2;
+  const W = 360, H = 760, X0 = 124, X1 = 236, FOUL = 730, TOP = 30, BW = (X1 - X0) / 39, CX = (X0 + X1) / 2;
   const NS = 'http://www.w3.org/2000/svg';
   const esc = (t) => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const num = (v) => { if (v === null || v === undefined || v === '') return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  // Lane length is drawn on two scales so the pin deck is readable: 0–57 ft over most of the height, 57–64 ft above it.
-  const yOf = (ft) => ft <= 57 ? 600 - ft / 57 * 430 : 170 - (ft - 57) / 7 * 120;
+  // A long, narrow lane. Length is drawn on two scales so the pin deck is readable: 0–57 ft over most of the height, 57–64 ft above it.
+  const yOf = (ft) => ft <= 57 ? FOUL - ft / 57 * 530 : (FOUL - 530) - (ft - 57) / 7 * 170;
   // Pins: lateral offset from the head pin in boards (− = left as you face the pins), and distance in feet.
   const PIN = { 1: [0, 60], 2: [-5.64, 60.87], 3: [5.64, 60.87], 4: [-11.28, 61.73], 5: [0, 61.73], 6: [11.28, 61.73], 7: [-16.92, 62.6], 8: [-5.64, 62.6], 9: [5.64, 62.6], 10: [16.92, 62.6] };
   const pinX = (p) => CX + PIN[p][0] * BW;
@@ -39,33 +39,56 @@
 
     // ---------- the ball's line for one shot ----------
     let lastLine = { feet: null, arrows: null };
+    // How the line is drawn from what you logged (righties; lefties mirrored):
+    //  · Your mark: hit it → the ball goes over your target. Right / left of it → about 1.5 boards off at the target.
+    //  · A miss at the target carries on down the lane on the same angle, so it is off by more at the breakpoint
+    //    (1.5 boards at 15 ft ≈ 4–5 boards at 45 ft). A ball that missed right can't go through your breakpoint.
+    //  · "Recovered" / "held" = the lane saved it: off at the target and the breakpoint, but back in the pocket.
+    //  · Hit your mark + flush pocket = the line as planned: laydown → target → breakpoint → pocket.
+    //  · The pocket read decides where it enters the pins. With no pocket read: a strike is flush; a miss you
+    //    didn't recover is light (missed right) or high (missed left); otherwise the pins you left decide.
     function pathFor(x) {
       const feet = num(x.feet) ?? lastLine.feet, arrows = num(x.arrows) ?? lastLine.arrows;
       if (num(x.feet) != null) lastLine.feet = num(x.feet); if (num(x.arrows) != null) lastLine.arrows = num(x.arrows);
       const tFt = num(x.targetFt) || 15, off = num(x.layOff) || layOffDefault;
-      const pk = String(x.pocket || 'Unknown'), lv = standing(x);
-      let entry = { 'Pocket flush': 17.5, 'Pocket high': 19.5, 'Pocket light': 15.5, 'Brooklyn': 22.5, 'Missed left': lefty ? 11 : 24, 'Missed right': lefty ? 24 : 11 }[pk];
-      if (entry == null) entry = !lv.length ? 17.5 : (lv.includes(lefty ? 7 : 10) || lv.includes(lefty ? 4 : 6)) ? 15.5 : (lv.includes(lefty ? 6 : 4) || lv.includes(lefty ? 10 : 7)) ? 19.5 : 17.5;
+      const pk = String(x.pocket || 'Unknown'), lv = standing(x), miss = String(x.miss || 'didntTrack');
+      const R = lefty ? 1 : -1; // one board to the right on screen, in your own boards
+      const markSide = /^right/.test(miss) ? 1 : /^left/.test(miss) ? -1 : 0; // + = right of the mark
+      const saved = miss === 'rightRecovered' || miss === 'leftHeld';
+      const d = markSide * 1.5 * R; // boards off at the target
       const bpFt = patLen ? clamp(patLen + 3, 36, 50) : 44;
       const lay = feet != null ? feet - off : null, tgt = arrows;
-      let bp = num(x.bp);
-      if (bp == null && lay != null && tgt != null) bp = clamp(lay + (tgt - lay) * bpFt / tFt, 1, 39);
-      if (bp == null) bp = tgt != null ? clamp(tgt - 4, 1, 39) : 8;
-      const lay0 = lay != null ? lay : (tgt != null ? tgt + 3 : 15), tgt0 = tgt != null ? tgt : lay0 + (bp - lay0) * tFt / bpFt;
-      const exitDrift = { 'Exit left': -5, 'Exit right': 5, 'Exit straight': 0 }[String(x.exit || '')] ?? 0; // in screen boards (− = left)
+      let bpPlan = num(x.bp);
+      if (bpPlan == null && lay != null && tgt != null) bpPlan = clamp(lay + (tgt - lay) * bpFt / tFt, 1, 39);
+      if (bpPlan == null) bpPlan = tgt != null ? clamp(tgt - 4, 1, 39) : 8;
+      const lay0 = lay != null ? lay : (tgt != null ? tgt + 3 : 15);
+      const tgtPlan = tgt != null ? tgt : lay0 + (bpPlan - lay0) * tFt / bpFt;
+      // Off at the target → off by more at the breakpoint (same angle from the laydown).
+      const tgtHit = tgtPlan + d, bpHit = clamp(bpPlan + d * bpFt / tFt, 1, 39);
+      const ENTRY = { 'Pocket flush': 17.5, 'Pocket high': 19.5, 'Pocket light': 15.5, 'Brooklyn': 22.5, 'Missed left': 17.5 - 6 * R, 'Missed right': 17.5 + 6 * R };
+      let entry = ENTRY[pk], why = '';
+      if (entry == null) {
+        if (!lv.length) entry = 17.5;
+        else if (markSide && !saved) entry = 17.5 + markSide * 2 * R; // missed and not saved: light (right) or high (left)
+        else entry = (lv.includes(lefty ? 7 : 10) || lv.includes(lefty ? 4 : 6)) ? 15.5 : (lv.includes(lefty ? 6 : 4) || lv.includes(lefty ? 10 : 7)) ? 19.5 : 17.5;
+      }
+      if (markSide) why = `${markSide > 0 ? 'right' : 'left'} of your target → ${Math.round(Math.abs(bpHit - bpPlan))} boards ${markSide > 0 ? 'right' : 'left'} of your breakpoint${saved ? (markSide > 0 ? ', the lane brought it back' : ', the lane held it') : ''}`;
+      else if (miss === 'noMiss' && pk === 'Pocket flush') why = 'on target, through your breakpoint, flush';
+      else if (miss === 'noMiss') why = 'on target, through your breakpoint';
+      const exitDrift = { 'Exit left': -4, 'Exit right': 4, 'Exit straight': 0 }[String(x.exit || '')] ?? 0; // screen boards (− = left)
       const pts = [];
       for (let ft = 0; ft <= 63.5; ft += 0.5) {
         let b;
-        if (ft <= tFt) b = lay0 + (tgt0 - lay0) * ft / tFt;
-        else if (ft <= bpFt) b = tgt0 + (bp - tgt0) * (ft - tFt) / (bpFt - tFt);
-        else if (ft <= 60) { const u = (ft - bpFt) / (60 - bpFt); b = bp + (entry - bp) * Math.pow(u, 1.8); }
+        if (ft <= tFt) b = lay0 + (tgtHit - lay0) * ft / tFt;
+        else if (ft <= bpFt) b = tgtHit + (bpHit - tgtHit) * (ft - tFt) / (bpFt - tFt);
+        else if (ft <= 60) { const u = (ft - bpFt) / (60 - bpFt); b = bpHit + (entry - bpHit) * Math.pow(u, 1.8); }
         else b = null;
         let px = b != null ? xOf(b) : null;
         if (b == null) { const e = xOf(entry); px = e + exitDrift * BW * (ft - 60) / 3.5; }
-        pts.push([clamp(px, X0 - 10, X1 + 10), yOf(ft), ft]);
+        pts.push([clamp(px, X0 - 6, X1 + 6), yOf(ft), ft]);
       }
       const col = isX(x) ? '#4ade80' : /^Pocket|Brooklyn/.test(pk) || (pk === 'Unknown' && lv.length && lv.length <= 2) ? '#fbbf24' : /^Missed/.test(pk) ? '#f87171' : '#e5e7eb';
-      return { pts, col, info: { feet, arrows, bp: num(x.bp), lay } };
+      return { pts, col, info: { feet, arrows, bp: num(x.bp), lay, why, tgtPlan, bpPlan, markSide, tFt, bpFt } };
     }
     const paths = steps.map(pathFor);
 
@@ -93,8 +116,8 @@
         <div class="rp-title"><div id="rpTitle">GAME 1 · FRAME 1</div><div class="rp-sub" id="rpSub"></div></div>
         <div class="rp-score"><div id="rpScore">—</div><div class="rp-sub" id="rpThru"></div></div></div>
       <div class="rp-stage"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" id="rpSvg"></svg>
-        <div class="rp-side" id="rpSide"></div>
-        <div class="rp-chip" id="rpChip"></div></div>
+        <div class="rp-side" id="rpSide"></div></div>
+      <div class="rp-chip" id="rpChip"></div>
       <div class="rp-card" id="rpCard"></div>
       <div class="rp-ctl">
         <button type="button" class="rp-b" id="rpPrev" aria-label="Previous shot">⏮</button>
@@ -111,24 +134,24 @@
     const defs = el('defs', {}, svg);
     const lg = el('linearGradient', { id: 'rpWood', x1: '0', x2: '1', y1: '0', y2: '0' }, defs);
     [['0', '#c9a06a'], ['0.5', '#dcb98a'], ['1', '#c49a63']].forEach(([o, c]) => el('stop', { offset: o, 'stop-color': c }, lg));
-    el('rect', { x: X0 - 14, y: 40, width: X1 - X0 + 28, height: 572, rx: 6, fill: '#2b2f36' }, svg); // gutters
-    el('rect', { x: X0, y: 40, width: X1 - X0, height: 560, fill: 'url(#rpWood)' }, svg);
-    for (let b = 5; b < 39; b += 5) el('line', { x1: xOf(b) , x2: xOf(b), y1: 40, y2: 600, stroke: 'rgba(0,0,0,.06)', 'stroke-width': 1 }, svg);
-    if (patLen) { const yo = yOf(patLen); el('rect', { x: X0, y: yo, width: X1 - X0, height: 600 - yo, fill: 'rgba(56,132,255,.13)' }, svg); el('line', { x1: X0, x2: X1, y1: yo, y2: yo, stroke: 'rgba(56,132,255,.55)', 'stroke-dasharray': '4 4' }, svg); const t = el('text', { x: X0 + 4, y: yo + 12, 'text-anchor': 'start', class: 'rp-lbl' }, svg); t.textContent = `oil ends ${patLen} ft`; }
+    el('rect', { x: X0 - 9, y: TOP, width: X1 - X0 + 18, height: FOUL - TOP + 10, rx: 5, fill: '#2b2f36' }, svg); // gutters
+    el('rect', { x: X0, y: TOP, width: X1 - X0, height: FOUL - TOP, fill: 'url(#rpWood)' }, svg);
+    for (let b = 5; b < 39; b += 5) el('line', { x1: xOf(b) , x2: xOf(b), y1: TOP, y2: FOUL, stroke: 'rgba(0,0,0,.06)', 'stroke-width': 1 }, svg);
+    if (patLen) { const yo = yOf(patLen); el('rect', { x: X0, y: yo, width: X1 - X0, height: FOUL - yo, fill: 'rgba(56,132,255,.13)' }, svg); el('line', { x1: X0, x2: X1, y1: yo, y2: yo, stroke: 'rgba(56,132,255,.55)', 'stroke-dasharray': '4 4' }, svg); const t = el('text', { x: X0 + 4, y: yo + 12, 'text-anchor': 'start', class: 'rp-lbl' }, svg); t.textContent = `oil ends ${patLen} ft`; }
     // Arrows (15 ft) and dots (7 ft)
-    for (let b = 5; b <= 35; b += 5) { const x = xOf(b), y = yOf(15) - (Math.abs(b - 20) / 5) * 0; el('path', { d: `M${x} ${y - 7} L${x - 4} ${y + 4} L${x + 4} ${y + 4} Z`, fill: '#3b2a1a' }, svg); }
-    [3, 5, 8, 11, 14, 26, 29, 32, 35, 37].forEach(b => el('circle', { cx: xOf(b), cy: yOf(7), r: 1.8, fill: '#3b2a1a' }, svg));
-    el('line', { x1: X0, x2: X1, y1: 600, y2: 600, stroke: '#b91c1c', 'stroke-width': 2 }, svg);
+    for (let b = 5; b <= 35; b += 5) { const x = xOf(b), y = yOf(15) - (Math.abs(b - 20) / 5) * 0; el('path', { d: `M${x} ${y - 6} L${x - 2.6} ${y + 3} L${x + 2.6} ${y + 3} Z`, fill: '#3b2a1a' }, svg); }
+    [3, 5, 8, 11, 14, 26, 29, 32, 35, 37].forEach(b => el('circle', { cx: xOf(b), cy: yOf(7), r: 1.3, fill: '#3b2a1a' }, svg));
+    el('line', { x1: X0, x2: X1, y1: FOUL, y2: FOUL, stroke: '#b91c1c', 'stroke-width': 2 }, svg);
     // Pin deck + pins
-    el('rect', { x: X0, y: 40, width: X1 - X0, height: yOf(59) - 40, fill: 'rgba(255,255,255,.08)' }, svg);
+    el('rect', { x: X0, y: TOP, width: X1 - X0, height: yOf(59) - TOP, fill: 'rgba(255,255,255,.08)' }, svg);
     const pinEl = {};
-    for (let p = 1; p <= 10; p++) { const g = el('g', { class: 'rp-pin' }, svg); el('circle', { cx: pinX(p), cy: yOf(PIN[p][1]), r: 7, fill: '#f8fafc', stroke: '#9ca3af', 'stroke-width': 1 }, g); el('circle', { cx: pinX(p), cy: yOf(PIN[p][1]), r: 2.4, fill: '#dc2626' }, g); pinEl[p] = g; }
+    for (let p = 1; p <= 10; p++) { const g = el('g', { class: 'rp-pin' }, svg); el('circle', { cx: pinX(p), cy: yOf(PIN[p][1]), r: 8.5, fill: '#f8fafc', stroke: '#dc2626', 'stroke-width': 1.6 }, g); const tn = el('text', { x: pinX(p), y: yOf(PIN[p][1]) + 3.4, 'text-anchor': 'middle', class: 'rp-pnum' }, g); tn.textContent = String(p); pinEl[p] = g; }
     // Ball, trail, spare ball
-    const trail = el('polyline', { fill: 'none', 'stroke-width': 3.2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', opacity: 0.95 }, svg);
+    const trail = el('polyline', { fill: 'none', 'stroke-width': 2.6, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', opacity: 0.95 }, svg);
     const trail2 = el('line', { stroke: '#93c5fd', 'stroke-width': 2.4, 'stroke-dasharray': '5 4', opacity: 0 }, svg);
-    const ball = el('circle', { r: 6.5, fill: '#111827', stroke: '#f9fafb', 'stroke-width': 1.6 }, svg);
-    const bpDot = el('circle', { r: 3.5, fill: 'none', stroke: '#111827', 'stroke-width': 1.4, opacity: 0 }, svg);
-    const tgDot = el('circle', { r: 3.5, fill: 'none', stroke: '#111827', 'stroke-width': 1.4, opacity: 0 }, svg);
+    const ball = el('circle', { r: 5.5, fill: '#111827', stroke: '#f9fafb', 'stroke-width': 1.6 }, svg);
+    const bpDot = el('circle', { r: 4.5, fill: 'none', stroke: '#1e3a8a', 'stroke-width': 1.6, 'stroke-dasharray': '2 1.5', opacity: 0 }, svg);
+    const tgDot = el('circle', { r: 4.5, fill: 'none', stroke: '#1e3a8a', 'stroke-width': 1.6, 'stroke-dasharray': '2 1.5', opacity: 0 }, svg);
 
     // ---------- state + drawing ----------
     let i = 0, t = 0, playing = true, speed = 1, raf = 0, lastTs = 0, drawnI = -1, shownI = -1;
@@ -149,7 +172,7 @@
       const line = [P.feet, P.arrows].every(v => v != null) ? `${P.feet}/${P.arrows}${P.bp != null ? '/' + P.bp : ''}` : '';
       const res = isX(x) ? 'Strike' : lv.join('-') + (x.second && Array.isArray(x.second.left) ? (x.second.left.length ? ` → ${x.second.left.join('-')} left` : ' → spare') : '');
       const fault = x.fault && root.BTCoach && root.BTCoach.faultLabel ? ` · 🤔 ${root.BTCoach.faultLabel(x.fault)}` : '';
-      $('rpChip').innerHTML = `<div><b>${esc(x.ball || 'Ball?')}</b>${line ? ` · ${esc(line)}` : ''}</div>` + (!shown ? '<div class="rp-dim">…</div>' : `<div><span style="color:${paths[i].col}">●</span> ${esc(res)}${x.pocket && x.pocket !== 'Unknown' ? ` · ${esc(String(x.pocket).replace(/^Pocket /, ''))}` : ''}${esc(fault)}</div>`);
+      $('rpChip').innerHTML = `<div><b>${esc(x.ball || 'Ball?')}</b>${line ? ` · ${esc(line)}` : ''}</div>` + (!shown ? '<div class="rp-dim">…</div>' : `<div><span style="color:${paths[i].col}">●</span> ${esc(res)}${x.pocket && x.pocket !== 'Unknown' ? ` · ${esc(String(x.pocket).replace(/^Pocket /, ''))}` : ''}${esc(fault)}</div>${P.why ? `<div class="rp-why">${esc(P.why)}</div>` : ''}`);
       // Mini scorecard for this game
       const cells = []; const fr = c ? c.frames.slice() : []; while (fr.length < 10) fr.push({ no: fr.length + 1, marks: [''], cum: null });
       const curF = x.isFill ? 10 : Number(x.frame) || 0;
@@ -160,9 +183,10 @@
     function frame(tt) {
       const P = paths[i], x = steps[i], lv = standing(x), sec = x.second && Array.isArray(x.second.left) ? x.second.left : null;
       if (drawnI !== i) { drawnI = i; shownI = -1; hud(false); trail.setAttribute('stroke', P.col); trail2.setAttribute('opacity', '0');
-        const tp = P.pts.find(p => p[2] >= (num(x.targetFt) || 15)), bpp = P.pts.reduce((m, p) => (p[2] <= 60 && (m == null || (lefty ? p[0] < m[0] : p[0] > m[0]))) ? p : m, null);
-        if (tp && P.info.arrows != null) { tgDot.setAttribute('cx', tp[0]); tgDot.setAttribute('cy', tp[1]); tgDot.setAttribute('opacity', '0.8'); } else tgDot.setAttribute('opacity', '0');
-        if (bpp && bpp[2] > 20) { bpDot.setAttribute('cx', bpp[0]); bpDot.setAttribute('cy', bpp[1]); bpDot.setAttribute('opacity', '0.8'); } else bpDot.setAttribute('opacity', '0'); }
+        // Rings = where you aimed: your target and your breakpoint. The line shows where the ball went.
+        const I = P.info;
+        if (I.arrows != null) { tgDot.setAttribute('cx', xOf(I.tgtPlan)); tgDot.setAttribute('cy', yOf(I.tFt)); tgDot.setAttribute('opacity', '0.9'); } else tgDot.setAttribute('opacity', '0');
+        bpDot.setAttribute('cx', xOf(I.bpPlan)); bpDot.setAttribute('cy', yOf(I.bpFt)); bpDot.setAttribute('opacity', I.arrows != null || I.bp != null ? '0.9' : '0'); }
       // 0–8% reset · 8–60% first ball · 60–80% spare ball · then hold
       const a = clamp((tt - 0.08) / 0.52, 0, 1), k = Math.round(a * (P.pts.length - 1));
       trail.setAttribute('points', P.pts.slice(0, k + 1).map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' '));
@@ -174,7 +198,7 @@
       if (sec && lv.length && tt >= 0.6) {
         const b2 = clamp((tt - 0.6) / 0.2, 0, 1);
         const tx = lv.reduce((m, p) => m + pinX(p), 0) / lv.length, ty = lv.reduce((m, p) => m + yOf(PIN[p][1]), 0) / lv.length;
-        const sx = CX - (tx - CX) * 0.9, sy = 600;
+        const sx = CX - (tx - CX) * 0.9, sy = FOUL;
         trail2.setAttribute('x1', sx); trail2.setAttribute('y1', sy); trail2.setAttribute('x2', sx + (tx - sx) * b2); trail2.setAttribute('y2', sy + (ty - sy) * b2); trail2.setAttribute('opacity', '0.9');
         ball.setAttribute('cx', sx + (tx - sx) * b2); ball.setAttribute('cy', sy + (ty - sy) * b2); ball.setAttribute('opacity', b2 < 1 ? '1' : '0');
         setPins(b2 >= 1 ? sec : lv, 0.12);
