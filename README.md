@@ -58,6 +58,12 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v123-beta60: Night replay, add missed frames, pair-first bag
+- ▶ Watch replay on each night's review: shot-by-shot lane animation (laydown → target → breakpoint → pocket, pins left, spare ball), running scorecard and the night's numbers; play, pause, skip, 2× / 4×, drag to any shot.
+- ➕ Add a frame, fill ball or whole game you skipped after the night; it goes in the right order and is marked "added later".
+- 🎒 Bag pick: on the pair you're bowling, a ball with 6+ games there clearly above your pair average is the start ball; Best averages on the pair (3+ games) listed before the house.
+- Scores: Min games dropdown in History and Stats; Stats ball breakdown sorted highest average first.
+
 ## Changes in v122-beta59: 5 Scoring Elements, smarter bag pick
 - 🎳 Del Warren's 5 Scoring Elements (Kegel): Direction (geometry, targeting, posture), Speed (total, versatility), Angle (entry, exit point), Revs (hook, versatility), Roll. Each graded with its parts in the night review; planned speed / hand changes (Changed since last shot) count as versatility, not misses.
 - 📊 Stats: 5 Scoring Elements by night, with the average and your lowest element; tap a night to open its review.
