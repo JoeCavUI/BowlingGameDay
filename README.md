@@ -58,6 +58,10 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v124-beta61: Replay lane and ball path
+- ▶ Replay: longer, narrower lane with numbered pins; dotted rings show your target and breakpoint.
+- Ball path follows what you logged: a miss at the target carries on the same angle past your breakpoint (right of mark can't go through it); recovered / held misses come back to the pocket you logged; the pocket read decides where it enters, else the mark and the leave do. Each shot says how its line was drawn.
+
 ## Changes in v123-beta60: Night replay, add missed frames, pair-first bag
 - ▶ Watch replay on each night's review: shot-by-shot lane animation (laydown → target → breakpoint → pocket, pins left, spare ball), running scorecard and the night's numbers; play, pause, skip, 2× / 4×, drag to any shot.
 - ➕ Add a frame, fill ball or whole game you skipped after the night; it goes in the right order and is marked "added later".
