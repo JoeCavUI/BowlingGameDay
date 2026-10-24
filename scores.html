@@ -82,6 +82,8 @@
       </div>
     </div>
 
+    <div data-secpage="trends"><div id="trBody"></div></div>
+
     <div data-secpage="nights">
     <div class="panel" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       <button class="btn secondary" id="refresh">Refresh</button>
@@ -141,15 +143,17 @@
   <script src="history.js?v=125"></script>
   <script src="stats.js?v=125"></script>
   <script src="replay.js?v=125"></script>
+  <script src="trends.js?v=125"></script>
   <script>
     BT.renderNav('scores');
     // 🗂️ Scores: menu first, then History (search your PinPal games) or Game Day nights (review each night).
     const oldHash = () => { if (location.hash === '#histPanel') history.replaceState(null, '', '#history'); };
     oldHash(); window.addEventListener('hashchange', oldHash);
     window.__scSec = BT.sectionPages({
-      hub: BT.$('#scHub'), nav: BT.$('#scNav'), homeLabel: 'Scores', cols: 3,
+      hub: BT.$('#scHub'), nav: BT.$('#scNav'), homeLabel: 'Scores', cols: 4,
       pages: [
         { id: 'stats', icon: '📊', t: 'Stats', d: 'Every number on one page: average, strikes, spares, splits, by house, ball, game and frame' },
+        { id: 'trends', icon: '📈', t: 'Trends', d: 'Every night on one timeline: average, repeatability, eyeball score, strikes, spares and more, with a trend line' },
         { id: 'history', icon: '📚', t: 'History', d: 'Search your PinPal games: houses, pairs, balls, years, leaves' },
         { id: 'nights', icon: '🎳', t: 'Game Day nights', s: 'Nights', d: 'Review each night: lanes, shots, what Coach saw' },
       ],
@@ -158,6 +162,7 @@
         const d = hub.querySelector('[data-hubd="nights"]'); if (d) d.textContent = `${n} night${n === 1 ? '' : 's'} saved · review lanes, shots and what Coach saw`;
         const sub = hub.querySelector('[data-hubsub]'); if (sub) sub.textContent = 'Pick what you want to see:';
         if (id === 'stats') setTimeout(() => { try { renderStats(); } catch (e) { console.error(e); } }, 0);
+        else if (id === 'trends') setTimeout(() => { try { if (window.BTTrends) BTTrends.render(BT.$('#trBody'), { openNight: (sid) => openNight(sid) }); } catch (e) { console.error(e); } }, 0);
         else { try { const all = window.BTStats ? BTStats.allGames() : []; const sd = hub.querySelector('[data-hubd="stats"]'); if (sd && all.length) { const S = BTStats.summarize(all); sd.textContent = `${S.n} games · ${S.avg} average · ${S.strike}% strikes · ${S.spare}% spares`; } } catch (_e) {} }
       },
     });
