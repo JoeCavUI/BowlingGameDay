@@ -58,6 +58,12 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v126-beta63: Trends, repeatability, lane totals
+- 📈 Scores → Trends: every night on one timeline (average, repeatability, eyeball score, strikes, spares, pocket, carry, series, high game, 5 Scoring Elements); running-average and trend-line checkboxes; period / house / pair / league filters; tap a night, open Game Day nights.
+- 🔁 Repeatability score: your mark, normal speed, release, and the same result from the same line and lane; in the night review (with each game), Stats and the Game Day summary.
+- Lanes: shots saved without a lane get it from the night's alternation, so lane totals add up.
+- Replay speeds ¼× ½× 1× 2× 4×.
+
 ## Changes in v125-beta62: Smoother replay, Game Day editor, report fix
 - ▶ Replay: one smooth bird's-eye ball path (skid over the target, arc to the breakpoint, hook, roll into the pocket); the ball slows as it reaches the pins; pins at the far end of the lane.
 - ✏️ Shot editor uses Game Day's choices: dropdowns for ball, game, frame, lane, mark, pocket, exit, key pin, execution, reason and speed; a pin deck for pins left and after the 2nd ball; ball reaction chips.
