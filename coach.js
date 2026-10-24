@@ -761,6 +761,48 @@
     return { model: 'kegel5', elements: out, weakest: weakest ? weakest.key : '', drill: weakest ? DRILL[weakest.key] : '' };
   }
 
+  // ---------- 🔁 Repeatability: how well you repeated your shot, from what you logged ----------
+  // Four parts (each needs 3+ logged shots): your mark, your normal speed (planned speed changes don't count
+  // against you), a good or OK release, and the same reaction from the same line on the same lane as the last
+  // time you threw it there. Moves you make on purpose aren't misses: the line part compares like with like.
+  function repeatability(shots, bowler) {
+    const prof = bowlerProfile(bowler);
+    const C = (shots || []).filter(s => s && s.type !== 'gameStart' && !s.isFill).map(s => classify(s, prof.lefty));
+    if (C.length < 4) return null;
+    const pct = (a, b) => b ? Math.round(a / b * 100) : null;
+    const parts = [];
+    const tr = C.filter(c => !['didntTrack', 'na', ''].includes(String(c.shot.miss || 'didntTrack')));
+    const mk = tr.filter(c => c.shot.miss === 'noMiss' || c.saved).length;
+    if (tr.length >= 3) parts.push({ k: 'mark', label: 'Your mark', w: 0.35, score: pct(mk, tr.length), text: `Over your mark (or saved by the lane) ${mk} of ${tr.length}` });
+    const sp = C.filter(c => c.speed && c.speed !== 'unknown' && !(Array.isArray(c.shot.changed) && c.shot.changed.includes('speed') && c.speed !== 'same'));
+    const ss = sp.filter(c => c.speed === 'same').length;
+    if (sp.length >= 3) parts.push({ k: 'speed', label: 'Speed', w: 0.25, score: pct(ss, sp.length), text: `Your normal speed ${ss} of ${sp.length}` });
+    const ex = C.filter(c => c.shot.execTapped === true || num(c.shot.executionQuality) === 1 || num(c.shot.executionQuality) === 5);
+    const eg = ex.filter(c => num(c.shot.executionQuality) >= 3).length;
+    if (ex.length >= 3) parts.push({ k: 'release', label: 'Release', w: 0.2, score: pct(eg, ex.length), text: `Good or OK release ${eg} of ${ex.length}` });
+    // Same line + same lane as the last time: did the ball do the same thing?
+    const grp = (c) => c.strike || c.hit === 'flush' ? 'good' : c.hit === 'light' || c.hit === 'missLight' ? 'light' : c.hit === 'high' || c.hit === 'missHigh' || c.hit === 'brooklyn' ? 'high' : '';
+    const last = {}; let pairs = 0, same = 0;
+    C.forEach(c => { const g = grp(c); if (!g || c.feet == null || c.arrows == null) return; const key = `${c.lane}|${c.feet}|${c.arrows}|${c.ball}`; if (last[key]) { pairs++; if (last[key] === g) same++; } last[key] = g; });
+    if (pairs >= 3) parts.push({ k: 'reaction', label: 'Ball reaction', w: 0.2, score: pct(same, pairs), text: `Same result from the same line on the same lane ${same} of ${pairs} times` });
+    if (!parts.length) return null;
+    const wsum = parts.reduce((a, p) => a + p.w, 0);
+    const score = Math.round(parts.reduce((a, p) => a + p.score * p.w, 0) / wsum);
+    const weakest = parts.length >= 2 ? parts.slice().sort((a, z) => a.score - z.score)[0] : null;
+    const TIP = {
+      mark: 'Your mark varied most. Spot drill: 10 shots, same feet and target; goal 8 of 10 over your mark.',
+      speed: 'Your speed varied most. Same tempo every shot: same number of steps, same pushaway height.',
+      release: 'Your release varied most. Slow your last step and hold your finish until the ball passes your target.',
+      reaction: "The ball's reaction varied most from the same line. If your mark and speed held, that's the lane changing: read it before you move.",
+    };
+    return { score, parts, weakest: weakest ? weakest.k : '', tip: weakest && weakest.score < 80 ? TIP[weakest.k] : '' };
+  }
+  function repeatByGame(shots, bowler) {
+    const out = {}; const gs = [...new Set((shots || []).filter(s => s && s.type !== 'gameStart').map(s => num(s.gameNo) || 1))];
+    gs.forEach(g => { const r = repeatability((shots || []).filter(s => s && (num(s.gameNo) || 1) === g), bowler); if (r) out[g] = r.score; });
+    return out;
+  }
+
   // ---------- Arsenal check: bowler ↔ ball, bag shape, history ----------
   // Games logged on a ball (fractional: share of first balls in each game), optionally since a date.
   function ballGames(sessions, name, sinceTs) {
@@ -1616,5 +1658,5 @@
     });
   }
 
-  root.BTCoach = { FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
+  root.BTCoach = { repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
 })(typeof window !== 'undefined' ? window : globalThis);

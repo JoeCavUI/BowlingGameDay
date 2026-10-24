@@ -544,7 +544,8 @@
         if (Math.abs(pa - pb) >= 10 || Math.abs(sa - sb) >= 15) { const tough = pa + sa < pb + sb ? a : b, easy = tough === a ? b : a; const dP = Math.abs(pa - pb) >= 5, dS = Math.abs(sa - sb) >= 5; laneNote = `Lane ${tough.lane} was tougher: ${[dP && `pocket ${pc(tough.m.pocket, tough.m.n)}% vs ${pc(easy.m.pocket, easy.m.n)}%`, dS && `strikes ${pc(tough.m.strikes, tough.m.n)}% vs ${pc(easy.m.strikes, easy.m.n)}%`].filter(Boolean).join(', ')} on ${easy.lane}. Next time here, watch your first shots on ${tough.lane} closely.`; }
         else laneNote = 'Both lanes played about the same.';
       }
-      let five = null, moves = null;
+      let five = null, moves = null, rep = null, repG = {};
+      try { if (window.BTCoach && BTCoach.repeatability) { rep = BTCoach.repeatability(chron, bowler); repG = BTCoach.repeatByGame(chron, bowler); } } catch (_e) {}
       try { five = (window.BTCoach ? BTCoach.elementsReport(chron, bowler, (BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || []).find(q => q.name === s.pattern) || null) : null) || (s.summary && s.summary.elements) || null; } catch (_e) {}
       try { moves = (window.BTCoach && BTCoach.moveSummary ? BTCoach.moveSummary(chron, bowler) : null) || (s.summary && s.summary.moves) || null; } catch (_e) {}
       if (moves && moves.afterPoor >= 2) T.push({ k: 'Try next time', t: `${moves.afterPoor} of your ${moves.made} moves came right after a poor shot. Repeat the shot first; move when two good shots say the same thing.` });
@@ -586,7 +587,7 @@
       if (games.length > 1) games.forEach(g => sp.push(`Game ${g.no}${g.score != null ? ', ' + g.score : ''}: ${g.m.strikes} strikes, pocket ${pc(g.m.pocket, g.m.n)} percent.`));
       if (laneNote && !T.some(t => t.t === laneNote)) sp.push(strip(laneNote));
       if (moves && moves.tip && !T.some(t => /poor shot/.test(t.t))) sp.push(strip(moves.tip));
-      return { scores, headline, okPct, all, takeaways: T, games, lanes, laneNote, balls, moves, faults, five, eye: eyeballFor(s), log, speech: sp.join(' ').replace(/(\d)%/g, '$1 percent') };
+      return { scores, headline, okPct, all, takeaways: T, games, lanes, laneNote, balls, moves, faults, five, rep, repG, eye: eyeballFor(s), log, speech: sp.join(' ').replace(/(\d)%/g, '$1 percent') };
     }
     // 🎳 Frame-by-frame scorecard (marks on top, running total under each frame; splits circled)
     function scorecard(c) {
@@ -675,11 +676,12 @@
         </div>
         ${pinpalPanel(s, true)}
         ${R.takeaways.length ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>💡 What tonight says</b><ol class="nr-list">${R.takeaways.map(t => `<li><b>${t.k}:</b> ${t.t}</li>`).join('')}</ol></div>` : ''}
-        ${R.games.length > 1 || (R.games[0] && R.games[0].score != null) ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🎯 Game by game</b>${R.games.map(g => `<div class="nr-row"><b>Game ${g.no}${g.score != null ? ': ' + g.score : ''}</b>${g.card ? scorecard(g.card) : ''}<div class="small">${statLine(g.m)}</div>${g.notes.length ? `<div class="small" style="opacity:1">${g.notes.join(' · ')}</div>` : ''}</div>`).join('')}</div>` : ''}
+        ${R.games.length > 1 || (R.games[0] && R.games[0].score != null) ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🎯 Game by game</b>${R.games.map(g => `<div class="nr-row"><b>Game ${g.no}${g.score != null ? ': ' + g.score : ''}</b>${g.card ? scorecard(g.card) : ''}<div class="small">${statLine(g.m)}${R.repG && R.repG[g.no] != null ? ` · repeat ${R.repG[g.no]}%` : ''}</div>${g.notes.length ? `<div class="small" style="opacity:1">${g.notes.join(' · ')}</div>` : ''}</div>`).join('')}</div>` : ''}
         ${R.lanes.length ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>↔️ Lanes</b>${R.lanes.map(l => `<div class="nr-row"><b>Lane ${esc(l.lane)}</b><div class="small">${statLine(l.m)}</div></div>`).join('')}${R.laneNote ? `<div class="small nr-note">${R.laneNote}</div>` : ''}</div>` : ''}
         ${R.balls.length ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🎳 Balls</b>${R.balls.map(b => `<div class="nr-row"><b>${esc(b.ball)}</b><div class="small">${statLine(b.m)}</div></div>`).join('')}</div>` : ''}
         ${R.moves ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>${R.moves.text}</b>${R.moves.tip ? `<div class="small" style="margin-top:6px;opacity:1">${R.moves.tip}</div>` : ''}</div>` : ''}
         ${R.faults.length ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🤔 Poor shots: what you felt</b><ul class="nr-list">${R.faults.map(l => `<li>${l}</li>`).join('')}</ul></div>` : ''}
+        ${R.rep ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🔁 Repeatability tonight: ${R.rep.score}%</b><div class="small" style="margin-top:2px">How well you repeated your shot, from what you logged. Moves you made on purpose don't count against you.</div><ul class="nr-subs">${R.rep.parts.map(p => `<li><b>${p.label} ${p.score}%:</b> ${p.text}.</li>`).join('')}</ul>${Object.keys(R.repG || {}).length > 1 ? `<div class="small" style="margin-top:6px;opacity:1">By game: ${Object.entries(R.repG).map(([g, v]) => `G${g} ${v}%`).join(' · ')}</div>` : ''}${R.rep.tip ? `<div class="small" style="margin-top:8px;color:var(--accent);opacity:1">${R.rep.tip}</div>` : ''}</div>` : ''}
         ${R.five ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🎳 The 5 Scoring Elements tonight</b>${R.five.elements.map(e => `<div class="small" style="margin-top:6px;opacity:1">${e.icon} <b>${e.key}${e.score != null ? ': ' + e.score + '%' : ''}</b>. ${e.text}</div>${(e.subs || []).length ? `<ul class="nr-subs">${e.subs.map(x => `<li><b>${x.label}${x.score != null ? ' ' + x.score + '%' : ''}:</b> ${x.text}</li>`).join('')}</ul>` : ''}`).join('')}<div class="small" style="margin-top:8px">From Del Warren's 5 Scoring Elements (Kegel). Grades only what you logged.</div>${R.five.drill ? `<div class="small" style="margin-top:8px;color:var(--accent);opacity:1"><b>Work on ${R.five.weakest}:</b> ${R.five.drill}</div>` : ''}</div>` : ''}
         <details class="panel gd-subfold no-print" style="padding:12px;margin-top:10px">
           <summary><b>More details</b> <span class="small">(eyeball score, arsenal audit)</span></summary>
@@ -779,9 +781,9 @@
         const ss = (Array.isArray(sessions) ? sessions : []).filter(x => x && Array.isArray(x.shots) && x.shots.length >= 3)
           .filter(x => !f.house || x.house === f.house).filter(x => !f.period || dOf(x).startsWith(f.period))
           .slice().sort((a, b) => dOf(b).localeCompare(dOf(a)) || (b.savedAt || 0) - (a.savedAt || 0)).slice(0, 10);
-        const rows = ss.map(x => { let r = null; try { r = BTCoach.elementsReport([...x.shots].filter(Boolean).sort((a, b) => (a.at || 0) - (b.at || 0)), bw, (Array.isArray(pats) ? pats : []).find(q => q.name === x.pattern) || null); } catch (_e) {} return r ? { x, r } : null; }).filter(Boolean);
+        const rows = ss.map(x => { let r = null; try { const ch = [...x.shots].filter(Boolean).sort((a, b) => (a.at || 0) - (b.at || 0)), rp = BTCoach.repeatability ? BTCoach.repeatability(ch, bw) : null; r = BTCoach.elementsReport([...x.shots].filter(Boolean).sort((a, b) => (a.at || 0) - (b.at || 0)), bw, (Array.isArray(pats) ? pats : []).find(q => q.name === x.pattern) || null); if (r) r = Object.assign({}, r, { elements: [...r.elements, { key: 'Repeat', score: rp ? rp.score : null }] }); } catch (_e) {} return r ? { x, r } : null; }).filter(Boolean);
         if (!rows.length) return '';
-        const K = [['Direction', '🎯'], ['Speed', '⚡'], ['Angle', '📐'], ['Revs', '🔄'], ['Roll', '🌀']];
+        const K = [['Direction', '🎯'], ['Speed', '⚡'], ['Angle', '📐'], ['Revs', '🔄'], ['Roll', '🌀'], ['Repeat', '🔁']];
         const sc = (r, k) => { const e = r.elements.find(e => e.key === k); return e && e.score != null ? e.score : null; };
         const avg = K.map(([k]) => { const v = rows.map(o => sc(o.r, k)).filter(v => v != null); return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null; });
         const scoredAvg = avg.map((v, i) => ({ v, k: K[i][0] })).filter(o => o.v != null);
@@ -791,7 +793,7 @@
           <div style="overflow-x:auto"><table class="st-table st-tbl"><tr><th>Night</th>${K.map(([k, i]) => `<th title="${k}">${i}</th>`).join('')}</tr>
           <tr class="st-avg"><td class="st-k"><b>Average</b></td>${avg.map(v => cell(v)).join('')}</tr>
           ${rows.map(o => `<tr data-night="${esc(o.x.id)}"><td class="st-k">${dLbl(o.x)}${o.x.house ? ' · ' + esc(o.x.house) : ''}</td>${K.map(([k]) => cell(sc(o.r, k))).join('')}</tr>`).join('')}</table></div>
-          <div class="small" style="margin-top:4px">🎯 Direction · ⚡ Speed · 📐 Angle · 🔄 Revs · 🌀 Roll (Del Warren's 5 Scoring Elements, Kegel). % of logged shots graded good; — = not enough logged. ${low ? `Lowest on average: <b>${low}</b>. ` : ''}Tap a night to open its review.</div></div>`;
+          <div class="small" style="margin-top:4px">🎯 Direction · ⚡ Speed · 📐 Angle · 🔄 Revs · 🌀 Roll (Del Warren's 5 Scoring Elements, Kegel) · 🔁 Repeatability. % of logged shots graded good; — = not enough logged. ${low ? `Lowest on average: <b>${low}</b>. ` : ''}Tap a night to open its review.</div></div>`;
       })();
       // Spare leaves
       const lv = S.leaves.filter(l => l.leave !== '—').slice(0, 15);

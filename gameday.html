@@ -2403,6 +2403,7 @@ function sessionSummary(shots) {
       let elements = null;
       try { if (window.BTCoach) elements = BTCoach.elementsReport(sessionShots.slice().reverse(), BT.lsGet(BT.KEYS.BOWLER, {}) || {}, coachContext().pattern); } catch (_e) {}
       if (elements) sum.elements = elements;
+      let rep = null; try { if (window.BTCoach && BTCoach.repeatability) rep = BTCoach.repeatability(sessionShots.slice().reverse(), BT.lsGet(BT.KEYS.BOWLER, {}) || {}); } catch (_e) {}
       let moves = null;
       try { if (window.BTCoach && BTCoach.moveSummary) moves = BTCoach.moveSummary(sessionShots.slice().reverse(), BT.lsGet(BT.KEYS.BOWLER, {}) || {}); } catch (_e) {}
       if (moves) sum.moves = moves;
@@ -2440,7 +2441,8 @@ function sessionSummary(shots) {
         const bits = [`Mark tracked ${p.mark ?? '—'}%`, `Pocket ${p.pocket ?? '—'}%`];
         if (p.exit != null) bits.push(`Exit watched ${p.exit}% of pocket hits`);
         if (p.keyPin != null) bits.push(`Key pin seen ${p.keyPin}%`);
-        const el5 = elements ? '\n\n5 SCORING ELEMENTS\n' + elements.elements.map(e => `${e.icon} ${e.key}${e.score != null ? ' ' + e.score + '%' : ''}: ${e.text}` + (e.subs || []).map(x => `\n   · ${x.label}${x.score != null ? ' ' + x.score + '%' : ''}: ${x.text}`).join('')).join('\n') + (elements.drill ? `\n\nWork on ${elements.weakest}: ${elements.drill}` : '') : '';
+        const rep5 = rep ? `\n\nREPEATABILITY ${rep.score}%\n` + rep.parts.map(p => `   · ${p.label} ${p.score}%: ${p.text}`).join('\n') : '';
+        const el5 = rep5 + (elements ? '\n\n5 SCORING ELEMENTS\n' + elements.elements.map(e => `${e.icon} ${e.key}${e.score != null ? ' ' + e.score + '%' : ''}: ${e.text}` + (e.subs || []).map(x => `\n   · ${x.label}${x.score != null ? ' ' + x.score + '%' : ''}: ${x.text}`).join('')).join('\n') + (elements.drill ? `\n\nWork on ${elements.weakest}: ${elements.drill}` : '') : '');
         const mv = moves ? `\n\n${moves.text}${moves.tip ? '\n' + moves.tip : ''}` : '';
         alert(`Saved to Scores.\n\n👁️ Eyeball score: ${eyeball.score} (${eyeball.label})\n${bits.join(' • ')}${el5}${mv}\n\nBest ball is your eyeball.`);
       } else {
