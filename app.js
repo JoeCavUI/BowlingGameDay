@@ -1675,6 +1675,22 @@
   // ---------- 🎳 Full scoring (Game Day) ----------
   // A shot is a frame's first ball (or a 10th-frame fill ball). shot.second = { left: [pins], spare } is the 2nd ball.
   const isStrikeShotX = (x) => { const L = (x && x.leaves) || []; return L.includes('Strike') || L.includes('Brooklyn') || x.leaveTag === 'Strike' || x.leaveTag === 'Brooklyn'; };
+  // Typed or older values → the values Game Day saves ("Flush" → "Pocket flush", "Left" → "Exit left", "na" → "didntTrack").
+  function normPocket(v) { const t = String(v || '').trim(), k = t.toLowerCase().replace(/^pocket\s*/, '');
+    if (!t || /^(unknown|didn'?t see|n\/?a|none|-)$/.test(k)) return 'Unknown';
+    const M = { flush: 'Pocket flush', light: 'Pocket light', high: 'Pocket high', brooklyn: 'Brooklyn', 'missed left': 'Missed left', 'miss left': 'Missed left', 'missed right': 'Missed right', 'miss right': 'Missed right' };
+    return M[k] || t; }
+  function normExit(v) { const t = String(v || '').trim(), k = t.toLowerCase().replace(/^exit\s*/, '');
+    if (!t || /^(didn'?t notice|unknown|n\/?a|none|-)$/.test(k)) return "Didn't notice";
+    return ({ left: 'Exit left', straight: 'Exit straight', right: 'Exit right' })[k] || t; }
+  function normMiss(v) { const t = String(v || '').trim(), k = t.toLowerCase().replace(/[^a-z]/g, '');
+    const M = { nomiss: 'noMiss', hit: 'noMiss', hitmymark: 'noMiss', hitmark: 'noMiss', rightrecovered: 'rightRecovered', leftheld: 'leftHeld', rightmiss: 'rightMiss', leftmiss: 'leftMiss', missedright: 'rightMiss', missedleft: 'leftMiss', didnttrack: 'didntTrack', didntsee: 'didntTrack', na: 'didntTrack', '': 'didntTrack' };
+    return M[k] || t; }
+  // Pocket hit: a pocket read, or a strike with no read (a strike comes from the pocket unless you logged Brooklyn).
+  function isPocketHit(x) { const pk = String((x && x.pocket) || ''); if (pk.startsWith('Pocket')) return true; const L = (x && x.leaves) || [];
+    return isStrikeShotX(x) && !/^(Brooklyn|Missed)/.test(pk) && !L.includes('Brooklyn') && x.leaveTag !== 'Brooklyn'; }
+  function normalizeShot(x) { if (!x || x.type === 'gameStart') return false; const a = [x.pocket, x.exit, x.miss].join('|');
+    x.pocket = normPocket(x.pocket); x.exit = normExit(x.exit); x.miss = normMiss(x.miss); return a !== [x.pocket, x.exit, x.miss].join('|'); }
   function standingPins(x) { if (!x || isStrikeShotX(x)) return []; if (Array.isArray(x.leavePins) && x.leavePins.length) return x.leavePins.slice(); const t = String(x.leaveTag || ((x.leaves || [])[0]) || ''); const m = t.match(/\d+/g); return m ? [...new Set(m.map(Number).filter(n => n >= 1 && n <= 10))] : []; }
   // USBC: a split = headpin down and at least one pin down between (or ahead of and between) the pins left standing.
   // Same-row pins never touch, so standing pins must connect through the diagonal neighbors to not be a split.
@@ -1886,7 +1902,7 @@
     renderNav,
     speak, stopSpeaking, isSpeaking, wireReadAloud, speechText,
     isTestMode, hasTestData, enterTestMode, exitTestMode, resetTestData, checkForUpdate,
-    exportBackup, buildBackup, appDataKeys, scoreGame, standingPins, isSplit,
+    exportBackup, buildBackup, appDataKeys, scoreGame, standingPins, isSplit, normPocket, normExit, normMiss, normalizeShot, isPocketHit,
     importBackupFile,
     lastBackupAt,
     setupStatus,

@@ -771,9 +771,9 @@ function selectedPills(container) {
       function stat(arr){
         const leaves = arr.flatMap(s=>s.leaves||[]);
         const strikes = leaves.filter(x=>x==='Strike' || x==='Brooklyn').length;
-        const pocketHits = arr.filter(s=>String(s.pocket||'').startsWith('Pocket')).length;
+        const pocketHits = arr.filter(s=>BT.isPocketHit(s)).length;
         const isX = (q)=>(q.leaves||[]).some(x=>x==='Strike' || x==='Brooklyn');
-        const carry = pocketHits ? (arr.filter(q=>String(q.pocket||'').startsWith('Pocket') && isX(q)).length / pocketHits) : 0;
+        const carry = pocketHits ? (arr.filter(q=>BT.isPocketHit(q) && isX(q)).length / pocketHits) : 0;
         const execScore = arr.length ? Math.round(arr.reduce((a,s)=>a + effectiveExecutionValue(s), 0) / (arr.length*5) * 100) : 0;
         return { shots: arr.length, strikes, pocketHits, pocketPct: arr.length? pocketHits/arr.length : 0, carryPct: carry, execScore };
       }
@@ -1054,10 +1054,7 @@ function isStrike(shot) {
       return leaves.includes('Strike') || leaves.includes('Brooklyn');
     }
 
-    function isPocket(shot) {
-      const p = (shot.pocket || 'Unknown');
-      return p.startsWith('Pocket');
-    }
+    function isPocket(shot) { return BT.isPocketHit(shot); }
 
     function effectiveExecutionValue(shot) {
       const base = (shot && typeof shot.executionQuality !== 'undefined')

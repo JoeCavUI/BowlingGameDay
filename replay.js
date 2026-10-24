@@ -9,8 +9,9 @@
   const esc = (t) => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const num = (v) => { if (v === null || v === undefined || v === '') return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  // A long, narrow lane. Length is drawn on two scales so the pin deck is readable: 0–57 ft over most of the height, 57–64 ft above it.
-  const yOf = (ft) => ft <= 57 ? FOUL - ft / 57 * 530 : (FOUL - 530) - (ft - 57) / 7 * 170;
+  // A long, narrow lane.
+  // Foul line to 58 ft on one scale; the last 6 ft (the pin deck, at the far end) a little larger so the pins read.
+  const LEN = FOUL - TOP, yOf = (ft) => ft <= 58 ? FOUL - ft / 58 * LEN * 0.87 : FOUL - LEN * 0.87 - (ft - 58) / 6 * LEN * 0.13;
   // Pins: lateral offset from the head pin in boards (− = left as you face the pins), and distance in feet.
   const PIN = { 1: [0, 60], 2: [-5.64, 60.87], 3: [5.64, 60.87], 4: [-11.28, 61.73], 5: [0, 61.73], 6: [11.28, 61.73], 7: [-16.92, 62.6], 8: [-5.64, 62.6], 9: [5.64, 62.6], 10: [16.92, 62.6] };
   const pinX = (p) => CX + PIN[p][0] * BW;
@@ -51,7 +52,7 @@
       const feet = num(x.feet) ?? lastLine.feet, arrows = num(x.arrows) ?? lastLine.arrows;
       if (num(x.feet) != null) lastLine.feet = num(x.feet); if (num(x.arrows) != null) lastLine.arrows = num(x.arrows);
       const tFt = num(x.targetFt) || 15, off = num(x.layOff) || layOffDefault;
-      const pk = String(x.pocket || 'Unknown'), lv = standing(x), miss = String(x.miss || 'didntTrack');
+      const pk = BT.normPocket ? BT.normPocket(x.pocket) : String(x.pocket || 'Unknown'), lv = standing(x), miss = BT.normMiss ? BT.normMiss(x.miss) : String(x.miss || 'didntTrack');
       const R = lefty ? 1 : -1; // one board to the right on screen, in your own boards
       const markSide = /^right/.test(miss) ? 1 : /^left/.test(miss) ? -1 : 0; // + = right of the mark
       const saved = miss === 'rightRecovered' || miss === 'leftHeld';
@@ -75,18 +76,25 @@
       if (markSide) why = `${markSide > 0 ? 'right' : 'left'} of your target → ${Math.round(Math.abs(bpHit - bpPlan))} boards ${markSide > 0 ? 'right' : 'left'} of your breakpoint${saved ? (markSide > 0 ? ', the lane brought it back' : ', the lane held it') : ''}`;
       else if (miss === 'noMiss' && pk === 'Pocket flush') why = 'on target, through your breakpoint, flush';
       else if (miss === 'noMiss') why = 'on target, through your breakpoint';
-      const exitDrift = { 'Exit left': -4, 'Exit right': 4, 'Exit straight': 0 }[String(x.exit || '')] ?? 0; // screen boards (− = left)
+      // Bird's-eye ball motion, one smooth curve (no corners): skid straight from the laydown over the target,
+      // a gradual arc out to the breakpoint (the farthest board it reaches), then the hook back and a near-straight
+      // roll into the pocket at about a 4–6° entry angle. Through the deck it keeps going and deflects a little.
+      const herm = (x0, y0, m0, x1, y1, m1, xx) => { const h = x1 - x0, t = (xx - x0) / h, t2 = t * t, t3 = t2 * t; return (2 * t3 - 3 * t2 + 1) * y0 + (t3 - 2 * t2 + t) * h * m0 + (-2 * t3 + 3 * t2) * y1 + (t3 - t2) * h * m1; };
+      const s0 = (tgtHit - lay0) / tFt;
+      const s1 = 1.5 * (entry - bpHit) / (60 - bpFt); // steeper at the pins than the average hook = it finished
+      const exitScr = { 'Exit left': -1.5, 'Exit right': 1.5, 'Exit straight': 0 }[String(x.exit || '')] ?? 0;
       const pts = [];
-      for (let ft = 0; ft <= 63.5; ft += 0.5) {
+      for (let ft = 0; ft <= 63.5 + 1e-9; ft += 0.25) {
         let b;
-        if (ft <= tFt) b = lay0 + (tgtHit - lay0) * ft / tFt;
-        else if (ft <= bpFt) b = tgtHit + (bpHit - tgtHit) * (ft - tFt) / (bpFt - tFt);
-        else if (ft <= 60) { const u = (ft - bpFt) / (60 - bpFt); b = bpHit + (entry - bpHit) * Math.pow(u, 1.8); }
-        else b = null;
-        let px = b != null ? xOf(b) : null;
-        if (b == null) { const e = xOf(entry); px = e + exitDrift * BW * (ft - 60) / 3.5; }
-        pts.push([clamp(px, X0 - 6, X1 + 6), yOf(ft), ft]);
+        if (ft <= tFt) b = lay0 + s0 * ft;
+        else if (ft <= bpFt) b = herm(tFt, tgtHit, s0, bpFt, bpHit, 0, ft);
+        else if (ft <= 60) b = herm(bpFt, bpHit, 0, 60, entry, s1, ft);
+        else b = entry + s1 * 0.55 * (ft - 60) + exitScr * R * (ft - 60) / 3.5; // deflects as it goes through the pins
+        pts.push([clamp(xOf(b), X0 - 6, X1 + 6), yOf(ft), ft]);
       }
+      // Distance along the path on screen, so the ball's speed on screen is what we control (no speed-up at the deck).
+      let acc = 0; const cum = [0]; for (let q = 1; q < pts.length; q++) { acc += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1]); cum.push(acc); }
+      pts.len = acc; pts.cum = cum;
       const col = isX(x) ? '#4ade80' : /^Pocket|Brooklyn/.test(pk) || (pk === 'Unknown' && lv.length && lv.length <= 2) ? '#fbbf24' : /^Missed/.test(pk) ? '#f87171' : '#e5e7eb';
       return { pts, col, info: { feet, arrows, bp: num(x.bp), lay, why, tgtPlan, bpPlan, markSide, tFt, bpFt } };
     }
@@ -96,7 +104,7 @@
     const MARKOK = { noMiss: 1, rightRecovered: 1, leftHeld: 1 };
     function soFar(i) {
       const upto = steps.slice(0, i + 1).filter(x => !x.isFill);
-      const str = upto.filter(isX).length, pocket = upto.filter(x => /^Pocket|Brooklyn/.test(String(x.pocket || '')) || isX(x)).length;
+      const str = upto.filter(isX).length, pocket = upto.filter(x => BT.isPocketHit(x)).length;
       const tr = upto.filter(x => String(x.miss || 'didntTrack') !== 'didntTrack' && x.miss !== 'na'), mk = tr.filter(x => MARKOK[x.miss]).length;
       const sp = upto.filter(x => !isX(x) && x.second && Array.isArray(x.second.left)), made = sp.filter(x => x.second.left.length === 0).length;
       return { n: upto.length, str, pocket, mark: tr.length ? Math.round(mk / tr.length * 100) : null, spares: sp.length ? `${made}/${sp.length}` : '—' };
@@ -145,7 +153,7 @@
     // Pin deck + pins
     el('rect', { x: X0, y: TOP, width: X1 - X0, height: yOf(59) - TOP, fill: 'rgba(255,255,255,.08)' }, svg);
     const pinEl = {};
-    for (let p = 1; p <= 10; p++) { const g = el('g', { class: 'rp-pin' }, svg); el('circle', { cx: pinX(p), cy: yOf(PIN[p][1]), r: 8.5, fill: '#f8fafc', stroke: '#dc2626', 'stroke-width': 1.6 }, g); const tn = el('text', { x: pinX(p), y: yOf(PIN[p][1]) + 3.4, 'text-anchor': 'middle', class: 'rp-pnum' }, g); tn.textContent = String(p); pinEl[p] = g; }
+    for (let p = 1; p <= 10; p++) { const g = el('g', { class: 'rp-pin' }, svg); el('circle', { cx: pinX(p), cy: yOf(PIN[p][1]), r: 6.6, fill: '#f8fafc', stroke: '#dc2626', 'stroke-width': 1.4 }, g); const tn = el('text', { x: pinX(p), y: yOf(PIN[p][1]) + 3, 'text-anchor': 'middle', class: 'rp-pnum' }, g); tn.textContent = String(p); pinEl[p] = g; }
     // Ball, trail, spare ball
     const trail = el('polyline', { fill: 'none', 'stroke-width': 2.6, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', opacity: 0.95 }, svg);
     const trail2 = el('line', { stroke: '#93c5fd', 'stroke-width': 2.4, 'stroke-dasharray': '5 4', opacity: 0 }, svg);
@@ -188,15 +196,16 @@
         if (I.arrows != null) { tgDot.setAttribute('cx', xOf(I.tgtPlan)); tgDot.setAttribute('cy', yOf(I.tFt)); tgDot.setAttribute('opacity', '0.9'); } else tgDot.setAttribute('opacity', '0');
         bpDot.setAttribute('cx', xOf(I.bpPlan)); bpDot.setAttribute('cy', yOf(I.bpFt)); bpDot.setAttribute('opacity', I.arrows != null || I.bp != null ? '0.9' : '0'); }
       // 0–8% reset · 8–60% first ball · 60–80% spare ball · then hold
-      const a = clamp((tt - 0.08) / 0.52, 0, 1), k = Math.round(a * (P.pts.length - 1));
+      const a0 = clamp((tt - 0.08) / 0.55, 0, 1), a = a0 * (1.4 - 0.4 * a0); // fast off the hand, slowing as it gets to the pins
+      const want = a * P.pts.len; let k = 0; { let lo = 0, hi = P.pts.length - 1; while (lo < hi) { const mid = (lo + hi) >> 1; if (P.pts.cum[mid] < want) lo = mid + 1; else hi = mid; } k = lo; }
       trail.setAttribute('points', P.pts.slice(0, k + 1).map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' '));
-      const bp = P.pts[k]; ball.setAttribute('cx', bp[0]); ball.setAttribute('cy', bp[1]); ball.setAttribute('opacity', a > 0 && a < 1 ? '1' : '0');
+      const bp = P.pts[k]; ball.setAttribute('cx', bp[0]); ball.setAttribute('cy', bp[1]); ball.setAttribute('opacity', a0 > 0 && a0 < 0.995 ? '1' : '0');
       const hit = P.pts[k][2] >= 60;
       if (hit && shownI !== i) { shownI = i; hud(true); }
       if (!hit) setPins([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 1);
-      else if (tt < 0.6 || !sec || !lv.length) setPins(lv, 0.12);
-      if (sec && lv.length && tt >= 0.6) {
-        const b2 = clamp((tt - 0.6) / 0.2, 0, 1);
+      else if (tt < 0.66 || !sec || !lv.length) setPins(lv, 0.12);
+      if (sec && lv.length && tt >= 0.66) {
+        const b20 = clamp((tt - 0.66) / 0.2, 0, 1), b2 = b20 * (1.3 - 0.3 * b20);
         const tx = lv.reduce((m, p) => m + pinX(p), 0) / lv.length, ty = lv.reduce((m, p) => m + yOf(PIN[p][1]), 0) / lv.length;
         const sx = CX - (tx - CX) * 0.9, sy = FOUL;
         trail2.setAttribute('x1', sx); trail2.setAttribute('y1', sy); trail2.setAttribute('x2', sx + (tx - sx) * b2); trail2.setAttribute('y2', sy + (ty - sy) * b2); trail2.setAttribute('opacity', '0.9');
