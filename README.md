@@ -58,6 +58,12 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v125-beta62: Smoother replay, Game Day editor, report fix
+- ▶ Replay: one smooth bird's-eye ball path (skid over the target, arc to the breakpoint, hook, roll into the pocket); the ball slows as it reaches the pins; pins at the far end of the lane.
+- ✏️ Shot editor uses Game Day's choices: dropdowns for ball, game, frame, lane, mark, pocket, exit, key pin, execution, reason and speed; a pin deck for pins left and after the 2nd ball; ball reaction chips.
+- Typed values from older edits ("Flush", "Left", "na") are cleaned up to Game Day's values.
+- Reports: a strike with no pocket read counts as a pocket hit everywhere (night review, games, lanes, balls, Game Day, replay); "Try next time" about moves is recalculated after edits.
+
 ## Changes in v124-beta61: Replay lane and ball path
 - ▶ Replay: longer, narrower lane with numbered pins; dotted rings show your target and breakpoint.
 - Ball path follows what you logged: a miss at the target carries on the same angle past your breakpoint (right of mark can't go through it); recovered / held misses come back to the pocket you logged; the pocket read decides where it enters, else the mark and the leave do. Each shot says how its line was drawn.
