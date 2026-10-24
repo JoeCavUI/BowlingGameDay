@@ -1689,6 +1689,25 @@
   // Pocket hit: a pocket read, or a strike with no read (a strike comes from the pocket unless you logged Brooklyn).
   function isPocketHit(x) { const pk = String((x && x.pocket) || ''); if (pk.startsWith('Pocket')) return true; const L = (x && x.leaves) || [];
     return isStrikeShotX(x) && !/^(Brooklyn|Missed)/.test(pk) && !L.includes('Brooklyn') && x.leaveTag !== 'Brooklyn'; }
+  // Lanes for shots saved without one (a game added later, an old night): you alternate lanes every frame, and
+  // each new game starts on the other lane (or the same lane, per your Game Day setting). Uses any shot with a lane.
+  function inferLanes(sess) {
+    const pr = (String((sess && sess.lanes) || '').match(/\d+/g) || []).map(String); if (pr.length < 2) return 0;
+    const [A, B] = pr, other = (l) => (String(l) === A ? B : A);
+    let same = false; try { same = (localStorage.getItem('bt_gameday_game_lane_v1') || '').replace(/"/g, '') === 'same'; } catch (_e) {}
+    const shots = (sess.shots || []).filter(x => x && x.type !== 'gameStart');
+    const fr = (x) => x.isFill ? 10 : Number(x.frame) || 0;
+    const start = {}; // game → lane of frame 1
+    shots.forEach(x => { const l = String(x.lane || ''); if (!pr.includes(l) || x.laneInferred || !fr(x)) return; const g = Number(x.gameNo) || 1; if (start[g] == null) start[g] = (fr(x) - 1) % 2 ? other(l) : l; });
+    const known = Object.keys(start).map(Number).sort((a, b) => a - b); if (!known.length) return 0;
+    // The night itself says which it was: games 1 and 2 both started on 14 = same lane each game.
+    let vs = 0, vo = 0; for (let q = 1; q < known.length; q++) { const d = known[q] - known[q - 1]; if (d % 2) { start[known[q]] === start[known[q - 1]] ? vs++ : vo++; } }
+    if (vs !== vo) same = vs > vo;
+    const startOf = (g) => { if (start[g] != null) return start[g]; const ref = known.slice().sort((a, b) => Math.abs(a - g) - Math.abs(b - g))[0]; return !same && Math.abs(g - ref) % 2 ? other(start[ref]) : start[ref]; };
+    let n = 0;
+    shots.forEach(x => { const l = String(x.lane || ''); if (pr.includes(l) && !x.laneInferred) return; if (!fr(x)) return; const g = Number(x.gameNo) || 1, st = startOf(g); const v = (fr(x) - 1) % 2 ? other(st) : st; if (x.lane !== v) { x.lane = v; x.laneInferred = true; n++; } });
+    return n;
+  }
   function normalizeShot(x) { if (!x || x.type === 'gameStart') return false; const a = [x.pocket, x.exit, x.miss].join('|');
     x.pocket = normPocket(x.pocket); x.exit = normExit(x.exit); x.miss = normMiss(x.miss); return a !== [x.pocket, x.exit, x.miss].join('|'); }
   function standingPins(x) { if (!x || isStrikeShotX(x)) return []; if (Array.isArray(x.leavePins) && x.leavePins.length) return x.leavePins.slice(); const t = String(x.leaveTag || ((x.leaves || [])[0]) || ''); const m = t.match(/\d+/g); return m ? [...new Set(m.map(Number).filter(n => n >= 1 && n <= 10))] : []; }
@@ -1902,7 +1921,7 @@
     renderNav,
     speak, stopSpeaking, isSpeaking, wireReadAloud, speechText,
     isTestMode, hasTestData, enterTestMode, exitTestMode, resetTestData, checkForUpdate,
-    exportBackup, buildBackup, appDataKeys, scoreGame, standingPins, isSplit, normPocket, normExit, normMiss, normalizeShot, isPocketHit,
+    exportBackup, buildBackup, appDataKeys, scoreGame, standingPins, isSplit, normPocket, normExit, normMiss, normalizeShot, isPocketHit, inferLanes,
     importBackupFile,
     lastBackupAt,
     setupStatus,

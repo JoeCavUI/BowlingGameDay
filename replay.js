@@ -222,7 +222,9 @@
     $('rpPrev').onclick = () => go(t > 0.25 && playing ? i : i - 1);
     $('rpNext').onclick = () => go(i + 1);
     $('rpPlay').onclick = () => { if (!playing && i === steps.length - 1 && t >= 1) { i = 0; t = 0; drawnI = -1; } playing = !playing; $('rpPlay').textContent = playing ? '⏸' : '▶'; };
-    $('rpSpd').onclick = () => { speed = speed === 1 ? 2 : speed === 2 ? 4 : 1; $('rpSpd').textContent = speed + '×'; };
+    // Speeds: ¼× and ½× to study a shot, 1×, then 2× and 4× to skim the night.
+    const SPEEDS = [1, 2, 4, 0.25, 0.5], SPL = { 0.25: '¼×', 0.5: '½×', 1: '1×', 2: '2×', 4: '4×' };
+    $('rpSpd').onclick = () => { speed = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length]; $('rpSpd').textContent = SPL[speed]; };
     $('rpSeek').oninput = (e) => { playing = false; $('rpPlay').textContent = '▶'; go(Number(e.target.value)); };
     function close() { cancelAnimationFrame(raf); wrap.remove(); document.body.classList.remove('rp-open'); document.removeEventListener('keydown', onKey); }
     function onKey(e) { if (e.key === 'Escape') close(); else if (e.key === ' ') { e.preventDefault(); $('rpPlay').click(); } else if (e.key === 'ArrowRight') go(i + 1); else if (e.key === 'ArrowLeft') go(i - 1); }

@@ -389,7 +389,7 @@
     function laneFor(s, g, frame) {
       const pr = String(s.lanes || '').match(/\d+/g); if (!pr || pr.length < 2) return '';
       const [a, b] = pr.map(String); const ref = gameShots(s, g).find(x => x.lane && !x.isFill && x.frame);
-      if (!ref) return '';
+      if (!ref) { try { const tmp = { lanes: s.lanes, shots: [...(s.shots || []), { gameNo: g, frame, lane: '' }] }; BT.inferLanes(tmp); return tmp.shots[tmp.shots.length - 1].lane || ''; } catch (_e) { return ''; } }
       const same = (frame - Number(ref.frame)) % 2 === 0; return same ? String(ref.lane) : (String(ref.lane) === a ? b : a);
     }
     function openEditShot(sessionId, shotIndex) {
@@ -451,6 +451,8 @@
       const m2 = BT.$('#edit2nd').value;
       if (!pins.length || m2 === 'none') { if (!pins.length) delete sh.second; else if (m2 === 'none') delete sh.second; }
       else { const left = m2 === 'spare' ? [] : [...ed2].filter(p => pins.includes(p)).sort((a, z) => a - z); sh.second = { left, spare: left.length === 0, at: (sh.second && sh.second.at) || Date.now() }; if (fr === 10 && !isFill) sh.tenthSpare = sh.second.spare; }
+      if (BT.$('#editLane').value) sh.laneInferred = false;
+      try { BT.inferLanes(s); } catch (_e) {}
       recomputeSessionSummary(s);
       recomputeLaneStats(s);
       BT.lsSet(BT.KEYS.GAME_SESSIONS, sessions);
@@ -809,7 +811,7 @@
 
     function refresh() {
       sessions = BT.lsGet(BT.KEYS.GAME_SESSIONS, []);
-      (Array.isArray(sessions)?sessions:[]).forEach(s=>{ (s.shots || []).forEach(x => { try { BT.normalizeShot(x); } catch (_e) {} }); recomputeSessionSummary(s); recomputeLaneStats(s); });
+      (Array.isArray(sessions)?sessions:[]).forEach(s=>{ (s.shots || []).forEach(x => { try { BT.normalizeShot(x); } catch (_e) {} }); try { BT.inferLanes(s); } catch (_e) {} recomputeSessionSummary(s); recomputeLaneStats(s); });
       BT.lsSet(BT.KEYS.GAME_SESSIONS, sessions);
       renderList();
     }
