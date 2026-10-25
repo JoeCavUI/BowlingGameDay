@@ -192,7 +192,7 @@
   function patternProfile(p) {
     if (!p) return null;
     const length = num(p.length), volume = num(p.volume), ratio = parseRatio(p.ratio);
-    return {
+    const out = {
       name: p.name || '', length, volume, ratio,
       lengthClass: length == null ? null : length <= 37 ? 'short' : length >= 43 ? 'long' : 'medium',
       volumeClass: volume == null ? null : volume <= 21 ? 'light' : volume >= 26 ? 'heavy' : 'medium',
@@ -202,6 +202,10 @@
       box: (p.box && !p.box.off && p.box.b1 != null) ? p.box : null, // 📦 Baker Box, decided by BT.boxFor
       r31: p.r31 !== false, // 📏 Rule of 31 checkbox (off = no exit-point advice)
     };
+    // A saved pattern straight from the Oil page (Scores, Trends): use your Baker Box and Rule of 31 settings, as Game Day does.
+    if (p.box === undefined && root.BT && root.BT.boxFor) { try { const b = root.BT.boxFor(length, ratio, {}); out.box = !b.off && b.b1 != null ? b : null; } catch (_e) {} }
+    if (p.r31 === undefined && root.BT && root.BT.rule31Pref) { try { out.r31 = (ratio != null && ratio <= 3) || root.BT.rule31Pref(); } catch (_e) {} }
+    return out;
   }
 
   // Rule of 31: estimated board where the ball EXITS the pattern (length − 31). Not the breakpoint.
@@ -677,7 +681,7 @@
         const on = checks.filter(r => r.status === 'on').length;
         const basis = checks[0].basis === 'box' ? 'your Baker Box' : 'the Rule of 31';
         dSubs.push(sub('Geometry', pct(on, checks.length), `Your game 1 line went through ${basis} on ${of(on, checks.length)} shots.`));
-      } else dSubs.push(sub('Geometry', null, pat && pat.length && pat.r31 ? 'Log your slide and target in game 1 to check your line.' : 'Pick a pattern (with Rule of 31 checked) to check your line.'));
+      } else dSubs.push(sub('Geometry', null, pat && (pat.box || (pat.length && pat.r31)) ? 'Log your slide and target in game 1 to check your line.' : pat ? 'Check the Baker Box (Angles page) or Rule of 31 to check your line.' : 'Pick an oil pattern to check your line.'));
     }
     const trackedMark = C.filter(c => String(c.shot.miss || 'didntTrack') !== 'didntTrack');
     const onMark = trackedMark.filter(c => c.shot.miss === 'noMiss' || c.saved).length;

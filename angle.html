@@ -186,7 +186,7 @@
       const speedDom = /speed/i.test(String(bowler.dominance || ''));
       const bf = BT.boxFor(len, ratio, { speedDominant: speedDom });
       let box = null, boxOff = bf.off || '';
-      if (!bf.off && len) {
+      if (!bf.off) { // no pattern length picked = checked as a house shot
         const at15 = lay + slope * 15;                       // Zone 1 = playing boards 1–10 at the arrows
         const zone1 = at15 <= 10.5 && bf.early38 != null;
         const f1 = zone1 ? bf.early38 : bf.f1;
@@ -417,7 +417,7 @@
       // 1. Through the Baker Box or the rule-of-31 exit point
       if (c.box) { const hb = c.at(c.box.fm), inB = hb >= c.box.b1 - 0.5 && hb <= c.box.b2 + 0.5; C.push([inB ? 'ok' : 'warn', inB ? `Goes through your Baker Box (board ${fmt(hb)} at ${r1(c.box.fm)} ft)` : `Misses your Baker Box: board ${fmt(hb)} at ${r1(c.box.fm)} ft (box ${c.box.b1}–${c.box.b2})`]); }
       if (c.exit != null && c.len) { const eb = c.at(c.len), d = eb - c.exit, tol = c.rc === 'sport' ? 1 : 2; C.push([Math.abs(d) <= tol ? 'ok' : 'warn', Math.abs(d) <= tol ? `Leaves the oil at the exit point (board ${fmt(eb)}, rule of 31 says ${c.exit})` : `Leaves the oil on board ${fmt(eb)}, ${fmt(Math.abs(d))} boards ${d < 0 ? 'outside' : 'inside'} the exit point (${c.exit})`]); }
-      if (!c.box && c.exit == null) C.push(['na', 'No Baker Box or Rule of 31 check here: check one above']);
+      if (!c.box && c.exit == null) C.push(['na', c.boxOff === 'sport' ? `The Baker Box doesn't apply to this ${c.len} ft sport pattern: check Rule of 31 above` : c.boxOff === 'off' ? 'No Baker Box or Rule of 31 check here: check one above' : (c.r31 && !c.len ? 'Rule of 31 needs a pattern length: pick a pattern or enter its length' : 'No Baker Box or Rule of 31 check here: check one above')]);
       // 2. Breakpoint
       if (c.bp == null) C.push(['na', H.est ? `No breakpoint entered: this line would turn about board ${fmt(half(H.est.b))} at ${Math.round(H.est.ft)} ft (estimate). Enter yours to check it` : 'No breakpoint entered: the turn is set at the end of the oil']);
       else if (!bpFits(c)) C.push(['warn', `Your breakpoint (board ${fmt(c.bp)}) doesn't fit this line: it turns at the end of the oil instead`]);
