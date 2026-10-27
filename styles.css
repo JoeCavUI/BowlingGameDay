@@ -904,3 +904,17 @@ body.rp-open{overflow:hidden}
 .cf-f.on .input{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
 .cf-clear{justify-self:start;padding:8px 0}
 .cf-note{margin-top:4px;opacity:1}
+/* 🤫 Quiet Coach */
+.gd-q1{font-size:16px;font-weight:800;line-height:1.35;padding:10px 12px;border-radius:0 12px 12px 0;border-left:4px solid rgba(255,255,255,.18);background:rgba(255,255,255,.05)}
+.gd-q1.move{border-left-color:#ffc400;background:rgba(255,196,0,.14)}.gd-q1.warn{border-left-color:var(--danger);background:rgba(255,107,107,.12)}.gd-q1.good{border-left-color:var(--accent);background:rgba(99,230,210,.12)}
+.gd-q1.calm{font-weight:600;font-size:14px;opacity:.75;border-left-color:rgba(255,255,255,.12);background:transparent}
+.gd-q1more{margin-top:4px;font-size:13px}
+.gd-eyes{margin:8px 0;padding:8px 10px;border:1px dashed rgba(255,255,255,.18);border-radius:10px}
+.gd-eyes .dim{opacity:.65;font-size:12px}
+body.gd-seasoned .gd-help{display:none}
+.gd-sb1{display:flex;gap:12px;flex-wrap:wrap;align-items:baseline;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.06)}.gd-sb1 b{min-width:62px}
+.gd-shot1{padding:8px 10px;line-height:1.35}
+.gd-lread{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0 2px}.gd-lread .small{margin-right:2px}
+.gd-lread button{border:1px solid rgba(255,255,255,.22);background:transparent;color:inherit;border-radius:999px;padding:5px 10px;font-weight:700;font-size:13px}
+.gd-lread button.on{background:var(--accent);color:#0b0f14;border-color:transparent}
+.gd-laneinfo{display:flex;gap:8px;align-items:center;margin-top:8px;font-weight:700;font-size:14px}.gd-laneinfo input{width:20px;height:20px;accent-color:var(--accent)}

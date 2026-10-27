@@ -149,6 +149,7 @@
 
     return {
       exitRaw, exitRead, keyPin, finish, speed, speedCaused, bp, outward, recovery, angleClass,
+      laneInfo: s.laneInfo === true, // a poor shot you said still told you about the lane: used for lane reads
       shot: s, execution, missSide, saved, hit, strike, meaning, early, long, lean,
       pocketHit, carryFail: pocketHit && !strike,
       overUnder: obs.includes('Over/under') || meaning === 'split',
@@ -558,7 +559,7 @@
       if (wf >= 2) res.notes.push(`⚠️ 🌀 Roll / energy early warning: the ball is losing energy on ${wf} of your last ${pocket3.length} pocket hits (deflecting off the deck / ${kp} laying down). Flat 10s are next if it continues.`);
       else if (sf >= 2) res.notes.push(`⚠️ 🌀 Roll / energy early warning: the ball is hitting too hard on ${sf} of your last ${pocket3.length} pocket hits (driving left off the deck / ${kp} wrapping). Watch for ringing 10s and 4-pins.`);
     }
-    const trusted = C.filter(c => c.execution !== 'poor');
+    const trusted = C.filter(c => (c.execution !== 'poor' || c.laneInfo));
     const avg = (arr) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
 
     // 🛣️ Lane by lane: one lane of the pair can play differently
@@ -984,8 +985,8 @@
       const i = ch.i, prev = C[i - 1], cur = C[i];
       const start = k ? changes[k - 1].i : 0;
       const end = k + 1 < changes.length ? changes[k + 1].i : C.length;
-      const before = C.slice(start, i).filter(c => c.execution !== 'poor');
-      const after = C.slice(i, end).filter(c => c.execution !== 'poor');
+      const before = C.slice(start, i).filter(c => (c.execution !== 'poor' || c.laneInfo));
+      const after = C.slice(i, end).filter(c => (c.execution !== 'poor' || c.laneInfo));
       const last2 = before.slice(-2);
       const read = last2.length === 2 && last2.every(c => c.lean > 0) ? 'early' : last2.length === 2 && last2.every(c => c.lean < 0) ? 'late' : '';
       const dF = (prev.feet != null && cur.feet != null) ? own(cur.feet) - own(prev.feet) : 0;
@@ -1089,7 +1090,7 @@
   // 🛣️ One lane of the pair playing differently (needs 6+ good shots on each lane).
   function laneSplit(C) {
     const by = {};
-    C.filter(c => c.execution !== 'poor' && c.shot && c.shot.lane).forEach(c => { const k = String(c.shot.lane); (by[k] = by[k] || []).push(c); });
+    C.filter(c => (c.execution !== 'poor' || c.laneInfo) && c.shot && c.shot.lane).forEach(c => { const k = String(c.shot.lane); (by[k] = by[k] || []).push(c); });
     const ks = Object.keys(by);
     if (ks.length !== 2) return null;
     const st = ks.map(k => { const a = by[k]; const n = a.length; const x = a.filter(c => c.strike).length; const pk = a.filter(c => c.pocketHit).length; const early = a.filter(c => c.early || c.lean > 0).length; const long = a.filter(c => c.long || c.lean < 0).length; return { lane: k, n, x, rate: n ? x / n : 0, pk, early, long }; });
@@ -1126,7 +1127,7 @@
       const prof = bowlerProfile(ctx && ctx.bowler);
       const all = ((ctx && ctx.shots) || []).filter(s => s && s.type !== 'gameStart' && !s.isFill);
       const C = all.map(s => classify(s, prof.lefty));
-      const W = C.filter(c => c.execution !== 'poor').slice(-5);
+      const W = C.filter(c => (c.execution !== 'poor' || c.laneInfo)).slice(-5);
       if (C.length >= 3) sideNotes(out, C, W, prof, patternProfile(ctx && ctx.pattern));
       if (C.length >= 2) moveNotes(out, C, prof);
       laneNotes(out, C, prof);
@@ -1228,7 +1229,7 @@
     }
 
     // ---- Before there's enough to read: starting plan ----
-    const trustedAll = C.filter(c => c.execution !== 'poor');
+    const trustedAll = C.filter(c => (c.execution !== 'poor' || c.laneInfo));
     if (C.length < 3) {
       res.status = 'start';
       // Same first ball as tonight's Game Plan when it's in the bag (history-based pick); else the motion pick.
@@ -1311,8 +1312,8 @@
       }
     }
     const since = lastChange >= 0 ? C.slice(lastChange) : C;
-    const trustedSince = since.filter(c => c.execution !== 'poor');
-    const before = lastChange >= 0 ? C.slice(Math.max(0, lastChange - 5), lastChange).filter(c => c.execution !== 'poor') : [];
+    const trustedSince = since.filter(c => (c.execution !== 'poor' || c.laneInfo));
+    const before = lastChange >= 0 ? C.slice(Math.max(0, lastChange - 5), lastChange).filter(c => (c.execution !== 'poor' || c.laneInfo)) : [];
 
     // Window for decisions: last 5 trusted shots on the current line/ball
     const W = trustedSince.slice(-5);
@@ -1331,7 +1332,7 @@
 
     // Lane read for the whole current game (for the trend line)
     const gameNo = last.gameNo;
-    const G = C.filter(c => c.gameNo === gameNo && c.execution !== 'poor');
+    const G = C.filter(c => c.gameNo === gameNo && (c.execution !== 'poor' || c.laneInfo));
     const gH = cnt(G, c => c.lean > 0), gL = cnt(G, c => c.lean < 0);
     res.read = gH >= 2 && gL >= 2 ? 'Over/under' : gH >= 2 && gH > gL ? 'Hooking early (drying up)' : gL >= 2 && gL > gH ? 'Holding (ball going long)' : (outsideSaved || insideSaved) ? 'Room to miss' : 'Steady';
 

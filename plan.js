@@ -469,6 +469,24 @@
       } catch (e) { console.error(e); }
     }
 
+    // ---- 🗺️ Lane map: the lines that have worked here, from the nights you logged in Game Day
+    if (root.BTEyes) {
+      try {
+        let sessAll = []; try { sessAll = BT().lsGet(BT().KEYS.GAME_SESSIONS, []) || []; } catch (_e) {}
+        const lm = root.BTEyes.laneMap(houseLabel, lanes, sessAll);
+        if (lm && lm.rows.length) {
+          const pat0 = opts.patternName ? `&pattern=${encodeURIComponent(opts.patternName)}` : '';
+          const items = [`From ${lm.nights} night${lm.nights === 1 ? '' : 's'} you logged ${lm.pair ? 'on lanes ' + esc(lanes) : 'at this house'}: your lines with 5+ shots, best first (strikes, then pocket hits).`];
+          lm.rows.slice(0, 4).forEach((o, i) => { const g = Object.entries(o.games).filter(([, v]) => v.n >= 3).map(([k, v]) => `G${k} ${v.x}/${v.n}`).join(' · ');
+            items.push(`${i === 0 ? '⭐ ' : ''}<b>${esc(o.ball)} ${o.feet}/${o.arrows}${o.bp != null ? '/' + o.bp : ''}</b>: ${o.x} strikes in ${o.n}, pocket ${Math.round(o.p / o.n * 100)}%${g ? ` <span class="dim">(${g})</span>` : ''} · <a href="angle.html?slide=${o.feet}&target=${o.arrows}${o.bp != null ? '&bp=' + o.bp : ''}${pat0}">📐 Angles</a>`); });
+          const bgs = [1, 2, 3].filter(g => lm.byGame[g]).map(g => { const o = lm.byGame[g]; return `G${g} <b>${o.feet}/${o.arrows}</b> (${o.x}/${o.n})`; });
+          if (bgs.length >= 2) items.splice(1, 0, `<b>How your line has moved here:</b> ${bgs.join(' → ')}`);
+          items.push('<span class="small">Where the pattern brought the ball back to the pocket for you. Lanes change; start here and let the first shots confirm it.</span>');
+          sec('🗺️', 'Lane map: where it has worked', items);
+        }
+      } catch (e) { console.error(e); }
+    }
+
     // ---- Starting line
     {
       const items = [];

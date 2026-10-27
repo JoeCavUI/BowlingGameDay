@@ -134,7 +134,7 @@
         <div class="panel gd-coach" id="coachPanel">
           <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
             <b>Coach</b>
-            <span style="display:flex;gap:10px;align-items:baseline"><button type="button" class="btn secondary" id="coachSpeak" style="padding:4px 10px;font-size:13px">🔊 Read aloud</button><a href="guide.html#coach" class="small" style="color:var(--accent)">How Coach works →</a></span>
+            <span style="display:flex;gap:10px;align-items:baseline"><button type="button" class="btn secondary" id="coachMode" style="padding:4px 10px;font-size:13px" aria-label="Coach detail">Quiet</button><button type="button" class="btn secondary" id="coachSpeak" style="padding:4px 10px;font-size:13px">🔊 Read aloud</button><a href="guide.html#coach" class="small" style="color:var(--accent)">How Coach works →</a></span>
           </div>
           <div class="small" id="coachText" style="margin-top:6px">Log a few shots to get feedback.</div>
         </div>
@@ -158,7 +158,7 @@
               <option value="15">the arrows (15 ft)</option><option value="7">the dots (7 ft)</option><option value="20">20 ft</option><option value="22">22 ft</option><option value="25">25 ft</option><option value="27">27 ft</option><option value="30">30 ft</option><option value="33">33 ft</option><option value="35">35 ft</option><option value="40">40 ft</option>
             </select>
           </div>
-          <div class="small" style="margin-top:6px">Slide = the board under the inside of your slide foot at the foul line. Target = the board your eyes are on, at the distance you pick.</div>
+          <div class="small gd-help" style="margin-top:6px">Slide = the board under the inside of your slide foot at the foul line. Target = the board your eyes are on, at the distance you pick.</div>
           <div class="gd-changed"><span class="small"><b>Changed since last shot</b> (optional)</span>
             <div id="changedPills" class="gd-chg"><button type="button" data-chg="feet">Feet / eyes</button><button type="button" data-chg="speed">Speed</button><button type="button" data-chg="loft">Loft</button><button type="button" data-chg="hand">Hand</button><button type="button" data-chg="ball">Ball</button></div>
           </div>
@@ -172,6 +172,7 @@
         <!-- The shot, in the order you see it -->
         <div class="panel" id="shotPanel">
           <div class="gd-frameline" id="frameLine">Game 1 · Frame 1</div>
+          <div class="gd-lread" id="laneReadRow"><span class="small">Lanes:</span><button type="button" data-lread="same">Same</button><button type="button" data-lread="more">Hook more</button><button type="button" data-lread="less">Hook less</button></div>
           <div id="liveCard"></div>
           <div id="gameFlow"></div>
           <div class="gd-q"><span class="gd-qnum">1</span><b>Your mark</b></div>
@@ -201,6 +202,7 @@
               <div id="faultWrap" class="gd-fault" style="display:none">
                 <div class="gd-rl">What do you think happened? <span class="small">(optional, one tap)</span></div>
                 <div id="readsFault" class="gd-r1"></div>
+                <label class="gd-laneinfo"><input type="checkbox" id="laneInfo" /> 👀 Still told me about the lane</label>
                 <div class="gd-myfault"><button type="button" class="gd-addfault" id="addFaultBtn">+ Add your own</button></div>
                 <div id="myFaultBox" style="display:none;margin-top:8px">
                   <div style="display:flex;gap:8px"><input id="myFaultIn" class="input" maxlength="40" placeholder="What it felt like" style="flex:1" /><button type="button" class="btn" id="myFaultAdd">Add</button></div>
@@ -236,13 +238,13 @@
       <div class="gd-side">
         <div class="panel" id="scoreboardPanel">
           <h2>Lane scoreboard</h2>
-          <div class="small">Strikes + pocket/carry by lane for this session.</div>
+          <div class="small gd-help">Strikes + pocket/carry by lane for this session.</div>
           <div class="hr-split"></div>
           <div id="laneScoreboard" class="small">Enter a lane pair (e.g., 21/22) and log a few shots.</div>
         </div>
         <div class="panel">
           <h2>Current session log</h2>
-          <div class="small">Tap any shot to fix it or delete it. “Save session” stores the night in Scores.</div>
+          <div class="small gd-help">Tap any shot to fix it or delete it. “Save session” stores the night in Scores.</div>
           <div id="faultSum"></div>
           <div class="hr-split"></div>
           <div class="list" id="logList" style="max-height:80vh"></div>
@@ -314,10 +316,11 @@
   <script src="chart.js?v=126"></script>
   <script src="plan.js?v=126"></script>
   <script src="insight.js?v=126"></script>
+  <script src="eyes.js?v=126"></script>
   <script src="cloud.js?v=126"></script>
   <script>
     BT.renderNav('gameday');
-    BT.wireReadAloud(document.getElementById('coachSpeak'), () => ((document.getElementById('coachText') || {}).innerText || '').split('\n').filter(l => !/^(Why & what's next|What Coach is using)/i.test(l.trim())).join('\n'));
+    BT.wireReadAloud(document.getElementById('coachSpeak'), () => { const q = document.querySelector('#coachText .gd-q1'), full = document.querySelector('#coachFull'); if (q && full && full.hidden) return q.innerText; return ((document.getElementById('coachText') || {}).innerText || '').split('\n').filter(l => !/^(Why & what's next|What Coach is using|Why ›|Less ‹)/i.test(l.trim())).join('\n'); });
 
     // Quick result buttons (pin deck handles everything else)
     const quickResults = ['Strike','Brooklyn','Flat 10','Ringing 10'];
@@ -691,7 +694,14 @@ function selectedPills(container) {
     }
     // 🤔 The reason list only shows once you tap Poor.
     function updateFaultVis() { const w = BT.$('#faultWrap'); if (!w) return; const on = selectedPills(el.readsQuality).includes('Poor execution'); w.style.display = on ? '' : 'none'; if (!on && el.readsFault) BT.$all('button[data-pill]', el.readsFault).forEach(b => { b.classList.remove('active'); b.style.outline = 'none'; }); }
+    // 🛣️ Your lane read for this game (optional): you see the lanes change; Coach follows what you saw.
+    const laneReads = {};
+    function laneReadFor(g) { if (laneReads[g] != null) return laneReads[g]; const x = sessionShots.find(s => s && s.type !== 'gameStart' && Number(s.gameNo) === Number(g) && s.laneRead); return x ? x.laneRead : ''; }
+    function paintLaneRead() { const g = currentGameNumber(), v = laneReadFor(g); BT.$all('#laneReadRow [data-lread]').forEach(b => b.classList.toggle('on', b.dataset.lread === v)); }
+    BT.$all('#laneReadRow [data-lread]').forEach(b => b.addEventListener('click', () => { const g = currentGameNumber(); laneReads[g] = laneReadFor(g) === b.dataset.lread ? '' : b.dataset.lread; paintLaneRead(); try { markCoachDirty(); } catch (_e) {} }));
     function clearPills() {
+      try { const li = BT.$('#laneInfo'); if (li) li.checked = false; } catch (_e) {}
+      try { paintLaneRead(); } catch (_e) {}
       try { changedSel.clear(); paintChanged(); } catch (_e) {}
 	      [el.readsQuality, el.readsMiss, el.readsBallObs, el.readsPocket, el.readsExit, el.readsSpeed, el.readsFault].forEach(c => {
 	        if (!c) return;
@@ -980,6 +990,7 @@ function selectedPills(container) {
     }
 
     function updateFrameUI() {
+      try { paintLaneRead(); } catch (_e) {}
       if (!el.frame || !el.fill) return;
       const info = computeFrameInfo();
       el.frame.value = String(info.frame);
@@ -1134,6 +1145,11 @@ function isStrike(shot) {
       const sL = laneStats(String(L));
       const sR = laneStats(String(R));
 
+      if (coachMode() !== 'full') {
+        const row = (lab, n, st) => `<div class="gd-sb1"><b>${lab} ${n}</b><span>${st.strikes}/${st.total} X</span><span>pocket ${st.pocketPct}%</span><span>carry ${st.carry}%</span></div>`;
+        el.laneScoreboard.innerHTML = row('Lane', L, sL) + row('Lane', R, sR);
+        return;
+      }
       el.laneScoreboard.innerHTML = `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <div class="panel" style="padding:10px;margin:0">
@@ -1298,6 +1314,11 @@ function isStrike(shot) {
         };
         const missTxt = missLabel(s.miss) ? ` • ${missLabel(s.miss)}` : '';
 
+        if (coachMode() !== 'full') {
+          const pk = String(s.pocket || '').replace(/^Pocket /, '').replace('Unknown', ''), mk = { noMiss: 'on mark', rightRecovered: 'R, recovered', leftHeld: 'L, held', rightMiss: 'missed R', leftMiss: 'missed L' }[s.miss] || '';
+          const line1 = [s.feet != null && s.arrows != null ? `${s.feet}/${s.arrows}${s.bp != null && s.bp !== '' ? '/' + s.bp : ''}` : '', pk, mk, Number(s.executionQuality) === 1 ? 'poor' + (s.laneInfo ? ' (lane info)' : '') : ''].filter(Boolean).join(' · ');
+          return `<div class="list-item gd-shot gd-shot1" data-shot="${s.id}" role="button" tabindex="0"><span class="small">${[gameTxt, frameTxt].filter(Boolean).join(' ')}${s.lane ? ' · L' + s.lane : ''}</span> <b>${escapeHtml(leaveText)}</b> <span class="small">${escapeHtml(s.ball || '')}${line1 ? ' · ' + escapeHtml(line1) : ''}</span></div>`;
+        }
         return `<div class="list-item gd-shot" data-shot="${s.id}" role="button" tabindex="0">
           <div class="small">✏️ ${dt}${gameTxt || frameTxt ? ' • ' : ''}${[gameTxt, frameTxt].filter(Boolean).join(' ')}</div>
           <div><b>${s.ball || 'Ball?'}</b> • ${reads}</div>
@@ -2032,7 +2053,26 @@ function saveCurrentSessionDraft() {
       };
     }
 
+    // 🤫 Quiet Coach: one short line while you bowl, only when something is new; the reasoning is one tap away.
+    const COACH_MODE_KEY = 'bt_gd_coach_mode_v1';
+    const coachMode = () => { try { return localStorage.getItem(COACH_MODE_KEY) || 'quiet'; } catch (_e) { return 'quiet'; } };
+    let lastQuiet = '', quietMemo = null; const shownEyes = new Set();
+    try { if ((BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || []).length >= 2) document.body.classList.add('gd-seasoned'); } catch (_e) {}
+    { const mb = document.getElementById('coachMode'); if (mb) { const paint = () => { mb.textContent = coachMode() === 'full' ? 'Full' : 'Quiet'; mb.title = coachMode() === 'full' ? 'Showing everything. Tap for one line.' : 'One line while you bowl. Tap for everything.'; }; paint();
+      mb.addEventListener('click', () => { try { localStorage.setItem(COACH_MODE_KEY, coachMode() === 'full' ? 'quiet' : 'full'); } catch (_e) {} paint(); lastQuiet = ''; quietMemo = null; try { autoCoach(); } catch (_e) {} try { renderLog(); updateLayPt(); updateLineMath(); renderScoreboard(); } catch (_e) {} }); } }
+    const firstSentence = (t) => { const m = String(t || '').match(/^(.+?[.!?])(\s|$)/); return (m ? m[1] : String(t || '')).trim(); };
+    // The same advice in other words, once: drop a sentence that mostly repeats one already shown.
+    function dedupeCoach(r) {
+      const seen = [], words = (t) => new Set(String(t).toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 3));
+      const dup = (t) => { const w = words(t); if (w.size < 3) return false; return seen.some(o => { let c = 0; w.forEach(x => { if (o.has(x)) c++; }); return c / w.size >= 0.7; }); }; // most of this sentence was already said
+      const keep = (t) => { if (!t) return ''; const out = String(t).split(/(?<=[.!?])\s+/).filter(x => { if (dup(x)) return false; seen.push(words(x)); return true; }); return out.join(' '); };
+      const o = Object.assign({}, r);
+      keep(o.headline); if (o.heads) keep(o.heads.text); if (o.ready) o.ready = Object.assign({}, o.ready, { text: keep(o.ready.text) });
+      o.why = keep(o.why); o.next = keep(o.next); o.notes = (o.notes || []).map(keep).filter(Boolean);
+      return o;
+    }
     function renderCoachV2(r) {
+      r = dedupeCoach(r);
       const icon = { good: '✅', move: '🔔', warn: '✋', info: '👀' }[r.tone] || '👀';
       const color = { good: 'rgba(99,230,210,0.14)', move: 'rgba(255,196,0,0.16)', warn: 'rgba(255,107,107,0.14)', info: 'rgba(255,255,255,0.05)' }[r.tone] || 'rgba(255,255,255,0.05)';
       const border = { good: 'var(--accent)', move: '#ffc400', warn: 'var(--danger)', info: 'rgba(255,255,255,0.18)' }[r.tone] || 'rgba(255,255,255,0.18)';
@@ -2061,7 +2101,11 @@ function saveCurrentSessionDraft() {
           notesBlock = `<details class="gd-notes"><summary class="small" style="cursor:pointer"><b>📝 Your notes for ${escapeHtml(el.house.value)}</b>${N.length ? ` (${N.length})` : ''}</summary>${BTInsight.notesHtml(el.house.value)}<button type="button" class="btn secondary" id="gdNoteAdd" style="margin-top:6px">+ Add a note</button></details>`;
         }
       } catch (e) { console.error(e); }
-      el.coachText.innerHTML = headsHtml + meterHtml + `
+      // 👀 Second set of eyes: history at this house and pair, and tonight lane against lane.
+      let eyes = []; try { if (window.BTEyes) { const bw = BT.lsGet(BT.KEYS.BOWLER, {}) || {}; eyes = BTEyes.signals({ shots: sessionShots.slice().reverse(), lanes: BT.formatLanes ? BT.formatLanes(el.lanes.value) : el.lanes.value.trim(), house: el.house.value, gameNow: currentGameNumber(), ball: el.ball.value, sessions: BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || [], lefty: /^l/i.test(String(bw.handedness || bw.hand || '')), userRead: laneReadFor(currentGameNumber()) }); } } catch (e) { console.error(e); }
+      const angleHref = (a) => `angle.html?from=gameday&slide=${encodeURIComponent(a.slide)}&target=${encodeURIComponent(a.target)}${a.bp != null ? '&bp=' + encodeURIComponent(a.bp) : ''}${el.pattern.value ? '&pattern=' + encodeURIComponent(el.pattern.value) : ''}`;
+      const eyesHtml = eyes.length ? `<div class="gd-eyes"><div class="small" style="opacity:1"><b>👀 Second set of eyes</b></div>${eyes.map(x => `<div class="small" style="margin-top:4px;opacity:1">${escapeHtml(x.text)}<div class="dim">${escapeHtml(x.why)}</div>${x.angle ? `<a class="small" style="color:var(--accent)" href="${angleHref(x.angle)}">📐 Check this line on Angles →</a>` : ''}</div>`).join('')}</div>` : '';
+      el.coachText.innerHTML = headsHtml + meterHtml + eyesHtml + `
         <div style="border-left:4px solid ${border};background:${color};border-radius:0 12px 12px 0;padding:10px 12px">
           ${(r.lens || r.element) ? `<div class="small" style="opacity:1;font-weight:800;letter-spacing:.3px;margin-bottom:4px">${escapeHtml([r.lens, r.element].filter(Boolean).join(' · '))}</div>` : ''}
           ${r.compass && r.compass.badge ? `<div style="font-weight:800;font-size:15px;margin-bottom:6px;line-height:1.35;color:var(--text)">${escapeHtml(r.compass.badge)}</div>` : ''}
@@ -2079,6 +2123,24 @@ function saveCurrentSessionDraft() {
         </div>
         ${details ? `<details style="margin-top:8px"><summary class="small" style="cursor:pointer">What Coach is using</summary>${details}</details>` : ''}
         ${notesBlock}`;
+      if (coachMode() !== 'full') {
+        // Pick the one thing worth saying: a move, a lane change you should know about, or a new pattern from your history.
+        let line = '', tone = r.tone || 'info', key = '';
+        const nNow = sessionShots.filter(x => x && x.type !== 'gameStart').length;
+        if (quietMemo && quietMemo.n === nNow) ({ line, tone, key } = quietMemo); // same shot, same line (Coach redraws a few times)
+        else if (r.status === 'move') { line = firstSentence(r.headline); key = 'move:' + line; }
+        else if (r.heads && r.heads.text) { line = firstSentence(r.heads.text); tone = 'warn'; key = 'heads:' + line; }
+        else { const fresh = eyes.find(x => !shownEyes.has(x.id)); if (fresh) { line = fresh.text; tone = 'info'; key = 'eyes:' + fresh.id; shownEyes.add(fresh.id); }
+          else if (r.tone === 'warn') { line = firstSentence(r.headline); key = 'warn:' + line; }
+          else { const nn = (r.notes || []).map(firstSentence).find(n => n && !shownEyes.has('note:' + n)); if (nn) { line = nn; key = 'note:' + nn; shownEyes.add(key); } } }
+        const same = !(quietMemo && quietMemo.n === nNow) && key && key === lastQuiet && r.status !== 'move';
+        if (!(quietMemo && quietMemo.n === nNow)) { lastQuiet = key || lastQuiet; quietMemo = { n: nNow, line: same ? '' : line, tone, key }; }
+        const icon1 = { good: '✅', move: '🔔', warn: '✋', info: '👀' }[tone] || '👀';
+        const full = el.coachText.innerHTML;
+        el.coachText.innerHTML = `<div class="gd-q1 ${tone}${!line || same ? ' calm' : ''}">${!line || same ? '✓ Nothing new. Make your shot.' : `${/^\p{Extended_Pictographic}/u.test(line) ? '' : icon1 + ' '}${escapeHtml(line)}`}</div>
+          <button type="button" class="cl-link gd-q1more" id="coachFullBtn">Why ›</button><div id="coachFull" hidden>${full}</div>`;
+        BT.$('#coachFullBtn').addEventListener('click', () => { const f = BT.$('#coachFull'); f.hidden = !f.hidden; BT.$('#coachFullBtn').textContent = f.hidden ? 'Why ›' : 'Less ‹'; });
+      }
       { const na = BT.$('#gdNoteAdd'); if (na) na.addEventListener('click', () => { const t = prompt(`What have you noticed at ${el.house.value}? Coach will test it against your games.\n(e.g. "10 pin won't fall", "game 3 move back outside")`); if (t && t.trim()) { BTInsight.addNote(el.house.value, t.trim()); autoCoach(); const d = BT.$('.gd-notes'); if (d) d.open = true; } }); }
       const KIND2CHG = { Aim: 'feet', Angle: 'feet', Speed: 'speed', Loft: 'loft', Release: 'hand', Equipment: 'ball' };
       BT.$all('.gd-opt', el.coachText).forEach(b => b.addEventListener('click', () => {
@@ -2239,6 +2301,8 @@ function saveCurrentSessionDraft() {
         // New coaching layers
         speedTrend: singlePillValue(el.readsSpeed, 'unknown'),
         fault: execQuality === 1 ? singlePillValue(el.readsFault, '') : '',
+        laneInfo: execQuality === 1 && !!(BT.$('#laneInfo') && BT.$('#laneInfo').checked),
+        laneRead: laneReadFor(info.gameNo || currentGameNumber()) || '',
         adjust: null,
 
         pocket: singlePillValue(el.readsPocket, 'Unknown'),
@@ -2879,8 +2943,14 @@ function sessionSummary(shots) {
       box.style.display = '';
       box.className = 'gd-linemath ' + (r.status === 'on' ? 'ok' : r.status ? 'off' : '');
       const t = BTCoach.lineText(r).replace(/^📐 /, '');
-      box.innerHTML = '📐 ' + escapeHtml(t)
+      const fullT = '📐 ' + escapeHtml(t)
         .replace(/^(✅ Starting line checks out:|✅ Usable line:|⚠️ Starting-line heads-up:|⚠️ Usable-line heads-up:|Starting line through the rule-of-31 exit point:)/, '<b>$1</b>');
+      if (coachMode() !== 'full' && r.status) {
+        const what = r.basis === 'box' ? 'your Baker Box' : 'the exit point';
+        const badge = r.status === 'on' ? `📐 ✅ Through ${what}` : `📐 ${r.gap} board${r.gap === 1 ? '' : 's'} ${r.status} ${what}${r.slide != null && r.yourSlide != null && Math.abs(r.slide - r.yourSlide) <= 8 ? ` · slide ${r.slide} fits` : ''}`;
+        box.innerHTML = `<b>${badge}</b> <button type="button" class="cl-link" id="lmMore">more</button><div id="lmFull" hidden style="margin-top:4px">${fullT}</div>`;
+        BT.$('#lmMore').onclick = () => { const f = BT.$('#lmFull'); f.hidden = !f.hidden; BT.$('#lmMore').textContent = f.hidden ? 'more' : 'less'; };
+      } else box.innerHTML = fullT;
     }
     // 🎳 Laydown point at the foul line: slide board minus your laydown offset (Bowler page).
     function updateLayPt() {
@@ -2888,7 +2958,8 @@ function sessionSummary(shots) {
       const sl = Number(el.feet.value), off0 = Number((BT.lsGet(BT.KEYS.BOWLER, {}) || {}).laydownOffset), set = Number.isFinite(off0) && off0 > 0, off = set ? off0 : 5;
       if (el.feet.value === '' || !Number.isFinite(sl)) { box.innerHTML = ''; return; }
       const lay = Math.round((sl - off) * 2) / 2;
-      box.innerHTML = `🎳 Laydown at the foul line: <b>board ${lay}</b> <span class="small">(slide ${sl} − ${off}¹)</span><div class="small gd-layfoot">¹ Laydown offset ${off}${set ? '' : ' (not measured yet, so Coach uses 5)'}: from your <a href="bowler.html">Bowler page</a>.</div>`;
+      box.innerHTML = coachMode() !== 'full' ? `🎳 Laydown <b>board ${lay}</b> <span class="small">(slide ${sl} − ${off}${set ? '' : ', <a class="cl-link" href="bowler.html">offset not measured</a>'})</span>`
+        : `🎳 Laydown at the foul line: <b>board ${lay}</b> <span class="small">(slide ${sl} − ${off}¹)</span><div class="small gd-layfoot">¹ Laydown offset ${off}${set ? '' : ' (not measured yet, so Coach uses 5)'}: from your <a href="bowler.html">Bowler page</a>.</div>`;
     }
     el.feet.addEventListener('input', updateLayPt); el.feet.addEventListener('change', updateLayPt);
     document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('[data-step="feet"]')) setTimeout(updateLayPt, 0); });

@@ -563,6 +563,7 @@
         if (first && last && lineKey(first) !== lineKey(last)) notes.push(`line ${lineKey(first)} → ${lineKey(last)}`);
         const bs = [...new Set(gs.map(x => x.ball).filter(Boolean))]; if (bs.length) notes.push(bs.length === 1 ? bs[0] : `balls: ${bs.join(', ')}`);
         const mv = gs.filter((x, i) => i && (x.feet !== gs[i - 1].feet || x.arrows !== gs[i - 1].arrows)).length; if (mv) notes.push(`${mv} move${mv === 1 ? '' : 's'}`);
+        { const rd = (gs.find(x => x.laneRead) || {}).laneRead; if (rd) notes.push(`your read: ${rd === 'more' ? 'hooking more' : rd === 'less' ? 'hooking less' : 'same'}`); }
         let card = null; try { const all = chron.filter(x => x.type !== 'gameStart' && (Number(x.gameNo) || 1) === g); const c = BT.scoreGame(all); if (c.frames.some(f => f.shot && (f.shot.second || f.shot.noSecond)) || c.complete) card = c; } catch (_e) {}
         return { no: g, score: scoreFor(g) ?? (card && card.complete ? card.total : null), m, notes, card };
       });
@@ -700,7 +701,7 @@
               return `<div class="nr-gh">Game ${g.no}${g.score != null ? ` · ${g.score}` : ''}</div>${miss.length || fill ? `<div class="nr-add"><span class="small">${miss.length ? `Not logged: frame${miss.length === 1 ? '' : 's'} ${miss.length > 3 && miss.every((f, i) => !i || f === miss[i - 1] + 1) ? `${miss[0]}–${miss[miss.length - 1]}` : miss.join(', ')}` : 'The 10th needs its fill ball'}</span><button type="button" class="btn secondary small" data-add-game="${g.no}" data-add-frame="${miss.length ? miss[0] : 10}"${fill ? ' data-add-fill="1"' : ''}>＋ Add ${fill ? 'fill ball' : `frame ${miss[0]}`}</button></div>` : ''}` + g.shots.map(x => `<div class="list-item nr-shot" data-shot-index="${x.idx}">
               <div class="small">F${x.sh.frame || '—'}${x.sh.isFill ? ' (fill)' : ''}${x.sh.added ? ' · <span class="nr-added">＋ added later</span>' : ''}${x.sh.lane ? ` · lane ${esc(x.sh.lane)}` : ''} · ${esc(x.sh.ball || 'Ball?')}</div>
               <div><b>${esc(x.result)}</b>${x.pocket ? ` · ${esc(x.pocket)}` : ''}${x.mark ? ` · ${esc(x.mark)}` : ''}</div>
-              <div class="small">Line ${x.line}${x.moved ? ` · <span class="nr-mv">🔁 moved ${x.moved}</span>` : ''}${x.fault ? ` · 🤔 ${esc(x.fault)}` : ''}${x.flag ? ` · <span class="nr-flag">${x.flag}</span>` : ''}</div>
+              <div class="small">Line ${x.line}${x.moved ? ` · <span class="nr-mv">🔁 moved ${x.moved}</span>` : ''}${x.fault ? ` · 🤔 ${esc(x.fault)}` : ''}${x.sh.laneInfo ? ' · 👀 lane info' : ''}${x.flag ? ` · <span class="nr-flag">${x.flag}</span>` : ''}</div>
             </div>`).join(''); }).join('')}
           <div class="nr-add" style="margin-top:10px"><span class="small">Bowled a game you didn't log?</span><button type="button" class="btn secondary small" id="nrAddGame">＋ Add a game</button></div>
         </div>
