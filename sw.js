@@ -1,10 +1,10 @@
 /* Bowling Tool service worker: lets the app open and run with no signal.
    Strategy: try the network first (so testers get updates), but fall back to
    the cached copy after 3 seconds or when offline. Bump CACHE on each release. */
-const CACHE = 'bowling-tool-v126-beta63';
+const CACHE = 'bowling-tool-v127-beta64';
 const SHELL = [
   './', 'index.html', 'bowler.html', 'arsenal.html', 'analyze.html', 'lane.html',
-  'oil.html', 'gameday.html', 'plan.html', 'angle.html', 'scores.html', 'guide.html', 'styles.css?v=126', 'app.js?v=126', 'coach.js?v=126', 'chart.js?v=126', 'pinpal.js?v=126', 'history.js?v=126', 'plan.js?v=126', 'insight.js?v=126', 'cloud.js?v=126', 'stats.js?v=126', 'replay.js?v=126', 'trends.js?v=126', 'eyes.js?v=126',
+  'oil.html', 'gameday.html', 'plan.html', 'angle.html', 'scores.html', 'guide.html', 'styles.css?v=127', 'app.js?v=127', 'coach.js?v=127', 'chart.js?v=127', 'pinpal.js?v=127', 'history.js?v=127', 'plan.js?v=127', 'insight.js?v=127', 'cloud.js?v=127', 'stats.js?v=127', 'replay.js?v=127', 'trends.js?v=127', 'eyes.js?v=127',
   'databalls.csv', 'manifest.webmanifest',
   'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png'
 ];

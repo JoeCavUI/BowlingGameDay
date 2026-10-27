@@ -58,6 +58,14 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v127-beta64: Quiet Coach, lane map, second set of eyes
+- 🤫 Quiet Coach (default): one short line while you bowl, only when something is new; Why › for the reasoning; Quiet/Full switch; repeats removed; short line-check and laydown badges; one-line lane scoreboard and shot log; help text hides after your first two nights.
+- 👀 "Still told me about the lane" on poor shots (Coach uses them for lane reads); Lanes: Same / Hook more / Hook less per game, saved and shown in the review.
+- Second set of eyes: lane vs lane tonight; this pair over your PinPal history (only when bigger than chance); when you usually move in game 2 here; a ball fading late.
+- 🗺️ Lane map: your best lines at each house and pair, and how your best line moves game 1 → 3; on Game Day and the Game Plan, one tap to Angles.
+- Barnes chart filters: cover, core, layout, surface, brand.
+- Baker Box: night review, Stats and Trends use your Baker Box / Rule of 31 settings; Angles checks the box without a pattern length.
+
 ## Changes in v126-beta63: Trends, repeatability, lane totals
 - 📈 Scores → Trends: every night on one timeline (average, repeatability, eyeball score, strikes, spares, pocket, carry, series, high game, 5 Scoring Elements); running-average and trend-line checkboxes; period / house / pair / league filters; tap a night, open Game Day nights.
 - 🔁 Repeatability score: your mark, normal speed, release, and the same result from the same line and lane; in the night review (with each game), Stats and the Game Day summary.
