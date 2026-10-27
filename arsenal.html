@@ -48,6 +48,7 @@
           <label class="small" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="chartShowRetired" style="width:auto" /> show retired</label>
         </div>
       </div>
+      <div id="chartFilters" class="cf-row"></div>
       <div id="chartSummary" style="margin-top:10px"></div>
       <div id="barnesChart" style="margin-top:8px"></div>
     </div>
@@ -1472,6 +1473,30 @@
       sel.innerHTML = [['all', 'My whole arsenal'], ...sets.map(st => ['set:' + st.name, 'Bag: ' + st.name])].map(([v, t]) => `<option value="${escH(v)}">${escH(t)}</option>`).join('');
       if (keep && Array.from(sel.options).some(o => o.value === keep)) sel.value = keep;
     }
+    // 🔎 Chart filters: show only the balls you want in the boxes (cover, core, layout, surface, brand).
+    const CF_KEY = 'bt_chart_filters_v1';
+    const cfGet = () => { try { return JSON.parse(localStorage.getItem(CF_KEY) || '{}') || {}; } catch (_e) { return {}; } };
+    const cfSet = (o) => { try { localStorage.setItem(CF_KEY, JSON.stringify(o)); } catch (_e) {} };
+    const LAYOUT_L = { short: 'Short pin (under 3")', flare: 'Medium pin (3–4¼")', long: 'Long pin (4¼–5⅝")', xlong: 'Very long pin (over 5⅝")', control: 'Pin down', benchmark: 'Unknown / benchmark' };
+    const CF = {
+      cover: { label: 'Cover', of: (r) => { const c = String(BT.ballCover(r) || '').toLowerCase(); return /ure/.test(c) ? 'Urethane' : /pearl/.test(c) ? 'Pearl' : /hybrid/.test(c) ? 'Hybrid' : /solid/.test(c) ? 'Solid' : /poly|plastic/.test(c) ? 'Plastic' : ''; } },
+      core: { label: 'Core', of: (r) => { const c = String(BT.getField(r, ['Core'], '') || '').toLowerCase(); return /asym/.test(c) ? 'Asymmetric' : /sym/.test(c) ? 'Symmetric' : ''; } },
+      layout: { label: 'Layout', of: (r) => { try { return LAYOUT_L[BT.layoutTypeFromRow(r)] || ''; } catch (_e) { return ''; } } },
+      surface: { label: 'Surface', of: (r) => { const sf = String(BT.ballSurface(r) || ''); if (!sf) return ''; if (/polish/i.test(sf)) return 'Polished / 5000+'; const g = BT.surfaceToGrit(sf); return g == null ? '' : g <= 1500 ? 'Up to 1500 grit' : g <= 2500 ? '2000 grit' : g <= 3500 ? '3000 grit' : g < 5000 ? '4000 grit' : 'Polished / 5000+'; } },
+      brand: { label: 'Brand', of: (r) => { const b = String(BT.getField(r, ['Brand'], '') || '').trim(); return /^(900\s*global|global\s*900)$/i.test(b) ? '900 Global' : /^roto\s*-?grip$/i.test(b) ? 'Roto Grip' : b; } },
+    };
+    const cfMatch = (r, f) => Object.keys(CF).every(k => !f[k] || CF[k].of(r) === f[k]);
+    function renderChartFilters(rows0) {
+      const box = BT.$('#chartFilters'); if (!box) return; const f = cfGet();
+      const ord = { cover: ['Solid', 'Hybrid', 'Pearl', 'Urethane', 'Plastic'], surface: ['Up to 1500 grit', '2000 grit', '3000 grit', '4000 grit', 'Polished / 5000+'] };
+      box.innerHTML = Object.entries(CF).map(([k, d]) => { const m = {}, fo = Object.assign({}, f, { [k]: '' }); rows0.forEach(r => { if (!cfMatch(r, fo)) return; const v = d.of(r); if (v) m[v] = (m[v] || 0) + 1; }); // counts = balls left with your other filters
+        let vals = Object.keys(m); vals.sort((a, b) => ord[k] ? ord[k].indexOf(a) - ord[k].indexOf(b) : k === 'layout' ? Object.values(LAYOUT_L).indexOf(a) - Object.values(LAYOUT_L).indexOf(b) : a.localeCompare(b));
+        if (f[k] && !vals.includes(f[k])) vals.unshift(f[k]);
+        return `<label class="cf-f${f[k] ? ' on' : ''}"><span>${d.label}</span><select class="input" data-cf="${k}"><option value="">All</option>${vals.map(v => `<option value="${escH(v)}"${f[k] === v ? ' selected' : ''}>${escH(v)} (${m[v] || 0})</option>`).join('')}</select></label>`; }).join('')
+        + (Object.values(f).some(Boolean) ? '<button type="button" class="cl-link cf-clear" id="cfClear">Clear filters</button>' : '');
+      BT.$all('[data-cf]', box).forEach(sel => sel.addEventListener('change', () => { const o = cfGet(); o[sel.dataset.cf] = sel.value; cfSet(o); renderChart(); }));
+      const cl = BT.$('#cfClear'); if (cl) cl.addEventListener('click', () => { cfSet({}); renderChart(); });
+    }
     let mxQuery = '';
     function renderChart() {
       const box = BT.$('#barnesChart'); if (!box || !window.BTChart) return;
@@ -1490,20 +1515,23 @@
       }
       const balls = BTChart.place(rows, bowler);
       const an = BTChart.analyze(balls);
+      renderChartFilters(rows.filter(r => !r.__proposed));
+      const cf = cfGet(), cfOn = Object.values(cf).some(Boolean);
+      const ballsV = cfOn ? balls.filter(b => b.proposed || cfMatch(b.row || {}, cf)) : balls;
       // Summary
       const retiredN = viewRowsAll().filter(r => !r.__proposed && BT.isRetired(r)).length;
-      if (sum) sum.innerHTML = `<div class="chart-sum"><b>${an.covered.length} of 6 boxes covered</b>${an.urethane ? ' + urethane' : ''} · ${an.active} active ball${an.active === 1 ? '' : 's'}${retiredN ? ` · ${retiredN} retired` : ''}</div>`;
+      if (sum) sum.innerHTML = `<div class="chart-sum"><b>${an.covered.length} of 6 boxes covered</b>${an.urethane ? ' + urethane' : ''} · ${an.active} active ball${an.active === 1 ? '' : 's'}${retiredN ? ` · ${retiredN} retired` : ''}</div>${cfOn ? `<div class="small cf-note">🔎 Showing <b>${ballsV.filter(b => !b.proposed).length} of ${balls.filter(b => !b.proposed).length}</b> balls: ${Object.keys(CF).filter(k => cf[k]).map(k => escH(cf[k])).join(' · ')}. Box counts are for these balls only.</div>` : ''}`;
       // Rows
       const allRowsDef = BTChart.ROWS.concat([{ key: 'SPARE', label: 'Spare (plastic)', job: 'Straight at corner pins.', optional: true }]);
       // 🧮 Barnes matrix: strength down, shape across (the way Chris Barnes draws it). Double-tap a box for a full page.
       const tunedB = (nm) => { const t = BT.ballTweaksFor(nm) || {}; return !!(t.hook || t.length || t.backend); };
       const cvc = (b) => /solid/i.test(b.cover) ? 's' : /pearl/i.test(b.cover) ? 'p' : /hybrid/i.test(b.cover) ? 'h' : 'o';
-      const inBox = (k) => { const L = balls.filter(b => b.rowKey === k).sort((a, b) => a.timing - b.timing); L.forEach((b, i) => { b.n = i + 1; }); return L; };
+      const inBox = (k) => { const L = ballsV.filter(b => b.rowKey === k).sort((a, b) => a.timing - b.timing); L.forEach((b, i) => { b.n = i + 1; }); return L; };
       const stackL = (L, gap, max) => { const lanes = []; L.forEach(b => { let li = lanes.findIndex(x => b.x - x >= gap); if (li < 0) { li = lanes.length < max ? lanes.length : max - 1; if (li === lanes.length) lanes.push(-99); } lanes[li] = b.x; b.lane = li; }); return Math.max(1, lanes.length); };
       const chipOf = (b) => `<button type="button" class="mx-name ${b.proposed ? 'ghost' : ''} ${b.retired ? 'retired' : ''}" data-cball="${escH(b.name)}">${escH(b.name)}${tunedB(b.name) ? '<b class="ctuned-t" title="Your slider adjustments">*</b>' : ''}${b.proposed ? ' <span class="dim">(what-if)</span>' : b.retired ? ' <span class="dim">(retired)</span>' : ''}</button>`;
       const cellOf = (k) => {
         const L = inBox(k), act = L.filter(b => !b.proposed && !b.retired).length;
-        const st = act >= 10 ? '<span class="mx-st deep">Deep</span>' : act ? '<span class="mx-st">Covered</span>' : '<span class="mx-st gap">Gap</span>';
+        const st = act >= 10 ? '<span class="mx-st deep">Deep</span>' : act ? '<span class="mx-st">Covered</span>' : cfOn ? '<span class="mx-st">None</span>' : '<span class="mx-st gap">Gap</span>';
         const nl = stackL(L, 4, 3);
         const dots = L.map(b => `<span class="mx-t cv-${cvc(b)} ${b.proposed ? 'ghost' : ''} ${b.retired ? 'retired' : ''}" style="left:${4 + b.x * 0.92}%;top:${3 + b.lane * 11}px"></span>`).join('');
         const top = L.slice(0, 3).map(chipOf).join('');
@@ -1552,7 +1580,7 @@
         const q = String(sIn.value || '').trim().toLowerCase(); mxQuery = sIn.value;
         BT.$all('.mx-cell', box).forEach(c => c.classList.remove('dimmed', 'hit'));
         if (!q) { sOut.innerHTML = ''; return; }
-        const hits = balls.filter(b => [b.name, BT.getField(b.row || {}, ['Brand'], ''), b.cover, BT.ballSurface(b.row || {})].join(' ').toLowerCase().includes(q)).sort((a, b) => a.name.localeCompare(b.name));
+        const hits = ballsV.filter(b => [b.name, BT.getField(b.row || {}, ['Brand'], ''), b.cover, BT.ballSurface(b.row || {})].join(' ').toLowerCase().includes(q)).sort((a, b) => a.name.localeCompare(b.name));
         const keys = new Set(hits.map(b => b.rowKey));
         BT.$all('.mx-cell', box).forEach(c => c.classList.add(keys.has(c.dataset.mxbox) ? 'hit' : 'dimmed'));
         const lab = (k) => k === 'SPARE' ? 'Spare' : k === 'URETHANE' ? 'Urethane' : BTChart.label(k);

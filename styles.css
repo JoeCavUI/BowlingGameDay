@@ -897,3 +897,10 @@ body.rp-open{overflow:hidden}
 .tr-sub{margin:16px 2px 0}
 .tr-grid2{display:grid;grid-template-columns:1fr;gap:0}
 @media (min-width:700px){.tr-grid2{grid-template-columns:1fr 1fr;gap:0 10px}.tr-filters .tr-frow{grid-template-columns:repeat(4,minmax(0,1fr))}}
+/* 🔎 Barnes chart filters */
+.cf-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px;align-items:end}
+@media (min-width:700px){.cf-row{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.cf-f{display:block;font-size:12px}.cf-f>span{display:block;opacity:.8;margin-bottom:3px}
+.cf-f.on .input{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.cf-clear{justify-self:start;padding:8px 0}
+.cf-note{margin-top:4px;opacity:1}
