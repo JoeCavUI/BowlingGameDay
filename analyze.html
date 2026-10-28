@@ -128,7 +128,7 @@
 
     function renderSelection() {
       if (el.selectionCount) el.selectionCount.textContent = `(${currentSelection.length})`;
-      el.selection.innerHTML = currentSelection.map(n => {
+      el.selection.innerHTML = currentSelection.slice().sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: "base" })).map(n => {
         return `<div class="list-item" style="display:flex;justify-content:space-between;gap:10px;align-items:center">
           <div><b>${n}</b></div>
           <button class="btn danger" data-remove="${n}" style="min-width:110px">Remove</button>
@@ -772,7 +772,7 @@ roles.push({ id:'urethane', label:'Urethane / short (optional)', ok: hasUrethane
     function renderBallList() {
       const mine = new Set((BT.customBalls ? BT.customBalls() : []).map(b => BT.ballName(b)));
       const retiredN = filteredRows.filter(r => BT.isRetired(r)).length;
-      const rows = filteredRows.filter(r => !BT.isRetired(r)).sort((a, b) => (mine.has(BT.ballName(b)) ? 1 : 0) - (mine.has(BT.ballName(a)) ? 1 : 0));
+      const rows = filteredRows.filter(r => !BT.isRetired(r)).sort((a, b) => String(BT.ballName(a) || '').localeCompare(String(BT.ballName(b) || ''), undefined, { numeric: true, sensitivity: 'base' })); // A → Z
       el.ballList.innerHTML = rows.map(r => {
         const nm = BT.ballName(r);
         const on = currentSelection.includes(nm);

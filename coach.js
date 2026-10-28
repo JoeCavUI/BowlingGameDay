@@ -59,7 +59,36 @@
   }
 
   // ---------- per-shot classification ----------
+  // ---------- 📝 Your shot notes, read as reads ----------
+  // "6 pin tapped the 10 at the last second" = a strike on the weak side (the 6-pin laying down is a weak hit; wrapping
+  // around the 10 is a solid one). A messenger = a lucky strike: it doesn't prove the line. "hooked early", "went long",
+  // "over/under", "carrydown", "lanes hooking more / drying up / tightening" become the same reads as the buttons.
+  // Lefties: the key pin is the 4 and the corner the 7, so "4 tapped the 7" reads the same way.
+  function noteTags(text, lefty) {
+    const t = ' ' + String(text || '').toLowerCase().replace(/[’']/g, '').replace(/\s+/g, ' ') + ' ';
+    if (!t.trim()) return null;
+    const K = lefty ? '(4|four)' : '(6|six)', C = lefty ? '(7|seven)' : '(10|ten)';
+    const out = { tags: [], obs: [] };
+    const has = (re) => re.test(t);
+    if (has(/messenger/)) { out.strike = 'lucky'; out.tags.push('lucky strike (messenger)'); }
+    if (has(new RegExp(`${K}[ -]?(pin)?[^.]{0,30}(tap|tapped|barely|just got|late|last second|slow|trickl|lazy|soft|nudg|tipped)[^.]{0,25}${C}`)) || has(new RegExp(`${C}[ -]?(pin)?[^.]{0,12}(fell|went|dropped) (late|last|slow)`)) || has(/weak strike|lucky strike|cheap strike|soft strike/)) { if (!out.strike) out.strike = 'weak'; out.tags.push(out.strike === 'lucky' ? 'lucky strike' : `strike on the weak side (${lefty ? '4' : '6'}-pin barely got the ${lefty ? '7' : '10'})`); }
+    if (has(/wrap|ringing|rang the|ring the/) || has(new RegExp(`${K}[ -]?(pin)?[^.]{0,20}(wrapped|around)`))) { out.keyPin = 'wrap'; out.tags.push('key pin wrapped (strong)'); }
+    else if (has(/kick ?back/)) { out.keyPin = 'kickback'; out.tags.push('key pin hit the kickback'); }
+    else if (has(new RegExp(`${K}[ -]?(pin)?[^.]{0,15}(laid|lay|layed|fell|went) (down|flat)`)) || has(/flat (10|ten|7|seven)|weak (10|ten|7|seven)/)) { out.keyPin = 'weak'; out.tags.push('key pin laid down (weak)'); }
+    if (has(/hooked early|read early|early hook|burn(ed|t)? up|rolled out|hit early|too early/)) { out.obs.push('Too early'); out.tags.push('hooked early'); }
+    if (has(/went long|too long|skid(ded)?|didnt hook|did not hook|never hooked|held (the )?line|missed the break|slid through/)) { out.obs.push('Too long'); out.tags.push('went long'); }
+    if (has(/over ?\/? ?under|over and under/)) { out.obs.push('Over/under'); out.tags.push('over/under'); }
+    if (has(/carry ?down/)) { out.obs.push('Carrydown'); out.tags.push('carrydown'); }
+    if (has(/deflect/)) { out.finish = 'weak'; out.tags.push('deflected'); }
+    if (has(/drove through|strong hit|hit hard|powered through/)) { out.finish = out.finish || 'strong'; out.tags.push('drove through'); }
+    if (has(/lanes? (are |is )?(hooking more|drying|dry|burn|breaking down|opening)|more hook|friction/)) { out.laneRead = 'more'; out.tags.push('lanes hooking more'); }
+    else if (has(/lanes? (are |is )?(hooking less|tight|tightening|oily|holding)|less hook|carry ?down/)) { if (!out.obs.includes('Carrydown')) { out.laneRead = 'less'; out.tags.push('lanes hooking less'); } }
+    return out.tags.length ? out : null;
+  }
   function classify(s, lefty) {
+    // Your notes add reads you didn't tap (the buttons you tapped always win).
+    const NT = noteTags(s && s.notes, lefty);
+    if (NT) s = Object.assign({}, s, { obs: [...new Set([...(Array.isArray(s.obs) ? s.obs : []), ...NT.obs])], keyPin: s.keyPin || NT.keyPin || '' });
     const miss = String(s.miss || 'didntTrack');
     const exec = num(s.executionQuality);
     const tapped = s.execTapped === true || exec === 1 || exec === 5; // older shots: only extremes count as tapped
@@ -106,6 +135,7 @@
     if (!strike && meaning === 'high' && hit !== 'flush') lean += 0.5; // flush pocket = the line was fine; it's a carry read
     if (!strike && meaning === 'weak' && hit !== 'flush') lean -= 0.5;
     if (strike && hit !== 'brooklyn') lean = 0; // a real strike says the line is fine
+    if (strike && NT && NT.strike === 'weak') lean = -0.5; // …unless your note says it only just carried (weak side)
     lean = clamp(lean, -2, 2);
 
     const pocketHit = ['high', 'flush', 'light', 'brooklyn'].includes(hit);
@@ -122,6 +152,8 @@
     if (keyPin === 'weak' || (pocketHit && exitRead === 'weak')) finish = 'weak';
     else if (keyPin === 'wrap' || keyPin === 'kickback' || (pocketHit && exitRead === 'strong')) finish = 'strong';
     else if (pocketHit && exitRead === 'good') finish = 'good';
+    if (NT && NT.finish && !finish) finish = NT.finish;
+    if (strike && NT && NT.strike === 'weak' && finish !== 'strong') finish = 'weak';
 
     // Carrydown tap: oil pushed downlane -> ball skids further and arrives weak.
     const carrydown = obs.includes('Carrydown');
@@ -150,6 +182,7 @@
     return {
       exitRaw, exitRead, keyPin, finish, speed, speedCaused, bp, outward, recovery, angleClass,
       laneInfo: s.laneInfo === true, // a poor shot you said still told you about the lane: used for lane reads
+      noteTags: NT, lucky: !!(NT && NT.strike === 'lucky'),
       shot: s, execution, missSide, saved, hit, strike, meaning, early, long, lean,
       pocketHit, carryFail: pocketHit && !strike,
       overUnder: obs.includes('Over/under') || meaning === 'split',
@@ -1663,5 +1696,5 @@
     });
   }
 
-  root.BTCoach = { repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
+  root.BTCoach = { noteTags, repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
 })(typeof window !== 'undefined' ? window : globalThis);

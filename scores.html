@@ -533,6 +533,9 @@
       const byLine = {}; real.forEach(x => { const k = `${x.ball || '?'}|${lineKey(x)}`; (byLine[k] = byLine[k] || []).push(x); });
       const best = Object.entries(byLine).map(([k, arr]) => ({ k, m: metrics(arr) })).filter(o => o.m.n >= 4).sort((a, z) => (z.m.strikes / z.m.n) - (a.m.strikes / a.m.n) || z.m.n - a.m.n)[0];
       if (best && best.m.strikes) { const [ball, line] = best.k.split('|'); T.push({ k: 'What worked', t: `${ball} on ${line}: ${best.m.strikes} strike${best.m.strikes === 1 ? '' : 's'} in ${best.m.n} shots, pocket ${pc(best.m.pocket, best.m.n)}%.` }); }
+      // 📝 What your notes add: strikes that only just carried
+      { let w = 0, l = 0; real.forEach(x => { try { const t = BTCoach.noteTags(x.notes, lefty); if (t && isX(x)) { if (t.strike === 'weak') w++; if (t.strike === 'lucky') l++; } } catch (_e) {} });
+        if (w + l >= 2) T.push({ k: 'What your notes say', t: `${w ? `${w} strike${w === 1 ? '' : 's'} only just carried (${lefty ? '4' : '6'}-pin barely got the ${lefty ? '7' : '10'})` : ''}${w && l ? ' and ' : ''}${l ? `${l} came from a messenger` : ''}. Your carry was closer to the edge than the strike count shows.` }); }
       const lost = all.pocket - all.carry;
       if (lost >= 3) {
         const bits = [all.lightLeft && `${all.lightLeft} light`, all.highLeft && `${all.highLeft} high`, all.flushLeft && `${all.flushLeft} flush that still left pins`].filter(Boolean);
@@ -596,8 +599,10 @@
       return { scores, headline, okPct, all, takeaways: T, games, lanes, laneNote, balls, moves, faults, five, rep, repG, eye: eyeballFor(s), log, speech: sp.join(' ').replace(/(\d)%/g, '$1 percent') };
     }
     // 🎳 Frame-by-frame scorecard (marks on top, running total under each frame; splits circled)
-    function scorecard(c) {
-      const cell = (f) => `<div class="sc-f${f.no === 10 ? ' sc-10' : ''}"><div class="sc-m">${f.marks.map((m, i) => `<span${i === 0 && f.split ? ' class="sc-sp"' : ''}>${m}</span>`).join('')}</div><div class="sc-c">${f.cum ?? ''}</div></div>`;
+    function scorecard(c, sess) {
+      // ✎ With the night (sess), each frame opens its shot in the editor.
+      const idx = (f) => sess && f.shot ? (sess.shots || []).indexOf(f.shot) : -1;
+      const cell = (f) => `<div class="sc-f${f.no === 10 ? ' sc-10' : ''}${idx(f) >= 0 ? ' sc-tap' : ''}"${idx(f) >= 0 ? ` data-shot-index="${idx(f)}" role="button" aria-label="Edit frame ${f.no}"` : ''}><div class="sc-m">${f.marks.map((m, i) => `<span${i === 0 && f.split ? ' class="sc-sp"' : ''}>${m}</span>`).join('')}</div><div class="sc-c">${f.cum ?? ''}</div></div>`;
       const fr = c.frames.slice(); while (fr.length < 10) fr.push({ no: fr.length + 1, marks: [''], cum: null });
       return `<div class="sc-card">${fr.map(cell).join('')}</div>`;
     }
@@ -661,6 +666,7 @@
       const balls = Object.entries(ballCounts).sort((a,b)=>b[1]-a[1]);
 
       const R = nightReview(s);
+      const lefty0 = (() => { const b = BT.lsGet(BT.KEYS.BOWLER, {}) || {}; return /^l/i.test(String(b.handedness || b.hand || '')); })();
       const esc = (t) => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
       const d0 = new Date(s.savedAt);
       const title = `${d0.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} · ${esc(s.house || 'Game Day')}${s.lanes ? ` · lanes ${esc(s.lanes)}` : ''}`;
@@ -676,13 +682,13 @@
         <div class="panel nr-head" id="nrHead" style="padding:12px" title="Double tap for the shot log">
           <div class="nr-title">${title}</div>
           <div class="small">${[s.leagueName, s.pattern, s.setName && 'Bag: ' + s.setName].filter(Boolean).map(esc).join(' · ')}</div>
-          ${R.scores.length ? `<div class="nr-scores">🎳 ${R.scores.join(' · ')} <span class="small">= ${R.scores.reduce((a, b) => a + Number(b || 0), 0)}${s.pinpal ? ' (PinPal)' : ''}</span></div>` : ''}
+          ${R.scores.length ? `<div class="nr-scores">🎳 ${R.scores.map(x => x == null ? '—' : x).join(' · ')} <span class="small">= ${R.scores.reduce((a, b) => a + Number(b || 0), 0)}${s.pinpal ? ' (PinPal)' : ''}</span></div>` : ''}
           <div class="nr-line">${R.headline}</div>
           <div class="small dim" style="margin-top:6px">${statLine(R.all)} · good or OK shots ${R.okPct}%<span class="no-print"> · double tap for the shot log</span></div>
         </div>
         ${pinpalPanel(s, true)}
         ${R.takeaways.length ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>💡 What tonight says</b><ol class="nr-list">${R.takeaways.map(t => `<li><b>${t.k}:</b> ${t.t}</li>`).join('')}</ol></div>` : ''}
-        ${R.games.length > 1 || (R.games[0] && R.games[0].score != null) ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🎯 Game by game</b>${R.games.map(g => `<div class="nr-row"><b>Game ${g.no}${g.score != null ? ': ' + g.score : ''}</b>${g.card ? scorecard(g.card) : ''}<div class="small">${statLine(g.m)}${R.repG && R.repG[g.no] != null ? ` · repeat ${R.repG[g.no]}%` : ''}</div>${g.notes.length ? `<div class="small" style="opacity:1">${g.notes.join(' · ')}</div>` : ''}</div>`).join('')}</div>` : ''}
+        ${R.games.length > 1 || (R.games[0] && R.games[0].score != null) ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🎯 Game by game</b>${R.games.map(g => `<div class="nr-row"><button type="button" class="nr-gscore" data-gscore="${g.no}" aria-label="Edit game ${g.no} score"><b>Game ${g.no}${g.score != null ? ': ' + g.score : ''}</b> <span class="small">✎</span></button>${g.card ? scorecard(g.card, s) : ''}<div class="small">${statLine(g.m)}${R.repG && R.repG[g.no] != null ? ` · repeat ${R.repG[g.no]}%` : ''}</div>${g.notes.length ? `<div class="small" style="opacity:1">${g.notes.join(' · ')}</div>` : ''}</div>`).join('')}</div>` : ''}
         ${R.lanes.length ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>↔️ Lanes</b>${R.lanes.map(l => `<div class="nr-row"><b>Lane ${esc(l.lane)}</b><div class="small">${statLine(l.m)}</div></div>`).join('')}${R.laneNote ? `<div class="small nr-note">${R.laneNote}</div>` : ''}</div>` : ''}
         ${R.balls.length ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🎳 Balls</b>${R.balls.map(b => `<div class="nr-row"><b>${esc(b.ball)}</b><div class="small">${statLine(b.m)}</div></div>`).join('')}</div>` : ''}
         ${R.moves ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>${R.moves.text}</b>${R.moves.tip ? `<div class="small" style="margin-top:6px;opacity:1">${R.moves.tip}</div>` : ''}</div>` : ''}
@@ -701,7 +707,7 @@
               return `<div class="nr-gh">Game ${g.no}${g.score != null ? ` · ${g.score}` : ''}</div>${miss.length || fill ? `<div class="nr-add"><span class="small">${miss.length ? `Not logged: frame${miss.length === 1 ? '' : 's'} ${miss.length > 3 && miss.every((f, i) => !i || f === miss[i - 1] + 1) ? `${miss[0]}–${miss[miss.length - 1]}` : miss.join(', ')}` : 'The 10th needs its fill ball'}</span><button type="button" class="btn secondary small" data-add-game="${g.no}" data-add-frame="${miss.length ? miss[0] : 10}"${fill ? ' data-add-fill="1"' : ''}>＋ Add ${fill ? 'fill ball' : `frame ${miss[0]}`}</button></div>` : ''}` + g.shots.map(x => `<div class="list-item nr-shot" data-shot-index="${x.idx}">
               <div class="small">F${x.sh.frame || '—'}${x.sh.isFill ? ' (fill)' : ''}${x.sh.added ? ' · <span class="nr-added">＋ added later</span>' : ''}${x.sh.lane ? ` · lane ${esc(x.sh.lane)}` : ''} · ${esc(x.sh.ball || 'Ball?')}</div>
               <div><b>${esc(x.result)}</b>${x.pocket ? ` · ${esc(x.pocket)}` : ''}${x.mark ? ` · ${esc(x.mark)}` : ''}</div>
-              <div class="small">Line ${x.line}${x.moved ? ` · <span class="nr-mv">🔁 moved ${x.moved}</span>` : ''}${x.fault ? ` · 🤔 ${esc(x.fault)}` : ''}${x.sh.laneInfo ? ' · 👀 lane info' : ''}${x.flag ? ` · <span class="nr-flag">${x.flag}</span>` : ''}</div>
+              <div class="small">Line ${x.line}${x.moved ? ` · <span class="nr-mv">🔁 moved ${x.moved}</span>` : ''}${x.fault ? ` · 🤔 ${esc(x.fault)}` : ''}${x.sh.laneInfo ? ' · 👀 lane info' : ''}${(() => { try { const t = BTCoach.noteTags(x.sh.notes, lefty0); return t ? ` · 📝 ${esc(t.tags.join(', '))}` : ''; } catch (_e) { return ''; } })()}${x.flag ? ` · <span class="nr-flag">${x.flag}</span>` : ''}</div>
             </div>`).join(''); }).join('')}
           <div class="nr-add" style="margin-top:10px"><span class="small">Bowled a game you didn't log?</span><button type="button" class="btn secondary small" id="nrAddGame">＋ Add a game</button></div>
         </div>
@@ -713,6 +719,15 @@
       if (!BT.$('#nrSpeak').dataset.wired) { BT.$('#nrSpeak').dataset.wired = '1'; BT.wireReadAloud(BT.$('#nrSpeak'), () => lastReviewText); }
       onDoubleTap(BT.$('#nrHead'), jumpToShots);
 
+      BT.$all('[data-gscore]', el.details).forEach(b => b.addEventListener('click', (e) => { e.stopPropagation();
+        const g = Number(b.dataset.gscore), gNos = R.games.map(x => x.no), cur = (R.games.find(x => x.no === g) || {}).score;
+        const v = prompt(`Game ${g} score`, cur != null ? String(cur) : ''); if (v == null) return;
+        const n = Number(String(v).trim()); if (String(v).trim() !== '' && !(Number.isInteger(n) && n >= 0 && n <= 300)) { alert('A game score is a whole number from 0 to 300.'); return; }
+        const arr = gNos.map(no => { const gg = R.games.find(x => x.no === no); return gg && gg.score != null ? gg.score : null; });
+        arr[gNos.indexOf(g)] = String(v).trim() === '' ? null : n;
+        s.scores = arr.some(x => x != null) ? arr : []; // a game you haven't scored stays blank
+        s.scoresEdited = true; recomputeSessionSummary(s); BT.lsSet(BT.KEYS.GAME_SESSIONS, sessions); renderList(); showDetails(s.id);
+      }));
       BT.$all('[data-add-game]', el.details).forEach(b => b.addEventListener('click', (e) => { e.stopPropagation(); openAddShot(activeSessionId, Number(b.dataset.addGame), Number(b.dataset.addFrame), b.dataset.addFill === '1'); }));
       { const ag = BT.$('#nrAddGame'); if (ag) ag.onclick = () => { const gs = (s.shots || []).filter(x => x && x.type !== 'gameStart').map(x => Number(x.gameNo) || 1); openAddShot(activeSessionId, (gs.length ? Math.max(...gs) : 0) + 1, 1, false, true); }; }
       BT.$all('[data-shot-index]', el.details).forEach(row => {

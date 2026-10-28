@@ -51,7 +51,7 @@
       const ball = Object.entries(balls).sort((a, b) => b[1] - a[1])[0];
       const frames = sc.frames.map(f => ({ f1: f.balls[0], f2: f.balls[0] === 10 ? null : f.balls[1], leave: f.leave, strike: f.balls[0] === 10, spare: !!f.spare, split: f.split, ball: f.shot && f.shot.ball || '' }));
       const fs = sc.frames.map((f, i) => f.cum - (i ? sc.frames[i - 1].cum : 0));
-      return { id: `${sess.id}:${gn}`, src: 'gd', d, h: sess.house || '', lanes: sess.lanes || '', lg: sess.leagueName || '', p: sess.pattern || '', gn, s: sc.total, ball: ball ? ball[0] : '', frames, fs, wk: 'gd' + sess.id };
+      return { id: `${sess.id}:${gn}`, src: 'gd', d, h: sess.house || '', lanes: sess.lanes || '', lg: sess.leagueName || '', p: sess.pattern || '', gn, s: (sess.scoresEdited && Array.isArray(sess.scores) && Number.isFinite(Number(sess.scores[gNos.indexOf(gn)])) && sess.scores[gNos.indexOf(gn)] != null) ? Number(sess.scores[gNos.indexOf(gn)]) : sc.total, ball: ball ? ball[0] : '', frames, fs, wk: 'gd' + sess.id };
     }).filter(Boolean);
   }
 

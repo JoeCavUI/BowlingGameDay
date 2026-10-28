@@ -141,6 +141,8 @@
 
         <!-- My line + ball -->
         <div class="panel">
+          <button type="button" class="gd-fold" id="lineSum" aria-expanded="false" aria-controls="lineWrap"></button>
+          <div id="lineWrap">
           <div class="gd-line">
             <div class="gd-step"><label>Slide</label>
               <div class="stepper"><button type="button" class="btn secondary" data-step="feet" data-d="-1" aria-label="Slide minus one">−</button><input id="feet" class="input" type="number" step="1" inputmode="numeric" /><button type="button" class="btn secondary" data-step="feet" data-d="1" aria-label="Slide plus one">+</button></div>
@@ -162,8 +164,10 @@
           <div class="gd-changed"><span class="small"><b>Changed since last shot</b> (optional)</span>
             <div id="changedPills" class="gd-chg"><button type="button" data-chg="feet">Feet / eyes</button><button type="button" data-chg="speed">Speed</button><button type="button" data-chg="loft">Loft</button><button type="button" data-chg="hand">Hand</button><button type="button" data-chg="ball">Ball</button></div>
           </div>
+          </div>
           <div id="lineMath" class="gd-linemath" style="display:none"></div>
-          <div style="margin-top:10px">
+          <button type="button" class="gd-fold" id="ballSum" aria-expanded="false" aria-controls="ballWrap" style="margin-top:10px"></button>
+          <div id="ballWrap" style="margin-top:10px">
             <label>Ball</label>
             <select id="ball" class="input"></select>
           </div>
@@ -216,7 +220,8 @@
               <div class="gd-rl">Speed vs normal <span class="small">(by feel)</span></div>
               <div id="readsSpeed" class="gd-r1"></div>
               <label style="margin-top:10px;display:block">Notes</label>
-              <input id="notes" class="input" placeholder="Only for things worth remembering next week." />
+              <input id="notes" class="input" placeholder="What you saw: 6 tapped the 10, messenger, hooked early…" />
+              <div id="notesRead" class="small gd-notesread"></div>
             </div>
           </details>
 
@@ -699,7 +704,28 @@ function selectedPills(container) {
     function laneReadFor(g) { if (laneReads[g] != null) return laneReads[g]; const x = sessionShots.find(s => s && s.type !== 'gameStart' && Number(s.gameNo) === Number(g) && s.laneRead); return x ? x.laneRead : ''; }
     function paintLaneRead() { const g = currentGameNumber(), v = laneReadFor(g); BT.$all('#laneReadRow [data-lread]').forEach(b => b.classList.toggle('on', b.dataset.lread === v)); }
     BT.$all('#laneReadRow [data-lread]').forEach(b => b.addEventListener('click', () => { const g = currentGameNumber(); laneReads[g] = laneReadFor(g) === b.dataset.lread ? '' : b.dataset.lread; paintLaneRead(); try { markCoachDirty(); } catch (_e) {} }));
+    function isLeftyBowler() { const b = BT.lsGet(BT.KEYS.BOWLER, {}) || {}; return /^l/i.test(String(b.handedness || b.hand || '')); }
+    function paintNotesRead() { const box = BT.$('#notesRead'); if (!box || !el.notes) return; let t = null; try { t = BTCoach.noteTags(el.notes.value, isLeftyBowler()); } catch (_e) {} box.innerHTML = t ? `📝 Coach reads: <b>${t.tags.map(escapeHtml).join(' · ')}</b>` : ''; }
+    if (el.notes) el.notes.addEventListener('input', paintNotesRead);
+    // 🧹 Tap to show / hide your line steppers and the ball picker; a one-line summary stays on screen.
+    const FOLD_KEY = 'bt_gd_folds_v1';
+    const folds = () => { try { return Object.assign({ line: true, ball: true }, JSON.parse(localStorage.getItem(FOLD_KEY) || '{}')); } catch (_e) { return { line: true, ball: true }; } };
+    function paintFolds() {
+      const f = folds(), ls = BT.$('#lineSum'), bs = BT.$('#ballSum'), lw = BT.$('#lineWrap'), bw = BT.$('#ballWrap'); if (!ls || !bs) return;
+      const v = (x) => (x && x.value !== '' ? x.value : '—'), off0 = Number((BT.lsGet(BT.KEYS.BOWLER, {}) || {}).laydownOffset), off = Number.isFinite(off0) && off0 > 0 ? off0 : 5;
+      const lay = el.feet && el.feet.value !== '' ? Math.round((Number(el.feet.value) - off) * 2) / 2 : null, td = el.tdist && el.tdist.value && el.tdist.value !== '15' ? ` at ${el.tdist.value} ft` : '';
+      lw.hidden = f.line; bw.hidden = f.ball;
+      ls.innerHTML = `<span>📐 Slide <b>${escapeHtml(v(el.feet))}</b> · Target <b>${escapeHtml(v(el.arrows))}</b>${td} · BP <b>${escapeHtml(v(el.bp))}</b>${lay != null ? ` <span class="small">· lay ${lay}</span>` : ''}</span><span class="gd-fold-i">${f.line ? 'Change ▾' : 'Done ▴'}</span>`;
+      bs.innerHTML = `<span>🎳 <b>${escapeHtml(el.ball && el.ball.value ? el.ball.value : 'Pick a ball')}</b></span><span class="gd-fold-i">${f.ball ? 'Change ▾' : 'Done ▴'}</span>`;
+      ls.setAttribute('aria-expanded', String(!f.line)); bs.setAttribute('aria-expanded', String(!f.ball));
+    }
+    const toggleFold = (k) => { const f = folds(); f[k] = !f[k]; try { localStorage.setItem(FOLD_KEY, JSON.stringify(f)); } catch (_e) {} paintFolds(); };
+    setTimeout(() => { const ls = BT.$('#lineSum'), bs = BT.$('#ballSum'); if (ls) ls.addEventListener('click', () => toggleFold('line')); if (bs) bs.addEventListener('click', () => toggleFold('ball'));
+      ['feet', 'arrows', 'bp', 'tdist', 'ball'].forEach(k => { if (el[k]) { el[k].addEventListener('input', paintFolds); el[k].addEventListener('change', paintFolds); } });
+      document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('[data-step]')) setTimeout(paintFolds, 0); });
+      paintFolds(); setTimeout(paintFolds, 600); }, 0);
     function clearPills() {
+      try { setTimeout(paintNotesRead, 0); } catch (_e) {}
       try { const li = BT.$('#laneInfo'); if (li) li.checked = false; } catch (_e) {}
       try { paintLaneRead(); } catch (_e) {}
       try { changedSel.clear(); paintChanged(); } catch (_e) {}
@@ -2129,6 +2155,7 @@ function saveCurrentSessionDraft() {
         const nNow = sessionShots.filter(x => x && x.type !== 'gameStart').length;
         if (quietMemo && quietMemo.n === nNow) ({ line, tone, key } = quietMemo); // same shot, same line (Coach redraws a few times)
         else if (r.status === 'move') { line = firstSentence(r.headline); key = 'move:' + line; }
+        else if ((() => { const t = sessionShots.find(x => x && x.type !== 'gameStart'); return t && Array.isArray(t.noteRead) && t.noteRead.length && !shownEyes.has('nr:' + t.id); })()) { const t = sessionShots.find(x => x && x.type !== 'gameStart'); line = `📝 Noted: ${t.noteRead.join(' · ')}.${/weak side|lucky/.test(t.noteRead.join(' ')) ? ' Coach won\'t count it as proof your line is right.' : ''}`; key = 'nr:' + t.id; shownEyes.add(key); tone = 'info'; }
         else if (r.heads && r.heads.text) { line = firstSentence(r.heads.text); tone = 'warn'; key = 'heads:' + line; }
         else { const fresh = eyes.find(x => !shownEyes.has(x.id)); if (fresh) { line = fresh.text; tone = 'info'; key = 'eyes:' + fresh.id; shownEyes.add(fresh.id); }
           else if (r.tone === 'warn') { line = firstSentence(r.headline); key = 'warn:' + line; }
@@ -2302,7 +2329,7 @@ function saveCurrentSessionDraft() {
         speedTrend: singlePillValue(el.readsSpeed, 'unknown'),
         fault: execQuality === 1 ? singlePillValue(el.readsFault, '') : '',
         laneInfo: execQuality === 1 && !!(BT.$('#laneInfo') && BT.$('#laneInfo').checked),
-        laneRead: laneReadFor(info.gameNo || currentGameNumber()) || '',
+        laneRead: laneReadFor(info.gameNo || currentGameNumber()) || (() => { try { const t = BTCoach.noteTags(el.notes.value, isLeftyBowler()); return (t && t.laneRead) || ''; } catch (_e) { return ''; } })(),
         adjust: null,
 
         pocket: singlePillValue(el.readsPocket, 'Unknown'),
@@ -2310,6 +2337,7 @@ function saveCurrentSessionDraft() {
         keyPin: keyPinRead || (resultTag === 'Flat 10' ? 'weak' : resultTag === 'Ringing 10' ? 'wrap' : ''),
 	        miss: missRead,
         notes: el.notes.value.trim(),
+        noteRead: (() => { try { const t = BTCoach.noteTags(el.notes.value, isLeftyBowler()); return t ? t.tags : []; } catch (_e) { return []; } })(),
       };
 
       
@@ -2844,7 +2872,8 @@ function sessionSummary(shots) {
       const st = gameState(), g = currentGameNumber();
       let sc = null; try { sc = BT.scoreGame(currentGameShotsChron()); } catch (_e) {}
       const scTxt = !scoringOn() ? '' : sc && sc.complete ? ` · <b>${sc.total}</b>` : sc && sc.thru ? ` · <b>${sc.thru.score}</b> thru ${sc.thru.frame}` : '';
-      { const lc = BT.$('#liveCard'); if (lc) { if (scoringOn() && sc && sc.frames.length) { const fr = sc.frames.slice(); while (fr.length < 10) fr.push({ no: fr.length + 1, marks: [''], cum: null }); lc.innerHTML = `<div class="sc-card sc-live">${fr.map(f => `<div class="sc-f${f.no === 10 ? ' sc-10' : ''}${f.no === st.frame && st.phase !== 'done' ? ' sc-now' : ''}"><div class="sc-m">${f.marks.map((m, i) => `<span${i === 0 && f.split ? ' class="sc-sp"' : ''}>${m === '?' ? '' : m}</span>`).join('')}</div><div class="sc-c">${f.cum ?? ''}</div></div>`).join('')}</div>`; } else lc.innerHTML = ''; } }
+      { const lc = BT.$('#liveCard'); if (lc) { if (scoringOn() && sc && sc.frames.length) { const fr = sc.frames.slice(); while (fr.length < 10) fr.push({ no: fr.length + 1, marks: [''], cum: null }); lc.innerHTML = `<div class="sc-card sc-live">${fr.map(f => `<div class="sc-f${f.no === 10 ? ' sc-10' : ''}${f.no === st.frame && st.phase !== 'done' ? ' sc-now' : ''}${f.shot && f.shot.id ? ' sc-tap' : ''}"${f.shot && f.shot.id ? ` data-sid="${escapeHtml(f.shot.id)}" role="button" aria-label="Edit frame ${f.no}"` : ''}><div class="sc-m">${f.marks.map((m, i) => `<span${i === 0 && f.split ? ' class="sc-sp"' : ''}>${m === '?' ? '' : m}</span>`).join('')}</div><div class="sc-c">${f.cum ?? ''}</div></div>`).join('')}</div>`; } else lc.innerHTML = ''; } }
+      { const lc = BT.$('#liveCard'); if (lc && !lc.dataset.wired) { lc.dataset.wired = '1'; lc.addEventListener('click', (e) => { const f = e.target.closest && e.target.closest('[data-sid]'); if (f) openEditShot(f.dataset.sid); }); } } // ✎ tap a frame to fix it
       line.innerHTML = (st.phase === 'second' ? `Game ${g} · Frame ${st.frame} · 2nd ball` : st.phase === 'fill' ? `Game ${g} · 10th frame · fill ball ${st.fillNo}` : st.phase === 'done' || st.phase === 'askSpare' ? `Game ${g} · 10th frame` : `Game ${g} · Frame ${st.frame}`) + scTxt;
       let h = '';
       if (st.phase === 'second') {

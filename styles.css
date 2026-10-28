@@ -918,3 +918,12 @@ body.gd-seasoned .gd-help{display:none}
 .gd-lread button{border:1px solid rgba(255,255,255,.22);background:transparent;color:inherit;border-radius:999px;padding:5px 10px;font-weight:700;font-size:13px}
 .gd-lread button.on{background:var(--accent);color:#0b0f14;border-color:transparent}
 .gd-laneinfo{display:flex;gap:8px;align-items:center;margin-top:8px;font-weight:700;font-size:14px}.gd-laneinfo input{width:20px;height:20px;accent-color:var(--accent)}
+/* ✎ Tap a frame / score to edit */
+.sc-tap{cursor:pointer}.sc-tap:active{background:rgba(99,230,210,.18)}
+.nr-gscore{background:none;border:0;color:inherit;padding:0;font:inherit;cursor:pointer;display:block;text-align:left}
+.nr-gscore .small{opacity:.6}
+.gd-notesread{margin-top:4px;opacity:1;color:var(--accent)}
+/* 🧹 Fold the line steppers and ball picker */
+.gd-fold{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px 12px;color:inherit;font-size:15px}
+.gd-fold b{font-weight:800}.gd-fold-i{font-size:13px;color:var(--accent);font-weight:700;white-space:nowrap}
+#lineWrap{margin-top:10px}

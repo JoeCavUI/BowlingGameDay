@@ -396,8 +396,10 @@
     let customRows = BT.lsGet('bt_custom_balls_v1', []);
     if (!Array.isArray(customRows)) customRows = [];
 
+    // Every list on the Arsenal pages reads A → Z by ball name (1, 2, … 10 in number order).
+    const byBallName = (a, b) => String(BT.ballName(a) || '').localeCompare(String(BT.ballName(b) || ''), undefined, { numeric: true, sensitivity: 'base' });
     function viewRowsAll() {
-      return allRows.concat(customRows).concat(proposedRows);
+      return allRows.concat(customRows).concat(proposedRows).slice().sort(byBallName);
     }
     // Active arsenal: retired balls are left out of the matrix, planner, check and bag suggestions.
     function viewRows() {
@@ -449,12 +451,7 @@
       // stronger to weaker, and within Smooth/Sharp by that shape direction.
       function sortBucket(key, arr) {
         const wantSharp = key.endsWith('SHARP');
-        arr.sort((a, b) => {
-          // stronger first
-          if (b.strength !== a.strength) return b.strength - a.strength;
-          // for SHARP, higher shape first; for SMOOTH, lower shape first
-          return wantSharp ? (b.shape - a.shape) : (a.shape - b.shape);
-        });
+        arr.sort((a, b) => String(a.nm).localeCompare(String(b.nm), undefined, { numeric: true, sensitivity: 'base' })); // A → Z
         return arr;
       }
 
@@ -1526,7 +1523,7 @@
       // 🧮 Barnes matrix: strength down, shape across (the way Chris Barnes draws it). Double-tap a box for a full page.
       const tunedB = (nm) => { const t = BT.ballTweaksFor(nm) || {}; return !!(t.hook || t.length || t.backend); };
       const cvc = (b) => /solid/i.test(b.cover) ? 's' : /pearl/i.test(b.cover) ? 'p' : /hybrid/i.test(b.cover) ? 'h' : 'o';
-      const inBox = (k) => { const L = ballsV.filter(b => b.rowKey === k).sort((a, b) => a.timing - b.timing); L.forEach((b, i) => { b.n = i + 1; }); return L; };
+      const inBox = (k) => { const L = ballsV.filter(b => b.rowKey === k).sort((a, b) => String(a.name).localeCompare(String(b.name), undefined, { numeric: true, sensitivity: 'base' })); L.forEach((b, i) => { b.n = i + 1; }); return L; }; // A → Z; the dots still sit early → late
       const stackL = (L, gap, max) => { const lanes = []; L.forEach(b => { let li = lanes.findIndex(x => b.x - x >= gap); if (li < 0) { li = lanes.length < max ? lanes.length : max - 1; if (li === lanes.length) lanes.push(-99); } lanes[li] = b.x; b.lane = li; }); return Math.max(1, lanes.length); };
       const chipOf = (b) => `<button type="button" class="mx-name ${b.proposed ? 'ghost' : ''} ${b.retired ? 'retired' : ''}" data-cball="${escH(b.name)}">${escH(b.name)}${tunedB(b.name) ? '<b class="ctuned-t" title="Your slider adjustments">*</b>' : ''}${b.proposed ? ' <span class="dim">(what-if)</span>' : b.retired ? ' <span class="dim">(retired)</span>' : ''}</button>`;
       const cellOf = (k) => {
