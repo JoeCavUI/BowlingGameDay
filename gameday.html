@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=127" />
+  <link rel="stylesheet" href="styles.css?v=128" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -317,15 +317,15 @@
     </div>
   </div>
 
-  <script src="app.js?v=127"></script>
-  <script src="coach.js?v=127"></script>
-  <script src="pinpal.js?v=127"></script>
-  <script src="history.js?v=127"></script>
-  <script src="chart.js?v=127"></script>
-  <script src="plan.js?v=127"></script>
-  <script src="insight.js?v=127"></script>
-  <script src="eyes.js?v=127"></script>
-  <script src="cloud.js?v=127"></script>
+  <script src="app.js?v=128"></script>
+  <script src="coach.js?v=128"></script>
+  <script src="pinpal.js?v=128"></script>
+  <script src="history.js?v=128"></script>
+  <script src="chart.js?v=128"></script>
+  <script src="plan.js?v=128"></script>
+  <script src="insight.js?v=128"></script>
+  <script src="eyes.js?v=128"></script>
+  <script src="cloud.js?v=128"></script>
   <script>
     BT.renderNav('gameday');
     BT.wireReadAloud(document.getElementById('coachSpeak'), () => { const q = document.querySelector('#coachText .gd-q1'), full = document.querySelector('#coachFull'); if (q && full && full.hidden) return q.innerText; return ((document.getElementById('coachText') || {}).innerText || '').split('\n').filter(l => !/^(Why & what's next|What Coach is using|Why ›|Less ‹)/i.test(l.trim())).join('\n'); });

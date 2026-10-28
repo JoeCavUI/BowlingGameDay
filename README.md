@@ -58,6 +58,14 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v128-beta65: Notes Coach reads, A–Z arsenal, tap-to-edit, tidier Game Day
+- Arsenal pages and ball lists sorted A–Z by ball name (lane-condition rankings stay ranked).
+- Tap a scorecard frame (Game Day and night review) to edit that shot; tap a game header to edit the game score.
+- Game Day: slide / target / BP and ball fold into one-line summaries; tap to change.
+- Coach reads your shot notes: messenger and "drove through" = strong entry; 6 tapping the 10 / laying down = weak; wrapped / ringing = too much energy. Notes are tallied per ball and line to back up (or question) "right ball, right spot", with past notes at the house and a night-review takeaway.
+- Game Day shot editor now has the key-pin read (6 / 4) and notes.
+- Ball matchup line counts strikes as pocket hits.
+
 ## Changes in v127-beta64: Quiet Coach, lane map, second set of eyes
 - 🤫 Quiet Coach (default): one short line while you bowl, only when something is new; Why › for the reasoning; Quiet/Full switch; repeats removed; short line-check and laydown badges; one-line lane scoreboard and shot log; help text hides after your first two nights.
 - 👀 "Still told me about the lane" on poor shots (Coach uses them for lane reads); Lanes: Same / Hook more / Hook less per game, saved and shown in the review.
