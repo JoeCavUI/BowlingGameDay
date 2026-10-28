@@ -70,7 +70,7 @@
     const K = lefty ? '(4|four)' : '(6|six)', C = lefty ? '(7|seven)' : '(10|ten)';
     const out = { tags: [], obs: [] };
     const has = (re) => re.test(t);
-    if (has(/messenger/)) { out.strike = 'lucky'; out.tags.push('lucky strike (messenger)'); }
+    if (has(/messenger/)) { out.strike = 'lucky'; out.tags.push('messenger (lucky carry)'); }
     if (has(new RegExp(`${K}[ -]?(pin)?[^.]{0,30}(tap|tapped|barely|just got|late|last second|slow|trickl|lazy|soft|nudg|tipped)[^.]{0,25}${C}`)) || has(new RegExp(`${C}[ -]?(pin)?[^.]{0,12}(fell|went|dropped) (late|last|slow)`)) || has(/weak strike|lucky strike|cheap strike|soft strike/)) { if (!out.strike) out.strike = 'weak'; out.tags.push(out.strike === 'lucky' ? 'lucky strike' : `strike on the weak side (${lefty ? '4' : '6'}-pin barely got the ${lefty ? '7' : '10'})`); }
     if (has(/wrap|ringing|rang the|ring the/) || has(new RegExp(`${K}[ -]?(pin)?[^.]{0,20}(wrapped|around)`))) { out.keyPin = 'wrap'; out.tags.push('key pin wrapped (strong)'); }
     else if (has(/kick ?back/)) { out.keyPin = 'kickback'; out.tags.push('key pin hit the kickback'); }

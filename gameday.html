@@ -293,6 +293,9 @@
       </div>
       <div id="esFaultWrap" style="display:none"><label style="margin-top:10px;display:block">🤔 What do you think happened? <span class="small">(poor shot)</span></label><div id="esFault" class="es-pills"></div></div>
       <label style="margin-top:10px;display:block">Ball</label><select id="esBall" class="input"></select>
+      <div id="esKeyWrap"><label style="margin-top:10px;display:block" id="esKeyLbl">What did the 6-pin do?</label><select id="esKey" class="input"><option value="">Didn't see / not needed</option><option value="weak">Laid down weak</option><option value="kickback">Hit the kickback, missed</option><option value="wrap">Wrapped around it</option></select></div>
+      <label style="margin-top:10px;display:block">Notes</label><textarea id="esNotes" class="input" rows="2" placeholder="What you saw"></textarea>
+      <div id="esNotesRead" class="small gd-notesread"></div>
       <div class="btn-row" style="margin-top:14px">
         <button class="btn" id="editShotSave" type="button">Save changes</button>
         <button class="btn danger" id="editShotDelete" type="button">Delete shot</button>
@@ -3068,8 +3071,12 @@ function sessionSummary(shots) {
       const balls = Array.from(el.ball.options).map(o => o.value).filter(Boolean);
       if (shot.ball && !balls.includes(shot.ball)) balls.unshift(shot.ball);
       BT.$('#esBall').innerHTML = balls.map(b => `<option value="${escapeHtml(b)}"${b === shot.ball ? ' selected' : ''}>${escapeHtml(b)}</option>`).join('');
+      { const lefty = isLeftyBowler(); BT.$('#esKeyLbl').textContent = `What did the ${lefty ? '4' : '6'}-pin do? (${lefty ? '7' : '10'} left standing)`; BT.$('#esKey').value = ['weak', 'kickback', 'wrap'].includes(shot.keyPin) ? shot.keyPin : ''; }
+      BT.$('#esNotes').value = shot.notes || ''; paintEsNotes();
       BT.$('#editShotModal').classList.remove('hidden');
     }
+    function paintEsNotes() { const box = BT.$('#esNotesRead'); let t = null; try { t = BTCoach.noteTags(BT.$('#esNotes').value, isLeftyBowler()); } catch (_e) {} box.textContent = t && t.tags && t.tags.length ? '📝 Coach reads: ' + t.tags.join(' · ') : ''; }
+    BT.$('#esNotes').addEventListener('input', paintEsNotes);
     function closeEditShot() { editingId = null; BT.$('#editShotModal').classList.add('hidden'); }
     function afterShotEdit() { saveCurrentSessionDraft(); renderLog(); renderLaneGeometry(); try { renderScoreboard(); } catch (_e) {} updateFrameUI(); autoCoach(); updateLineMath(); }
     BT.$('#editShotClose').addEventListener('click', closeEditShot);
@@ -3098,6 +3105,8 @@ function sessionSummary(shots) {
       const n = (id) => { const v = BT.$('#' + id).value; return v === '' ? null : Number(v); };
       shot.feet = n('esFeet'); shot.arrows = n('esArrows'); shot.bp = n('esBp');
       shot.ball = BT.$('#esBall').value || shot.ball;
+      { const k = BT.$('#esKey').value; if (k) shot.keyPin = k; else if (['weak', 'kickback', 'wrap'].includes(shot.keyPin)) shot.keyPin = (shot.leaveTag === 'Flat 10' ? 'weak' : shot.leaveTag === 'Ringing 10' ? 'wrap' : ''); }
+      { shot.notes = BT.$('#esNotes').value.trim(); let t = null; try { t = BTCoach.noteTags(shot.notes, isLeftyBowler()); } catch (_e) {} shot.noteRead = t && t.tags ? t.tags : []; if (t && t.laneRead && !shot.laneRead) shot.laneRead = t.laneRead; }
       shot.editedAt = Date.now();
       closeEditShot(); afterShotEdit(); toast('Shot updated. Coach re-read the lane.');
     });

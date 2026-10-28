@@ -123,12 +123,12 @@
         <div style="grid-column:1/-1"><label>Pins left <span class="small" id="editDeckHint">(tap the pins still standing; none = strike)</span></label><div id="editDeck" class="ed-deck"></div></div>
         <div id="edit2Wrap" style="grid-column:1/-1"><label>2nd ball</label><select id="edit2nd" class="input"><option value="none">Not recorded</option><option value="spare">Spare: all down</option><option value="left">Pins still standing (tap below)</option></select><div id="editDeck2" class="ed-deck" style="display:none"></div></div>
         <div><label>Exit off the deck</label><select id="editExit" class="input"></select></div>
-        <div><label>Key pin (6 / 4)</label><select id="editKey" class="input"><option value="">Didn't see</option><option value="weak">Laid down weak</option><option value="kickback">Hit the kickback, missed</option><option value="wrap">Wrapped around it</option></select></div>
+        <div><label id="editKeyLbl">What did the 6-pin do? (10 left)</label><select id="editKey" class="input"><option value="">Didn't see</option><option value="weak">Laid down weak</option><option value="kickback">Hit the kickback, missed</option><option value="wrap">Wrapped around it</option></select></div>
         <div><label>Execution</label><select id="editExec" class="input"><option value="5">Good</option><option value="3">OK</option><option value="1">Poor</option></select></div>
         <div id="editFaultWrap"><label>What do you think happened?</label><select id="editFault" class="input"></select></div>
         <div><label>Speed vs normal</label><select id="editSpeed" class="input"><option value="unknown">Didn't notice</option><option value="slower">Slower</option><option value="same">Same</option><option value="faster">Faster</option></select></div>
         <div style="grid-column:1/-1"><label>Ball reaction</label><div id="editObs" class="ed-chips"></div></div>
-        <div style="grid-column:1/-1"><label>Notes</label><input id="editNotes" class="input" /></div>
+        <div style="grid-column:1/-1"><label>Notes</label><textarea id="editNotes" class="input" rows="2" placeholder="What you saw"></textarea><div id="editNotesRead" class="small gd-notesread"></div></div>
       </div>
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
         <button class="btn danger" id="editDelete" type="button">Delete shot</button>
@@ -364,7 +364,8 @@
       edLeave = new Set(BT.standingPins(sh)); edOrig = [...edLeave].sort((a, z) => a - z).join('-');
       const sec = sh.second && Array.isArray(sh.second.left) ? sh.second.left : null;
       ed2 = new Set(sec || []); BT.$('#edit2nd').value = !sec ? (sh.added ? 'spare' : 'none') : sec.length ? 'left' : 'spare';
-      el.editNotes.value = sh.notes || '';
+      el.editNotes.value = sh.notes || ''; edNotesRead();
+      { const lf = edLefty(); BT.$('#editKeyLbl').textContent = `What did the ${lf ? '4' : '6'}-pin do? (${lf ? '7' : '10'} left)`; }
       edRefresh();
     }
     function openAddShot(sessionId, gameNo, frame, isFill, newGame) {
@@ -397,6 +398,9 @@
       if (!ref) { try { const tmp = { lanes: s.lanes, shots: [...(s.shots || []), { gameNo: g, frame, lane: '' }] }; BT.inferLanes(tmp); return tmp.shots[tmp.shots.length - 1].lane || ''; } catch (_e) { return ''; } }
       const same = (frame - Number(ref.frame)) % 2 === 0; return same ? String(ref.lane) : (String(ref.lane) === a ? b : a);
     }
+    function edLefty() { const b = BT.lsGet(BT.KEYS.BOWLER, {}) || {}; return /^l/i.test(String(b.handedness || b.hand || '')); }
+    function edNotesRead() { const box = BT.$('#editNotesRead'); if (!box) return; let t = null; try { t = BTCoach.noteTags(el.editNotes.value, edLefty()); } catch (_e) {} box.textContent = t && t.tags && t.tags.length ? '📝 Coach reads: ' + t.tags.join(' · ') : ''; }
+    BT.$('#editNotes').addEventListener('input', edNotesRead);
     function openEditShot(sessionId, shotIndex) {
       addCtx = null; BT.$('#editTitle').textContent = 'Edit shot'; BT.$('#editHint').textContent = 'Change anything you logged wrong. Same choices as Game Day.';
       el.editDelete.style.display = ''; el.editSave.textContent = 'Save changes';
@@ -449,6 +453,7 @@
       sh.speedTrend = BT.$('#editSpeed').value || 'unknown';
       sh.obs = [...edObs];
       sh.notes = el.editNotes.value.trim();
+      { let t = null; try { t = BTCoach.noteTags(sh.notes, edLefty()); } catch (_e) {} sh.noteRead = t && t.tags ? t.tags : []; }
       // Pins: unchanged pins keep their tag (Flat 10, Ringing 10…); changed pins are saved as the pins you tapped.
       const pins = [...edLeave].sort((a, z) => a - z), key = pins.join('-');
       if (!pins.length) { sh.leavePins = []; sh.leaveTag = 'Strike'; sh.leaves = ['Strike']; }
