@@ -227,7 +227,7 @@
     if (risk) score -= 1;
     let dir = '';
     if (last.length >= 3) {
-      const p = last.filter(isPocket).length, st = last.filter(isStrike).length;
+      const p = last.filter(x => isPocket(x) || isStrike(x)).length, st = last.filter(isStrike).length;
       why.push(`tonight, last ${last.length} with it: ${p} in the pocket, ${st} strike${st === 1 ? '' : 's'}`);
       if (p / last.length >= 0.6 && st / last.length >= 0.34) score += 1; else if (last.length >= 4 && p / last.length < 0.4) score -= 1;
       const g3 = good.slice(-3), e = g3.filter(readsEarly).length, l = g3.filter(readsLong).length;

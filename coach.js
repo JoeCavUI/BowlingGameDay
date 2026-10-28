@@ -61,7 +61,7 @@
   // ---------- per-shot classification ----------
   // ---------- 📝 Your shot notes, read as reads ----------
   // "6 pin tapped the 10 at the last second" = a strike on the weak side (the 6-pin laying down is a weak hit; wrapping
-  // around the 10 is a solid one). A messenger = a lucky strike: it doesn't prove the line. "hooked early", "went long",
+  // around the 10 is a solid one). A messenger = strong entry: the ball drove the head pin off the side wall into the corner, so it still had energy (ball strength + lane condition). "hooked early", "went long",
   // "over/under", "carrydown", "lanes hooking more / drying up / tightening" become the same reads as the buttons.
   // Lefties: the key pin is the 4 and the corner the 7, so "4 tapped the 7" reads the same way.
   function noteTags(text, lefty) {
@@ -70,7 +70,7 @@
     const K = lefty ? '(4|four)' : '(6|six)', C = lefty ? '(7|seven)' : '(10|ten)';
     const out = { tags: [], obs: [] };
     const has = (re) => re.test(t);
-    if (has(/messenger/)) { out.strike = 'lucky'; out.tags.push('messenger (lucky carry)'); }
+    if (has(/messenger/)) { out.strike = 'messenger'; out.tags.push('messenger (strong entry)'); }
     if (has(new RegExp(`${K}[ -]?(pin)?[^.]{0,30}(tap|tapped|barely|just got|late|last second|slow|trickl|lazy|soft|nudg|tipped)[^.]{0,25}${C}`)) || has(new RegExp(`${C}[ -]?(pin)?[^.]{0,12}(fell|went|dropped) (late|last|slow)`)) || has(/weak strike|lucky strike|cheap strike|soft strike/)) { if (!out.strike) out.strike = 'weak'; out.tags.push(out.strike === 'lucky' ? 'lucky strike' : `strike on the weak side (${lefty ? '4' : '6'}-pin barely got the ${lefty ? '7' : '10'})`); }
     if (has(/wrap|ringing|rang the|ring the/) || has(new RegExp(`${K}[ -]?(pin)?[^.]{0,20}(wrapped|around)`))) { out.keyPin = 'wrap'; out.tags.push('key pin wrapped (strong)'); }
     else if (has(/kick ?back/)) { out.keyPin = 'kickback'; out.tags.push('key pin hit the kickback'); }
@@ -83,7 +83,24 @@
     if (has(/drove through|strong hit|hit hard|powered through/)) { out.finish = out.finish || 'strong'; out.tags.push('drove through'); }
     if (has(/lanes? (are |is )?(hooking more|drying|dry|burn|breaking down|opening)|more hook|friction/)) { out.laneRead = 'more'; out.tags.push('lanes hooking more'); }
     else if (has(/lanes? (are |is )?(hooking less|tight|tightening|oily|holding)|less hook|carry ?down/)) { if (!out.obs.includes('Carrydown')) { out.laneRead = 'less'; out.tags.push('lanes hooking less'); } }
+    if (out.strike === 'messenger' && !out.finish) out.finish = 'good';
+    // What the note says about energy at the pins: strong entry, weak (short on energy), hot (too much, wrapping)
+    out.energy = out.finish === 'weak' || out.strike === 'weak' || out.keyPin === 'weak' ? 'weak' : out.keyPin === 'wrap' ? 'hot' : out.strike === 'messenger' || out.finish === 'strong' ? 'strong' : '';
     return out.tags.length ? out : null;
+  }
+  // 📝 Notes tally for a set of shots (e.g. one ball + one line): what your notes keep saying about energy at the pins.
+  function noteMix(shots, lefty) {
+    const m = { n: 0, strong: 0, weak: 0, hot: 0, messenger: 0, x: 0 };
+    (shots || []).forEach(x => { if (!x || x.type === 'gameStart') return; let t = null; try { t = noteTags(x.notes, lefty); } catch (_e) {} if (!t || !t.energy) return; m.n++; m[t.energy]++; if (t.strike === 'messenger') m.messenger++; if (isStrikeShot(x)) m.x++; });
+    if (m.n < 2) return null;
+    const say = [m.messenger ? `${m.messenger} messenger${m.messenger === 1 ? '' : 's'}` : '', m.strong - m.messenger > 0 ? `${m.strong - m.messenger} drove through` : '', m.weak ? `${m.weak} weak-side` : '', m.hot ? `${m.hot} wrapped/ringing` : ''].filter(Boolean).join(', ');
+    m.say = say;
+    m.read = m.strong >= 2 && m.weak + m.hot <= Math.floor(m.strong / 2) ? 'strong' : m.weak >= 2 && m.weak > m.strong ? 'weak' : m.hot >= 2 && m.hot > m.strong ? 'hot' : 'mixed';
+    m.text = m.read === 'strong' ? `Strong entry: the ball is getting to the pins with energy. That's what right ball, right spot looks like.`
+      : m.read === 'weak' ? `The ball is getting to the pocket short on energy (the ${lefty ? '4' : '6'} is laying down). Look for more energy at the pins: a stronger ball, or a line that lets this one finish.`
+      : m.read === 'hot' ? `The ball is hitting with too much energy (the ${lefty ? '4' : '6'} is wrapping). Look for a smoother ball or a little less angle.`
+      : 'Your notes are split, so they don\'t point either way yet.';
+    return m;
   }
   function classify(s, lefty) {
     // Your notes add reads you didn't tap (the buttons you tapped always win).
@@ -182,7 +199,7 @@
     return {
       exitRaw, exitRead, keyPin, finish, speed, speedCaused, bp, outward, recovery, angleClass,
       laneInfo: s.laneInfo === true, // a poor shot you said still told you about the lane: used for lane reads
-      noteTags: NT, lucky: !!(NT && NT.strike === 'lucky'),
+      noteTags: NT, messenger: !!(NT && NT.strike === 'messenger'),
       shot: s, execution, missSide, saved, hit, strike, meaning, early, long, lean,
       pocketHit, carryFail: pocketHit && !strike,
       overUnder: obs.includes('Over/under') || meaning === 'split',
@@ -1509,6 +1526,10 @@
       return res;
     }
 
+    // 📝 What your notes say about this line (same ball, last good shots): backs up, or questions, "right ball, right spot".
+    const noteBack = () => { let nm = null; try { nm = noteMix(W.map(c => c.shot), prof.lefty); } catch (_e) {} if (!nm) return;
+      if (nm.read === 'strong') res.notes.push(`📝 Your notes back it up: ${nm.say}. ${nm.text}`);
+      else if (nm.read === 'weak' || nm.read === 'hot') res.notes.push(`📝 But your notes say ${nm.say} on this line. ${nm.text}`); };
     // ---- 2. Utopia: room both ways ----
     if (outsideSaved && insideSaved) {
       res.status = 'utopia'; res.tone = 'good'; res.element = '🎯 Direction';
@@ -1517,6 +1538,7 @@
       res.next = 'Don\'t change a thing until a good shot misses the pocket.';
       setCompass('ok', 'ok', 'stay', '🧭 Right ball, right spot. This is what you\'re looking for.');
       if (moveVerdict) res.notes.push(moveVerdict);
+      noteBack();
       return res;
     }
 
@@ -1529,6 +1551,7 @@
       res.why = `${cnt(W, clean)} pocket strikes in your last ${W.length} good shots on this line.`;
       const bk = W.slice(-3).filter(c => c.hit === 'brooklyn').length;
       setCompass('ok', 'ok', 'stay', '🧭 Right ball, right spot. Stay.');
+      noteBack();
       res.next = bk >= 2 ? 'Heads-up: those were Brooklyns. The lane is starting to hook early. Be ready to move deeper.' : 'Keep repeating. Coach will flag the first sign of change.';
       if (moveVerdict) res.notes.push(moveVerdict);
       return res;
@@ -1696,5 +1719,5 @@
     });
   }
 
-  root.BTCoach = { noteTags, repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
+  root.BTCoach = { noteTags, noteMix, repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
 })(typeof window !== 'undefined' ? window : globalThis);

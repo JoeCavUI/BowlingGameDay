@@ -117,12 +117,25 @@
     }
     if (game === 3 && real.filter(s => Number(s.gameNo) === 3).length <= 2 && tr.drop && tr.drop.d <= -8) out.push({ id: 'drop3', text: `⏱️ On this pair your game 3s average ${Math.round(-tr.drop.d)} less than game 1s. Watch for the lanes changing.`, why: `Game 1: ${r1(tr.drop.g1.avg)} over ${gm(tr.drop.g1.n)}; game 3: ${r1(tr.drop.g3.avg)} over ${gm(tr.drop.g3.n)} (PinPal).` });
     if (game >= 2 && ctx.ball) { let bf = null; try { bf = ballFade(ctx.house, ctx.ball); } catch (_e) {} if (bf && bf.d <= -10) out.push({ id: 'fade', text: `🎳 ${ctx.ball} fades here: its game 3s average ${Math.round(-bf.d)} below its game 1s.`, why: `Game 1: ${r1(bf.g1.avg)} over ${gm(bf.g1.n)}; game 3: ${r1(bf.g3.avg)} over ${gm(bf.g3.n)} (PinPal).` }); }
+    // 📝 Your notes on this ball: tonight first, then past nights here
+    const NM = root.BTCoach && root.BTCoach.noteMix;
+    if (NM && ctx.ball) {
+      const mine = real.filter(s => s.ball === ctx.ball);
+      const tn = NM(mine, lefty);
+      if (tn && tn.read !== 'mixed') out.push({ id: `notes:${tn.read}:${tn.n}`, text: `📝 Your notes on ${ctx.ball} tonight: ${tn.say}. ${tn.text}`, why: `From ${tn.n} shot notes with this ball tonight. Coach weighs them with your pocket and mark reads.` });
+      if (!tn && real.length <= 2) {
+        const hk = String(ctx.house || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const past = (ctx.sessions || []).filter(s => s && String(s.house || '').toLowerCase().replace(/[^a-z0-9]/g, '') === hk);
+        const hn = NM(past.flatMap(s => (s.shots || []).filter(x => x && x.ball === ctx.ball)), lefty);
+        if (hn && hn.read !== 'mixed') out.push({ id: `notesh:${ctx.ball}`, text: `📝 Past notes on ${ctx.ball} here: ${hn.say}. ${hn.read === 'strong' ? 'It has entered strong here.' : hn.text}`, why: `From ${hn.n} shot notes over ${nt(past.length)} here.`, late: true });
+      }
+    }
     let lm = null; try { lm = laneMap(ctx.house, ctx.lanes, ctx.sessions); } catch (_e) {}
     const best = lm && lm.rows[0];
     const bg = lm && lm.byGame[game], inGame = real.filter(s => (Number(s.gameNo) || 1) === game).length;
     if (bg && inGame <= 1 && (game > 1 || !best || bg.feet !== best.feet || bg.arrows !== best.arrows)) out.push({ id: `mapg${game}`, text: `🗺️ Game ${game} here: ${bg.ball} ${bg.feet}/${bg.arrows} has worked best (${bg.x} strikes in ${bg.n}).`, why: `From ${nt(lm.nights)} you logged ${lm.pair ? 'on this pair' : 'at this house'}.`, angle: { slide: bg.feet, target: bg.arrows } });
     if (best && real.length <= 1 && game === 1) out.push({ id: 'map', text: `🗺️ Your best line here: ${best.ball} ${best.feet}/${best.arrows}${best.bp != null ? '/' + best.bp : ''}: ${best.x} strikes in ${best.n}.`, why: `From ${nt(best.nights)} you logged ${lm.pair ? 'on this pair' : 'at this house'}: pocket ${Math.round(best.p / best.n * 100)}%.`, angle: { slide: best.feet, target: best.arrows, bp: best.bp } });
-    return out;
+    return out.filter(x => !x.late).concat(out.filter(x => x.late));
   }
   root.BTEyes = { signals, tonightLanes, pairHistory, transition, ballFade, laneMap, leaveSide };
 })(typeof window !== 'undefined' ? window : globalThis);

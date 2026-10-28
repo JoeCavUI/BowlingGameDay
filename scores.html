@@ -539,8 +539,8 @@
       const best = Object.entries(byLine).map(([k, arr]) => ({ k, m: metrics(arr) })).filter(o => o.m.n >= 4).sort((a, z) => (z.m.strikes / z.m.n) - (a.m.strikes / a.m.n) || z.m.n - a.m.n)[0];
       if (best && best.m.strikes) { const [ball, line] = best.k.split('|'); T.push({ k: 'What worked', t: `${ball} on ${line}: ${best.m.strikes} strike${best.m.strikes === 1 ? '' : 's'} in ${best.m.n} shots, pocket ${pc(best.m.pocket, best.m.n)}%.` }); }
       // 📝 What your notes add: strikes that only just carried
-      { let w = 0, l = 0; real.forEach(x => { try { const t = BTCoach.noteTags(x.notes, lefty); if (t && isX(x)) { if (t.strike === 'weak') w++; if (t.strike === 'lucky') l++; } } catch (_e) {} });
-        if (w + l >= 2) T.push({ k: 'What your notes say', t: `${w ? `${w} strike${w === 1 ? '' : 's'} only just carried (${lefty ? '4' : '6'}-pin barely got the ${lefty ? '7' : '10'})` : ''}${w && l ? ' and ' : ''}${l ? `${l} came from a messenger` : ''}. Your carry was closer to the edge than the strike count shows.` }); }
+      { const byBall = {}; real.forEach(x => { (byBall[x.ball || '?'] = byBall[x.ball || '?'] || []).push(x); });
+        Object.entries(byBall).forEach(([bn, xs]) => { let m = null; try { m = BTCoach.noteMix(xs, lefty); } catch (_e) {} if (m && m.read !== 'mixed') T.push({ k: `What your notes say: ${bn}`, t: `${m.say}. ${m.text}` }); }); }
       const lost = all.pocket - all.carry;
       if (lost >= 3) {
         const bits = [all.lightLeft && `${all.lightLeft} light`, all.highLeft && `${all.highLeft} high`, all.flushLeft && `${all.flushLeft} flush that still left pins`].filter(Boolean);
