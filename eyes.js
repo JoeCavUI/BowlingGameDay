@@ -22,6 +22,8 @@
     if (pk === 'Pocket high' || pk === 'Brooklyn' || pk === (lefty ? 'Missed right' : 'Missed left')) v += 1;
     if (pk === 'Pocket light' || pk === (lefty ? 'Missed left' : 'Missed right')) v -= 1;
     if (obs.includes('Too early')) v += 1; if (obs.includes('Too long')) v -= 1;
+    // A flush hit that leaves the 10 (ringing, kickback, flat) is a carry / energy read, not a hook read.
+    if (!v && (pk === 'Pocket flush' || s.leaveTag === 'Ringing 10' || s.leaveTag === 'Flat 10' || ['wrap', 'kickback', 'weak'].includes(s.keyPin))) return 0;
     if (!v) { const lv = BT().standingPins(s).sort((a, b) => a - b).join('-'), sd = leaveSide(lv, lefty); v = sd === 'high' ? 1 : sd === 'light' ? -1 : 0; }
     return v;
   }
@@ -35,6 +37,22 @@
     const d = a.idx - b.idx; if (Math.abs(d) < 0.35) return { same: true, a, b };
     const more = d > 0 ? a : b, less = d > 0 ? b : a;
     return { more, less };
+  }
+
+  // ---------- tonight: is one lane tougher to get to the pocket / to strike? (all shots, with poor shots split out)
+  function tonightTough(shots, lanes) {
+    const pr = pairOf(lanes); if (pr.length < 2) return null;
+    const by = {}; pr.forEach(l => { by[l] = { l, n: 0, p: 0, x: 0, miss: 0, poorMiss: 0, good: 0, goodP: 0 }; });
+    shots.filter(s => s && s.type !== 'gameStart' && by[String(s.lane)]).forEach(s => { const b = by[String(s.lane)], ph = BT().isPocketHit(s), x = !BT().standingPins(s).length;
+      const poor = !counts(s); b.n++; if (ph) b.p++; if (x) b.x++; if (!ph) { b.miss++; if (poor) b.poorMiss++; } if (!poor) { b.good++; if (ph) b.goodP++; } });
+    const [a, b] = pr.map(l => by[l]); if (a.n < 5 || b.n < 5) return null;
+    const pp = (o) => o.p / o.n, sx = (o) => o.x / o.n, cy = (o) => o.p ? o.x / o.p : 0;
+    let tough = null, kind = '';
+    if (Math.abs(pp(a) - pp(b)) >= 0.25 && Math.abs(a.p - b.p) >= 2) { tough = pp(a) < pp(b) ? a : b; kind = 'pocket'; }
+    else if (Math.abs(sx(a) - sx(b)) >= 0.3 && Math.abs(a.x - b.x) >= 2) { tough = sx(a) < sx(b) ? a : b; kind = 'strike'; }
+    const easy = tough ? (tough === a ? b : a) : null;
+    const noCarry = [a, b].filter(o => o.p >= 5 && pp(o) >= 0.8 && cy(o) <= 0.45);
+    return { a, b, tough, easy, noCarry, kind };
   }
 
   // ---------- history at this pair (PinPal): each frame's lane from the game's starting lane
@@ -130,6 +148,13 @@
         if (hn && hn.read !== 'mixed') out.push({ id: `notesh:${ctx.ball}`, text: `📝 Past notes on ${ctx.ball} here: ${hn.say}. ${hn.read === 'strong' ? 'It has entered strong here.' : hn.text}`, why: `From ${hn.n} shot notes over ${nt(past.length)} here.`, late: true });
       }
     }
+    { let tt = null; try { tt = tonightTough(shots, ctx.lanes); } catch (_e) {}
+      if (tt && tt.tough) { const t = tt.tough, e = tt.easy, pl = (n, w) => `${n} ${w}${n === 1 ? '' : 'es'}`;
+        const why = !t.miss ? '' : t.poorMiss === t.miss ? ` ${t.miss === 1 ? 'The miss' : `All ${t.miss} misses`} on ${t.l} ${t.miss === 1 ? 'was a poor shot' : 'were poor shots'}: on good shots it was ${t.goodP} of ${t.good} to the pocket, so that part is execution.`
+          : t.poorMiss * 2 >= t.miss ? ` ${t.poorMiss} of the ${pl(t.miss, 'miss')} on ${t.l} were poor shots; on good shots it was ${t.goodP} of ${t.good} to the pocket.`
+          : ` Most of the misses on ${t.l} were good shots, so it's the lane.`;
+        out.push({ id: `tough:${t.l}:${tt.kind}:${Math.floor(t.n / 4)}`, text: `👀 Lane ${t.l} is tougher ${tt.kind === 'pocket' ? 'to get to the pocket' : 'to strike'} tonight: pocket ${t.p} of ${t.n} vs ${e.p} of ${e.n} on ${e.l}, strikes ${t.x} vs ${e.x}.${why}`, why: `Every shot counts here (fill balls too). Pocket = a pocket read or a strike.` }); }
+      if (tt) tt.noCarry.filter(o => !tt.tough || o !== tt.tough).forEach(o => out.push({ id: `nocarry:${o.l}:${Math.floor(o.p / 3)}`, text: `👀 Lane ${o.l} gets you to the pocket (${o.p} of ${o.n}) but only ${o.x} carried. That's energy at the pins, not your line.`, why: 'A pocket hit that leaves pins: check what the corner pin did (flat, kickback, ringing) to see if the ball is weak or too strong.' })); }
     let lm = null; try { lm = laneMap(ctx.house, ctx.lanes, ctx.sessions); } catch (_e) {}
     const best = lm && lm.rows[0];
     const bg = lm && lm.byGame[game], inGame = real.filter(s => (Number(s.gameNo) || 1) === game).length;
@@ -137,5 +162,5 @@
     if (best && real.length <= 1 && game === 1) out.push({ id: 'map', text: `🗺️ Your best line here: ${best.ball} ${best.feet}/${best.arrows}${best.bp != null ? '/' + best.bp : ''}: ${best.x} strikes in ${best.n}.`, why: `From ${nt(best.nights)} you logged ${lm.pair ? 'on this pair' : 'at this house'}: pocket ${Math.round(best.p / best.n * 100)}%.`, angle: { slide: best.feet, target: best.arrows, bp: best.bp } });
     return out.filter(x => !x.late).concat(out.filter(x => x.late));
   }
-  root.BTEyes = { signals, tonightLanes, pairHistory, transition, ballFade, laneMap, leaveSide };
+  root.BTEyes = { signals, tonightLanes, tonightTough, pairHistory, transition, ballFade, laneMap, leaveSide };
 })(typeof window !== 'undefined' ? window : globalThis);

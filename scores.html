@@ -210,7 +210,7 @@
       const eb = eyeballFor(s);
       const eyeTxt = eb ? ` • 👁️ Eyeball: ${eb.score} (${eb.label})` : '';
       const sc = (Array.isArray(s.scores) && s.scores.length) ? s.scores : (s.pinpal && s.pinpal.scores) || [];
-      const m = metrics((s.shots || []).filter(x => x && x.type !== 'gameStart' && !x.isFill)), q = (a, b) => b ? Math.round(a / b * 100) : 0;
+      const m = metrics((s.shots || []).filter(x => x && x.type !== 'gameStart')), q = (a, b) => b ? Math.round(a / b * 100) : 0;
       return `${sc.length ? `🎳 ${sc.join(' · ')} · ` : ''}${m.n} shots · ${m.strikes} strikes (${q(m.strikes, m.n)}%) · pocket ${q(m.pocket, m.n)}% · carry ${q(m.carry, m.pocket)}%`;
     }
 
@@ -518,7 +518,13 @@
     function nightReview(s) {
       const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {}, lefty = /^l/i.test(String(bowler.handedness || ''));
       const chron = [...(s.shots || [])].filter(Boolean).sort((a, b) => (a.at || 0) - (b.at || 0));
-      const real = chron.filter(x => x.type !== 'gameStart' && !x.isFill);
+      // Every ball counts: fill balls are strike shots too (they count in strikes, pocket and carry).
+      const real = chron.filter(x => x.type !== 'gameStart');
+      const frames1 = real.filter(x => !x.isFill);
+      const balls2 = frames1.filter(x => x.second && Array.isArray(x.second.left));
+      const tally = { first: frames1.length, fills: real.length - frames1.length, second: balls2.length, spares: balls2.filter(x => !x.second.left.length).length,
+        fillX: real.filter(x => x.isFill && isX(x)).length, noSecondData: frames1.some(x => !isX(x) && !(x.second && Array.isArray(x.second.left))) };
+      tally.total = tally.first + tally.fills + tally.second;
       const all = metrics(real), pc = (a, b) => b ? Math.round(a / b * 100) : 0;
       const okPct = pc(real.filter(x => Number(x.executionQuality || 3) >= 3).length, real.length);
       const scores = (Array.isArray(s.scores) && s.scores.length) ? s.scores : (s.pinpal && s.pinpal.scores) || [];
@@ -550,17 +556,53 @@
         T.push({ k: 'What cost pins', t: `${lost} pocket hits didn't strike (${bits.join(', ')}). ${why}` });
       }
       const lanesM = {}; real.forEach(x => { if (x.lane) (lanesM[x.lane] = lanesM[x.lane] || []).push(x); });
-      const lanes = Object.keys(lanesM).sort((a, b) => Number(a) - Number(b)).map(l => ({ lane: l, m: metrics(lanesM[l]) }));
+      const poorSh = (x) => x.laneInfo !== true && (Number(x.executionQuality) === 1 || x.miss === 'rightMiss' || x.miss === 'leftMiss');
+      const lanes = Object.keys(lanesM).sort((a, b) => Number(a) - Number(b)).map(l => { const xs = lanesM[l], miss = xs.filter(x => !isP(x)), good = xs.filter(x => !poorSh(x));
+        const byG = [...new Set(xs.map(x => Number(x.gameNo) || 1))].sort((a, b) => a - b).map(g => ({ g, m: metrics(xs.filter(x => (Number(x.gameNo) || 1) === g)) }));
+        return { lane: l, m: metrics(xs), miss: miss.length, poorMiss: miss.filter(poorSh).length, good: good.length, goodP: good.filter(isP).length, byG,
+          ten: xs.filter(x => isP(x) && !isX(x) && BT.standingPins(x).join('-') === (lefty ? '7' : '10')).length }; });
       let laneNote = '';
       if (lanes.length === 2 && lanes.every(l => l.m.n >= 6)) {
         const [a, b] = lanes, pa = pc(a.m.pocket, a.m.n), pb = pc(b.m.pocket, b.m.n), sa = pc(a.m.strikes, a.m.n), sb = pc(b.m.strikes, b.m.n);
-        if (Math.abs(pa - pb) >= 10 || Math.abs(sa - sb) >= 15) { const tough = pa + sa < pb + sb ? a : b, easy = tough === a ? b : a; const dP = Math.abs(pa - pb) >= 5, dS = Math.abs(sa - sb) >= 5; laneNote = `Lane ${tough.lane} was tougher: ${[dP && `pocket ${pc(tough.m.pocket, tough.m.n)}% vs ${pc(easy.m.pocket, easy.m.n)}%`, dS && `strikes ${pc(tough.m.strikes, tough.m.n)}% vs ${pc(easy.m.strikes, easy.m.n)}%`].filter(Boolean).join(', ')} on ${easy.lane}. Next time here, watch your first shots on ${tough.lane} closely.`; }
+        if (Math.abs(pa - pb) >= 10 || Math.abs(sa - sb) >= 15) { const tough = pa + sa < pb + sb ? a : b, easy = tough === a ? b : a; const dP = Math.abs(pa - pb) >= 5, dS = Math.abs(sa - sb) >= 5; laneNote = `Lane ${tough.lane} was tougher: ${[dP && `pocket ${pc(tough.m.pocket, tough.m.n)}% vs ${pc(easy.m.pocket, easy.m.n)}%`, dS && `strikes ${pc(tough.m.strikes, tough.m.n)}% vs ${pc(easy.m.strikes, easy.m.n)}%`].filter(Boolean).join(', ')} on ${easy.lane}. Next time here, watch your first shots on ${tough.lane} closely.`;
+          if (tough.miss && tough.poorMiss * 2 >= tough.miss) laneNote += ` But ${tough.poorMiss} of its ${tough.miss} misses were poor shots: on good shots it was ${tough.goodP} of ${tough.good} to the pocket, so part of that is execution, not the lane.`;
+          { const eC = pc(easy.m.carry, easy.m.pocket); if (pc(easy.m.pocket, easy.m.n) >= 80 && eC <= 50) laneNote += ` Lane ${easy.lane} got you to the pocket but carried only ${eC}%${easy.ten >= 3 ? ` (${easy.ten} single ${lefty ? '7' : '10'}-pins)` : ''}: that's energy at the pins, not your line.`; } }
         else laneNote = 'Both lanes played about the same.';
       }
       let five = null, moves = null, rep = null, repG = {};
       try { if (window.BTCoach && BTCoach.repeatability) { rep = BTCoach.repeatability(chron, bowler); repG = BTCoach.repeatByGame(chron, bowler); } } catch (_e) {}
       try { five = (window.BTCoach ? BTCoach.elementsReport(chron, bowler, (BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || []).find(q => q.name === s.pattern) || null) : null) || (s.summary && s.summary.elements) || null; } catch (_e) {}
       try { moves = (window.BTCoach && BTCoach.moveSummary ? BTCoach.moveSummary(chron, bowler) : null) || (s.summary && s.summary.moves) || null; } catch (_e) {}
+      // 🎯 The 10-pin story: pocket hits that left only the corner pin, and what the key pin did
+      { const C1 = lefty ? '7' : '10', K1 = lefty ? '4' : '6';
+        const tens = real.filter(x => isP(x) && !isX(x) && BT.standingPins(x).join('-') === C1);
+        if (tens.length >= 3 && tens.length * 2 >= (all.pocket - all.carry)) {
+          const kp = (x) => x.leaveTag === 'Ringing 10' || x.keyPin === 'wrap' ? 'wrap' : x.leaveTag === 'Flat 10' || x.keyPin === 'weak' ? 'weak' : x.keyPin === 'kickback' ? 'kickback' : 'unseen';
+          const k = { wrap: 0, kickback: 0, weak: 0, unseen: 0 }; tens.forEach(x => k[kp(x)]++);
+          const byL = {}; tens.forEach(x => { if (x.lane) byL[x.lane] = (byL[x.lane] || 0) + 1; });
+          const lp = Object.entries(byL).sort((a, b) => b[1] - a[1]).map(([l, n]) => `${n} on ${l}`).join(', ');
+          const parts = [k.kickback && `hit the kickback and missed ${k.kickback}×`, k.wrap && `wrapped / ringing ${k.wrap}×`, k.weak && `laid down flat ${k.weak}×`, k.unseen && `not seen ${k.unseen}×`].filter(Boolean).join(', ');
+          const strongN = k.wrap + k.kickback;
+          const verdict = strongN >= 2 && strongN > k.weak * 1.5 ? `Mostly the strong side: the ball is still carrying a lot of energy or coming in steep when it hits. Let it read sooner (feet and eyes ${lefty ? 'left' : 'right'} together) or go smoother.`
+            : k.weak >= 2 && k.weak > strongN ? `Mostly weak: the ball is running out of energy before the pins. A little more angle (feet ${lefty ? 'right' : 'left'}, eyes the same) or a stronger / longer ball.`
+            : `Tap what the ${K1}-pin did on each one (flat, kickback or ringing) so Coach can tell if the ball is weak or too strong.`;
+          { const wc = T.find(t => t.k === 'What cost pins'); if (wc) wc.t = wc.t.replace(' Flush hits that leave pins point to entry angle or speed, not your aim.', ''); }
+          T.push({ k: `The ${C1}-pin story`, t: `${tens.length} pocket hits left only the ${C1}${lp ? ` (${lp})` : ''}. The ${K1}-pin: ${parts}. ${verdict}` });
+        } }
+      // 🗣️ Coach said / you did: each line move Coach called, what you did next, and what followed
+      const said = [];
+      { const R1 = real.filter(x => !x.isFill), used = new Set(), dirWord = (d) => (d < 0) !== lefty ? 'right' : 'left';
+        R1.forEach((x, i) => { const h = (x.coach && x.coach.headline) || ''; const m = h.match(/feet (\d+) boards? (left|right)(?: and your eyes (\d+) (left|right))?/i); if (!m) return;
+          const n = Number(m[1]), want = (m[2].toLowerCase() === 'right') !== lefty ? -1 : 1; // board-number direction
+          let j = -1; for (let q = i + 1; q < R1.length; q++) { if (R1[q].feet !== R1[q - 1].feet || R1[q].arrows !== R1[q - 1].arrows) { j = q; break; } }
+          if (used.has(j)) return; used.add(j);
+          const at = `G${x.gameNo || 1} F${x.frame}`, adv = `feet ${n} ${m[2].toLowerCase()}${m[3] ? `, eyes ${m[3]} ${m[4].toLowerCase()}` : ''}`;
+          if (j < 0) { said.push(`${at}: Coach said ${adv}. You stayed on ${lineKey(x)}.`); return; }
+          const a = R1[j - 1], b = R1[j], dF = (b.feet ?? a.feet) - (a.feet ?? b.feet), dA = (b.arrows ?? a.arrows) - (a.arrows ?? b.arrows);
+          const dir = Math.sign(dF || dA), nx = R1.slice(j, j + 3), np = nx.filter(isP).length, nX = nx.filter(isX).length;
+          const did = dir === want ? 'You moved that way' : dir === -want ? 'You moved the other way' : 'You changed your line';
+          const mv = [dF && `feet ${Math.abs(dF)} ${dirWord(dF)}`, dA && `eyes ${Math.abs(dA)} ${dirWord(dA)}`].filter(Boolean).join(', ');
+          said.push(`${at}: Coach said ${adv}. ${did} (${mv}, ${a.feet}/${a.arrows} → ${b.feet}/${b.arrows}) at G${b.gameNo || 1} F${b.frame}: next ${nx.length} shots ${np} in the pocket, ${nX} strike${nX === 1 ? '' : 's'}.`); }); }
       if (moves && moves.afterPoor >= 2) T.push({ k: 'Try next time', t: `${moves.afterPoor} of your ${moves.made} moves came right after a poor shot. Repeat the shot first; move when two good shots say the same thing.` });
       else if (laneNote && /tougher/.test(laneNote)) T.push({ k: 'Try next time', t: laneNote });
       else if (five && five.drill) T.push({ k: 'Try next time', t: `${five.weakest}: ${five.drill}` });
@@ -601,7 +643,7 @@
       if (games.length > 1) games.forEach(g => sp.push(`Game ${g.no}${g.score != null ? ', ' + g.score : ''}: ${g.m.strikes} strikes, pocket ${pc(g.m.pocket, g.m.n)} percent.`));
       if (laneNote && !T.some(t => t.t === laneNote)) sp.push(strip(laneNote));
       if (moves && moves.tip && !T.some(t => /poor shot/.test(t.t))) sp.push(strip(moves.tip));
-      return { scores, headline, okPct, all, takeaways: T, games, lanes, laneNote, balls, moves, faults, five, rep, repG, eye: eyeballFor(s), log, speech: sp.join(' ').replace(/(\d)%/g, '$1 percent') };
+      return { scores, headline, okPct, all, tally, said, takeaways: T, games, lanes, laneNote, balls, moves, faults, five, rep, repG, eye: eyeballFor(s), log, speech: sp.join(' ').replace(/(\d)%/g, '$1 percent') };
     }
     // 🎳 Frame-by-frame scorecard (marks on top, running total under each frame; splits circled)
     function scorecard(c, sess) {
@@ -689,14 +731,15 @@
           <div class="small">${[s.leagueName, s.pattern, s.setName && 'Bag: ' + s.setName].filter(Boolean).map(esc).join(' · ')}</div>
           ${R.scores.length ? `<div class="nr-scores">🎳 ${R.scores.map(x => x == null ? '—' : x).join(' · ')} <span class="small">= ${R.scores.reduce((a, b) => a + Number(b || 0), 0)}${s.pinpal ? ' (PinPal)' : ''}</span></div>` : ''}
           <div class="nr-line">${R.headline}</div>
+          <div class="nr-tally"><b>${R.tally.total}</b> balls thrown${R.tally.noSecondData ? ' logged' : ''} · <b>${R.all.strikes}</b> strike${R.all.strikes === 1 ? '' : 's'} on ${R.all.n} strike shots${R.tally.fills ? ` (incl. ${R.tally.fills} fill ball${R.tally.fills === 1 ? '' : 's'})` : ''}${R.tally.second ? ` · spares ${R.tally.spares} of ${R.tally.second}` : ''}</div>
           <div class="small dim" style="margin-top:6px">${statLine(R.all)} · good or OK shots ${R.okPct}%<span class="no-print"> · double tap for the shot log</span></div>
         </div>
         ${pinpalPanel(s, true)}
         ${R.takeaways.length ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>💡 What tonight says</b><ol class="nr-list">${R.takeaways.map(t => `<li><b>${t.k}:</b> ${t.t}</li>`).join('')}</ol></div>` : ''}
         ${R.games.length > 1 || (R.games[0] && R.games[0].score != null) ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🎯 Game by game</b>${R.games.map(g => `<div class="nr-row"><button type="button" class="nr-gscore" data-gscore="${g.no}" aria-label="Edit game ${g.no} score"><b>Game ${g.no}${g.score != null ? ': ' + g.score : ''}</b> <span class="small">✎</span></button>${g.card ? scorecard(g.card, s) : ''}<div class="small">${statLine(g.m)}${R.repG && R.repG[g.no] != null ? ` · repeat ${R.repG[g.no]}%` : ''}</div>${g.notes.length ? `<div class="small" style="opacity:1">${g.notes.join(' · ')}</div>` : ''}</div>`).join('')}</div>` : ''}
-        ${R.lanes.length ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>↔️ Lanes</b>${R.lanes.map(l => `<div class="nr-row"><b>Lane ${esc(l.lane)}</b><div class="small">${statLine(l.m)}</div></div>`).join('')}${R.laneNote ? `<div class="small nr-note">${R.laneNote}</div>` : ''}</div>` : ''}
+        ${R.lanes.length ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>↔️ Lanes</b>${R.lanes.map(l => `<div class="nr-row"><b>Lane ${esc(l.lane)}</b><div class="small">${statLine(l.m)}</div><div class="small dim">${l.miss ? `missed the pocket ${l.miss}× (${l.poorMiss} poor shot${l.poorMiss === 1 ? '' : 's'}) · ` : ''}good shots to the pocket ${l.goodP} of ${l.good}${l.ten ? ` · single ${lefty0 ? '7' : '10'}: ${l.ten}` : ''}</div>${l.byG.length > 1 ? `<div class="small dim">${l.byG.map(o => `G${o.g}: pocket ${o.m.pocket}/${o.m.n}, ${o.m.strikes} X`).join(' · ')}</div>` : ''}</div>`).join('')}${R.laneNote ? `<div class="small nr-note">${R.laneNote}</div>` : ''}</div>` : ''}
         ${R.balls.length ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🎳 Balls</b>${R.balls.map(b => `<div class="nr-row"><b>${esc(b.ball)}</b><div class="small">${statLine(b.m)}</div></div>`).join('')}</div>` : ''}
-        ${R.moves ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>${R.moves.text}</b>${R.moves.tip ? `<div class="small" style="margin-top:6px;opacity:1">${R.moves.tip}</div>` : ''}</div>` : ''}
+        ${R.moves || R.said.length ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px">${R.moves ? `<b>${R.moves.text}</b>${R.moves.tip ? `<div class="small" style="margin-top:6px;opacity:1">${R.moves.tip}</div>` : ''}` : ''}${R.said.length ? `<div style="margin-top:8px"><b>🗣️ Coach said / you did</b>${R.said.map(t => `<div class="small" style="margin-top:4px;opacity:1">${esc(t)}</div>`).join('')}</div>` : ''}</div>` : ''}
         ${R.faults.length ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🤔 Poor shots: what you felt</b><ul class="nr-list">${R.faults.map(l => `<li>${l}</li>`).join('')}</ul></div>` : ''}
         ${R.rep ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🔁 Repeatability tonight: ${R.rep.score}%</b><div class="small" style="margin-top:2px">How well you repeated your shot, from what you logged. Moves you made on purpose don't count against you.</div><ul class="nr-subs">${R.rep.parts.map(p => `<li><b>${p.label} ${p.score}%:</b> ${p.text}.</li>`).join('')}</ul>${Object.keys(R.repG || {}).length > 1 ? `<div class="small" style="margin-top:6px;opacity:1">By game: ${Object.entries(R.repG).map(([g, v]) => `G${g} ${v}%`).join(' · ')}</div>` : ''}${R.rep.tip ? `<div class="small" style="margin-top:8px;color:var(--accent);opacity:1">${R.rep.tip}</div>` : ''}</div>` : ''}
         ${R.five ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🎳 The 5 Scoring Elements tonight</b>${R.five.elements.map(e => `<div class="small" style="margin-top:6px;opacity:1">${e.icon} <b>${e.key}${e.score != null ? ': ' + e.score + '%' : ''}</b>. ${e.text}</div>${(e.subs || []).length ? `<ul class="nr-subs">${e.subs.map(x => `<li><b>${x.label}${x.score != null ? ' ' + x.score + '%' : ''}:</b> ${x.text}</li>`).join('')}</ul>` : ''}`).join('')}<div class="small" style="margin-top:8px">From Del Warren's 5 Scoring Elements (Kegel). Grades only what you logged.</div>${R.five.drill ? `<div class="small" style="margin-top:8px;color:var(--accent);opacity:1"><b>Work on ${R.five.weakest}:</b> ${R.five.drill}</div>` : ''}</div>` : ''}

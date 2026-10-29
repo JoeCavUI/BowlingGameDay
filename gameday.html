@@ -2527,7 +2527,9 @@ function sessionSummary(shots) {
         scores, scoredInApp: !!scoredInApp,
         shots: [...sessionShots],
       };
-      const sessions = BT.lsGet(BT.KEYS.GAME_SESSIONS, []);
+      let sessions = BT.lsGet(BT.KEYS.GAME_SESSIONS, []);
+      // Saving the same night twice (double tap, or save → reopen → save) replaces it instead of adding a copy.
+      { const ids = new Set((payload.shots || []).map(x => x && x.id).filter(Boolean)); if (ids.size) sessions = sessions.filter(o => { const oi = (o.shots || []).map(x => x && x.id).filter(Boolean); const shared = oi.filter(i => ids.has(i)).length; return !(shared && shared >= Math.min(oi.length, ids.size) * 0.8); }); }
       sessions.unshift(payload);
       BT.lsSet(BT.KEYS.GAME_SESSIONS, sessions);
       localStorage.removeItem(SESSION_KEY);
@@ -3105,6 +3107,9 @@ function sessionSummary(shots) {
       const n = (id) => { const v = BT.$('#' + id).value; return v === '' ? null : Number(v); };
       shot.feet = n('esFeet'); shot.arrows = n('esArrows'); shot.bp = n('esBp');
       shot.ball = BT.$('#esBall').value || shot.ball;
+      { // Keep the next shot's "changed: ball" honest after a ball fix
+        const real = sessionShots.filter(x => x && x.type !== 'gameStart'), i = real.indexOf(shot), nx = i > 0 ? real[i - 1] : null;
+        if (nx && Array.isArray(nx.changed)) { const has = nx.changed.includes('ball'); if (has && nx.ball === shot.ball) nx.changed = nx.changed.filter(k => k !== 'ball'); else if (!has && nx.ball && nx.ball !== shot.ball) nx.changed = [...nx.changed, 'ball']; } }
       { const k = BT.$('#esKey').value; if (k) shot.keyPin = k; else if (['weak', 'kickback', 'wrap'].includes(shot.keyPin)) shot.keyPin = (shot.leaveTag === 'Flat 10' ? 'weak' : shot.leaveTag === 'Ringing 10' ? 'wrap' : ''); }
       { shot.notes = BT.$('#esNotes').value.trim(); let t = null; try { t = BTCoach.noteTags(shot.notes, isLeftyBowler()); } catch (_e) {} shot.noteRead = t && t.tags ? t.tags : []; if (t && t.laneRead && !shot.laneRead) shot.laneRead = t.laneRead; }
       shot.editedAt = Date.now();

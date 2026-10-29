@@ -1604,7 +1604,7 @@
       // A strike on the last good shot, or leaves that point both ways, is not a reason to change speed.
       if ((lastT && lastT.strike) || !agree) {
         res.status = 'watch'; res.tone = 'info'; res.lens = '🌀 Energy';
-        res.headline = lastT && lastT.strike ? 'Strike. Keep repeating; no speed change yet.' : (weak && strong) ? 'In the pocket, but the leaves point both ways. Repeat before changing anything.' : 'In the pocket, not carrying yet. Repeat before changing anything.';
+        res.headline = lastT && lastT.strike ? 'Strike. Keep repeating; no speed change yet.' : lastT && !lastT.pocketHit ? 'That one missed the pocket. Your shots before it were in the pocket but not carrying. Repeat before changing anything.' : (weak && strong) ? 'In the pocket, but the leaves point both ways. Repeat before changing anything.' : 'In the pocket, not carrying yet. Repeat before changing anything.';
         res.why = `${cnt(recentPocket, c => c.pocketHit)} of your last ${recentPocket.length} good shots hit the pocket (${carryFails.slice(-3).map(c => c.shot.leaveTag || pinsText(c.shot)).filter(Boolean).join(', ') || 'no carry'}). ${lastT && lastT.strike ? 'The last one carried, so the energy is there.' : !agree ? ((weak && strong) ? `Weak signs ${weak}, strong signs ${strong}: they don't agree.` : 'One leave isn\'t enough to tell weak from strong.') : ''}`;
         res.next = 'Coach calls an energy change when 2 more good pocket shots leave the same kind of pin.';
         setCompass('ok', inMud ? 'mud' : 'ok', 'watch', '🧭 Right ball, right spot so far. Watch how the 10 pin (or 7 pin) goes down.');

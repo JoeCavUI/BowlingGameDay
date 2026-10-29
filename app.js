@@ -313,6 +313,10 @@
     if (ch) lsSet(key, arr);
   }
   try { migrateLayouts(CUSTOM_BALLS_KEY); migrateLayouts('bt_proposed_balls_v1'); } catch (_e) {}
+  // The same night saved twice (identical shots): keep the newest copy only.
+  try { const ss = lsGet(KEYS.GAME_SESSIONS, []); if (Array.isArray(ss) && ss.length > 1) { const seen = new Set(), keep = [];
+    ss.slice().sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0)).forEach(o => { const k = (o.shots || []).map(x => x && x.id).filter(Boolean).sort().join('|'); if (k && seen.has(k)) return; if (k) seen.add(k); keep.push(o); });
+    if (keep.length < ss.length) { const ks = new Set(keep); lsSet(KEYS.GAME_SESSIONS, ss.filter(o => ks.has(o))); } } } catch (_e) {}
 
   // ---- Edit a ball (name, specs, layout) on the phone ----
   // patch keys: name, brand, cover, core, rg, diff, psa (intermediate diff), surface, pin (pin location),
