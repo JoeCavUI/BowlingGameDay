@@ -1507,6 +1507,44 @@
     window.addEventListener('pagehide', stopSpeaking);
   }
 
+  // --- 🔊 Read aloud on every text panel: any .panel with real reading in it gets a small speaker button ---
+  // Skips forms (lots of inputs), short panels, and panels that already have their own read-aloud button.
+  let _raBtn = null;
+  function panelText(el) {
+    const c = el.cloneNode(true);
+    c.querySelectorAll('button, select, input, textarea, svg, canvas, script, style, .ra-btn, .no-read, [aria-hidden="true"], summary .small').forEach(n => n.remove());
+    c.querySelectorAll('details').forEach(d => d.setAttribute('open', ''));
+    c.style.cssText = 'position:absolute;left:-99999px;top:0;width:' + Math.max(320, el.clientWidth) + 'px;';
+    document.body.appendChild(c); const t = c.innerText; c.remove(); return t;
+  }
+  function autoReadAloud() {
+    if (!canSpeak() || typeof document === 'undefined') return;
+    document.querySelectorAll('.panel').forEach(el => {
+      if (el.dataset.raDone || el.closest('[data-no-read]')) return;
+      if (el.querySelector('#coachSpeak, #pSpeak, #nrSpeak, .ra-btn')) { el.dataset.raDone = '1'; return; }
+      if (el.parentElement && el.parentElement.closest('.panel[data-ra-done="2"]')) return; // a parent panel already reads this
+      if (!el.offsetParent && !(el.closest('details') && !el.closest('details').open)) return; // hidden now; check again later
+      const controls = el.querySelectorAll('input:not([type=checkbox]):not([type=radio]), select, textarea').length;
+      const txt = (el.innerText || '').replace(/\s+/g, ' ').trim();
+      const btns = [...el.querySelectorAll('button')].filter(x => !x.classList.contains('ra-btn') && !x.closest('.panel .panel')).length;
+      if (controls > 3 || btns > 12 || (btns > 6 && !el.matches('details')) && txt.length < 900 || txt.length < 220 || (txt.match(/[a-z]{3,}/gi) || []).length < 30) return;
+      el.dataset.raDone = '2';
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'ra-btn'; b.textContent = '🔊'; b.title = 'Read aloud'; b.setAttribute('aria-label', 'Read this aloud');
+      b.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation();
+        if (_raBtn === b && isSpeaking()) { stopSpeaking(); b.textContent = '🔊'; _raBtn = null; return; }
+        if (_raBtn) _raBtn.textContent = '🔊';
+        const ok = speak(panelText(el), () => { b.textContent = '🔊'; if (_raBtn === b) _raBtn = null; });
+        if (ok) { b.textContent = '⏹'; _raBtn = b; } });
+      const sum = el.matches('details') ? el.querySelector(':scope > summary') : null;
+      if (sum) { b.classList.add('ra-in-sum'); sum.appendChild(b); } else { el.classList.add('ra-host'); el.insertBefore(b, el.firstChild); }
+    });
+  }
+  if (typeof document !== 'undefined' && typeof document.addEventListener === 'function' && typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+    let _raT = null; const kick = () => { clearTimeout(_raT); _raT = setTimeout(autoReadAloud, 500); };
+    const start = () => { kick(); try { new MutationObserver(kick).observe(document.body, { childList: true, subtree: true }); } catch (_e) {} document.addEventListener('toggle', kick, true); window.addEventListener('hashchange', kick); window.addEventListener('pagehide', stopSpeaking); };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+  }
+
   // --- Arsenal section: its sub-pages (menu cards + the sticky bar on each page) ---
   const ARSENAL_PAGES = [
     { id: 'add', icon: '➕', t: 'Add a ball', d: 'Add one ball or upload your spreadsheet' },
