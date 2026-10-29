@@ -141,7 +141,7 @@
 
         <!-- My line + ball -->
         <div class="panel">
-          <button type="button" class="gd-fold" id="lineSum" aria-expanded="false" aria-controls="lineWrap"></button>
+          <button type="button" class="gd-sum" id="lineSum" aria-expanded="false" aria-controls="lineWrap"></button>
           <div id="lineWrap">
           <div class="gd-line">
             <div class="gd-step"><label>Slide</label>
@@ -166,7 +166,7 @@
           </div>
           </div>
           <div id="lineMath" class="gd-linemath" style="display:none"></div>
-          <button type="button" class="gd-fold" id="ballSum" aria-expanded="false" aria-controls="ballWrap" style="margin-top:10px"></button>
+          <button type="button" class="gd-sum" id="ballSum" aria-expanded="false" aria-controls="ballWrap" style="margin-top:10px"></button>
           <div id="ballWrap" style="margin-top:10px">
             <label>Ball</label>
             <select id="ball" class="input"></select>
@@ -718,8 +718,8 @@ function selectedPills(container) {
       const v = (x) => (x && x.value !== '' ? x.value : '—'), off0 = Number((BT.lsGet(BT.KEYS.BOWLER, {}) || {}).laydownOffset), off = Number.isFinite(off0) && off0 > 0 ? off0 : 5;
       const lay = el.feet && el.feet.value !== '' ? Math.round((Number(el.feet.value) - off) * 2) / 2 : null, td = el.tdist && el.tdist.value && el.tdist.value !== '15' ? ` at ${el.tdist.value} ft` : '';
       lw.hidden = f.line; bw.hidden = f.ball;
-      ls.innerHTML = `<span>📐 Slide <b>${escapeHtml(v(el.feet))}</b> · Target <b>${escapeHtml(v(el.arrows))}</b>${td} · BP <b>${escapeHtml(v(el.bp))}</b>${lay != null ? ` <span class="small">· lay ${lay}</span>` : ''}</span><span class="gd-fold-i">${f.line ? 'Change ▾' : 'Done ▴'}</span>`;
-      bs.innerHTML = `<span>🎳 <b>${escapeHtml(el.ball && el.ball.value ? el.ball.value : 'Pick a ball')}</b></span><span class="gd-fold-i">${f.ball ? 'Change ▾' : 'Done ▴'}</span>`;
+      ls.innerHTML = `<span>📐 Slide <b>${escapeHtml(v(el.feet))}</b> · Target <b>${escapeHtml(v(el.arrows))}</b>${td} · BP <b>${escapeHtml(v(el.bp))}</b>${lay != null ? ` <span class="small">· lay ${lay}</span>` : ''}</span><span class="gd-sum-i">${f.line ? 'Change ▾' : 'Done ▴'}</span>`;
+      bs.innerHTML = `<span>🎳 <b>${escapeHtml(el.ball && el.ball.value ? el.ball.value : 'Pick a ball')}</b></span><span class="gd-sum-i">${f.ball ? 'Change ▾' : 'Done ▴'}</span>`;
       ls.setAttribute('aria-expanded', String(!f.line)); bs.setAttribute('aria-expanded', String(!f.ball));
     }
     const toggleFold = (k) => { const f = folds(); f[k] = !f[k]; try { localStorage.setItem(FOLD_KEY, JSON.stringify(f)); } catch (_e) {} paintFolds(); };

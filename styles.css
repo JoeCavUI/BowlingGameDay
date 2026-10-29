@@ -924,8 +924,8 @@ body.gd-seasoned .gd-help{display:none}
 .nr-gscore .small{opacity:.6}
 .gd-notesread{margin-top:4px;opacity:1;color:var(--accent)}
 /* 🧹 Fold the line steppers and ball picker */
-.gd-fold{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px 12px;color:inherit;font-size:15px}
-.gd-fold b{font-weight:800}.gd-fold-i{font-size:13px;color:var(--accent);font-weight:700;white-space:nowrap}
+.gd-sum{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px 12px;color:inherit;font-size:15px}
+.gd-sum b{font-weight:800}.gd-sum-i{font-size:13px;color:var(--accent);font-weight:700;white-space:nowrap}
 #lineWrap{margin-top:10px}
 .nr-tally { margin-top: 8px; font-size: 15px; }
 .nr-tally b { font-size: 17px; }
