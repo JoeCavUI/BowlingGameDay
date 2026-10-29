@@ -58,6 +58,16 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v129-beta66: Every ball counts, 10-pin story, lane checks
+- Night review: total balls thrown, strikes include fill balls (every ball counts), spares made of attempted.
+- "The 10-pin story": single corner-pin leaves on pocket hits, what the key pin did, and what it means.
+- "Coach said / you did": each line move Coach called, what you actually did, and the next 3 shots.
+- Lanes: misses split into poor shots vs good shots, single 10s, and each lane by game; easy-to-pocket-but-not-carrying lane called out.
+- Game Day: live "lane X is tougher to get to the pocket / to strike" and "gets you to the pocket but isn't carrying" checks; flush 10-pin leaves no longer count as light hook reads.
+- Coach no longer says "In the pocket" right after a shot that missed it.
+- The same night saved twice is kept once; fixing a shot's ball corrects the next shot's ball-change flag.
+- Fix: slide-outs (Tonight, Arsenal) were squished by the new one-line buttons in v128.
+
 ## Changes in v128-beta65: Notes Coach reads, A–Z arsenal, tap-to-edit, tidier Game Day
 - Arsenal pages and ball lists sorted A–Z by ball name (lane-condition rankings stay ranked).
 - Tap a scorecard frame (Game Day and night review) to edit that shot; tap a game header to edit the game score.
