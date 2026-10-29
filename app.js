@@ -613,6 +613,18 @@
   function dualSpareNames() {
     try { const c = lsGet(KEYS.CSV_CACHE, null); return withCustomBalls((c && c.rows) || []).filter(r => ballName(r) && !isRetired(r) && ballCareFor(ballName(r)).spare === 'dual').map(r => ballName(r)); } catch (_e) { return []; }
   }
+  // 🧽 Resurface log: every time you resurface a ball (date/time + the surface it went to). Newest last; resurfacedAt = newest.
+  function resurfaceLog(name) { const c = ballCareAll()[String(name || '').trim()] || {}; const L = Array.isArray(c.resurfaceLog) ? c.resurfaceLog.filter(x => x && Number(x.at)) : [];
+    if (!L.length && Number(c.resurfacedAt)) L.push({ at: Number(c.resurfacedAt), surface: '' }); return L.sort((a, b) => a.at - b.at); }
+  function logResurface(name, entry) {
+    const nm = String(name || '').trim(); if (!nm) return null;
+    const e = { at: Number(entry && entry.at) || Date.now(), surface: String((entry && entry.surface) || '') }; if (entry && entry.dateOnly) e.dateOnly = true;
+    const L = resurfaceLog(nm).filter(x => Math.abs(x.at - e.at) > 60000); L.push(e); L.sort((a, b) => a.at - b.at);
+    setBallCare(nm, { resurfaceLog: L.slice(-20), resurfacedAt: L[L.length - 1].at });
+    return e;
+  }
+  function fmtWhen(ts, withTime) { const d = new Date(ts); return d.toLocaleDateString(undefined, { weekday: withTime ? 'short' : undefined, month: 'short', day: 'numeric', year: 'numeric' }) + (withTime ? ' at ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : ''); }
+  function daysAgo(ts) { const d = Math.floor((Date.now() - ts) / 86400000); return d <= 0 ? 'today' : d === 1 ? 'yesterday' : d < 60 ? `${d} days ago` : `${Math.round(d / 30.4)} months ago`; }
   function setBallCare(name, patch) {
     const nm = String(name || '').trim(); if (!nm) return;
     const all = ballCareAll();
@@ -1941,7 +1953,7 @@
     setBallSurfaceOverride,
     ballCareFor, isSpareBall, spareBallNames, dualSpareNames,
     ARSENAL_PAGES, arsenalPageHref, arsenalNavHTML, sectionPages, formatLanes, wireLanesInput, allHouses, fillHouseSelect,
-    setBallCare,
+    setBallCare, resurfaceLog, logResurface, fmtWhen, daysAgo,
     clearBallSurfaceOverride,
     surfaceToGrit,
     motionVector,

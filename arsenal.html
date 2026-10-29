@@ -336,7 +336,9 @@
           <select class="input" id="tuneWeight" style="width:110px">
             <option value="">15 lb (default)</option><option value="16">16 lb</option><option value="15">15 lb</option><option value="14">14 lb</option><option value="13">13 lb</option><option value="12">12 lb</option><option value="11">11 lb</option><option value="10">10 lb</option>
           </select>
-          <button class="btn secondary" id="tuneResurfaced" type="button">Just resurfaced</button>
+          <div style="flex-basis:100%;display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap"><div><label class="small" for="tuneResDate" style="margin:0">🧽 Resurfaced on</label><input class="input" type="date" id="tuneResDate" style="width:160px;margin-top:4px" /></div>
+            <button class="btn secondary" id="tuneResurfaced" type="button">Save resurface</button></div>
+          <div id="tuneResInfo" class="small" style="flex-basis:100%"></div>
           <button class="btn danger" id="tuneRetire" type="button">Retire this ball</button>
           <div style="flex-basis:100%"><label class="small" for="tuneSpare" style="margin:0">🎯 <b>Spare ball</b></label>
             <select class="input" id="tuneSpare" style="margin-top:4px"><option value="no">Not a spare ball</option><option value="only">My spare ball (spares only)</option><option value="dual">Strike ball and spare ball (doubles as both)</option></select>
@@ -489,6 +491,7 @@
       });
     }
 
+    const escR = (t) => String(t ?? '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
     function renderTable(rows) {
       el.table.innerHTML = rows.map(r => {
         const nm = BT.ballName(r);
@@ -512,6 +515,7 @@
                 ${tuned ? '<span class="pill">Tuned</span>' : ''}
               </div>
               <div class="small">${brand} • ${cover} • ${core} • ${surf}</div>
+              ${(() => { const L = BT.resurfaceLog(nm); if (!L.length) return ''; const last = L[L.length - 1]; return `<div class="small dim">🧽 Resurfaced ${BT.fmtWhen(last.at)}${last.surface ? ` (${escR(last.surface)})` : ''} · ${BT.daysAgo(last.at)}</div>`; })()}
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
               <button class="btn secondary" data-tune="${nm}">Tune</button>
@@ -899,6 +903,9 @@
       let games = null;
       try { if (window.BTCoach) games = BTCoach.ballGames(BT.lsGet(BT.KEYS.GAME_SESSIONS, []), nm, care.resurfacedAt); } catch (_e) {}
       const since = care.resurfacedAt ? ` since ${new Date(care.resurfacedAt).toLocaleDateString()}` : '';
+      { const ri = BT.$('#tuneResInfo'), L = BT.resurfaceLog(nm), d = BT.$('#tuneResDate'); if (d && d.dataset.nm !== nm) { d.dataset.nm = nm; const t = new Date(); d.value = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`; }
+        if (ri) { if (!L.length) ri.innerHTML = '<span class="dim">No resurface logged yet.</span>'; else { const last = L[L.length - 1];
+          ri.innerHTML = `🧽 <b>Last resurfaced: ${BT.fmtWhen(last.at, !last.dateOnly)}</b>${last.surface ? ` → <b>${escR(last.surface)}</b>` : ''} <span class="dim">(${BT.daysAgo(last.at)}${games != null ? `, ${games} Game Day game${games === 1 ? '' : 's'} since` : ''})</span>${L.length > 1 ? `<div class="dim">Before: ${L.slice(0, -1).reverse().slice(0, 4).map(x => `${BT.fmtWhen(x.at)}${x.surface ? ' (' + escR(x.surface) + ')' : ''}`).join(' · ')}</div>` : ''}`; } } }
       info.textContent = games == null ? '' : games === 0 ? `No Game Day games logged on this ball${since} yet.` : `About ${games} game${games === 1 ? '' : 's'} logged on this ball${since}. Resurfacing is usually due every 60–100 games.`;
       try {
         if (window.BTHistory && BTHistory.has()) {
@@ -915,8 +922,12 @@
     });
     BT.$('#tuneResurfaced')?.addEventListener('click', () => {
       if (!tune.currentName) return;
-      BT.setBallCare(tune.currentName, { resurfacedAt: Date.now() });
-      renderTuneCare(tune.currentName);
+      const dv = BT.$('#tuneResDate') && BT.$('#tuneResDate').value; const now = new Date();
+      let at = Date.now(), dateOnly = false; if (dv) { const [y, m, d] = dv.split('-').map(Number); const today = y === now.getFullYear() && m === now.getMonth() + 1 && d === now.getDate(); if (!today) { const t = new Date(y, m - 1, d, 12, 0); if (t.getTime() <= Date.now()) { at = t.getTime(); dateOnly = true; } } }
+      const surface = (() => { try { return surfacePresetByIndex(tune.surface.value).surface; } catch (_e) { return ''; } })();
+      BT.logResurface(tune.currentName, { at, surface, dateOnly });
+      renderTuneCare(tune.currentName); applyFilter();
+      const ri = BT.$('#tuneResInfo'); if (ri) ri.insertAdjacentHTML('afterbegin', '<div class="tune-saved">✅ Saved</div>');
       renderArsenalCheck();
     });
 
@@ -1071,6 +1082,8 @@
           }
         } catch (_e) {}
       }, 80);
+      { const prevSurf = BT.ballTweaksFor(tune.currentName).surfaceOverride || '', newSurf = surfacePresetByIndex(tune.surface.value).surface;
+        if (newSurf && newSurf !== prevSurf && confirm(`Surface changed to ${newSurf}. Log this as a resurface today?`)) BT.logResurface(tune.currentName, { at: Date.now(), surface: newSurf }); }
       BT.setBallTweaks(tune.currentName, {
         hook: Number(tune.hook.value),
         length: Number(tune.len.value),

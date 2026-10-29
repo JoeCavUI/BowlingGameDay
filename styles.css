@@ -934,3 +934,4 @@ body.gd-seasoned .gd-help{display:none}
 .ra-btn.ra-in-sum { position: static; margin-left: 8px; width: 30px; height: 30px; font-size: 14px; flex: 0 0 auto; }
 .ra-host > h2:first-of-type, .ra-host > h3:first-of-type, .ra-host > div:nth-child(2) { padding-right: 40px; }
 @media print { .ra-btn { display: none; } }
+.tune-saved { color: #4ade80; font-weight: 700; margin-bottom: 4px; }
