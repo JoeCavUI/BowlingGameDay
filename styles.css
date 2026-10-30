@@ -939,3 +939,7 @@ body.gd-seasoned .gd-help{display:none}
 .sc-tab { border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.05); color: inherit; border-radius: 999px; padding: 4px 10px; font-size: 13px; font-weight: 700; cursor: pointer; }
 .sc-tab.on { background: rgba(99,230,210,.18); border-color: rgba(99,230,210,.6); }
 #liveCard a { color: var(--accent); }
+.sb-miss { margin: 8px 0 4px; }
+.sb-miss-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.sb-mchip { border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.05); color: inherit; border-radius: 999px; padding: 8px 12px; font-weight: 700; font-size: 14px; cursor: pointer; }
+.sb-mchip.on { background: rgba(255,170,80,.22); border-color: rgba(255,170,80,.7); }

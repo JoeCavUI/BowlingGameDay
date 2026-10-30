@@ -39,6 +39,22 @@
     return { more, less };
   }
 
+  // ---------- corner-pin spares (the 10, or the 7 for lefties): makes, and which way you miss it
+  function cornerSpares(shots, lefty) {
+    const C = lefty ? 7 : 10, o = { pin: C, att: 0, made: 0, missed: 0, inside: 0, channel: 0, thin: 0, unknown: 0, missBalls: {} };
+    (shots || []).forEach(x => { if (!x || x.type === 'gameStart' || !x.second || !Array.isArray(x.second.left)) return;
+      const lv = BT().standingPins(x); const single = lv.length === 1 && lv[0] === C;
+      const leftC = x.second.left.length === 1 && x.second.left[0] === C;
+      if (single) { o.att++; if (!x.second.left.length) o.made++; }
+      if (leftC) { o.missed++; const m = x.second.miss; if (m === 'inside' || m === 'channel' || m === 'thin') o[m]++; else o.unknown++; const bl = x.second.ball || x.ball || '?'; o.missBalls[bl] = (o.missBalls[bl] || 0) + 1; } });
+    const sides = [['channel', o.channel], ['inside', o.inside], ['thin', o.thin]].sort((a, b) => b[1] - a[1]);
+    o.pattern = sides[0][1] >= 2 && sides[0][1] > sides[1][1] ? sides[0][0] : '';
+    o.tip = o.pattern === 'channel' ? `Missing the ${C} to the channel points to alignment: check your feet and target on the ${C} (you may be lined up too thin or drifting).`
+      : o.pattern === 'inside' ? `Missing the ${C} inside means the ball is hooking: flatten your release or use your spare ball, and if it keeps happening move your feet.`
+      : o.pattern === 'thin' ? `Chopping the ${C}: you're close. Aim a half board more toward the middle of the pin.` : '';
+    return o;
+  }
+
   // ---------- tonight: is one lane tougher to get to the pocket / to strike? (all shots, with poor shots split out)
   function tonightTough(shots, lanes) {
     const pr = pairOf(lanes); if (pr.length < 2) return null;
@@ -155,6 +171,8 @@
           : ` Most of the misses on ${t.l} were good shots, so it's the lane.`;
         out.push({ id: `tough:${t.l}:${tt.kind}:${Math.floor(t.n / 4)}`, text: `👀 Lane ${t.l} is tougher ${tt.kind === 'pocket' ? 'to get to the pocket' : 'to strike'} tonight: pocket ${t.p} of ${t.n} vs ${e.p} of ${e.n} on ${e.l}, strikes ${t.x} vs ${e.x}.${why}`, why: `Every shot counts here (fill balls too). Pocket = a pocket read or a strike.` }); }
       if (tt) tt.noCarry.filter(o => !tt.tough || o !== tt.tough).forEach(o => out.push({ id: `nocarry:${o.l}:${Math.floor(o.p / 3)}`, text: `👀 Lane ${o.l} gets you to the pocket (${o.p} of ${o.n}) but only ${o.x} carried. That's energy at the pins, not your line.`, why: 'A pocket hit that leaves pins: check what the corner pin did (flat, kickback, ringing) to see if the ball is weak or too strong.' })); }
+    { let cs = null; try { cs = cornerSpares(shots, lefty); } catch (_e) {}
+      if (cs && cs.pattern) { const n = cs[cs.pattern], side = cs.pattern === 'channel' ? 'to the channel' : cs.pattern === 'inside' ? 'inside' : 'thin'; out.push({ id: `corner:${cs.pattern}:${n}`, text: `🎯 ${n} missed ${cs.pin}s ${side} tonight. ${cs.tip}`, why: `${cs.pin}-pin spares tonight: made ${cs.made} of ${cs.att} single ${cs.pin}s. Misses: ${cs.channel} channel, ${cs.inside} inside, ${cs.thin} thin${cs.unknown ? `, ${cs.unknown} not noted` : ''}.` }); } }
     let lm = null; try { lm = laneMap(ctx.house, ctx.lanes, ctx.sessions); } catch (_e) {}
     const best = lm && lm.rows[0];
     const bg = lm && lm.byGame[game], inGame = real.filter(s => (Number(s.gameNo) || 1) === game).length;
@@ -162,5 +180,5 @@
     if (best && real.length <= 1 && game === 1) out.push({ id: 'map', text: `🗺️ Your best line here: ${best.ball} ${best.feet}/${best.arrows}${best.bp != null ? '/' + best.bp : ''}: ${best.x} strikes in ${best.n}.`, why: `From ${nt(best.nights)} you logged ${lm.pair ? 'on this pair' : 'at this house'}: pocket ${Math.round(best.p / best.n * 100)}%.`, angle: { slide: best.feet, target: best.arrows, bp: best.bp } });
     return out.filter(x => !x.late).concat(out.filter(x => x.late));
   }
-  root.BTEyes = { signals, tonightLanes, tonightTough, pairHistory, transition, ballFade, laneMap, leaveSide };
+  root.BTEyes = { signals, cornerSpares, tonightLanes, tonightTough, pairHistory, transition, ballFade, laneMap, leaveSide };
 })(typeof window !== 'undefined' ? window : globalThis);

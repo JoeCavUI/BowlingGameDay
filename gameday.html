@@ -285,7 +285,7 @@
       <label style="margin-top:10px;display:block">Pocket</label><div id="esPocket" class="es-pills"></div>
       <label style="margin-top:10px;display:block">Pins left</label><div id="esTag" class="es-pills"></div>
       <input id="esPins" class="input" placeholder="Pins standing, e.g. 4-9 (blank = strike)" style="margin-top:6px" />
-      <div id="esSecondWrap"><label style="margin-top:10px;display:block">After the 2nd ball</label><input id="esSecond" class="input" placeholder="Pins still standing, e.g. 9 (blank = spare)" /></div>
+      <div id="esSecondWrap"><label style="margin-top:10px;display:block">After the 2nd ball</label><input id="esSecond" class="input" placeholder="Pins still standing, e.g. 9 (blank = spare)" /><select id="esSecMiss" class="input" style="margin-top:6px"><option value="">Corner pin miss: not noted</option><option value="inside">Missed it inside</option><option value="channel">Missed it to the channel</option><option value="thin">Chopped / hit it thin</option></select></div>
       <div class="gd-line" style="margin-top:10px">
         <div><label>Slide</label><input id="esFeet" class="input" type="number" inputmode="numeric" /></div>
         <div><label>Target</label><input id="esArrows" class="input" type="number" inputmode="numeric" /></div>
@@ -2898,6 +2898,7 @@ function sessionSummary(shots) {
         const deck = Object.entries(POS).map(([n, [x, y]]) => { const on = leave.includes(Number(n)); return `<g ${on ? `data-sb="${n}" style="cursor:pointer"` : ''}><circle cx="${x}" cy="${y}" r="15" class="${on ? 'sb-pin' : 'sb-down'}"/><text x="${x}" y="${y + 5}" text-anchor="middle" font-size="12" class="${on ? 'sb-t' : 'sb-td'}">${n}</text></g>`; }).join('');
         h = `<div class="gd-flow gd-second">🎳 <b>2nd ball${st.pend.fill ? ' (fill)' : ''}.</b> You left <b>${leave.join('-')}</b>${split ? ' <span class="sb-split">split</span>' : ''}. Tap any pins <b>still standing</b> after your 2nd ball.
           <svg class="sb-deck" viewBox="44 34 132 132">${deck}</svg>
+          <div id="sbMiss" class="sb-miss" style="display:none"><div class="small">How did you miss the ${isLeftyBowler() ? '7' : '10'}? <span class="dim">(optional)</span></div><div class="sb-miss-row">${(isLeftyBowler() ? [['channel', 'Left (channel)'], ['inside', 'Right'], ['thin', 'Chopped / thin']] : [['inside', 'Left'], ['channel', 'Right (channel)'], ['thin', 'Chopped / thin']]).map(([v, t]) => `<button type="button" class="sb-mchip" data-sbm="${v}">${t}</button>`).join('')}</div></div>
           <div class="btn-row"><button class="btn" type="button" id="sbSave">✓ Spare</button><button class="btn secondary" type="button" id="sbSkip">Skip</button></div></div>`;
       }
       else
@@ -2914,7 +2915,9 @@ function sessionSummary(shots) {
       on('flowSave', () => BT.$('#saveSession').click());
       if (st.phase === 'second') {
         const left = new Set(), sh = st.pend.shot, leave = BT.standingPins(sh);
-        const paint = () => { BT.$all('#gameFlow [data-sb]').forEach(gx => gx.querySelector('circle').classList.toggle('sb-on', left.has(Number(gx.dataset.sb)))); const b = BT.$('#sbSave'); if (b) b.textContent = left.size ? `Save: ${[...left].sort((a, z) => a - z).join('-')} left (open)` : '✓ Spare'; };
+        let sbMiss = ''; const corner = isLeftyBowler() ? 7 : 10;
+        BT.$all('#gameFlow [data-sbm]').forEach(bn => bn.addEventListener('click', () => { sbMiss = sbMiss === bn.dataset.sbm ? '' : bn.dataset.sbm; BT.$all('#gameFlow [data-sbm]').forEach(x => x.classList.toggle('on', x.dataset.sbm === sbMiss)); }));
+        const paint = () => { BT.$all('#gameFlow [data-sb]').forEach(gx => gx.querySelector('circle').classList.toggle('sb-on', left.has(Number(gx.dataset.sb)))); { const m = BT.$('#sbMiss'); if (m) m.style.display = left.size === 1 && left.has(corner) ? '' : 'none'; if (!(left.size === 1 && left.has(corner))) sbMiss = ''; } const b = BT.$('#sbSave'); if (b) b.textContent = left.size ? `Save: ${[...left].sort((a, z) => a - z).join('-')} left (open)` : '✓ Spare'; };
         BT.$all('#gameFlow [data-sb]').forEach(gx => gx.addEventListener('click', () => { const n = Number(gx.dataset.sb); if (left.has(n)) left.delete(n); else left.add(n); paint(); }));
         const finish = (second) => {
           Object.assign(sh, second);
@@ -2923,7 +2926,7 @@ function sessionSummary(shots) {
           if (!sh.isFill && st.frame === 10 && sh.noSecond) sh.tenthSpare = false;
           saveCurrentSessionDraft(); renderLog(); syncNextLane(); updateFrameUI(); afterGameFlow(false); renderGameFlow();
         };
-        on('sbSave', () => finish({ second: { left: [...left].sort((a, z) => a - z), spare: left.size === 0, at: Date.now() } }));
+        on('sbSave', () => { let sp = ''; try { const c = spareCtx(); sp = c && c.on && c.name ? c.name : ''; } catch (_e) {} finish({ second: Object.assign({ left: [...left].sort((a, z) => a - z), spare: left.size === 0, at: Date.now(), ball: sp || sh.ball || '' }, sbMiss ? { miss: sbMiss } : {}) }); });
         on('sbSkip', () => { if (confirm('Skip the 2nd ball? This game won\'t have a full score.')) finish({ noSecond: true }); });
       }
       on('flowNext', () => { startNextGame(); toast(`Game ${currentGameNumber()} started.`); renderGameFlow(); updateLineMath(); });
@@ -3079,6 +3082,7 @@ function sessionSummary(shots) {
       esPills(BT.$('#esTag'), quickResults.map(t => ({ val: t, label: t })), shot.leaveTag || ((shot.leavePins || []).length ? '' : 'Strike'));
       { const fw = BT.$('#esFaultWrap'), poor = Number(shot.executionQuality) === 1 && window.BTCoach && BTCoach.FAULTS; fw.style.display = poor ? '' : 'none'; if (poor) { const L = BTCoach.allFaults(); if (shot.fault && !L.some(f => f.v === shot.fault)) L.push({ v: shot.fault, l: BTCoach.faultLabel(shot.fault) }); esPills(BT.$('#esFault'), L.map(f => ({ val: f.v, label: f.l })), shot.fault || ''); } }
       BT.$('#esPins').value = (shot.leavePins || []).join('-');
+      { const sm = BT.$('#esSecMiss'), lf = isLeftyBowler(); sm.options[1].text = `Missed the ${lf ? '7' : '10'} ${lf ? 'right' : 'left'} (inside)`; sm.options[2].text = `Missed the ${lf ? '7' : '10'} ${lf ? 'left' : 'right'} (channel)`; sm.options[3].text = `Chopped / hit the ${lf ? '7' : '10'} thin`; sm.value = (shot.second && shot.second.miss) || ''; }
       { const w = BT.$('#esSecondWrap'), has = !shot.isFill || (shot.second != null); w.style.display = has ? '' : 'none'; BT.$('#esSecond').value = shot.second && Array.isArray(shot.second.left) ? shot.second.left.join('-') : ''; BT.$('#esSecond').dataset.had = shot.second ? '1' : ''; }
       BT.$('#esFeet').value = shot.feet ?? ''; BT.$('#esArrows').value = shot.arrows ?? ''; BT.$('#esBp').value = shot.bp ?? '';
       const balls = Array.from(el.ball.options).map(o => o.value).filter(Boolean);
@@ -3113,7 +3117,7 @@ function sessionSummary(shots) {
         if (isX) { delete shot.second; }
         else if (BT.$('#esSecondWrap').style.display !== 'none' && (sv || BT.$('#esSecond').dataset.had || !shot.noSecond)) {
           const lv = BT.standingPins(shot), left = sv.split(/[^0-9]+/).map(Number).filter(p => lv.includes(p));
-          shot.second = { left: [...new Set(left)].sort((a, z) => a - z), spare: left.length === 0, at: shot.second && shot.second.at || Date.now() }; delete shot.noSecond;
+          { const keep = shot.second || {}, mv = BT.$('#esSecMiss').value, L2 = [...new Set(left)].sort((a, z) => a - z); shot.second = Object.assign({ left: L2, spare: left.length === 0, at: keep.at || Date.now() }, keep.ball ? { ball: keep.ball } : {}, mv && L2.length ? { miss: mv } : {}); } delete shot.noSecond;
           if (Number(shot.frame) === 10 && !shot.isFill) shot.tenthSpare = shot.second.spare;
         } }
       const n = (id) => { const v = BT.$('#' + id).value; return v === '' ? null : Number(v); };
