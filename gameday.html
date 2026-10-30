@@ -203,10 +203,10 @@
               <div class="small" style="margin-bottom:6px">Skip any you didn't notice. Tap again to clear.</div>
               <div class="gd-rl">Execution</div>
               <div id="readsQuality" class="gd-r1"></div>
+              <div id="laneInfoWrap" style="display:none"><label class="gd-laneinfo"><input type="checkbox" id="laneInfo" /> 👀 Bad shot, but it still told me about the lane</label><div class="small dim" style="margin:2px 0 6px">Tick it when the miss showed you the pattern (it held, it hooked, it didn't come back). Coach still won't call a move off one bad shot, but it counts the read.</div></div>
               <div id="faultWrap" class="gd-fault" style="display:none">
                 <div class="gd-rl">What do you think happened? <span class="small">(optional, one tap)</span></div>
                 <div id="readsFault" class="gd-r1"></div>
-                <label class="gd-laneinfo"><input type="checkbox" id="laneInfo" /> 👀 Still told me about the lane</label>
                 <div class="gd-myfault"><button type="button" class="gd-addfault" id="addFaultBtn">+ Add your own</button></div>
                 <div id="myFaultBox" style="display:none;margin-top:8px">
                   <div style="display:flex;gap:8px"><input id="myFaultIn" class="input" maxlength="40" placeholder="What it felt like" style="flex:1" /><button type="button" class="btn" id="myFaultAdd">Add</button></div>
@@ -292,6 +292,7 @@
         <div><label>Breakpoint</label><input id="esBp" class="input" type="number" inputmode="numeric" /></div>
       </div>
       <div id="esFaultWrap" style="display:none"><label style="margin-top:10px;display:block">🤔 What do you think happened? <span class="small">(poor shot)</span></label><div id="esFault" class="es-pills"></div></div>
+      <label class="gd-laneinfo" id="esLaneInfoWrap" style="margin-top:10px;display:none"><input type="checkbox" id="esLaneInfo" /> 👀 Bad shot, but it still told me about the lane</label>
       <label style="margin-top:10px;display:block">Ball</label><select id="esBall" class="input"></select>
       <div id="esKeyWrap"><label style="margin-top:10px;display:block" id="esKeyLbl">What did the 6-pin do?</label><select id="esKey" class="input"><option value="">Didn't see / not needed</option><option value="weak">Laid down weak</option><option value="kickback">Hit the kickback, missed</option><option value="wrap">Wrapped around it</option></select></div>
       <label style="margin-top:10px;display:block">Notes</label><textarea id="esNotes" class="input" rows="2" placeholder="What you saw"></textarea>
@@ -701,7 +702,8 @@ function selectedPills(container) {
       box.innerHTML = mine.length ? `Your reasons: ${mine.map(t => `<span class="gd-mychip">${escapeHtml(t)} <button type="button" data-rmfault="${escapeHtml(t)}" aria-label="Remove">✕</button></span>`).join(' ')}` : 'Your reasons stay on the list for every shot. Coach learns their pattern like the others.';
     }
     // 🤔 The reason list only shows once you tap Poor.
-    function updateFaultVis() { const w = BT.$('#faultWrap'); if (!w) return; const on = selectedPills(el.readsQuality).includes('Poor execution'); w.style.display = on ? '' : 'none'; if (!on && el.readsFault) BT.$all('button[data-pill]', el.readsFault).forEach(b => { b.classList.remove('active'); b.style.outline = 'none'; }); }
+    function updateFaultVis() { const w = BT.$('#faultWrap'); if (!w) return; const on = selectedPills(el.readsQuality).includes('Poor execution');
+      { const lw = BT.$('#laneInfoWrap'), mm = selectedPills(el.readsMiss)[0] || '', pk = selectedPills(el.readsPocket)[0] || ''; const show = on || mm === 'leftMiss' || mm === 'rightMiss'; if (lw) lw.style.display = show ? '' : 'none'; if (!show && BT.$('#laneInfo')) BT.$('#laneInfo').checked = false; } w.style.display = on ? '' : 'none'; if (!on && el.readsFault) BT.$all('button[data-pill]', el.readsFault).forEach(b => { b.classList.remove('active'); b.style.outline = 'none'; }); }
     // 🛣️ Your lane read for this game (optional): you see the lanes change; Coach follows what you saw.
     const laneReads = {};
     function laneReadFor(g) { if (laneReads[g] != null) return laneReads[g]; const x = sessionShots.find(s => s && s.type !== 'gameStart' && Number(s.gameNo) === Number(g) && s.laneRead); return x ? x.laneRead : ''; }
@@ -2331,7 +2333,7 @@ function saveCurrentSessionDraft() {
         // New coaching layers
         speedTrend: singlePillValue(el.readsSpeed, 'unknown'),
         fault: execQuality === 1 ? singlePillValue(el.readsFault, '') : '',
-        laneInfo: execQuality === 1 && !!(BT.$('#laneInfo') && BT.$('#laneInfo').checked),
+        laneInfo: (execQuality === 1 || missRead === 'leftMiss' || missRead === 'rightMiss') && !!(BT.$('#laneInfo') && BT.$('#laneInfo').checked),
         laneRead: laneReadFor(info.gameNo || currentGameNumber()) || (() => { try { const t = BTCoach.noteTags(el.notes.value, isLeftyBowler()); return (t && t.laneRead) || ''; } catch (_e) { return ''; } })(),
         adjust: null,
 
@@ -2601,6 +2603,7 @@ function sessionSummary(shots) {
       BT.$('#myFaultIn').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addMine(); } });
       BT.$('#myFaultList').addEventListener('click', (e) => { const x = e.target.closest('[data-rmfault]'); if (!x) return; const t = x.getAttribute('data-rmfault'); if (!confirm(`Take "${t}" off your list? Shots already tagged with it keep it.`)) return; BTCoach.setMyFaults(BTCoach.myFaults().filter(y => y !== t)); renderFaultPills(); renderMyFaultList(); });
       el.readsQuality.addEventListener('click', () => setTimeout(updateFaultVis, 0));
+      el.readsMiss.addEventListener('click', () => setTimeout(updateFaultVis, 0));
 
       renderHouses();
       renderPatterns();
@@ -3075,6 +3078,7 @@ function sessionSummary(shots) {
       BT.$('#esBall').innerHTML = balls.map(b => `<option value="${escapeHtml(b)}"${b === shot.ball ? ' selected' : ''}>${escapeHtml(b)}</option>`).join('');
       { const lefty = isLeftyBowler(); BT.$('#esKeyLbl').textContent = `What did the ${lefty ? '4' : '6'}-pin do? (${lefty ? '7' : '10'} left standing)`; BT.$('#esKey').value = ['weak', 'kickback', 'wrap'].includes(shot.keyPin) ? shot.keyPin : ''; }
       BT.$('#esNotes').value = shot.notes || ''; paintEsNotes();
+      { const poor = Number(shot.executionQuality) === 1 || shot.miss === 'leftMiss' || shot.miss === 'rightMiss'; BT.$('#esLaneInfoWrap').style.display = poor ? '' : 'none'; BT.$('#esLaneInfo').checked = shot.laneInfo === true; }
       BT.$('#editShotModal').classList.remove('hidden');
     }
     function paintEsNotes() { const box = BT.$('#esNotesRead'); let t = null; try { t = BTCoach.noteTags(BT.$('#esNotes').value, isLeftyBowler()); } catch (_e) {} box.textContent = t && t.tags && t.tags.length ? '📝 Coach reads: ' + t.tags.join(' · ') : ''; }
@@ -3111,6 +3115,7 @@ function sessionSummary(shots) {
         const real = sessionShots.filter(x => x && x.type !== 'gameStart'), i = real.indexOf(shot), nx = i > 0 ? real[i - 1] : null;
         if (nx && Array.isArray(nx.changed)) { const has = nx.changed.includes('ball'); if (has && nx.ball === shot.ball) nx.changed = nx.changed.filter(k => k !== 'ball'); else if (!has && nx.ball && nx.ball !== shot.ball) nx.changed = [...nx.changed, 'ball']; } }
       { const k = BT.$('#esKey').value; if (k) shot.keyPin = k; else if (['weak', 'kickback', 'wrap'].includes(shot.keyPin)) shot.keyPin = (shot.leaveTag === 'Flat 10' ? 'weak' : shot.leaveTag === 'Ringing 10' ? 'wrap' : ''); }
+      if (BT.$('#esLaneInfoWrap').style.display !== 'none') shot.laneInfo = BT.$('#esLaneInfo').checked; else delete shot.laneInfo;
       { shot.notes = BT.$('#esNotes').value.trim(); let t = null; try { t = BTCoach.noteTags(shot.notes, isLeftyBowler()); } catch (_e) {} shot.noteRead = t && t.tags ? t.tags : []; if (t && t.laneRead && !shot.laneRead) shot.laneRead = t.laneRead; }
       shot.editedAt = Date.now();
       closeEditShot(); afterShotEdit(); toast('Shot updated. Coach re-read the lane.');

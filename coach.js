@@ -1505,6 +1505,22 @@
       if (moveVerdict) res.notes.push(moveVerdict);
       return res;
     }
+    // A bad shot you said still told you about the lane: don't move off it, but say what it showed and count it.
+    if (last.execution === 'poor' && last.laneInfo) {
+      res.status = 'repeat'; res.tone = 'info'; res.element = '🛣️ Lane read';
+      const sh = last.shot || {}, obs = Array.isArray(sh.obs) ? sh.obs : [], pk = String(sh.pocket || '');
+      const saw = obs.includes('Too early') ? 'it hooked early' : obs.includes('Too long') ? 'it skidded long' : obs.includes('Over/under') ? 'it went over/under'
+        : last.missSide === 'outside' && !last.saved ? 'the outside isn\'t coming back (less room out there)'
+        : last.missSide === 'inside' && !last.saved ? 'there\'s friction inside: a miss in there doesn\'t hold'
+        : last.missSide === 'outside' ? 'a miss outside still recovers (room out there)' : last.missSide === 'inside' ? 'a miss inside still holds (room in there)'
+        : /Pocket high|Brooklyn/.test(pk) ? 'it read the lane early' : /Pocket light/.test(pk) ? 'it held more than you expected' : 'what it showed you';
+      res.headline = `Bad shot, but it still told you something: ${saw}. Coach counted it in the lane read. Don't move off one bad shot.`;
+      res.why = 'You ticked "Bad shot, but it still told me about the lane", so this shot counts toward reading the pattern, not toward judging your line.';
+      res.next = W.length ? `Lane read so far: ${res.read.toLowerCase()}. If your next good shot says the same thing, that's your move.` : 'If your next good shot says the same thing, that\'s your move.';
+      setCompass('?', '?', 'watch', '🧭 One bad shot can show the pattern, but it can\'t tell you if it\'s the ball or the spot. Confirm it with a good one.');
+      if (moveVerdict) res.notes.push(moveVerdict);
+      return res;
+    }
     if (last.execution === 'poor') {
       res.status = 'repeat'; res.tone = 'warn'; res.element = '🎯 Direction';
       res.headline = 'That was an execution miss. Don\'t move. Repeat your shot.';

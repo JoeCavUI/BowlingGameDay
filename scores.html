@@ -126,6 +126,7 @@
         <div><label id="editKeyLbl">What did the 6-pin do? (10 left)</label><select id="editKey" class="input"><option value="">Didn't see</option><option value="weak">Laid down weak</option><option value="kickback">Hit the kickback, missed</option><option value="wrap">Wrapped around it</option></select></div>
         <div><label>Execution</label><select id="editExec" class="input"><option value="5">Good</option><option value="3">OK</option><option value="1">Poor</option></select></div>
         <div id="editFaultWrap"><label>What do you think happened?</label><select id="editFault" class="input"></select></div>
+        <div id="editLaneInfoWrap" style="grid-column:1/-1"><label class="gd-laneinfo"><input type="checkbox" id="editLaneInfo" /> 👀 Bad shot, but it still told me about the lane</label></div>
         <div><label>Speed vs normal</label><select id="editSpeed" class="input"><option value="unknown">Didn't notice</option><option value="slower">Slower</option><option value="same">Same</option><option value="faster">Faster</option></select></div>
         <div style="grid-column:1/-1"><label>Ball reaction</label><div id="editObs" class="ed-chips"></div></div>
         <div style="grid-column:1/-1"><label>Notes</label><textarea id="editNotes" class="input" rows="2" placeholder="What you saw"></textarea><div id="editNotesRead" class="small gd-notesread"></div></div>
@@ -336,12 +337,13 @@
       const d2 = BT.$('#editDeck2'); d2.style.display = has && BT.$('#edit2nd').value === 'left' ? '' : 'none';
       [...ed2].forEach(p => { if (!edLeave.has(p)) ed2.delete(p); }); paintDeck(d2, ed2, [...edLeave]);
       BT.$('#editFaultWrap').style.display = el.editExec.value === '1' ? '' : 'none';
+      { const mv = BT.$('#editMiss') && BT.$('#editMiss').value; BT.$('#editLaneInfoWrap').style.display = el.editExec.value === '1' || mv === 'leftMiss' || mv === 'rightMiss' ? '' : 'none'; }
       BT.$('#editObs').innerHTML = ED.obs.map(([v, t]) => `<button type="button" class="ed-chip${edObs.has(v) ? ' on' : ''}" data-obs="${edEsc(v)}">${t}</button>`).join('');
     }
     BT.$('#editDeck').addEventListener('click', (e) => { const b = e.target.closest('[data-pin]'); if (!b) return; const p = Number(b.dataset.pin); edLeave.has(p) ? edLeave.delete(p) : edLeave.add(p); edRefresh(); });
     BT.$('#editDeck2').addEventListener('click', (e) => { const b = e.target.closest('[data-pin]'); if (!b || b.disabled) return; const p = Number(b.dataset.pin); ed2.has(p) ? ed2.delete(p) : ed2.add(p); edRefresh(); });
     BT.$('#editObs').addEventListener('click', (e) => { const b = e.target.closest('[data-obs]'); if (!b) return; const v = b.dataset.obs; edObs.has(v) ? edObs.delete(v) : edObs.add(v); edRefresh(); });
-    BT.$('#edit2nd').addEventListener('change', edRefresh); el.editExec.addEventListener('change', edRefresh);
+    BT.$('#edit2nd').addEventListener('change', edRefresh); el.editExec.addEventListener('change', edRefresh); BT.$('#editMiss').addEventListener('change', edRefresh);
     function edBalls(s, cur) { let names = []; try { const c = BT.lsGet(BT.KEYS.CSV_CACHE, null); names = BT.withCustomBalls((c && c.rows) || []).filter(r => BT.ballName(r) && !BT.isRetired(r)).map(r => BT.ballName(r)); } catch (_e) {}
       const used = [...new Set((s.shots || []).map(x => x && x.ball).filter(Boolean))]; const all = [...new Set([...used, ...names])]; return all.map(n => [n, n]).concat(cur && !all.includes(cur) ? [[cur, cur]] : []); }
     function edFill(s, sh, g, frame) {
@@ -364,7 +366,7 @@
       edLeave = new Set(BT.standingPins(sh)); edOrig = [...edLeave].sort((a, z) => a - z).join('-');
       const sec = sh.second && Array.isArray(sh.second.left) ? sh.second.left : null;
       ed2 = new Set(sec || []); BT.$('#edit2nd').value = !sec ? (sh.added ? 'spare' : 'none') : sec.length ? 'left' : 'spare';
-      el.editNotes.value = sh.notes || ''; edNotesRead();
+      el.editNotes.value = sh.notes || ''; edNotesRead(); BT.$('#editLaneInfo').checked = sh.laneInfo === true;
       { const lf = edLefty(); BT.$('#editKeyLbl').textContent = `What did the ${lf ? '4' : '6'}-pin do? (${lf ? '7' : '10'} left)`; }
       edRefresh();
     }
@@ -450,6 +452,7 @@
       sh.executionQuality = Number(el.editExec.value || 3); sh.execTapped = true;
       sh.qualityShot = sh.executionQuality >= 3;
       sh.fault = sh.executionQuality === 1 ? (BT.$('#editFault').value || '') : '';
+      if (BT.$('#editLaneInfoWrap').style.display !== 'none') sh.laneInfo = BT.$('#editLaneInfo').checked; else delete sh.laneInfo;
       sh.speedTrend = BT.$('#editSpeed').value || 'unknown';
       sh.obs = [...edObs];
       sh.notes = el.editNotes.value.trim();
@@ -505,6 +508,7 @@
 
     // ---------- 📝 Night review: tonight in one line, what it says, games, lanes, balls, moves, shot log ----------
     let lastReviewText = '';
+    let reviewCss = ''; try { fetch('styles.css').then(r => r.ok ? r.text() : '').then(t => { reviewCss = t; }).catch(() => {}); } catch (_e) {}
     const isX = (sh) => { const L = sh.leaves || []; return L.includes('Strike') || L.includes('Brooklyn') || sh.leaveTag === 'Strike'; };
     // Pocket hit: a pocket read, or a strike you didn't read (strikes come from the pocket; a Brooklyn is logged as Brooklyn).
     const isP = (sh) => BT.isPocketHit(sh);
@@ -724,6 +728,7 @@
           <button type="button" class="btn" id="nrReplay">▶ Watch replay</button>
           <button type="button" class="btn secondary" id="nrSpeak">🔊 Read aloud</button>
           <button type="button" class="btn secondary" id="nrPdf">📄 Save as PDF</button>
+          <button type="button" class="btn secondary" id="nrFile">📤 Save to Files</button>
           <button type="button" class="btn secondary" id="nrShots">📋 Shot log</button>
         </div>
         <div class="panel nr-head" id="nrHead" style="padding:12px" title="Double tap for the shot log">
@@ -763,6 +768,16 @@
       lastReviewText = R.speech;
       BT.$('#nrShots').onclick = () => jumpToShots();
       BT.$('#nrReplay').onclick = () => { if (window.BTReplay) BTReplay.open(s); };
+      BT.$('#nrFile').onclick = () => {
+        // Save the review as a file through the iPhone share sheet (Save to Files, Mail, Messages…). No printing involved.
+        const box = el.details.cloneNode(true); box.querySelectorAll('button, .no-print, .ra-btn, script').forEach(n => n.remove()); box.querySelectorAll('details').forEach(d => d.setAttribute('open', ''));
+        const day = new Date(s.savedAt), stamp = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+        const name = `Bowling night ${stamp}${s.house ? ' ' + String(s.house).replace(/[^A-Za-z0-9 ]+/g, '').trim() : ''}.html`;
+        const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(name.replace(/\.html$/, ''))}</title><style>${reviewCss}\nbody{background:#fff;color:#111;padding:16px}.panel{background:#fff!important;color:#111;border:1px solid #ccc}.small,.dim{color:#444!important;opacity:1!important}</style></head><body>${box.innerHTML}</body></html>`;
+        const file = new File([html], name, { type: 'text/html' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) { navigator.share({ files: [file], title: name }).catch(() => {}); return; }
+        const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+      };
       BT.$('#nrPdf').onclick = () => { document.body.classList.add('print-review'); try { window.print(); } catch (_e) { alert('Printing isn\'t available here.'); } setTimeout(() => document.body.classList.remove('print-review'), 800); };
       if (!BT.$('#nrSpeak').dataset.wired) { BT.$('#nrSpeak').dataset.wired = '1'; BT.wireReadAloud(BT.$('#nrSpeak'), () => lastReviewText); }
       onDoubleTap(BT.$('#nrHead'), jumpToShots);
