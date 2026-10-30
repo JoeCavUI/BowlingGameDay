@@ -2875,13 +2875,21 @@ function sessionSummary(shots) {
       t.textContent = msg; t.classList.remove('hidden');
       clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add('hidden'), 3500);
     }
+    let cardGame = null; // which game the live score card shows (null = the one you're bowling)
     function renderGameFlow() {
       const box = BT.$('#gameFlow'), line = BT.$('#frameLine'); if (!box || !line) return;
       const st = gameState(), g = currentGameNumber();
       let sc = null; try { sc = BT.scoreGame(currentGameShotsChron()); } catch (_e) {}
       const scTxt = !scoringOn() ? '' : sc && sc.complete ? ` · <b>${sc.total}</b>` : sc && sc.thru ? ` · <b>${sc.thru.score}</b> thru ${sc.thru.frame}` : '';
-      { const lc = BT.$('#liveCard'); if (lc) { if (scoringOn() && sc && sc.frames.length) { const fr = sc.frames.slice(); while (fr.length < 10) fr.push({ no: fr.length + 1, marks: [''], cum: null }); lc.innerHTML = `<div class="sc-card sc-live">${fr.map(f => `<div class="sc-f${f.no === 10 ? ' sc-10' : ''}${f.no === st.frame && st.phase !== 'done' ? ' sc-now' : ''}${f.shot && f.shot.id ? ' sc-tap' : ''}"${f.shot && f.shot.id ? ` data-sid="${escapeHtml(f.shot.id)}" role="button" aria-label="Edit frame ${f.no}"` : ''}><div class="sc-m">${f.marks.map((m, i) => `<span${i === 0 && f.split ? ' class="sc-sp"' : ''}>${m === '?' ? '' : m}</span>`).join('')}</div><div class="sc-c">${f.cum ?? ''}</div></div>`).join('')}</div>`; } else lc.innerHTML = ''; } }
-      { const lc = BT.$('#liveCard'); if (lc && !lc.dataset.wired) { lc.dataset.wired = '1'; lc.addEventListener('click', (e) => { const f = e.target.closest && e.target.closest('[data-sid]'); if (f) openEditShot(f.dataset.sid); }); } } // ✎ tap a frame to fix it
+      { const lc = BT.$('#liveCard'); if (lc) {
+        // Tonight's games as tabs: tap an earlier game to see its card and tap any frame to fix it.
+        const gNos = [...new Set(sessionShots.filter(x => x && x.type !== 'gameStart').map(x => Number(x.gameNo) || 1))].sort((a, z) => a - z);
+        if (cardGame != null && (cardGame === g || !gNos.includes(cardGame))) cardGame = null;
+        const showG = cardGame != null ? cardGame : g;
+        let csc = sc; if (showG !== g) { try { csc = BT.scoreGame([...sessionShots].reverse().filter(x => x && x.type !== 'gameStart' && (Number(x.gameNo) || 1) === showG)); } catch (_e) { csc = null; } }
+        const tabs = scoringOn() && gNos.filter(n => n !== g).length ? `<div class="sc-tabs">${gNos.concat(gNos.includes(g) ? [] : [g]).map(n => { let t = ''; if (n !== g) { try { const c2 = BT.scoreGame([...sessionShots].reverse().filter(x => x && x.type !== 'gameStart' && (Number(x.gameNo) || 1) === n)); t = c2.complete ? ` · ${c2.total}` : ''; } catch (_e) {} } return `<button type="button" class="sc-tab${n === showG ? ' on' : ''}" data-cg="${n}">G${n}${n === g ? ' · now' : t}</button>`; }).join('')}</div>` : '';
+        if (scoringOn() && csc && csc.frames.length) { const fr = csc.frames.slice(); while (fr.length < 10) fr.push({ no: fr.length + 1, marks: [''], cum: null }); lc.innerHTML = tabs + `<div class="sc-card sc-live">${fr.map(f => `<div class="sc-f${f.no === 10 ? ' sc-10' : ''}${showG === g && f.no === st.frame && st.phase !== 'done' ? ' sc-now' : ''}${f.shot && f.shot.id ? ' sc-tap' : ''}"${f.shot && f.shot.id ? ` data-sid="${escapeHtml(f.shot.id)}" role="button" aria-label="Edit frame ${f.no}"` : ''}><div class="sc-m">${f.marks.map((m, i) => `<span${i === 0 && f.split ? ' class="sc-sp"' : ''}>${m === '?' ? '' : m}</span>`).join('')}</div><div class="sc-c">${f.cum ?? ''}</div></div>`).join('')}</div>${showG !== g ? `<div class="small dim" style="margin-top:4px">Game ${showG}: tap a frame to fix it · <a href="#" data-cg="${g}">back to game ${g}</a></div>` : ''}`; } else lc.innerHTML = tabs; } }
+      { const lc = BT.$('#liveCard'); if (lc && !lc.dataset.wired) { lc.dataset.wired = '1'; lc.addEventListener('click', (e) => { const t = e.target.closest && e.target.closest('[data-cg]'); if (t) { e.preventDefault(); const n = Number(t.dataset.cg); cardGame = n === currentGameNumber() ? null : n; renderGameFlow(); return; } const f = e.target.closest && e.target.closest('[data-sid]'); if (f) openEditShot(f.dataset.sid); }); } } // ✎ tap a frame to fix it
       line.innerHTML = (st.phase === 'second' ? `Game ${g} · Frame ${st.frame} · 2nd ball` : st.phase === 'fill' ? `Game ${g} · 10th frame · fill ball ${st.fillNo}` : st.phase === 'done' || st.phase === 'askSpare' ? `Game ${g} · 10th frame` : `Game ${g} · Frame ${st.frame}`) + scTxt;
       let h = '';
       if (st.phase === 'second') {

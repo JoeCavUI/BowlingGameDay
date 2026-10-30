@@ -935,3 +935,7 @@ body.gd-seasoned .gd-help{display:none}
 .ra-host > h2:first-of-type, .ra-host > h3:first-of-type, .ra-host > div:nth-child(2) { padding-right: 40px; }
 @media print { .ra-btn { display: none; } }
 .tune-saved { color: #4ade80; font-weight: 700; margin-bottom: 4px; }
+.sc-tabs { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+.sc-tab { border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.05); color: inherit; border-radius: 999px; padding: 4px 10px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.sc-tab.on { background: rgba(99,230,210,.18); border-color: rgba(99,230,210,.6); }
+#liveCard a { color: var(--accent); }
