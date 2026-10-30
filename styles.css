@@ -943,3 +943,15 @@ body.gd-seasoned .gd-help{display:none}
 .sb-miss-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
 .sb-mchip { border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.05); color: inherit; border-radius: 999px; padding: 8px 12px; font-weight: 700; font-size: 14px; cursor: pointer; }
 .sb-mchip.on { background: rgba(255,170,80,.22); border-color: rgba(255,170,80,.7); }
+.gd-swing { display: flex; align-items: center; gap: 8px; margin: 10px 0 2px; flex-wrap: wrap; }
+.gd-swc { border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.05); color: inherit; border-radius: 999px; padding: 8px 14px; font-weight: 700; font-size: 15px; cursor: pointer; }
+.gd-swc.on { background: rgba(99,230,210,.18); border-color: rgba(99,230,210,.7); }
+.gd-pro { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 6px; margin: 4px 0 10px; }
+.gd-pro-c { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 10px; padding: 6px 8px; min-width: 0; }
+.gd-pro-k { font-size: 11px; opacity: .7; text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gd-pro-v { font-size: 17px; font-weight: 800; line-height: 1.2; }
+.gd-pro-s { font-size: 11px; opacity: .75; overflow: hidden; text-overflow: ellipsis; }
+.hb-h { font-weight: 900; font-size: 17px; }
+.hb-sub { font-weight: 800; margin-top: 10px; }
+.hb-l { margin: 6px 0 0; padding-left: 18px; }
+.hb-l li { margin-bottom: 6px; }

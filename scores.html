@@ -594,6 +594,11 @@
           { const wc = T.find(t => t.k === 'What cost pins'); if (wc) wc.t = wc.t.replace(' Flush hits that leave pins point to entry angle or speed, not your aim.', ''); }
           T.push({ k: `The ${C1}-pin story`, t: `${tens.length} pocket hits left only the ${C1}${lp ? ` (${lp})` : ''}. The ${K1}-pin: ${parts}. ${verdict}` });
         } }
+      // 🙂/😬 How your swing felt, by line
+      { const fl = real.filter(x => x.swing === 'free' || x.swing === 'tight'); if (fl.length >= 4) { const byL = {}; fl.forEach(x => { const k = `${x.ball || '?'} ${lineKey(x)}`; const o = byL[k] = byL[k] || { f: 0, t: 0 }; o[x.swing === 'free' ? 'f' : 't']++; });
+        const tt = fl.filter(x => x.swing === 'tight').length, rows = Object.entries(byL).filter(([, o]) => o.f + o.t >= 2).sort((a, b) => (b[1].f - b[1].t) - (a[1].f - a[1].t));
+        const bestL = rows[0], worstL = rows[rows.length - 1];
+        T.push({ k: 'How your swing felt', t: `Free on ${fl.length - tt} of ${fl.length} shots you marked.${bestL && bestL[1].f ? ` Freest: ${bestL[0]} (${bestL[1].f} free, ${bestL[1].t} tight).` : ''}${worstL && worstL !== bestL && worstL[1].t ? ` Tightest: ${worstL[0]} (${worstL[1].t} tight).` : ''}` }); } }
       // 🎯 Corner-pin spares (10 for righties, 7 for lefties): makes and which way you miss
       { let cs = null; try { cs = window.BTEyes ? BTEyes.cornerSpares(real, lefty) : null; } catch (_e) {}
         if (cs && (cs.att || cs.missed)) { const noted = cs.channel + cs.inside + cs.thin;

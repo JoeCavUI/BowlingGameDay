@@ -167,7 +167,8 @@
       const secs = p.sections.map(s => `<section class="pl-sec"><h3><span class="pl-ic">${s.icon}</span>${esc(s.h)}</h3>${s.lead ? `<p>${s.lead}</p>` : ''}<ul>${s.items.map(i => `<li${/^<span class="pl-h">/.test(i) ? ' class="pl-hli"' : ''}>${i}</li>`).join('')}</ul></section>`).join('');
       const extra = insightHtml(p);
       const foot = `<div class="pl-foot">${p.basedOn && p.basedOn.length ? 'Based on ' + p.basedOn.map(esc).join(', ') + '. ' : ''}Built by Coach, ${today}.</div>`;
-      $('#planOut').innerHTML = `<div class="panel pl-sheet">${head}${empty}${secs}${extra}${foot}</div>`;
+      let hbH = ''; try { if (window.BTEyes && BTEyes.houseBook) { const bw = BT.lsGet(BT.KEYS.BOWLER, {}) || {}, lf = /^l/i.test(String(bw.handedness || '')); hbH = BTEyes.houseBookHtml(BTEyes.houseBook($('#pHouse').value.trim(), BT.formatLanes($('#pLanes').value), BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || [], lf), lf); } } catch (_e) {}
+      $('#planOut').innerHTML = `<div class="panel pl-sheet">${head}${empty}${secs}${extra}${foot}</div>` + (hbH ? `<div class="panel">${hbH}</div>` : '');
       wireNotes();
       $('#planActions').style.display = '';
       $('#pSaveBag').style.display = p.recBag && p.recBag.length ? '' : 'none';

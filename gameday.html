@@ -129,6 +129,7 @@
             <div class="small" style="margin-top:6px">Fill shots (10th-frame bonus balls) are left out of coaching. The lane alternates automatically from your pair + starting lane.</div>
           </details>
         </details>
+        <details class="panel gd-fold" id="hbFold" style="display:none"><summary><span class="gd-fold-title">📒 House book</span> <span class="small" id="hbSum"></span></summary><div id="hbBody" style="margin-top:8px"></div></details>
 
         <!-- Coach: the one thing to do next -->
         <div class="panel gd-coach" id="coachPanel">
@@ -225,6 +226,7 @@
             </div>
           </details>
 
+          <div class="gd-swing" id="swingRow"><span class="small">Swing felt</span><button type="button" class="gd-swc" data-swing="free">🙂 Free</button><button type="button" class="gd-swc" data-swing="tight">😬 Tight</button></div>
           <button class="btn gd-log" id="log">Log this shot</button>
           <div id="faultNote" class="gd-faultnote" style="display:none"></div>
         </div>
@@ -1038,7 +1040,11 @@ function selectedPills(container) {
       try { renderGameFlow(); } catch (_e) {}
     }
 
+    // 🙂/😬 How your swing felt: free (you could relax and let it go) or tight (steering, forcing, guiding)
+    let swingFeel = '';
+    BT.$all('#swingRow [data-swing]').forEach(b => b.addEventListener('click', () => { swingFeel = swingFeel === b.dataset.swing ? '' : b.dataset.swing; BT.$all('#swingRow [data-swing]').forEach(x => x.classList.toggle('on', x.dataset.swing === swingFeel)); }));
     function resetSection3AfterLog() {
+      swingFeel = ''; BT.$all('#swingRow [data-swing]').forEach(x => x.classList.remove('on'));
       // Reset everything in section 3 to avoid previous-shot confusion.
       clearPills();
       clearPinDeck();
@@ -2089,8 +2095,29 @@ function saveCurrentSessionDraft() {
     const coachMode = () => { try { return localStorage.getItem(COACH_MODE_KEY) || 'quiet'; } catch (_e) { return 'quiet'; } };
     let lastQuiet = '', quietMemo = null; const shownEyes = new Set();
     try { if ((BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || []).length >= 2) document.body.classList.add('gd-seasoned'); } catch (_e) {}
-    { const mb = document.getElementById('coachMode'); if (mb) { const paint = () => { mb.textContent = coachMode() === 'full' ? 'Full' : 'Quiet'; mb.title = coachMode() === 'full' ? 'Showing everything. Tap for one line.' : 'One line while you bowl. Tap for everything.'; }; paint();
-      mb.addEventListener('click', () => { try { localStorage.setItem(COACH_MODE_KEY, coachMode() === 'full' ? 'quiet' : 'full'); } catch (_e) {} paint(); lastQuiet = ''; quietMemo = null; try { autoCoach(); } catch (_e) {} try { renderLog(); updateLayPt(); updateLineMath(); renderScoreboard(); } catch (_e) {} }); } }
+    { const mb = document.getElementById('coachMode'); if (mb) { const paint = () => { mb.textContent = coachMode() === 'full' ? 'Full' : coachMode() === 'pro' ? 'Pro' : 'Quiet'; mb.title = coachMode() === 'full' ? 'Showing everything. Tap for one line.' : coachMode() === 'pro' ? 'Numbers plus one line. Tap for everything.' : 'One line while you bowl. Tap for numbers (Pro).'; }; paint();
+      mb.addEventListener('click', () => { try { localStorage.setItem(COACH_MODE_KEY, { quiet: 'pro', pro: 'full', full: 'quiet' }[coachMode()] || 'quiet'); } catch (_e) {} paint(); lastQuiet = ''; quietMemo = null; try { autoCoach(); } catch (_e) {} try { renderLog(); updateLayPt(); updateLineMath(); renderScoreboard(); } catch (_e) {} }); } }
+    // 📊 Pro view: tonight in numbers (no sentences). Every ball counts; fills included.
+    function proStrip() {
+      try {
+        const all = [...sessionShots].reverse().filter(x => x && x.type !== 'gameStart'), lefty = isLeftyBowler();
+        if (all.length < 2) return '';
+        const X = (x) => !BT.standingPins(x).length, P = (x) => BT.isPocketHit(x), pc = (a, b) => b ? Math.round(a / b * 100) : 0;
+        const tot = { n: all.length, x: all.filter(X).length, p: all.filter(P).length }; tot.c = all.filter(x => P(x) && X(x)).length;
+        const ln = all.filter(x => x.ball === el.ball.value && String(x.feet) === String(el.feet.value) && String(x.arrows) === String(el.arrows.value));
+        let since = 0; for (let i = all.length - 1; i > 0; i--) { const a = all[i - 1], b = all[i]; if (a.feet !== b.feet || a.arrows !== b.arrows || a.ball !== b.ball) break; since++; } since = Math.min(since + 1, all.length);
+        const cells = [];
+        cells.push(['Tonight', `${tot.x}X / ${tot.n}`, `P ${pc(tot.p, tot.n)}% · C ${pc(tot.c, tot.p)}%`]);
+        if (ln.length) cells.push(['This line', `${ln.filter(X).length}X / ${ln.length}`, `P ${pc(ln.filter(P).length, ln.length)}% · ${since} since move`]);
+        const lanes = BT.formatLanes ? BT.formatLanes(el.lanes.value) : el.lanes.value;
+        if (window.BTEyes) { const tt = BTEyes.tonightTough(all, lanes), tl = BTEyes.tonightLanes(all, lanes, lefty);
+          if (tt) [tt.a, tt.b].forEach(o => { const t2 = tl && (tl.a || tl.more) ? [tl.a, tl.b, tl.more, tl.less].filter(Boolean).find(q => q.l === o.l) : null; cells.push([`Lane ${o.l}`, `${o.x}X / ${o.n}`, `P ${o.p}/${o.n}${t2 ? ` · high ${t2.hi} · light ${t2.lo}` : ''}`]); });
+          const cs = BTEyes.cornerSpares(all, lefty); if (cs.att || cs.missed) cells.push([`${cs.pin}-pin spares`, `${cs.made}/${cs.att}`, cs.missed ? `missed ${cs.missed}${['channel', 'inside', 'thin'].filter(k => cs[k]).map(k => ` · ${k} ${cs[k]}`).join('')}` : 'no misses']); }
+        if (window.BTCoach && BTCoach.noteMix) { const nm = BTCoach.noteMix(all, lefty); if (nm) cells.push(['Energy', nm.read === 'strong' ? 'strong' : nm.read === 'weak' ? 'weak' : nm.read === 'hot' ? 'hot' : 'mixed', nm.say]); }
+        const sw = all.slice(-5).filter(x => x.swing); if (sw.length) cells.push(['Swing (last 5)', `${sw.filter(x => x.swing === 'free').length} free`, `${sw.filter(x => x.swing === 'tight').length} tight`]);
+        return `<div class="gd-pro">${cells.map(([k, v, sub]) => `<div class="gd-pro-c"><div class="gd-pro-k">${escapeHtml(k)}</div><div class="gd-pro-v">${escapeHtml(v)}</div><div class="gd-pro-s">${escapeHtml(sub)}</div></div>`).join('')}</div>`;
+      } catch (_e) { return ''; }
+    }
     const firstSentence = (t) => { const m = String(t || '').match(/^(.+?[.!?])(\s|$)/); return (m ? m[1] : String(t || '')).trim(); };
     // The same advice in other words, once: drop a sentence that mostly repeats one already shown.
     function dedupeCoach(r) {
@@ -2169,7 +2196,7 @@ function saveCurrentSessionDraft() {
         if (!(quietMemo && quietMemo.n === nNow)) { lastQuiet = key || lastQuiet; quietMemo = { n: nNow, line: same ? '' : line, tone, key }; }
         const icon1 = { good: '✅', move: '🔔', warn: '✋', info: '👀' }[tone] || '👀';
         const full = el.coachText.innerHTML;
-        el.coachText.innerHTML = `<div class="gd-q1 ${tone}${!line || same ? ' calm' : ''}">${!line || same ? '✓ Nothing new. Make your shot.' : `${/^\p{Extended_Pictographic}/u.test(line) ? '' : icon1 + ' '}${escapeHtml(line)}`}</div>
+        el.coachText.innerHTML = (coachMode() === 'pro' ? proStrip() : '') + `<div class="gd-q1 ${tone}${!line || same ? ' calm' : ''}">${!line || same ? '✓ Nothing new. Make your shot.' : `${/^\p{Extended_Pictographic}/u.test(line) ? '' : icon1 + ' '}${escapeHtml(line)}`}</div>
           <button type="button" class="cl-link gd-q1more" id="coachFullBtn">Why ›</button><div id="coachFull" hidden>${full}</div>`;
         BT.$('#coachFullBtn').addEventListener('click', () => { const f = BT.$('#coachFull'); f.hidden = !f.hidden; BT.$('#coachFullBtn').textContent = f.hidden ? 'Why ›' : 'Less ‹'; });
       }
@@ -2332,6 +2359,7 @@ function saveCurrentSessionDraft() {
 
         // New coaching layers
         speedTrend: singlePillValue(el.readsSpeed, 'unknown'),
+        swing: swingFeel || '',
         fault: execQuality === 1 ? singlePillValue(el.readsFault, '') : '',
         laneInfo: (execQuality === 1 || missRead === 'leftMiss' || missRead === 'rightMiss') && !!(BT.$('#laneInfo') && BT.$('#laneInfo').checked),
         laneRead: laneReadFor(info.gameNo || currentGameNumber()) || (() => { try { const t = BTCoach.noteTags(el.notes.value, isLeftyBowler()); return (t && t.laneRead) || ''; } catch (_e) { return ''; } })(),
@@ -2875,6 +2903,19 @@ function sessionSummary(shots) {
       t.textContent = msg; t.classList.remove('hidden');
       clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add('hidden'), 3500);
     }
+    // 📐 A line picked on the Angles page ("Use this line on Game Day"): apply it when you come back.
+    function takeAnglesLine() {
+      const h = BT.lsGet('bt_gameday_line_from_angles_v1', null); if (!h || !h.at || Date.now() - h.at > 30 * 60000) return;
+      BT.lsSet('bt_gameday_line_from_angles_v1', null);
+      const set = (inp, v) => { if (!inp || v == null || !isFinite(v)) return; inp.value = String(v); inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true })); };
+      set(el.feet, h.feet); set(el.arrows, h.arrows); if (h.bp != null) set(el.bp, h.bp);
+      if (el.tdist && h.tft && [...el.tdist.options].some(o => Number(o.value) === Number(h.tft))) { el.tdist.value = String(h.tft); el.tdist.dispatchEvent(new Event('change', { bubbles: true })); }
+      try { updateLineMath(); } catch (_e) {} try { paintFolds(); } catch (_e) {} try { autoCoach(); } catch (_e) {}
+      toast(`📐 Line from Angles: slide ${h.feet} · target ${h.arrows}${h.tft && Number(h.tft) !== 15 ? ` at ${h.tft} ft` : ''}${h.bp != null ? ` · BP ${h.bp}` : ''}. Log your next shot to try it.`);
+    }
+    window.addEventListener('pageshow', () => setTimeout(takeAnglesLine, 50));
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(takeAnglesLine, 50); });
+    setTimeout(takeAnglesLine, 600);
     let cardGame = null; // which game the live score card shows (null = the one you're bowling)
     function renderGameFlow() {
       const box = BT.$('#gameFlow'), line = BT.$('#frameLine'); if (!box || !line) return;
@@ -3024,8 +3065,16 @@ function sessionSummary(shots) {
     window.addEventListener('pageshow', () => setTimeout(updateLineMath, 350));
 
     // Tonight: one-line summary; opens itself until the must-haves are set.
+    function renderHouseBook() {
+      const f = BT.$('#hbFold'); if (!f || !window.BTEyes || !BTEyes.houseBook) return;
+      let hb = null; try { hb = BTEyes.houseBook(el.house.value, BT.formatLanes ? BT.formatLanes(el.lanes.value) : el.lanes.value, BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || [], isLeftyBowler()); } catch (_e) {}
+      if (!hb) { f.style.display = 'none'; return; }
+      f.style.display = ''; BT.$('#hbSum').textContent = `${hb.nights.length} night${hb.nights.length === 1 ? '' : 's'} ${hb.pair ? 'on this pair' : 'here'}`;
+      BT.$('#hbBody').innerHTML = BTEyes.houseBookHtml(hb, isLeftyBowler()).replace(/^<div class="hb"><div class="hb-h">[^<]*<\/div>/, '<div class="hb">');
+    }
     function updateSetupSummary() {
       const box = BT.$('#setupSummary'), fold = BT.$('#setupFold');
+      try { renderHouseBook(); } catch (_e) {}
       if (!box || !fold) return;
       const txt = (sel) => (sel && sel.value && sel.selectedIndex >= 0) ? sel.options[sel.selectedIndex].text : '';
       const parts = [el.house.value && el.house.value, el.lanes.value.trim(), el.pattern.value && txt(el.pattern), el.set.value && el.set.value].filter(Boolean);

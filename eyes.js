@@ -131,6 +131,48 @@
     return { rows, byGame, pair: onPair.length > 0, nights: use.length };
   }
 
+  // ---------- 📒 House book: what you did here before, on one page (from your Game Day nights)
+  function houseBook(house, lanes, sessions, lefty) {
+    const hk = String(house || '').toLowerCase().replace(/[^a-z0-9]/g, ''); if (!hk) return null;
+    const nights = (sessions || []).filter(s => s && String(s.house || '').toLowerCase().replace(/[^a-z0-9]/g, '') === hk).sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+    if (!nights.length) return null;
+    const onPair = lanes ? nights.filter(s => s.lanes === lanes) : [];
+    const use = onPair.length ? onPair : nights;
+    const deep = (d) => (d > 0) !== !!lefty ? 'deeper' : 'out'; // righty: higher board = deeper (left)
+    const isX = (x) => !BT().standingPins(x).length, isP = (x) => BT().isPocketHit(x);
+    const rows = use.map(s => {
+      const ch = (s.shots || []).filter(x => x && x.type !== 'gameStart').sort((a, b) => (a.at || 0) - (b.at || 0)), fr = ch.filter(x => !x.isFill);
+      if (!fr.length) return null;
+      const g1 = fr.filter(x => (Number(x.gameNo) || 1) === 1), first = fr[0];
+      let mv = null, sw = null;
+      for (let i = 1; i < fr.length; i++) { const a = fr[i - 1], b = fr[i];
+        if (!mv && a.feet != null && b.feet != null && (a.feet !== b.feet || a.arrows !== b.arrows)) { const nx = fr.slice(i, i + 3); mv = { g: Number(b.gameNo) || 1, f: b.frame, d: (b.feet - a.feet) || (b.arrows - a.arrows), boards: Math.abs(b.feet - a.feet), eyes: Math.abs(b.arrows - a.arrows), to: `${b.feet}/${b.arrows}`, ok: nx.filter(isP).length >= 2 && nx.filter(isX).length >= 1 }; }
+        if (!sw && a.ball && b.ball && a.ball !== b.ball) { const nx = fr.slice(i, i + 4); sw = { g: Number(b.gameNo) || 1, f: b.frame, from: a.ball, to: b.ball, x: nx.filter(isX).length, n: nx.length }; } }
+      return { s, date: new Date(s.savedAt), scores: s.scores || [], open: { ball: first.ball, line: `${first.feet}/${first.arrows}${first.bp != null ? '/' + first.bp : ''}`, x: g1.filter(isX).length, n: g1.length }, mv, sw };
+    }).filter(Boolean);
+    let lm = null; try { lm = laneMap(house, lanes, sessions); } catch (_e) {}
+    let cs = null; try { cs = cornerSpares(use.flatMap(s => s.shots || []), lefty); } catch (_e) {}
+    let tough = null; try { const all = use.flatMap(s => s.shots || []); tough = lanes ? tonightTough(all, lanes) : null; } catch (_e) {}
+    const moves = rows.filter(r => r.mv), worked = moves.filter(r => r.mv.ok);
+    const avgMove = moves.length ? { g: Math.round(moves.reduce((a, r) => a + r.mv.g, 0) / moves.length), deeper: moves.filter(r => deep(r.mv.d) === 'deeper').length } : null;
+    return { house, lanes, pair: onPair.length > 0, nights: rows, lm, cs, tough, moves, worked, avgMove, deep };
+  }
+
+  function houseBookHtml(hb, lefty) {
+    if (!hb) return '';
+    const esc = (t) => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const dt = (d) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    const L = [];
+    const best = hb.lm && (hb.lm.byGame[1] || hb.lm.rows[0]);
+    if (best) L.push(`<li><b>Open with:</b> ${esc(best.ball)} ${esc(best.feet)}/${esc(best.arrows)}: ${best.x} strikes in ${best.n}${hb.lm.byGame[1] ? ' in game 1s' : ''}.</li>`);
+    [2, 3].forEach(g => { const b = hb.lm && hb.lm.byGame[g]; if (b && (!best || b.feet !== best.feet || b.arrows !== best.arrows || b.ball !== best.ball)) L.push(`<li><b>Game ${g}:</b> ${esc(b.ball)} ${esc(b.feet)}/${esc(b.arrows)} has worked best (${b.x} in ${b.n}).</li>`); });
+    if (hb.avgMove) L.push(`<li><b>First move:</b> usually in game ${hb.avgMove.g}; ${hb.avgMove.deeper} of ${hb.moves.length} nights you went deeper. ${hb.worked.length} of ${hb.moves.length} first moves worked (2 of the next 3 in the pocket).</li>`);
+    if (hb.tough && hb.tough.tough) L.push(`<li><b>Lanes:</b> ${esc(hb.tough.tough.l)} has been tougher ${hb.tough.kind === 'pocket' ? 'to get to the pocket' : 'to strike'} (pocket ${hb.tough.tough.p}/${hb.tough.tough.n} vs ${hb.tough.easy.p}/${hb.tough.easy.n}).</li>`);
+    if (hb.cs && (hb.cs.att || hb.cs.missed)) L.push(`<li><b>${hb.cs.pin}-pin spares:</b> ${hb.cs.made} of ${hb.cs.att}${hb.cs.missed ? `; missed ${hb.cs.missed}${['channel', 'inside', 'thin'].filter(k => hb.cs[k]).map(k => `, ${hb.cs[k]} ${k}`).join('')}` : ''}.</li>`);
+    const nightLi = hb.nights.slice(0, 4).map(r => `<li><b>${dt(r.date)}</b>${r.scores.length ? ` · ${r.scores.join(' · ')}` : ''}${r.s.lanes && !hb.pair ? ` · ${esc(r.s.lanes)}` : ''}<br><span class="small">Opened ${esc(r.open.ball || '?')} ${esc(r.open.line)} (${r.open.x}X in ${r.open.n} in game 1).${r.mv ? ` First move G${r.mv.g} F${r.mv.f}: ${r.mv.boards}&${r.mv.eyes} ${hb.deep(r.mv.d)} → ${esc(r.mv.to)}${r.mv.ok ? ' ✅ worked' : ' ✗ didn\'t settle it'}.` : ' No line move.'}${r.sw ? ` Ball switch G${r.sw.g} F${r.sw.f}: ${esc(r.sw.from)} → ${esc(r.sw.to)} (${r.sw.x}X in next ${r.sw.n}).` : ''}</span></li>`).join('');
+    return `<div class="hb"><div class="hb-h">📒 House book: ${esc(hb.house)}${hb.lanes ? ` · ${esc(hb.lanes)}` : ''}</div><div class="small dim">${hb.nights.length} night${hb.nights.length === 1 ? '' : 's'} you logged ${hb.pair ? 'on this pair' : 'at this house'}. What you did, not a prediction.</div>${L.length ? `<ul class="hb-l">${L.join('')}</ul>` : ''}<div class="hb-sub">Last nights here</div><ul class="hb-l">${nightLi}</ul></div>`;
+  }
+
   // ---------- the signals Game Day shows, most useful first (each: id, text, why)
   function signals(ctx) {
     const out = [], lefty = !!ctx.lefty, shots = ctx.shots || [], game = ctx.gameNow || 1;
@@ -180,5 +222,5 @@
     if (best && real.length <= 1 && game === 1) out.push({ id: 'map', text: `🗺️ Your best line here: ${best.ball} ${best.feet}/${best.arrows}${best.bp != null ? '/' + best.bp : ''}: ${best.x} strikes in ${best.n}.`, why: `From ${nt(best.nights)} you logged ${lm.pair ? 'on this pair' : 'at this house'}: pocket ${Math.round(best.p / best.n * 100)}%.`, angle: { slide: best.feet, target: best.arrows, bp: best.bp } });
     return out.filter(x => !x.late).concat(out.filter(x => x.late));
   }
-  root.BTEyes = { signals, cornerSpares, tonightLanes, tonightTough, pairHistory, transition, ballFade, laneMap, leaveSide };
+  root.BTEyes = { signals, houseBook, houseBookHtml, cornerSpares, tonightLanes, tonightTough, pairHistory, transition, ballFade, laneMap, leaveSide };
 })(typeof window !== 'undefined' ? window : globalThis);

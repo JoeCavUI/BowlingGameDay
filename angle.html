@@ -86,6 +86,7 @@
       <table class="ang-tbl" id="aTbl"></table>
       <div id="aAlerts"></div>
       <div id="aFix"></div>
+      <button type="button" class="btn" id="aUse" style="display:none;margin-top:12px;width:100%">✓ Use this line on Game Day</button>
       <a class="btn secondary ang-back2" id="aBack2" href="gameday.html" style="display:none;margin-top:12px;text-align:center">← Back to Game Day</a>
       <div class="small" style="margin-top:10px;opacity:.75">A straight line, no hook: it shows where you're sending the ball, not where it turns. Arrows are taken at 15 ft (they're staggered 12–16 ft on a real lane, so set the distance if you use one arrow's exact spot). Board 1 is your outside board.</div>
     </div>
@@ -99,6 +100,18 @@
     if (new URLSearchParams(location.search).get('from') === 'gameday') ['#aBack', '#aBack2'].forEach(id => { const a = document.querySelector(id); a.style.display = ''; a.addEventListener('click', (e) => { if (/gameday\.html/.test(document.referrer) && history.length > 1) { e.preventDefault(); history.back(); } }); });
     const $ = (q) => document.querySelector(q);
     const LAST = 'bt_angle_last_v1';
+    // ✓ Use this line on Game Day: hand slide / target / breakpoint back, then return to Game Day.
+    if (new URLSearchParams(location.search).get('from') === 'gameday') setTimeout(() => { const u = $('#aUse'); if (!u) return; u.style.display = '';
+      u.addEventListener('click', () => {
+        const slide = Number($('#aSlide').value); let target = null, tft = 15;
+        if (mode === 'target') { target = Number($('#aTarget').value); tft = Number($('#aTargetFt').value) || 15; }
+        else if (mode === 'custom') { target = Number($('#aCBoard').value); tft = Number($('#aCFt').value) || 15; }
+        else { try { const c = compute(); if (c) target = Math.round(c.at(15)); } catch (_e) {} }
+        const bp = $('#aBp').value !== '' ? Number($('#aBp').value) : null;
+        if (!isFinite(slide) || target == null || !isFinite(target)) { alert('Fill in your slide and an aim point first.'); return; }
+        BT.lsSet('bt_gameday_line_from_angles_v1', { feet: Math.round(slide * 2) / 2, arrows: Math.round(target * 2) / 2, tft, bp, at: Date.now() });
+        if (/gameday\.html/.test(document.referrer) && history.length > 1) history.back(); else location.href = 'gameday.html';
+      }); }, 0);
     const BW_IN = 41.5 / 39;            // one board, inches
     const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
     const lefty = /^l/i.test(String(bowler.handedness || ''));

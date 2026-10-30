@@ -1430,6 +1430,7 @@
     };
 
     const decide = (sit, headline, why, lens) => {
+      { const tN = W.slice(-3).filter(c => c.shot && c.shot.swing === 'tight').length; if (tN >= 2) res.notes.push(`😬 Your swing felt tight on ${tN} of your last ${W.slice(-3).length}: the move below should also give your arm room to relax.`); }
       res.lens = lens || '';
       const ball = suggestBall(sit, ctx, prof);
       const step = (tried.has('Aim') && lastChange >= 0) ? 2 : 1;
@@ -1546,6 +1547,17 @@
     const noteBack = () => { let nm = null; try { nm = noteMix(W.map(c => c.shot), prof.lefty); } catch (_e) {} if (!nm) return;
       if (nm.read === 'strong') res.notes.push(`📝 Your notes back it up: ${nm.say}. ${nm.text}`);
       else if (nm.read === 'weak' || nm.read === 'hot') res.notes.push(`📝 But your notes say ${nm.say} on this line. ${nm.text}`); };
+    // 😬 Swing felt tight: striking or not, a tight swing means you're steering. Open room before the pins tell you.
+    const tightBack = (striking) => {
+      const r3 = W.slice(-3), tN = r3.filter(c => c.shot && c.shot.swing === 'tight').length; if (tN < 2) return false;
+      const lean = W.slice(-4).reduce((a, c) => a + (c.lean || 0), 0) / Math.max(1, W.slice(-4).length);
+      const deep = prof.lefty ? 'right' : 'left', out = prof.lefty ? 'left' : 'right';
+      const mv = lean > 0.2 ? `move deeper: feet 2 ${deep}, eyes 1 ${deep}` : lean < -0.2 ? `move out: feet 2 ${out}, eyes 1 ${out}` : `make a 2 & 1 move to the side that lets your arm hang: deeper (${deep}) if the lanes are starting to hook, out (${out}) if they're holding`;
+      res.headline = `${striking ? 'You\'re striking, but y' : 'Y'}our swing felt tight on ${tN} of your last ${r3.length}. Free it up before the pins tell you: ${mv}.`;
+      res.why = 'A tight swing means you\'re steering to hit the line. A small move with feet and eyes together keeps the same shape and gives your arm room to relax, which is how you stay in Utopia.';
+      res.status = 'move'; res.tone = 'move'; res.element = '🎯 Direction';
+      setCompass('ok', 'warn', 'move', '🧭 Right ball. The spot is costing you a free swing: a small 2 & 1 move.');
+      return true; };
     // ---- 2. Utopia: room both ways ----
     if (outsideSaved && insideSaved) {
       res.status = 'utopia'; res.tone = 'good'; res.element = '🎯 Direction';
@@ -1555,6 +1567,7 @@
       setCompass('ok', 'ok', 'stay', '🧭 Right ball, right spot. This is what you\'re looking for.');
       if (moveVerdict) res.notes.push(moveVerdict);
       noteBack();
+      tightBack(true);
       return res;
     }
 
@@ -1569,6 +1582,7 @@
       setCompass('ok', 'ok', 'stay', '🧭 Right ball, right spot. Stay.');
       noteBack();
       res.next = bk >= 2 ? 'Heads-up: those were Brooklyns. The lane is starting to hook early. Be ready to move deeper.' : 'Keep repeating. Coach will flag the first sign of change.';
+      tightBack(true);
       if (moveVerdict) res.notes.push(moveVerdict);
       return res;
     }
