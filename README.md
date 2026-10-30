@@ -58,6 +58,14 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v130-beta67: Read aloud everywhere, resurface log, 10-pin misses
+- 🔊 Read aloud button on every text panel (bag card, best averages, review sections, Guide…).
+- Arsenal: resurface log with date/time and surface; last resurfaced shown in Tune and on the ball list.
+- Game Day score card: tabs for tonight's earlier games; tap any frame to fix it.
+- "Bad shot, but it still told me about the lane": shows for missed marks too; Coach counts it and says what it showed; editable later.
+- 10-pin (7 for lefties) spare misses: left / right (channel) / chopped after the 2nd ball; live pattern alert and a night-review line.
+- Night review: 📤 Save to Files via the share sheet (no print pop-up).
+
 ## Changes in v129-beta66: Every ball counts, 10-pin story, lane checks
 - Night review: total balls thrown, strikes include fill balls (every ball counts), spares made of attempted.
 - "The 10-pin story": single corner-pin leaves on pocket hits, what the key pin did, and what it means.
