@@ -58,6 +58,13 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v131-beta68: House book, Pro view, swing feel, Angles → Game Day
+- Angles: "✓ Use this line on Game Day" carries the slide / target / breakpoint back to Game Day.
+- Game Day: optional "Swing felt 🙂 Free / 😬 Tight"; Coach calls a 2 & 1 move to free a tight swing even while striking.
+- Coach Pro view (Quiet → Pro → Full): tonight, this line, each lane, 10-pin spares, energy and swing as numbers, plus one line.
+- 📒 House book on Game Day and the Game Plan: opening line, best line by game, first move timing, tougher lane, 10-pin spares, last nights here.
+- Night review: "How your swing felt" by line.
+
 ## Changes in v130-beta67: Read aloud everywhere, resurface log, 10-pin misses
 - 🔊 Read aloud button on every text panel (bag card, best averages, review sections, Guide…).
 - Arsenal: resurface log with date/time and surface; last resurfaced shown in Tune and on the ball list.
