@@ -58,6 +58,12 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v132-beta69: Shorter Game Plan, energy vs angle, tidy Tonight
+- Game Plan about half as long: short bullets, no repeated caveats (surface rule, rule-of-31 disclaimers), top-4 lists, one-line trait trends, two-line bag jobs.
+- Night review: ⚖️ Energy vs angle (good shots by where you stood: pocket, carry, rolled out, turning hard).
+- Coach: when the ball keeps rolling out and you move in, move feet more than eyes to keep the angle.
+- Game Day Tonight: finished steps fold to one line (tap to reopen); "Done: tuck it away" button.
+
 ## Changes in v131-beta68: House book, Pro view, swing feel, Angles → Game Day
 - Angles: "✓ Use this line on Game Day" carries the slide / target / breakpoint back to Game Day.
 - Game Day: optional "Swing felt 🙂 Free / 😬 Tight"; Coach calls a 2 & 1 move to free a tight swing even while striking.
