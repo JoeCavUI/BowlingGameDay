@@ -955,3 +955,8 @@ body.gd-seasoned .gd-help{display:none}
 .hb-sub { font-weight: 800; margin-top: 10px; }
 .hb-l { margin: 6px 0 0; padding-left: 18px; }
 .hb-l li { margin-bottom: 6px; }
+.gd-tstep-tap { cursor: pointer; }
+.gd-tstep-tap::after { content: '▾'; margin-left: 6px; opacity: .6; }
+.gd-tstep-tap.closed::after { content: '▸'; }
+.gd-step-sum { display: block; opacity: .75; margin-top: 2px; }
+.gd-tdone { width: 100%; margin-top: 12px; }

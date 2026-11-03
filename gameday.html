@@ -109,6 +109,7 @@
               </select>
             </div>
           </div>
+          <button type="button" class="btn gd-tdone" id="setupDone">✓ Done: tuck it away</button>
           <details class="gd-subfold" style="margin-top:10px">
             <summary class="small">Frame & lane (set automatically)</summary>
             <div class="grid-3" style="grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:end;margin-top:8px">
@@ -2819,6 +2820,28 @@ function sessionSummary(shots) {
       BT.$('#bagKeep').addEventListener('click', () => setTimeout(updateSteps, 0));
       BT.$('#bagKeep').addEventListener('click', () => { w.dataset.kept = el.set.value + '|' + el.house.value; w.style.display = 'none'; });
     }
+    // 🗂️ Each numbered step folds to one line once it's done (tap the step to open it again).
+    const stepOpen = {}; // user's choice this visit: n -> true/false
+    function stepNodes(n) { const h = BT.$('#step' + n + 'n') && BT.$('#step' + n + 'n').closest('.gd-tstep'); const out = []; let x = h && h.nextElementSibling; while (x && !x.classList.contains('gd-tstep')) { if (!(x.tagName === 'INPUT' && x.type === 'hidden') && x.style.display !== 'none' || x.dataset.stepHide) out.push(x); x = x.nextElementSibling; } return { h, body: out }; }
+    function stepSummary(n) {
+      const t = (sel) => (sel && sel.value && sel.selectedIndex >= 0) ? sel.options[sel.selectedIndex].text : '';
+      if (n === 1) return [el.house.value, el.league && el.league.value && t(el.league), el.lanes.value.trim(), el.pattern.value && t(el.pattern)].filter(Boolean).join(' · ');
+      if (n === 2) { const sp = BT.$('#spareOn') && BT.$('#spareOn').checked && BT.$('#spareBall') ? BT.$('#spareBall').value : ''; return [el.set.value, sp && `spare: ${sp}`].filter(Boolean).join(' · '); }
+      if (n === 3) { let T = null; try { T = trafficInfo(); } catch (_e) {} return T ? 'set' : 'skipped'; }
+      return '';
+    }
+    function paintStepFolds() {
+      [1, 2, 3].forEach(n => { const { h, body } = stepNodes(n); if (!h) return;
+        const done = /done/.test((BT.$('#step' + n + 'st') || {}).textContent || '') || (n === 3);
+        const open = stepOpen[n] != null ? stepOpen[n] : !done;
+        body.forEach(b => { b.dataset.stepHide = '1'; b.style.display = open ? '' : 'none'; });
+        h.classList.add('gd-tstep-tap'); h.classList.toggle('closed', !open);
+        let sm = h.querySelector('.gd-step-sum'); if (!sm) { sm = document.createElement('span'); sm.className = 'gd-step-sum small'; const sub = h.querySelector('.gd-tstep-sub'); (sub ? sub.parentElement : h).appendChild(sm); }
+        sm.textContent = open ? '' : stepSummary(n);
+        const sub = h.querySelector('.gd-tstep-sub'); if (sub) sub.style.display = open ? '' : 'none';
+        if (!h.dataset.wiredFold) { h.dataset.wiredFold = '1'; h.addEventListener('click', (e) => { if (e.target.closest('button, select, input, a')) return; const isOpen = !h.classList.contains('closed'); stepOpen[n] = !isOpen; paintStepFolds(); }); }
+      });
+    }
     // Numbered steps: a check when each one is done.
     function updateSteps() {
       const mark = (n, ok, need) => { const st = BT.$('#step' + n + 'st'), nn = BT.$('#step' + n + 'n'); if (!st) return; st.textContent = ok ? '✓ done' : need; st.className = 'gd-step-st small ' + (ok ? 'ok' : 'need'); if (nn) nn.classList.toggle('ok', ok); };
@@ -2828,6 +2851,7 @@ function sessionSummary(shots) {
       mark(2, !!el.set.value && !bagOff, el.set.value ? 'check house' : 'pick a bag');
       let T = null; try { T = trafficInfo(); } catch (_e) {}
       mark(3, !!T, 'optional'); { const st = BT.$('#step3st'); if (st && !T) st.className = 'gd-step-st small dim'; }
+      try { paintStepFolds(); } catch (_e) {}
     }
     ['house', 'league', 'lanes', 'pattern', 'set'].forEach(k => { if (el[k]) ['change', 'input'].forEach(ev => el[k].addEventListener(ev, () => setTimeout(() => { updateBagWarn(); updateSteps(); }, 0))); });
     el.house.addEventListener('change', () => {
@@ -3088,6 +3112,7 @@ function sessionSummary(shots) {
       if (missing.length && !fold.dataset.userClosed) fold.open = true;
     }
     BT.$('#setupFold').addEventListener('toggle', (e) => { if (!e.target.open) e.target.dataset.userClosed = '1'; });
+    BT.$('#setupDone').addEventListener('click', () => { const f = BT.$('#setupFold'); f.open = false; f.dataset.userClosed = '1'; window.__tonightStale = false; const c = BT.$('#coachPanel') || f; setTimeout(() => f.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30); });
     ['house', 'lanes', 'pattern', 'set', 'ball', 'league'].forEach(k => { if (el[k]) { el[k].addEventListener('change', updateSetupSummary); el[k].addEventListener('input', updateSetupSummary); } });
     setTimeout(() => {
       updateSetupSummary();
