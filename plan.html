@@ -144,11 +144,11 @@
       const bag = (p.recBag && p.recBag.length ? p.recBag : []).slice();
       if (p.firstBall && !bag.includes(p.firstBall)) bag.unshift(p.firstBall);
       const items = bag.map(b => { const m = I.ballByGame(house, b); if (!m || !m.n) return ''; const risk = I.riskText(m); const role = p.recRoles && p.recRoles[b] ? ` <span class="small dim">(${esc(p.recRoles[b])})</span>` : '';
-        return `<li><b>${esc(b)}</b>${role}: ${[1, 2, 3].filter(n => m.g[n]).map(n => `game ${n} ${m.g[n].avg} <span class="dim">(${m.g[n].n})</span>`).join(' · ')}.${risk ? ` ⚠️ ${esc(risk)}` : m.strong && m.strong.length ? ` ✅ Above your average here in game ${m.strong.join(' & ')}.` : ''}</li>`; }).filter(Boolean);
-      if (items.length) out.push(`<section class="pl-sec"><h3><span class="pl-ic">🎯</span>Matchup &amp; risk by game</h3><p>How each ball has scored in game 1, 2 and 3 here (number of games in brackets). In Game Day, Coach's matchup meter starts from this and updates every shot from your reads.</p><ul>${items.join('')}</ul></section>`);
+        return `<li><b>${esc(b)}</b>: ${[1, 2, 3].filter(n => m.g[n]).map(n => `G${n} ${m.g[n].avg} <span class="dim">(${m.g[n].n})</span>`).join(' · ')}${risk ? ` ⚠️ ${esc((String(risk).match(/Plan the switch[^.]*\./) || [risk])[0])}` : m.strong && m.strong.length ? ` ✅ G${m.strong.join(' & G')}` : ''}</li>`; }).filter(Boolean);
+      if (items.length) out.push(`<section class="pl-sec"><h3><span class="pl-ic">🎯</span>Matchup &amp; risk by game</h3><ul>${items.join('')}</ul></section>`);
       const pn = I.pinpalNotes(house);
-      if (pn && pn.lines.length) out.push(`<section class="pl-sec"><h3><span class="pl-ic">📓</span>From your PinPal notes here</h3><p>${pn.n} of ${pn.games} games here have notes. "14 over 5" is read as slide board 14 over breakpoint 5.</p><ul>${pn.lines.map(l => `<li>${l}</li>`).join('')}</ul></section>`);
-      out.push(`<section class="pl-sec" id="notesSec"><h3><span class="pl-ic">🧪</span>Your notes for ${esc(house)}</h3><p>What you've noticed here, tested against your games: ✅ supported · 🟡 partly · ❌ not supported · 👀 watch for (needs Game Day reads) · ⏳ not enough data.</p>${I.notesHtml(house, { edit: true })}
+      if (pn && pn.lines.length) out.push(`<section class="pl-sec"><h3><span class="pl-ic">📓</span>From your PinPal notes here</h3><ul>${pn.lines.slice(0, 4).map(l => `<li>${l}</li>`).join('')}</ul></section>`);
+      out.push(`<section class="pl-sec" id="notesSec"><h3><span class="pl-ic">🧪</span>Your notes for ${esc(house)}</h3>${(() => { const h = I.notesHtml(house, { edit: true }); return /No notes for/.test(h) ? '' : `<p class="small dim">✅ supported · 🟡 partly · ❌ not supported · 👀 watch · ⏳ not enough data</p>${h}`; })()}
         <div class="no-print ins-add"><input class="input" id="noteTxt" placeholder="e.g. game 3 move back outside with the right ball" /><button class="btn secondary" id="noteAdd" type="button">Add note</button></div></section>`);
       return out.join('');
     }
@@ -167,7 +167,7 @@
       const secs = p.sections.map(s => `<section class="pl-sec"><h3><span class="pl-ic">${s.icon}</span>${esc(s.h)}</h3>${s.lead ? `<p>${s.lead}</p>` : ''}<ul>${s.items.map(i => `<li${/^<span class="pl-h">/.test(i) ? ' class="pl-hli"' : ''}>${i}</li>`).join('')}</ul></section>`).join('');
       const extra = insightHtml(p);
       const foot = `<div class="pl-foot">${p.basedOn && p.basedOn.length ? 'Based on ' + p.basedOn.map(esc).join(', ') + '. ' : ''}Built by Coach, ${today}.</div>`;
-      let hbH = ''; try { if (window.BTEyes && BTEyes.houseBook) { const bw = BT.lsGet(BT.KEYS.BOWLER, {}) || {}, lf = /^l/i.test(String(bw.handedness || '')); hbH = BTEyes.houseBookHtml(BTEyes.houseBook($('#pHouse').value.trim(), BT.formatLanes($('#pLanes').value), BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || [], lf), lf); } } catch (_e) {}
+      let hbH = ''; try { if (window.BTEyes && BTEyes.houseBook) { const bw = BT.lsGet(BT.KEYS.BOWLER, {}) || {}, lf = /^l/i.test(String(bw.handedness || '')); hbH = BTEyes.houseBookHtml(BTEyes.houseBook($('#pHouse').value.trim(), BT.formatLanes($('#pLanes').value), BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || [], lf), lf, { noLines: true }); } } catch (_e) {}
       $('#planOut').innerHTML = `<div class="panel pl-sheet">${head}${empty}${secs}${extra}${foot}</div>` + (hbH ? `<div class="panel">${hbH}</div>` : '');
       wireNotes();
       $('#planActions').style.display = '';

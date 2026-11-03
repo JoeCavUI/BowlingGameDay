@@ -1479,6 +1479,10 @@
       res.status = 'move'; res.tone = 'move';
       res.element = first ? ELEMENT[first.kind] : '';
       res.headline = `${headline} ${firstText}`;
+      { // ⚖️ Moving in while the ball rolls out: keep the angle (feet in, eyes the same) instead of a parallel move
+        const weakN = W.slice(-4).filter(c => c.finish === 'weak').length, deep = prof.lefty ? 'right' : 'left';
+        if (weakN >= 2 && first && (first.kind === 'Aim' || first.kind === 'Angle') && (sit === 'early' || sit === 'carryWeak' || sit === 'overunder'))
+          res.notes.unshift(`⚖️ The ball has rolled out on ${weakN} of your last ${Math.min(4, W.length)}. When you move ${deep}, move your feet more than your eyes (feet 2 ${deep}, target the same) so it still gets out to the breakpoint and keeps its angle into the pocket.`); }
       const ratingNote = !first ? '' : first.kind === 'Equipment' ? ' (Ball change: picked from tonight\'s bag.)'
         : first.kind === 'Angle' ? ` (Angle: ${res.angleLine.replace(/^About /, 'about ').replace(/\.$/, '')}. Aim rated ${first.rating}/5.)`
         : ` (${first.kind}: you rated yourself ${first.rating}/5.)`;
@@ -1749,5 +1753,20 @@
     });
   }
 
-  root.BTCoach = { noteTags, noteMix, repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
+  // ⚖️ Energy vs angle: how deep you stood vs how the ball finished (pocket, carry, rolled out vs still turning).
+  function energyAngle(shots, lefty) {
+    const C = (shots || []).filter(s => s && s.type !== 'gameStart' && !s.isFill && Number.isFinite(Number(s.feet))).map(s => classify(s, lefty)).filter(c => c.execution !== 'poor' || c.laneInfo); // good shots only
+    if (C.length < 8) return null;
+    const by = {}; C.forEach(c => { const f = Math.round(Number(c.shot.feet)); const o = by[f] = by[f] || { feet: f, n: 0, p: 0, x: 0, weak: 0, strong: 0, bp: [] }; o.n++; if (c.pocketHit) o.p++; if (c.strike) o.x++; if (c.finish === 'weak') o.weak++; if (c.finish === 'strong') o.strong++; if (Number.isFinite(Number(c.shot.bp))) o.bp.push(Number(c.shot.bp)); });
+    const rows = Object.values(by).filter(o => o.n >= 3).sort((a, b) => a.feet - b.feet).map(o => ({ ...o, bp: o.bp.length ? Math.round(o.bp.reduce((a, b) => a + b, 0) / o.bp.length * 10) / 10 : null, carry: o.p ? Math.round(o.x / o.p * 100) : 0, pocket: Math.round(o.p / o.n * 100) }));
+    if (rows.length < 2) return { rows, text: '' };
+    const deep = rows[rows.length - 1], out = rows[0]; // righty: higher slide board = deeper
+    const D = lefty ? out : deep, O = lefty ? deep : out; if (O.weak >= 2 && D.p < 3) return { rows, text: '' };
+    let text = '';
+    if (D.carry + 15 <= O.carry && D.p >= 3) text = `Deeper (slide ${D.feet}) carried ${D.carry}% vs ${O.carry}% from ${O.feet} on good shots: the deeper line may be costing angle. Next time try feet in with the same target, so the ball still gets out to the breakpoint.`;
+    else if (O.weak >= 2 && O.weak >= D.weak + 2) text = `From slide ${O.feet} the ball rolled out ${O.weak}×; from ${D.feet} ${D.weak}×. The outside line burns energy: stay deeper and open the angle (feet in, target the same).`;
+    else if (D.carry >= O.carry + 15) text = `Deeper (slide ${D.feet}) carried better on good shots: ${D.carry}% vs ${O.carry}%.`;
+    return { rows, text };
+  }
+  root.BTCoach = { energyAngle, noteTags, noteMix, repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
 })(typeof window !== 'undefined' ? window : globalThis);
