@@ -6,7 +6,7 @@
 
 (function () {
   // Bump this string each build so pages can display it and cache-bust resources.
-  const APP_VERSION = 'v133-beta70';
+  const APP_VERSION = 'v134-beta71';
   const KEYS = {
     CSV_CACHE: 'bt_csv_cache_v1',          // stringified { savedAt, name, rows }
     BOWLER: 'bt_bowler_v1',               // stringified object
@@ -20,42 +20,42 @@
 
 
   // Bundled fallback CSV (works even when opening via file:// where fetch is blocked)
-  const DEFAULT_DATABALLS_CSV = `#,Brand,Ball Name,Pin Location,Cover,Core,VLS,PAP,PSA,Val,Dual Angle,Drill Angle,PAP,Val,Total Angle,Specs,RG,Diff,PSA,Surface
-1,900 Global,Reality Check #1,Up,Hybrid,Asym,,4.796,4.024,1.686,,49,4.796,27,76,,2.49,0.052,0.018,4000
-2,900 Global,Reality Check #2,Up,Hybrid,Asym,,5.291,6.302,1.253,,82,5.291,18,100,,2.49,0.052,0.018,4000
-3,Motiv,Venom Blue Coral,Up,Hybrid,Asym,,5.506,3.063,2.766,,42,5.506,41,83,,2.47,0.036,0.013,4000
-4,Storm,Absolute,Up,Hybrid,Asym,,5.283,5.012,2.276,,68,5.283,35,103,,2.48,0.05,0.021,4000
-5,Brunswick,Crown Victory,Up,Hybrid,Sym,,5.817,N/A,2.855,,75,5.817,42,117,,2.54,0.045,N/A,Compound
-6,Storm,HyRoad #1,Up,Hybrid,Sym,,6.117,N/A,3.073,,76,6.117,44,120,,2.57,0.046,N/A,3000
-7,Storm,HyRoad #2,Up,Hybrid,Sym,,6.094,N/A,3.333,,76,6.094,48,124,,2.57,0.046,N/A,4000
-8,Storm,All Road,Up,Hybrid,Sym,,5.258,N/A,2.666,,74,5.258,41,115,,2.57,0.046,N/A,4000
-9,Storm,All Road SP,Short,Hybrid,Sym,,2.707,N/A,2.270,,58,2.707,76,134,,2.57,0.046,N/A,4000
-10,Storm,Code Black,Up,Pearl,Asym,,4.672,3.696,1.570,,43,4.672,25,68,,2.5,0.058,0.02,Compound
-11,Storm,Dark Code,Up,Pearl,Asym,,5.459,3.401,2.513,,46,5.459,38,84,,2.5,0.058,0.02,1500 Polish
-12,Storm,Infinite Physix,Up,Pearl,Asym,,3.413,4.542,1.557,,49,3.413,33,82,,2.48,0.053,0.017,4000
-13,Storm,Equinox,Up,Pearl,Asym,,5.989,3.416,3.090,,49,5.989,44,93,,2.48,0.054,0.018,4000
-14,Storm,DNA Coil,Up,Pearl,Asym,,6.043,3.672,2.062,,49,6.043,29,78,,2.47,0.053,0.023,4000
-15,Storm,Physix Blackout,Short,Pearl,Asym,,3.284,5.526,1.568,,70,3.284,35,105,,2.47,0.055,0.018,4000
-16,Storm,Vitual Energy Blackout,Up,Pearl,Asym,,4.935,3.099,3.232,,42,4.935,53,95,,2.48,0.052,0.02,4000
-17,Roto Grip,Gremlin,Up,Pearl,Asym,,5.495,3.326,2.897,,46,5.495,44,90,,2.5,0.058,0.01,Polish
-18,Storm,Next Factor,Up,Pearl,Asym,,6.014,3.495,2.766,,49,6.014,40,89,,2.56,0.051,0.017,Polish
-19,Roto Grip,Exotic Gem #1,Up,Pearl,Asym,,4.794,3.986,1.815,,49,4.794,29,78,,2.47,0.053,0.016,Polish
-20,Roto Grip,Exotic Gem #2,Down,Pearl,Asym,,4.419,5.119,3.849,,77,4.419,74,151,,2.47,0.053,0.016,Polish
-21,Motiv,Evoke Hysteria,Up,Pearl,Asym,,6.711,4.787,3.499,,69,6.711,48,117,,2.48,0.05,0.015,4000
-22,900 Global,Zen Gold Label,Up,Pearl,Sym,,6.043,N/A,2.062,,75,6.043,29,104,,2.49,0.051,N/A,Polish
-23,Storm,Typhoon,Up,Pearl,Sym,,5.858,N/A,4.156,,75,5.858,61,136,,2.53,0.042,N/A,Polish
-24,900 Global,Zen 25,Up,Pearl,Sym,,6.025,N/A,2.573,,75,6.025,37,112,,2.48,0.053,N/A,4000
-25,900 Global,Ember,Up,Pearl,Sym,,6.297,N/A,1.780,,76,6.297,25,101,,2.49,0.044,N/A,Polish
-26,Storm,HyRoad 40,Short,Pearl,Sym,,2.833,N/A,2.663,,63,2.833,90,153,,2.57,0.046,N/A,Polish
-27,Storm,Ion Pro,Down,Solid,Asym,,5.290,3.041,4.260,,46,5.290,68,114,,2.47,0.035,0.014,5000
-28,900 Global,Zen Master #1,Up,Solid,Sym,,4.672,N/A,1.506,,72,4.672,24,96,,2.49,0.051,N/A,4000
-29,900 Global,Zen Master #2,Up,Solid,Sym,,6.162,N/A,2.302,,76,6.162,33,109,,2.49,0.051,N/A,4000
-30,Storm,Phaze 2,Up,Solid,Sym,,6.031,N/A,2.445,,75,6.031,35,110,,2.48,0.051,N/A,4000
-31,Storm,Level,Up,Solid,Sym,,5.753,N/A,2.864,,75,5.753,42,117,,2.59,0.027,N/A,4000
-32,Motiv,Venom Shock #1,Up,Solid,Sym,,5.871,N/A,2.977,,75,5.871,43,118,,2.48,0.034,N/A,4000
-33,Motiv,Venom Shock #2,Up,Solid,Sym,,6.245,N/A,3.056,,76,6.245,43,119,,2.48,0.034,N/A,4000
-34,Roto Grip,Hustle Camo,Up,Solid,Sym,,5.516,N/A,2.635,,75,5.516,39,114,,2.53,0.03,N/A,4000
-35,Storm,ProMotion,Up,Solid,Sym,,5.753,N/A,2.864,,75,5.753,42,117,,2.52,0.049,N/A,4000`;
+  const DEFAULT_DATABALLS_CSV = `#,Brand,Ball Name,Pin Location,Cover,Core,VLS,PAP,PSA,Val,Dual Angle,Drill Angle,PAP,Val,Total Angle,Specs,RG,Diff,PSA,Surface,Cover Name,Cover Strength
+1,900 Global,Reality Check #1,Up,Hybrid,Asym,,4.796,4.024,1.686,,49,4.796,27,76,,2.49,0.052,0.018,4000,S84 Beta Hybrid,7
+2,900 Global,Reality Check #2,Up,Hybrid,Asym,,5.291,6.302,1.253,,82,5.291,18,100,,2.49,0.052,0.018,4000,S84 Beta Hybrid,7
+3,Motiv,Venom Blue Coral,Up,Hybrid,Asym,,5.506,3.063,2.766,,42,5.506,41,83,,2.47,0.036,0.013,4000,Coercion MFH Hybrid,4
+4,Storm,Absolute,Up,Hybrid,Asym,,5.283,5.012,2.276,,68,5.283,35,103,,2.48,0.05,0.021,4000,R2S Deep Hybrid,7
+5,Brunswick,Crown Victory,Up,Hybrid,Sym,,5.817,N/A,2.855,,75,5.817,42,117,,2.54,0.045,N/A,Compound,HK22 Savvy Hook Hybrid,4
+6,Storm,HyRoad #1,Up,Hybrid,Sym,,6.117,N/A,3.073,,76,6.117,44,120,,2.57,0.046,N/A,3000,R2S Hybrid,6
+7,Storm,HyRoad #2,Up,Hybrid,Sym,,6.094,N/A,3.333,,76,6.094,48,124,,2.57,0.046,N/A,4000,R2S Hybrid,6
+8,Storm,All Road,Up,Hybrid,Sym,,5.258,N/A,2.666,,74,5.258,41,115,,2.57,0.046,N/A,4000,NRG Hybrid,5
+9,Storm,All Road SP,Short,Hybrid,Sym,,2.707,N/A,2.270,,58,2.707,76,134,,2.57,0.046,N/A,4000,NRG Hybrid,5
+10,Storm,Code Black,Up,Pearl,Asym,,4.672,3.696,1.570,,43,4.672,25,68,,2.5,0.058,0.02,Compound,R2S Pearl,6
+11,Storm,Dark Code,Up,Pearl,Asym,,5.459,3.401,2.513,,46,5.459,38,84,,2.5,0.058,0.02,1500 Polish,ReX Pearl,8
+12,Storm,Infinite Physix,Up,Pearl,Asym,,3.413,4.542,1.557,,49,3.413,33,82,,2.48,0.053,0.017,4000,ReX Pearl,8
+13,Storm,Equinox,Up,Pearl,Asym,,5.989,3.416,3.090,,49,5.989,44,93,,2.48,0.054,0.018,4000,A1S Pearl,6
+14,Storm,DNA Coil,Up,Pearl,Asym,,6.043,3.672,2.062,,49,6.043,29,78,,2.47,0.053,0.023,4000,EXO Pearl,7
+15,Storm,Physix Blackout,Short,Pearl,Asym,,3.284,5.526,1.568,,70,3.284,35,105,,2.47,0.055,0.018,4000,NeX Pearl,8
+16,Storm,Vitual Energy Blackout,Up,Pearl,Asym,,4.935,3.099,3.232,,42,4.935,53,95,,2.48,0.052,0.02,4000,ReX Pearl,7
+17,Roto Grip,Gremlin,Up,Pearl,Asym,,5.495,3.326,2.897,,46,5.495,44,90,,2.5,0.058,0.01,Polish,V-R1 Pearl,5
+18,Storm,Next Factor,Up,Pearl,Asym,,6.014,3.495,2.766,,49,6.014,40,89,,2.56,0.051,0.017,Polish,R3S Pearl,6
+19,Roto Grip,Exotic Gem #1,Up,Pearl,Asym,,4.794,3.986,1.815,,49,4.794,29,78,,2.47,0.053,0.016,Polish,MicroTrax Pearl,7
+20,Roto Grip,Exotic Gem #2,Down,Pearl,Asym,,4.419,5.119,3.849,,77,4.419,74,151,,2.47,0.053,0.016,Polish,MicroTrax Pearl,7
+21,Motiv,Evoke Hysteria,Up,Pearl,Asym,,6.711,4.787,3.499,,69,6.711,48,117,,2.48,0.05,0.015,4000,Propulsion MXV Pearl,7
+22,900 Global,Zen Gold Label,Up,Pearl,Sym,,6.043,N/A,2.062,,75,6.043,29,104,,2.49,0.051,N/A,Polish,Reserve Blend 801 Pearl,5
+23,Storm,Typhoon,Up,Pearl,Sym,,5.858,N/A,4.156,,75,5.858,61,136,,2.53,0.042,N/A,Polish,Reactor Pearl,5
+24,900 Global,Zen 25,Up,Pearl,Sym,,6.025,N/A,2.573,,75,6.025,37,112,,2.48,0.053,N/A,4000,Reserve Blend 83 Pearl,5
+25,900 Global,Ember,Up,Pearl,Sym,,6.297,N/A,1.780,,76,6.297,25,101,,2.49,0.044,N/A,Polish,Reserve Blend 82 Pearl,5
+26,Storm,HyRoad 40,Short,Pearl,Sym,,2.833,N/A,2.663,,63,2.833,90,153,,2.57,0.046,N/A,Polish,A1S Pearl,5
+27,Storm,Ion Pro,Down,Solid,Asym,,5.290,3.041,4.260,,46,5.290,68,114,,2.47,0.035,0.014,5000,TX-16 Solid,9
+28,900 Global,Zen Master #1,Up,Solid,Sym,,4.672,N/A,1.506,,72,4.672,24,96,,2.49,0.051,N/A,4000,S77 Response Solid,6
+29,900 Global,Zen Master #2,Up,Solid,Sym,,6.162,N/A,2.302,,76,6.162,33,109,,2.49,0.051,N/A,4000,S77 Response Solid,6
+30,Storm,Phaze 2,Up,Solid,Sym,,6.031,N/A,2.445,,75,6.031,35,110,,2.48,0.051,N/A,4000,TX-16 Solid,8
+31,Storm,Level,Up,Solid,Sym,,5.753,N/A,2.864,,75,5.753,42,117,,2.59,0.027,N/A,4000,RPM Solid,6
+32,Motiv,Venom Shock #1,Up,Solid,Sym,,5.871,N/A,2.977,,75,5.871,43,118,,2.48,0.034,N/A,4000,Turmoil MFS Solid,5
+33,Motiv,Venom Shock #2,Up,Solid,Sym,,6.245,N/A,3.056,,76,6.245,43,119,,2.48,0.034,N/A,4000,Turmoil MFS Solid,5
+34,Roto Grip,Hustle Camo,Up,Solid,Sym,,5.516,N/A,2.635,,75,5.516,39,114,,2.53,0.03,N/A,4000,VTC Solid,3
+35,Storm,ProMotion,Up,Solid,Sym,,5.753,N/A,2.864,,75,5.753,42,117,,2.52,0.049,N/A,4000,SPEC Solid,7`;
 
   function $(sel, root) {
     return (root || document).querySelector(sel);
@@ -326,6 +326,7 @@
     name: ['Ball Name'], brand: ['Brand'], cover: ['Cover'], core: ['Core'], rg: ['RG'], diff: ['Diff'], psa: ['PSA'],
     surface: ['Surface'], pin: ['Pin Location'], vlsPin: ['PAP#1'], vlsPsa: ['PSA#1'], vlsBuf: ['Val#1'],
     drill: ['Drill Angle'], dualPin: ['PAP'], val: ['Val'], total: ['Total Angle'],
+    coverName: ['Cover Name'], coverStrength: ['Cover Strength'],
   };
   function setFieldOn(row, names, value) {
     const keys = Object.keys(row); const want = normKey(names[0]);
@@ -720,17 +721,25 @@
     const coverLengthTerm = cd.l * coverInf;
     const coverBackendTerm = cd.b * coverInf;
 
+    // Cover first (v134): the USBC Ball Motion Study ranked the coverstock (chemistry + surface) as the biggest ball
+    // factor, ahead of the core and layout. Cover strength (1–10) plus surface now carry most of the hook and read;
+    // before, differential carried the most and also stood in for how strong the cover was.
+    const cs = ballCoverStrength(row);
+    const csN = clamp((cs.value - 1) / 9, 0, 1);
+
     let hook =
-      0.34 * diffN +
-      0.26 * rough +
-      0.16 * psaN +
-      0.14 * flareEff +
-      0.10 * (0.5 + coverStrengthTerm);
+      0.30 * rough +
+      0.26 * csN +
+      0.18 * diffN +
+      0.08 * psaN +
+      0.12 * flareEff +
+      0.06 * (0.5 + coverStrengthTerm);
 
     let length =
-      0.32 * rgN +
-      0.26 * (1 - rough) +
-      0.18 * (0.5 + coverLengthTerm) +
+      0.24 * rgN +
+      0.28 * (1 - rough) +
+      0.12 * (0.5 + coverLengthTerm) +
+      0.12 * (1 - csN) +
       0.14 * (1 - midFromLayout) +
       0.10 * (1 - diffN);
 
@@ -1228,6 +1237,56 @@
 
   function ballCover(row) {
     return String(getField(row, ['Cover', 'Coverstock', 'Cover Stock'], '')).trim();
+  }
+
+  // ---- Cover strength (1–10): how strong the coverstock itself is, on one cross-brand scale ----
+  // 10 = strongest heavy-oil solids, 7–8 upper performance, 5–6 mid, 3–4 entry reactive, 1–2 urethane/plastic.
+  // Sources: the makers' own scales where they publish one (Motiv's per-ball Hook number, 900 Global's Reserve Blend
+  // number), otherwise the cover's line/tier and bowling.com's hook rating. Cover names from bowwwl.com and maker spec sheets.
+  const COVER_LIB = {
+    'tx-16 solid': 9, 'rex pearl': 8, 'nex pearl': 8, 'nex hybrid': 7, 'exo pearl': 7, 'exo solid': 8, 's84 beta hybrid': 7, 'r2s deep hybrid': 7,
+    'microtrax pearl': 7, 'propulsion mxv pearl': 7, 'spec solid': 7, 'r2s hybrid': 6, 'r2s pearl': 6, 'a1s pearl': 6, 'r3s pearl': 6,
+    's77 response solid': 6, 'rpm solid': 6, 'nrg hybrid': 5, 'nrg 2 pearl': 5, 'v-r1 pearl': 5, 'reserve blend 801 pearl': 5, 'reactor pearl': 5,
+    'reserve blend 83 pearl': 5, 'reserve blend 82 pearl': 5, 'turmoil mfs solid': 5, 'coercion mfh hybrid': 4, 'hk22 savvy hook hybrid': 4, 'vtc solid': 3,
+  };
+  // Known balls (drilling variants like "#2" or "SP" share the ball's cover).
+  const BALL_COVER = {
+    'reality check': 'S84 Beta Hybrid', 'venom blue coral': 'Coercion MFH Hybrid', 'blue coral venom': 'Coercion MFH Hybrid', 'absolute': 'R2S Deep Hybrid',
+    'crown victory': 'HK22 Savvy Hook Hybrid', 'hyroad': 'R2S Hybrid', 'all road': 'NRG Hybrid', 'code black': 'R2S Pearl', 'dark code': 'ReX Pearl',
+    'infinite physix': 'ReX Pearl', 'equinox': 'A1S Pearl', 'dna coil': 'EXO Pearl', 'physix blackout': 'NeX Pearl', 'virtual energy blackout': 'ReX Pearl',
+    'vitual energy blackout': 'ReX Pearl', 'gremlin': 'V-R1 Pearl', 'next factor': 'R3S Pearl', 'exotic gem': 'MicroTrax Pearl', 'evoke hysteria': 'Propulsion MXV Pearl',
+    'zen gold label': 'Reserve Blend 801 Pearl', 'typhoon': 'Reactor Pearl', 'zen 25': 'Reserve Blend 83 Pearl', 'ember': 'Reserve Blend 82 Pearl',
+    'hyroad 40': 'A1S Pearl', 'ion pro solid': 'TX-16 Solid', 'zen master': 'S77 Response Solid', 'phaze 2': 'TX-16 Solid', 'phaze ii': 'TX-16 Solid',
+    'level': 'RPM Solid', 'venom shock': 'Turmoil MFS Solid', 'hustle camo': 'VTC Solid', 'promotion': 'SPEC Solid', 'pro motion': 'SPEC Solid',
+  };
+  const ballKey = (n) => String(n || '').toLowerCase().replace(/\s*(#\s*\d+|\bsp\b)\s*$/i, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  // Lists saved before v134 have no cover columns: a ball with the same brand and name as the bundled sample list picks up its values.
+  let BUNDLED_COVERS = null;
+  function bundledCover(row) {
+    if (!BUNDLED_COVERS) { BUNDLED_COVERS = {}; try { parseCSV(DEFAULT_DATABALLS_CSV).forEach(r => { BUNDLED_COVERS[(ballBrand(r) + '|' + ballName(r)).toLowerCase()] = { name: String(getField(r, ['Cover Name'], '')).trim(), strength: asNum(getField(r, ['Cover Strength'], '')) }; }); } catch (_e) {} }
+    return BUNDLED_COVERS[(ballBrand(row) + '|' + ballName(row)).toLowerCase()] || null;
+  }
+  function ballCoverName(row) {
+    const own = String(getField(row, ['Cover Name', 'CoverName', 'Coverstock Name'], '')).trim();
+    if (own) return own;
+    const b = bundledCover(row); if (b && b.name) return b.name;
+    return BALL_COVER[ballKey(ballName(row))] || '';
+  }
+  // { value: 1–10, source: 'ball' (typed on the ball) | 'cover' (from the cover name) | 'type' (solid/hybrid/pearl default) }
+  function ballCoverStrength(row) {
+    const own = asNum(getField(row, ['Cover Strength', 'CoverStrength'], ''));
+    if (Number.isFinite(own) && own >= 1 && own <= 10) return { value: own, source: 'ball' };
+    const bc = bundledCover(row); if (bc && Number.isFinite(bc.strength) && !String(getField(row, ['Cover Name'], '')).trim()) return { value: bc.strength, source: 'ball' };
+    const cn = ballCoverName(row).toLowerCase();
+    if (cn && COVER_LIB[cn] != null) return { value: COVER_LIB[cn], source: 'cover' };
+    const c = ballCover(row).toLowerCase();
+    const v = c.includes('solid') ? 6 : c.includes('hybrid') ? 5.5 : c.includes('pearl') ? 5 : c.includes('urethane') ? 3 : (c.includes('plastic') || c.includes('poly')) ? 1.5 : 5;
+    return { value: v, source: 'type' };
+  }
+  // Opens a search for this ball on bowwwl.com (cover, core and specs for most balls).
+  function bowwwlLink(row) {
+    const q = [ballBrand(row), ballName(row).replace(/\s*(#\s*\d+|\bSP\b)\s*$/i, '')].filter(Boolean).join(' ');
+    return 'https://www.google.com/search?q=' + encodeURIComponent('site:bowwwl.com ' + q);
   }
 
   function ballCore(row) {
@@ -1957,6 +2016,9 @@
     clearBallSurfaceOverride,
     surfaceToGrit,
     motionVector,
+    ballCoverName,
+    ballCoverStrength,
+    bowwwlLink,
     getField,
     editBall,
     parseInches,

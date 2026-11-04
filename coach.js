@@ -468,7 +468,7 @@
   const dist3 = (a, b) => Math.sqrt((a.hook - b.hook) ** 2 + (a.length - b.length) ** 2 + (a.backend - b.backend) ** 2);
   // Layer 4: cover, surface and core matter on their own, not just through the motion model.
   // Lower = better fit for the situation.
-  function coverFit(sit, row, ctx) {
+  function coverFit(sit, row, ctx, curRow) {
     const info = ctx.ballInfo ? ctx.ballInfo(row) : null;
     if (!info) return 0;
     const cover = String(info.cover || '').toLowerCase();
@@ -488,6 +488,15 @@
       if (pearl || polished) p -= 0.04; if (asym) p -= 0.02; if (solid && grit <= 2000) p += 0.06;
     } else if (sit === 'carryStrong') { // use some energy early: sanded, smoother
       if (polished && asym) p += 0.06; if (!polished && !asym) p -= 0.04;
+    }
+    // Cover strength (1–10): don't go to a stronger cover when the ball needs to get through the front cleaner,
+    // or to a weaker one when it needs to read sooner.
+    if (curRow) {
+      const cur = ctx.ballInfo(curRow) || {}, sa = Number(cur.strength), sb = Number(info.strength);
+      if (Number.isFinite(sa) && Number.isFinite(sb)) {
+        if ((sit === 'early' || sit === 'carryWeak' || sit === 'mud') && sb >= sa + 2) p += 0.08;
+        if ((sit === 'late' || sit === 'carryStrong') && sb <= sa - 2) p += 0.08;
+      }
     } else if (sit === 'mud') {       // smooth, predictable: sanded symmetric, not shiny asym
       if (polished && pearl) p += 0.08; if (asym) p += 0.04; if (!asym && !polished) p -= 0.05;
     }
@@ -504,8 +513,9 @@
       const kind = (c) => { c = String(c || '').toLowerCase(); return c.includes('solid') ? 'solid' : c.includes('hybrid') ? 'hybrid' : c.includes('pearl') ? 'pearl' : c.includes('urethane') ? 'urethane' : ''; };
       const ka = kind(a.cover), kb = kind(b.cover), ga = Number(a.grit) || 4000, gb = Number(b.grit) || 4000;
       const surf = (g) => g >= 4500 ? 'polished' : `${g} grit`;
-      const parts = [];
-      if (ka && kb && ka !== kb) parts.push(`${kb} cover vs ${ka}`);
+      const parts = [], sa = Number(a.strength), sb = Number(b.strength);
+      if (Number.isFinite(sa) && Number.isFinite(sb) && Math.abs(sb - sa) >= 2) parts.push(`${sb > sa ? 'stronger' : 'cleaner'} cover (${b.coverName || kb || 'cover'} ${sb}/10 vs ${a.coverName || ka || 'cover'} ${sa}/10)`);
+      else if (ka && kb && ka !== kb) parts.push(`${kb} cover vs ${ka}`);
       if (Math.abs(ga - gb) >= 1000) parts.push(`${surf(gb)} vs ${surf(ga)}`);
       if (parts.length) return `Why: ${parts.join(', ')}. Cover and surface drive most of the read.`;
       return 'Why: same kind of cover and surface, so the difference is the core and layout. Expect a smaller change.';
@@ -534,7 +544,7 @@
         const lt = LANE_TIMING[sit];
         if (lt === 'early' && v.length <= cv.length + 0.02) continue; // reading too early -> need one that reads later
         if (lt === 'late' && v.length >= cv.length - 0.02) continue;  // reading too late -> need one that reads earlier
-        const fit = coverFit(sit, b.row, ctx);
+        const fit = coverFit(sit, b.row, ctx, cur.row);
         if (fit >= 0.15) continue;            // clearly the wrong kind of ball for this problem
         const sc = d + fit;
         if (!best || sc < best.d) best = { name: b.name, d: sc, row: b.row };

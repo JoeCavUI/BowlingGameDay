@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Arsenal</title>
-  <link rel="stylesheet" href="styles.css?v=133" />
+  <link rel="stylesheet" href="styles.css?v=134" />
 </head>
 <body data-page="arsenal">
   <div class="navlinks"></div>
@@ -368,12 +368,12 @@
     </div>
   </div>
 
-  <script src="app.js?v=133"></script>
-  <script src="coach.js?v=133"></script>
-  <script src="chart.js?v=133"></script>
-  <script src="pinpal.js?v=133"></script>
-  <script src="history.js?v=133"></script>
-  <script src="plan.js?v=133"></script>
+  <script src="app.js?v=134"></script>
+  <script src="coach.js?v=134"></script>
+  <script src="chart.js?v=134"></script>
+  <script src="pinpal.js?v=134"></script>
+  <script src="history.js?v=134"></script>
+  <script src="plan.js?v=134"></script>
   <script>
     BT.renderNav('arsenal');
 
@@ -835,7 +835,9 @@
         <div class="bs-grid">
           ${cell('Core', esc(core || '—'))}${cell('RG', plain(g(['RG'])))}${cell('Differential', plain(g(['Diff', 'Differential'])))}
           ${cell('Intermediate diff', sym || !num(psa) ? '— (symmetric)' : plain(psa))}${cell('Cover', esc(g(['Cover']) || '—'))}${cell('Surface', esc(surf))}
+          ${(() => { const cs = BT.ballCoverStrength(row), cn = BT.ballCoverName(row); return cell('Coverstock', esc(cn || '—'), true) + cell('Cover strength', `${+cs.value.toFixed(1)}/10${cs.source === 'type' ? ' <span class="dim">(from cover type: add the coverstock to sharpen)</span>' : ''}`, true); })()}
         </div>
+        <div class="small" style="margin-top:6px"><a href="${BT.bowwwlLink(row)}" target="_blank" rel="noopener" style="color:var(--accent)">🔎 Look up this ball on bowwwl.com</a> (coverstock, core and specs)</div>
         <div class="bs-h">Layout</div>
         <div class="bs-grid">
           ${cell('VLS (pin-to-PAP × PSA-to-PAP × pin buffer)', `${inch(vPin)} × ${inch(vPsa)} × ${inch(vBuf)}`, true)}${cell('Dual angle (drill × pin-to-PAP × VAL)', `${deg(drill)} × ${inch(pin2)} × ${deg(valA)}`, true)}
@@ -860,7 +862,9 @@
           ${sel('beCover', 'Cover', g(['Cover']), ['Solid', 'Pearl', 'Hybrid', 'Urethane', 'Plastic'])}${sel('beCore', 'Core', coreV, ['Sym', 'Asym'])}
           ${f('beRG', 'RG', g(['RG']), 'inputmode="decimal"')}${f('beDiff', 'Differential', g(['Diff', 'Differential']), 'inputmode="decimal"')}
           ${f('bePSA', 'Intermediate diff', g(['PSA']), 'inputmode="decimal" placeholder="N/A if symmetric"')}${f('beSurf', 'Surface (spec)', g(['Surface']), 'placeholder="e.g. 3000, 1500 Polish"')}
+          ${f('beCoverName', 'Coverstock', BT.ballCoverName(row), 'placeholder="e.g. TX-16 Solid"')}${f('beCoverStr', 'Cover strength (1–10)', g(['Cover Strength']), `inputmode="decimal" placeholder="${+BT.ballCoverStrength(row).value.toFixed(1)} (app's estimate)"`)}
         </div>
+        <div class="small dim" style="margin-top:4px">Cover strength: 10 = strongest heavy-oil solids, 7–8 upper performance, 5–6 mid, 3–4 entry level, 1–2 urethane or plastic. Leave it blank and the app uses the coverstock name, or the cover type. <a href="${BT.bowwwlLink(row)}" target="_blank" rel="noopener" style="color:var(--accent)">Look up the coverstock on bowwwl.com</a>.</div>
         <div class="bs-h">Layout (inches; 4 1/2 is fine)</div>
         <div class="be-grid">
           ${f('beVPin', 'Pin-to-PAP', g(['PAP#1']) || g(['PAP']))}${f('beVPsa', 'PSA-to-PAP', g(['PSA#1']))}
@@ -879,7 +883,8 @@
         const L = { vlsPin: inch(v('beVPin')), vlsPsa: inch(v('beVPsa')), vlsBuf: inch(v('beVBuf')) };
         Object.entries(L).forEach(([k, x]) => { if (x === null) bad.push({ vlsPin: 'Pin-to-PAP', vlsPsa: 'PSA-to-PAP', vlsBuf: 'Pin buffer' }[k]); });
         if (bad.length) { BT.$('#beMsg').textContent = `Check ${bad.join(', ')}: use a number like 4.5 or 4 1/2.`; return; }
-        const patch = { name: v('beName'), brand: v('beBrand'), cover: v('beCover'), core: v('beCore'), rg: v('beRG'), diff: v('beDiff'), psa: v('bePSA') || 'N/A', surface: v('beSurf'), pin: v('bePinLoc'), drill: v('beDrill'), val: v('beVal') };
+        const patch = { name: v('beName'), brand: v('beBrand'), cover: v('beCover'), core: v('beCore'), rg: v('beRG'), diff: v('beDiff'), psa: v('bePSA') || 'N/A', surface: v('beSurf'), pin: v('bePinLoc'), drill: v('beDrill'), val: v('beVal'), coverName: v('beCoverName'), coverStrength: v('beCoverStr') };
+        { const cs = v('beCoverStr'); if (cs && !(Number(cs) >= 1 && Number(cs) <= 10)) { BT.$('#beMsg').textContent = 'Cover strength is a number from 1 to 10.'; return; } }
         if (L.vlsPin) patch.vlsPin = L.vlsPin; if (L.vlsPsa) patch.vlsPsa = L.vlsPsa; if (L.vlsBuf) patch.vlsBuf = L.vlsBuf;
         const r = BT.editBall(nm, patch);
         if (!r.ok) { BT.$('#beMsg').textContent = r.msg; return; }
