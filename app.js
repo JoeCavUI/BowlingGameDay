@@ -48,8 +48,8 @@
 25,900 Global,Ember,Up,Pearl,Sym,,6.297,N/A,1.780,,76,6.297,25,101,,2.49,0.044,N/A,Polish,Reserve Blend 82 Pearl,5
 26,Storm,HyRoad 40,Short,Pearl,Sym,,2.833,N/A,2.663,,63,2.833,90,153,,2.57,0.046,N/A,Polish,A1S Pearl,5
 27,Storm,Ion Pro,Down,Solid,Asym,,5.290,3.041,4.260,,46,5.290,68,114,,2.47,0.035,0.014,5000,TX-16 Solid,9
-28,900 Global,Zen Master #1,Up,Solid,Sym,,4.672,N/A,1.506,,72,4.672,24,96,,2.49,0.051,N/A,4000,S77 Response Solid,6
-29,900 Global,Zen Master #2,Up,Solid,Sym,,6.162,N/A,2.302,,76,6.162,33,109,,2.49,0.051,N/A,4000,S77 Response Solid,6
+28,900 Global,Zen Master #1,Up,Solid,Sym,,4.672,N/A,1.506,,72,4.672,24,96,,2.49,0.051,N/A,4000,S77 Response Solid,7
+29,900 Global,Zen Master #2,Up,Solid,Sym,,6.162,N/A,2.302,,76,6.162,33,109,,2.49,0.051,N/A,4000,S77 Response Solid,7
 30,Storm,Phaze 2,Up,Solid,Sym,,6.031,N/A,2.445,,75,6.031,35,110,,2.48,0.051,N/A,4000,TX-16 Solid,8
 31,Storm,Level,Up,Solid,Sym,,5.753,N/A,2.864,,75,5.753,42,117,,2.59,0.027,N/A,4000,RPM Solid,6
 32,Motiv,Venom Shock #1,Up,Solid,Sym,,5.871,N/A,2.977,,75,5.871,43,118,,2.48,0.034,N/A,4000,Turmoil MFS Solid,5
@@ -1246,7 +1246,7 @@
   const COVER_LIB = {
     'tx-16 solid': 9, 'rex pearl': 8, 'nex pearl': 8, 'nex hybrid': 7, 'exo pearl': 7, 'exo solid': 8, 's84 beta hybrid': 7, 'r2s deep hybrid': 7,
     'microtrax pearl': 7, 'propulsion mxv pearl': 7, 'spec solid': 7, 'r2s hybrid': 6, 'r2s pearl': 6, 'a1s pearl': 6, 'r3s pearl': 6,
-    's77 response solid': 6, 'rpm solid': 6, 'nrg hybrid': 5, 'nrg 2 pearl': 5, 'v-r1 pearl': 5, 'reserve blend 801 pearl': 5, 'reactor pearl': 5,
+    's77 response solid': 7, 'rpm solid': 6, 'nrg hybrid': 5, 'nrg 2 pearl': 5, 'v-r1 pearl': 5, 'reserve blend 801 pearl': 5, 'reactor pearl': 5,
     'reserve blend 83 pearl': 5, 'reserve blend 82 pearl': 5, 'turmoil mfs solid': 5, 'coercion mfh hybrid': 4, 'hk22 savvy hook hybrid': 4, 'vtc solid': 3,
   };
   // Known balls (drilling variants like "#2" or "SP" share the ball's cover).
