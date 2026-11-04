@@ -401,7 +401,7 @@
   function moveText(kind, sit, prof, pat, ball, step, angleClass) {
     if (kind === 'Angle') return angleText(sit, prof, angleClass);
     if (kind === 'Aim') return aimText(sit, prof, pat, step);
-    if (kind === 'Equipment') return ball ? `Switch to ${ball} for ${NEED[sit].say}.` : '';
+    if (kind === 'Equipment') return ball ? `Switch to ${ball} for ${NEED[sit].say}.${lastBallWhy ? ' ' + lastBallWhy : ''}` : '';
     if (sit === 'mud' && kind === 'Release') return 'Take a little side roll off for a smoother, more forward-roll shape that won\'t try to plant in the mud.';
     if (kind === 'Speed') {
       if (sit === 'early') return 'Add a touch of speed (about ½ mph) so the ball gets down the lane before it reads.';
@@ -494,6 +494,24 @@
     return p;
   }
 
+  // Why this ball: say which lever the change pulls. Cover and surface first (the biggest factors in the
+  // USBC Ball Motion Study), then core/layout as the smaller change.
+  let lastBallWhy = '';
+  function ballWhy(ctx, curRow, sugRow) {
+    try {
+      if (!ctx.ballInfo) return '';
+      const a = ctx.ballInfo(curRow) || {}, b = ctx.ballInfo(sugRow) || {};
+      const kind = (c) => { c = String(c || '').toLowerCase(); return c.includes('solid') ? 'solid' : c.includes('hybrid') ? 'hybrid' : c.includes('pearl') ? 'pearl' : c.includes('urethane') ? 'urethane' : ''; };
+      const ka = kind(a.cover), kb = kind(b.cover), ga = Number(a.grit) || 4000, gb = Number(b.grit) || 4000;
+      const surf = (g) => g >= 4500 ? 'polished' : `${g} grit`;
+      const parts = [];
+      if (ka && kb && ka !== kb) parts.push(`${kb} cover vs ${ka}`);
+      if (Math.abs(ga - gb) >= 1000) parts.push(`${surf(gb)} vs ${surf(ga)}`);
+      if (parts.length) return `Why: ${parts.join(', ')}. Cover and surface drive most of the read.`;
+      return 'Why: same kind of cover and surface, so the difference is the core and layout. Expect a smaller change.';
+    } catch (_e) { return ''; }
+  }
+
   function suggestBall(sit, ctx, prof) {
     try {
       const m = ctx.motion;
@@ -519,9 +537,10 @@
         const fit = coverFit(sit, b.row, ctx);
         if (fit >= 0.15) continue;            // clearly the wrong kind of ball for this problem
         const sc = d + fit;
-        if (!best || sc < best.d) best = { name: b.name, d: sc };
+        if (!best || sc < best.d) best = { name: b.name, d: sc, row: b.row };
       }
-      return (best && best.d <= 0.30) ? best.name : '';
+      if (best && best.d <= 0.30) { lastBallWhy = ballWhy(ctx, cur.row, best.row); return best.name; }
+      return '';
     } catch (_e) { return ''; }
   }
 
@@ -1432,6 +1451,7 @@
     const decide = (sit, headline, why, lens) => {
       { const tN = W.slice(-3).filter(c => c.shot && c.shot.swing === 'tight').length; if (tN >= 2) res.notes.push(`😬 Your swing felt tight on ${tN} of your last ${W.slice(-3).length}: the move below should also give your arm room to relax.`); }
       res.lens = lens || '';
+      lastBallWhy = '';
       const ball = suggestBall(sit, ctx, prof);
       const step = (tried.has('Aim') && lastChange >= 0) ? 2 : 1;
       // 🧭 Which question is the answer: right ball or right spot?
@@ -1489,7 +1509,7 @@
       res.why = why + ratingNote;
       res.next = secondText ? `If 2 more good shots say the same thing, next: ${ELEMENT[second.kind]}: ${secondText}` : '';
       if (!ball && (ctx.setBalls || []).length >= 2 && ['late', 'carryWeak', 'early', 'overunder', 'carryStrong'].includes(sit)) {
-        res.notes.push(`Nothing else in tonight's bag gives ${NEED[sit].say} compared with ${ctx.currentBall || 'your current ball'}, so stick with line and speed moves.`);
+        res.notes.push(`Nothing else in tonight's bag gives ${NEED[sit].say} compared with ${ctx.currentBall || 'your current ball'}, so stick with line and speed moves.${(sit === 'late' || sit === 'early') ? ` If this keeps happening, a surface change on one ball is the cheapest equipment fix (${sit === 'late' ? 'rougher' : 'smoother or polished'}): cover and surface drive most of the read.` : ''}`);
       }
       res.ballSuggestion = (first && first.kind === 'Equipment') ? ball : '';
       res.moveKind = first ? first.kind : '';
