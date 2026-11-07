@@ -58,6 +58,10 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v135-beta72: VLS ⇄ Dual angle
+- Arsenal (Edit a ball, Add a ball): type Storm VLS (pin-to-PAP × PSA-to-PAP × pin buffer) or dual angle (drill × pin-to-PAP × VAL) and the app fills in the other (spherical conversion on a 27" ball).
+- Symmetric balls use a 5¾" pin-to-PSA (PSA ends up in the thumb hole after drilling, per Mo Pinel); asymmetric uses the spec-sheet pin-to-PSA.
+
 ## Changes in v132-beta69: Shorter Game Plan, energy vs angle, tidy Tonight
 - Game Plan about half as long: short bullets, no repeated caveats (surface rule, rule-of-31 disclaimers), top-4 lists, one-line trait trends, two-line bag jobs.
 - Night review: ⚖️ Energy vs angle (good shots by where you stood: pocket, carry, rolled out, turning hard).
