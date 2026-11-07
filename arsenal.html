@@ -225,8 +225,10 @@
       <div class="grid-3" style="gap:10px;margin-top:6px">
         <div><div class="small dim">Drill angle</div><input class="input" id="wiDrill" inputmode="decimal" placeholder="e.g., 50" /></div>
         <div><div class="small dim">VAL angle</div><input class="input" id="wiValAngle" inputmode="decimal" placeholder="e.g., 40" /></div>
-        <div class="small dim" style="align-self:end">Inches can be 4.5 or 4 1/2.</div>
+        <div><div class="small dim">Pin-to-PSA</div><input class="input" id="wiPinPsa" placeholder="6 3/4 (sym)" /></div>
       </div>
+      <div class="small" id="wiConv" style="margin-top:6px;color:var(--accent)"></div>
+      <div class="small dim" style="margin-top:4px">Type either VLS or dual angle: the other fills in. Inches can be 4.5 or 4 1/2. Pin-to-PSA is only for the conversion (6¾" for symmetric cores; asymmetric: from the ball's spec sheet).</div>
 
       <div class="hr-split" style="margin-top:14px"></div>
       <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-top:10px">
@@ -870,12 +872,15 @@
           ${f('beVPin', 'Pin-to-PAP', g(['PAP#1']) || g(['PAP']))}${f('beVPsa', 'PSA-to-PAP', g(['PSA#1']))}
           ${f('beVBuf', 'Pin buffer', g(['Val#1']))}${sel('bePinLoc', 'Pin location', g(['Pin Location', 'PinLocation']), ['Up', 'Down', 'Short'])}
           ${f('beDrill', 'Drill angle (°)', g(['Drill Angle', 'DrillAngle']), 'inputmode="decimal"')}${f('beVal', 'VAL angle (°)', g(['Val']), 'inputmode="decimal"')}
+          ${f('bePinPsa', 'Pin-to-PSA (for converting)', /asym/i.test(core) ? '' : '6 3/4', 'placeholder="6 3/4 (asym: from the spec sheet)"')}
         </div>
-        <div class="small dim" style="margin-top:6px">Pin-to-PAP is used for both VLS and dual angle. Total angle = drill + VAL. Renaming keeps this ball's sliders, retired status, bags, Game Day shots and PinPal matches.</div>
+        <div class="small" id="beConv" style="margin-top:6px;color:var(--accent)"></div>
+        <div class="small dim" style="margin-top:6px">Type either VLS or dual angle: the app fills in the other. Pin-to-PAP is shared. Total angle = drill + VAL. Renaming keeps this ball's sliders, retired status, bags, Game Day shots and PinPal matches.</div>
         <div class="btn-row"><button class="btn" type="button" id="beSave">Save changes</button><button class="btn secondary" type="button" id="beCancel">Cancel</button></div>
         <div class="small" id="beMsg" style="margin-top:6px"></div>`;
       const inch = (s) => { const t = String(s || '').trim().replace(/["″]/g, ''); if (!t) return ''; const m = t.match(/^(\d+)?[\s-]*(?:(\d+)\/(\d+))?$/); if (m && (m[1] || m[2])) return String(+((Number(m[1] || 0) + (m[2] ? Number(m[2]) / Number(m[3]) : 0)).toFixed(3))); const n = Number(t); return Number.isFinite(n) ? String(n) : null; };
       BT.$('#beCancel').addEventListener('click', () => renderTuneSpecs(nm, row));
+      try { BT.wireLayoutConvert({ pin: BT.$('#beVPin'), psa: BT.$('#beVPsa'), buf: BT.$('#beVBuf'), drill: BT.$('#beDrill'), val: BT.$('#beVal'), pinPsa: BT.$('#bePinPsa'), note: BT.$('#beConv') }); } catch (_e) {}
       try { BT.$('#beName').focus(); } catch (_e) {}
       BT.$('#beSave').addEventListener('click', () => {
         const v = (id) => BT.$('#' + id).value.trim();
@@ -2233,6 +2238,7 @@ function removeRowByName(name, type) {
     window.addEventListener('hashchange', show);
     show();
   })();
-  </script>
+  try { BT.wireLayoutConvert({ pin: BT.$('#wiPinToPAP'), psa: BT.$('#wiPSAToPAP'), buf: BT.$('#wiPinBuffer'), drill: BT.$('#wiDrill'), val: BT.$('#wiValAngle'), pinPsa: BT.$('#wiPinPsa'), note: BT.$('#wiConv') }); } catch (_e) {}
+</script>
 </body>
 </html>

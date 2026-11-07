@@ -281,6 +281,48 @@
 
   // Retired balls stay in your history but leave your active arsenal (chart, bags, Coach).
   // Inches: "4.5", "4 1/2", "4-1/2", "4 1/2\"" → 4.5 ; blank → null ; junk → NaN
+  // 📐 Storm VLS ⇄ Dual Angle. Same three points on the ball, two notations (spherical trig on a 27" ball).
+  //   VLS: pin-to-PAP × PSA-to-PAP × pin buffer (pin to VAL).  Dual angle: drill angle (at the pin, PAP line → PSA line) × pin-to-PAP × VAL angle (at the PAP).
+  //   pin buffer: sin(b) = sin(p)·sin(VAL);  PSA-to-PAP: cos(q) = cos(p)cos(m) + sin(p)sin(m)cos(drill), m = pin-to-PSA (6¾" for symmetric cores).
+  const BALL_R = 27 / (2 * Math.PI), D2R = Math.PI / 180;
+  function daToVls(drill, pin, val, pinPsa) {
+    const m = (Number(pinPsa) || 6.75) / BALL_R, p = Number(pin) / BALL_R;
+    if (![drill, pin, val].every(x => Number.isFinite(Number(x))) || p <= 0) return null;
+    const b = Math.asin(Math.min(1, Math.sin(p) * Math.sin(Number(val) * D2R)));
+    const q = Math.acos(Math.max(-1, Math.min(1, Math.cos(p) * Math.cos(m) + Math.sin(p) * Math.sin(m) * Math.cos(Number(drill) * D2R))));
+    const r8 = (x) => Math.round(x * BALL_R * 8) / 8; // to the eighth, the way a pin buffer is quoted
+    return { pin: Number(pin), psa: r8(q), buf: r8(b) };
+  }
+  function vlsToDa(pin, psa, buf, pinPsa) {
+    const m = (Number(pinPsa) || 6.75) / BALL_R, p = Number(pin) / BALL_R, q = Number(psa) / BALL_R, b = Number(buf) / BALL_R;
+    if (![pin, psa, buf].every(x => Number.isFinite(Number(x))) || p <= 0) return null;
+    const sv = Math.sin(b) / Math.sin(p), cd = (Math.cos(q) - Math.cos(p) * Math.cos(m)) / (Math.sin(p) * Math.sin(m));
+    if (sv > 1.0001 || Math.abs(cd) > 1.0001) return null; // those three distances can't all be true on one ball
+    return { drill: Math.round(Math.acos(Math.max(-1, Math.min(1, cd))) / D2R), pin: Number(pin), val: Math.round(Math.asin(Math.min(1, sv)) / D2R) };
+  }
+  // Wire a form: type either notation, the other fills in (and stays yours once you type in it).
+  function wireLayoutConvert(f) {
+    const num = (el) => { const v = parseInches(el && el.value); return Number.isFinite(v) ? v : NaN; };
+    const deg = (el) => { const v = parseFloat(String(el && el.value || '').replace(/[°\s]/g, '')); return Number.isFinite(v) ? v : NaN; };
+    const fmtIn = (x) => { const w = Math.floor(x + 1e-9), fr = Math.round((x - w) * 8); return fr === 0 ? String(w) : fr === 8 ? String(w + 1) : `${w ? w + ' ' : ''}${{ 1: '1/8', 2: '1/4', 3: '3/8', 4: '1/2', 5: '5/8', 6: '3/4', 7: '7/8' }[fr]}`; };
+    let last = null; // 'vls' | 'da'
+    const say = (t) => { if (f.note) f.note.textContent = t; };
+    const pinPsa = () => { const v = num(f.pinPsa); return Number.isFinite(v) && v > 0 ? v : 6.75; };
+    const fill = (el, v) => { if (!el) return; if (el.value.trim() && !el.dataset.auto) return false; el.value = v; el.dataset.auto = '1'; return true; };
+    const run = () => {
+      const p = num(f.pin); if (!Number.isFinite(p)) { say(''); return; }
+      if (last === 'vls') { const r = vlsToDa(p, num(f.psa), num(f.buf), pinPsa()); if (!r) { if (Number.isFinite(num(f.psa)) && Number.isFinite(num(f.buf))) say('Those VLS numbers don\'t fit together on one ball: check them.'); return; }
+        const a = fill(f.drill, String(r.drill)), b = fill(f.val, String(r.val)); if (a || b) say(`↳ Dual angle: ${r.drill}° × ${fmtIn(p)}" × ${r.val}° (pin-to-PSA ${fmtIn(pinPsa())}")`); }
+      if (last === 'da') { const r = daToVls(deg(f.drill), p, deg(f.val), pinPsa()); if (!r) return;
+        const a = fill(f.psa, fmtIn(r.psa)), b = fill(f.buf, fmtIn(r.buf)); if (a || b) say(`↳ VLS: ${fmtIn(p)}" × ${fmtIn(r.psa)}" × ${fmtIn(r.buf)}" (pin-to-PSA ${fmtIn(pinPsa())}")`); }
+    };
+    const own = (el, side) => el && el.addEventListener('input', () => { delete el.dataset.auto; last = side; run(); });
+    own(f.psa, 'vls'); own(f.buf, 'vls'); own(f.drill, 'da'); own(f.val, 'da');
+    if (f.pin) f.pin.addEventListener('input', run);
+    if (f.pinPsa) f.pinPsa.addEventListener('input', () => { [f.psa, f.buf, f.drill, f.val].forEach(el => { if (el && el.dataset.auto) el.value = ''; }); run(); });
+    // Start: whichever side is complete fills the empty side.
+    if (Number.isFinite(num(f.psa)) && Number.isFinite(num(f.buf))) { last = 'vls'; run(); } else if (Number.isFinite(deg(f.drill)) && Number.isFinite(deg(f.val))) { last = 'da'; run(); }
+  }
   function parseInches(s) {
     const t = String(s == null ? '' : s).trim().replace(/["″]/g, '');
     if (!t) return null;
@@ -2021,7 +2063,7 @@
     bowwwlLink,
     getField,
     editBall,
-    parseInches,
+    parseInches, daToVls, vlsToDa, wireLayoutConvert,
     layoutColumns,
     deleteBall,
     motionDistance,
