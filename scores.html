@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Scores</title>
-  <link rel="stylesheet" href="styles.css?v=137" />
+  <link rel="stylesheet" href="styles.css?v=138" />
 </head>
 <body data-page="scores">
   <div class="navlinks"></div>
@@ -139,15 +139,15 @@
     </div>
   </div>
 
-  <script src="app.js?v=137"></script>
-  <script src="coach.js?v=137"></script>
-  <script src="eyes.js?v=137"></script>
-  <script src="pinpal.js?v=137"></script>
-  <script src="history.js?v=137"></script>
-  <script src="stats.js?v=137"></script>
-  <script src="replay.js?v=137"></script>
-  <script src="trends.js?v=137"></script>
-  <script src="season.js?v=137"></script>
+  <script src="app.js?v=138"></script>
+  <script src="coach.js?v=138"></script>
+  <script src="eyes.js?v=138"></script>
+  <script src="pinpal.js?v=138"></script>
+  <script src="history.js?v=138"></script>
+  <script src="stats.js?v=138"></script>
+  <script src="replay.js?v=138"></script>
+  <script src="trends.js?v=138"></script>
+  <script src="season.js?v=138"></script>
   <script>
     BT.renderNav('scores');
     // 🗂️ Scores: menu first, then History (search your PinPal games) or Game Day nights (review each night).
@@ -622,6 +622,13 @@
       // ⚖️ Energy vs angle by how deep you stood
       let energy = null; try { energy = BTCoach.energyAngle(real, lefty); } catch (_e) {}
       if (energy && energy.text) T.push({ k: 'Energy vs angle', t: energy.text });
+      // 🔔 Carry over/under: ringing AND flat corner pins on good shots from about the same line (surface talk is fine here, after the night)
+      { let mix = null; try { const P = BT.lsGet('bt_oil_patterns_v1', []) || []; const pt = P.find(p => p.name === s.pattern) || null; mix = window.BTEyes && BTEyes.tenMix ? BTEyes.tenMix(real, lefty, pt && pt.length) : null; } catch (_e) {}
+        if (mix) { const deep = lefty ? 'right' : 'left', outd = lefty ? 'left' : 'right';
+          const z = mix.zone === 'outside' ? `Your breakpoint (about ${mix.bp}) was well outside the exit board (about ${mix.exB} on ${mix.patLen} ft): the ball finished out in the dry. Next time start 2 and 1 ${deep}.`
+            : mix.zone === 'inside' ? `Your breakpoint (about ${mix.bp}) was at or inside the exit board (about ${mix.exB} on ${mix.patLen} ft): it turned in the mud. Next time let it get further out (2 and 1 ${outd}).`
+            : mix.lean === 'flat' ? `Mostly flat: start a little deeper (${deep}).` : mix.lean === 'ring' ? `Mostly ringing: start a little straighter (${outd}).` : '';
+          T.push({ k: 'Carry over/under', t: `${mix.ring} ringing and ${mix.flat} flat ${mix.pin}s on good shots from about the same line (around ${mix.feet} at the feet). The line was close; the ball's reaction wasn't repeating. ${z} Equipment: a smoother, more predictable shape helps here: a symmetric ball, or knock the shine down a step on the ball you use.` }); } }
       // 🎯 Corner-pin spares (10 for righties, 7 for lefties): makes and which way you miss
       { let cs = null; try { cs = window.BTEyes ? BTEyes.cornerSpares(real, lefty) : null; } catch (_e) {}
         if (cs && (cs.att || cs.missed)) { const noted = cs.channel + cs.inside + cs.thin;

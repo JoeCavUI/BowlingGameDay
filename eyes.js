@@ -153,9 +153,11 @@
     let lm = null; try { lm = laneMap(house, lanes, sessions); } catch (_e) {}
     let cs = null; try { cs = cornerSpares(use.flatMap(s => s.shots || []), lefty); } catch (_e) {}
     let tough = null; try { const all = use.flatMap(s => s.shots || []); tough = lanes ? tonightTough(all, lanes) : null; } catch (_e) {}
+    let mix = null; try { const pl = (() => { const P = (root.BT && BT().lsGet) ? (BT().lsGet('bt_oil_patterns_v1', []) || []) : []; const pn = (use.find(s => s.pattern) || {}).pattern; const m = P.find(p => pn && p.name === pn && p.length) || P.find(p => String(p.center || '').toLowerCase().replace(/[^a-z0-9]/g, '') === hk && p.length); return m ? Number(m.length) : null; })();
+      const per = use.map(s => tenMix(s.shots, lefty, pl)).filter(Boolean); if (per.length >= 2) { const all = tenMix(use.flatMap(s => s.shots || []), lefty, pl); if (all) mix = Object.assign(all, { nights: per.length, of: use.length }); } } catch (_e) {}
     const moves = rows.filter(r => r.mv), worked = moves.filter(r => r.mv.ok);
     const avgMove = moves.length ? { g: Math.round(moves.reduce((a, r) => a + r.mv.g, 0) / moves.length), deeper: moves.filter(r => deep(r.mv.d) === 'deeper').length } : null;
-    return { house, lanes, pair: onPair.length > 0, nights: rows, lm, cs, tough, moves, worked, avgMove, deep };
+    return { house, lanes, pair: onPair.length > 0, nights: rows, lm, cs, tough, moves, worked, avgMove, deep, mix };
   }
 
   function houseBookHtml(hb, lefty, opt) {
@@ -169,9 +171,35 @@
     if (!opt.noLines) [2, 3].forEach(g => { const b = hb.lm && hb.lm.byGame[g]; if (b && (!best || b.feet !== best.feet || b.arrows !== best.arrows || b.ball !== best.ball)) L.push(`<li><b>Game ${g}:</b> ${esc(b.ball)} ${esc(b.feet)}/${esc(b.arrows)} has worked best (${b.x} in ${b.n}).</li>`); });
     if (hb.avgMove) L.push(`<li><b>First move:</b> usually in game ${hb.avgMove.g}; ${hb.avgMove.deeper} of ${hb.moves.length} nights you went deeper. ${hb.worked.length} of ${hb.moves.length} first moves worked (2 of the next 3 in the pocket).</li>`);
     if (hb.tough && hb.tough.tough) L.push(`<li><b>Lanes:</b> ${esc(hb.tough.tough.l)} has been tougher ${hb.tough.kind === 'pocket' ? 'to get to the pocket' : 'to strike'} (pocket ${hb.tough.tough.p}/${hb.tough.tough.n} vs ${hb.tough.easy.p}/${hb.tough.easy.n}).</li>`);
+    if (hb.mix) { const m = hb.mix, deepD = lefty ? 'right' : 'left', outD = lefty ? 'left' : 'right';
+      const where = m.zone === 'outside' ? ` Your breakpoint (about board ${m.bp}) is well outside the exit board (about ${m.exB} on ${m.patLen} ft), so the ball is finishing out in the dry: start 2 and 1 ${deepD} of your usual line.`
+        : m.zone === 'inside' ? ` Your breakpoint (about board ${m.bp}) is at or inside the exit board (about ${m.exB} on ${m.patLen} ft): the ball is turning in the mud. Let it travel further out before it turns.`
+        : m.lean === 'flat' ? ` Mostly flat: start a little deeper (${deepD}) so it keeps its energy.` : m.lean === 'ring' ? ` Mostly ringing: start a little straighter (${outD}).` : '';
+      L.push(`<li><b>⚠️ Carry over/under:</b> ringing and flat ${m.pin}s on good shots from the same line (about ${m.feet} at the feet) on ${m.nights} of ${m.of} nights: ${m.ring} ringing, ${m.flat} flat. The line is close; the reaction isn't repeating.${where} On Game Day: don't chase a single ${m.pin}; open with your smoothest, most predictable ball.${opt.surface !== false ? ` Before you go: a smoother shape helps here (a symmetric ball, shine knocked down a step).` : ''}</li>`); }
     if (hb.cs && (hb.cs.att || hb.cs.missed)) L.push(`<li><b>${hb.cs.pin}-pin spares:</b> ${hb.cs.made} of ${hb.cs.att}${hb.cs.missed ? `; missed ${hb.cs.missed}${['channel', 'inside', 'thin'].filter(k => hb.cs[k]).map(k => `, ${hb.cs[k]} ${k}`).join('')}` : ''}.</li>`);
     const nightLi = hb.nights.slice(0, 4).map(r => `<li><b>${dt(r.date)}</b>${r.scores.length ? ` · ${r.scores.join(' · ')}` : ''}${r.s.lanes && !hb.pair ? ` · ${esc(r.s.lanes)}` : ''}<br><span class="small">Opened ${esc(r.open.ball || '?')} ${esc(r.open.line)} (${r.open.x}X in ${r.open.n} in game 1).${r.mv ? ` First move G${r.mv.g} F${r.mv.f}: ${r.mv.boards}&${r.mv.eyes} ${hb.deep(r.mv.d)} → ${esc(r.mv.to)}${r.mv.ok ? ' ✅ worked' : ' ✗ didn\'t settle it'}.` : ' No line move.'}${r.sw ? ` Ball switch G${r.sw.g} F${r.sw.f}: ${esc(r.sw.from)} → ${esc(r.sw.to)} (${r.sw.x}X in next ${r.sw.n}).` : ''}</span></li>`).join('');
     return `<div class="hb"><div class="hb-h">📒 House book: ${esc(hb.house)}${hb.lanes ? ` · ${esc(hb.lanes)}` : ''}</div><div class="small dim">${hb.nights.length} night${hb.nights.length === 1 ? '' : 's'} logged ${hb.pair ? 'on this pair' : 'here'}.</div>${L.length ? `<ul class="hb-l">${L.join('')}</ul>` : ''}<div class="hb-sub">Last nights here</div><ul class="hb-l">${nightLi}</ul></div>`;
+  }
+
+
+  // ---------- 🔔 Carry over/under: ringing AND flat corner pins on good pocket shots, about the same line ----------
+  // Ringing 10 (6 wraps around) = too much energy / angle; flat 10 (6 lies down) = too little. Both off one line = the reaction isn't repeating.
+  function tenMix(shots, lefty, patLen) {
+    const C = lefty ? 7 : 10, good = (z) => !(Number(z.executionQuality) === 1 || z.miss === 'leftMiss' || z.miss === 'rightMiss');
+    const R = [], F = [];
+    (shots || []).filter(z => z && z.type !== 'gameStart' && !z.isFill && good(z) && BT().isPocketHit(z)).forEach(z => {
+      const lv = BT().standingPins(z); if (!(lv.length === 1 && lv[0] === C)) return;
+      const t = String(z.leaveTag || ''), k = String(z.keyPin || '');
+      if (t === 'Ringing 10' || t === 'Ringing 7' || k === 'wrap') R.push(z); else if (t === 'Flat 10' || t === 'Flat 7' || k === 'weak') F.push(z);
+    });
+    if (!R.length || !F.length) return null;
+    const nf = (a, f) => a.map(f).map(Number).filter(Number.isFinite), md = (a) => { if (!a.length) return null; const b = a.slice().sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; };
+    const fR = md(nf(R, z => z.feet)), fF = md(nf(F, z => z.feet)), bp = md(nf(R.concat(F), z => z.bp));
+    const same = fR == null || fF == null || Math.abs(fR - fF) <= 2;
+    if (!same) return null;
+    const exB = patLen ? Math.max(3, Math.min(20, Math.round(patLen - 31))) : null;
+    const zone = exB == null || bp == null ? '' : bp >= exB ? 'inside' : bp <= exB - 4 ? 'outside' : 'window';
+    return { ring: R.length, flat: F.length, n: R.length + F.length, pin: C, feet: fR ?? fF, bp, exB, patLen: patLen || null, zone, lean: R.length > F.length ? 'ring' : F.length > R.length ? 'flat' : 'even' };
   }
 
   // ---------- the signals Game Day shows, most useful first (each: id, text, why)
@@ -239,5 +267,5 @@
     if (best && real.length <= 1 && game === 1) out.push({ id: 'map', text: `🗺️ Your best line here: ${best.ball} ${best.feet}/${best.arrows}${best.bp != null ? '/' + best.bp : ''}: ${best.x} strikes in ${best.n}.`, why: `From ${nt(best.nights)} you logged ${lm.pair ? 'on this pair' : 'at this house'}: pocket ${Math.round(best.p / best.n * 100)}%.`, angle: { slide: best.feet, target: best.arrows, bp: best.bp } });
     return out.filter(x => !x.late).concat(out.filter(x => x.late));
   }
-  root.BTEyes = { signals, houseBook, houseBookHtml, cornerSpares, tonightLanes, tonightTough, pairHistory, transition, ballFade, laneMap, leaveSide };
+  root.BTEyes = { signals, tenMix, houseBook, houseBookHtml, cornerSpares, tonightLanes, tonightTough, pairHistory, transition, ballFade, laneMap, leaveSide };
 })(typeof window !== 'undefined' ? window : globalThis);

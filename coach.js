@@ -1218,6 +1218,21 @@
       if (C.length >= 3) sideNotes(out, C, W, prof, patternProfile(ctx && ctx.pattern));
       if (C.length >= 2) moveNotes(out, C, prof);
       laneNotes(out, C, prof);
+      // 🔔 Carry over/under (no new inputs: uses the ringing / flat tags you already log). Game Day: line + tonight's bag only, never surface.
+      try { const E = root.BTEyes, pat = patternProfile(ctx && ctx.pattern);
+        const mix = E && E.tenMix ? E.tenMix(all.slice(-24), prof.lefty, pat && pat.length) : null;
+        if (mix) { const deep = prof.deeper || (prof.lefty ? 'right' : 'left'), outd = prof.outside || (prof.lefty ? 'left' : 'right');
+          let t;
+          if (mix.n < 3) t = `🔔 Carry over/under: a ringing ${mix.pin} and a flat ${mix.pin} from about the same line. Your line is close; the reaction isn't repeating. Don't chase a single ${mix.pin}: hold your feet and target, and move only if 2 of the same ${mix.pin} come in a row.`;
+          else { const z = mix.zone === 'outside' ? `Your breakpoint (about ${mix.bp}) is well outside the exit board (about ${mix.exB} on ${mix.patLen} ft), so the ball is finishing out in the dry. Move feet 2 ${deep}, eyes 1 ${deep} so it leaves the oil near board ${mix.exB}.`
+              : mix.zone === 'inside' ? `Your breakpoint (about ${mix.bp}) is at or inside the exit board (about ${mix.exB} on ${mix.patLen} ft): it's turning in the mud. Move feet 2 ${outd}, eyes 1 ${outd} so it gets further out before it turns.`
+              : mix.lean === 'flat' ? `Mostly flat (${mix.flat} of ${mix.n}): the ball is giving up energy. Move feet 2 ${deep}, eyes 1 ${deep} to keep it in the oil longer.`
+              : mix.lean === 'ring' ? `Mostly ringing (${mix.ring} of ${mix.n}): too much angle. Move feet 2 ${outd}, eyes 1 ${outd} for a straighter line.`
+              : `Even split: your line is right; it's the ball's shape.`;
+            let ball = ''; try { ball = suggestBall('overunder', ctx, prof); } catch (_e) {}
+            t = `🔔 Carry over/under${mix.zone === 'inside' ? ' in the mud' : ''}: ${mix.ring} ringing and ${mix.flat} flat ${mix.pin}s on good shots from about the same line. ${z} ${ball ? `Smoother, more predictable shape in tonight's bag: ${ball}.` : `Nothing in tonight's bag is smoother: stay with your ball and move only your line.`}`; }
+          if (!(out.notes || []).some(n => /^🔔 Carry over\/under/.test(n))) (out.notes = out.notes || []).unshift(t);
+          out.carryOU = mix; } } catch (_e) {}
       missPatternNote(out, C);
       // 🛣️ How the inside plays on this league (the bowler told us), when the ball is reading early.
       const wear = ctx && ctx.wear;
@@ -1527,7 +1542,7 @@
       res.why = why + ratingNote;
       res.next = secondText ? `If 2 more good shots say the same thing, next: ${ELEMENT[second.kind]}: ${secondText}` : '';
       if (!ball && (ctx.setBalls || []).length >= 2 && ['late', 'carryWeak', 'early', 'overunder', 'carryStrong'].includes(sit)) {
-        res.notes.push(`Nothing else in tonight's bag gives ${NEED[sit].say} compared with ${ctx.currentBall || 'your current ball'}, so stick with line and speed moves.${(sit === 'late' || sit === 'early') ? ` If this keeps happening, a surface change on one ball is the cheapest equipment fix (${sit === 'late' ? 'rougher' : 'smoother or polished'}): cover and surface drive most of the read.` : ''}`);
+        res.notes.push(`Nothing else in tonight's bag gives ${NEED[sit].say} compared with ${ctx.currentBall || 'your current ball'}, so stick with line and speed moves.`);
       }
       res.ballSuggestion = (first && first.kind === 'Equipment') ? ball : '';
       res.moveKind = first ? first.kind : '';

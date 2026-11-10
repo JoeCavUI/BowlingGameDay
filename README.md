@@ -58,6 +58,11 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v138-beta75
+- 🔔 Carry over/under: Coach spots ringing AND flat corner pins on good shots from about the same line (no new inputs; uses the Ringing / Flat tags). First pair: hold, don't chase a single 10. 3+: a line move based on where the breakpoint sits vs the pattern's exit board (Rule of 31: length − 31), plus the smoothest ball in tonight's bag.
+- Game Day Coach no longer suggests surface changes. Surface ideas appear only in the Plan (house book) and the post-game review.
+- House book, Plan, post-game review and Season review flag houses with carry over/under (e.g. Imperial: 3 of 3 nights).
+
 ## Changes in v137-beta74
 - 🧭 Season review (Scores menu): reads every logged night (3+ needed) for what keeps going right, what keeps going wrong, habits, and the top 3 to work on, ranked by cost. "Make #1 my next goal" feeds the goal loop.
 - 🎯 Trends: 10-pin spares (7-pin for a lefty), single-pin leaves only, Game Day nights: make % by night plus a pie of Spare / Missed right / Missed left. "Chopped" no longer offered when only the corner pin was left.
