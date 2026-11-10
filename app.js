@@ -6,7 +6,7 @@
 
 (function () {
   // Bump this string each build so pages can display it and cache-bust resources.
-  const APP_VERSION = 'v138-beta75';
+  const APP_VERSION = 'v139-beta76';
   const KEYS = {
     CSV_CACHE: 'bt_csv_cache_v1',          // stringified { savedAt, name, rows }
     BOWLER: 'bt_bowler_v1',               // stringified object
@@ -100,6 +100,14 @@
     const arr = lsGet(KEYS.LEAGUES, []);
     return Array.isArray(arr) ? arr : [];
   }
+
+  // 🏠 House read: one general observation about how a house plays. Saved on the house (and the league when one is picked).
+  const HOUSE_READ_KEY = 'bt_house_read_v1';
+  function houseReadOptions(lefty) { const dIn = lefty ? 'Right' : 'Left';
+    return [['', 'Not sure / mixed'], ['easy', 'Plays easy (room to miss)'], ['sport', 'Tight (plays like a sport shot)'], ['dry', 'Dry backends (hooks hard late)'], ['burn', 'Burns up fast (moves early)'], ['carry', 'Carrydown (holds / goes long late)'], ['opens', `${dIn} opens up (two-handers, high revs)`], ['holds', `${dIn} stays oily (friction outside)`]]; }
+  const hrKey = (h) => String(h || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  function houseRead(house, leagueId) { try { const l = leagueId ? getLeagueById(leagueId) : null; if (l && l.wear) return l.wear; const m = lsGet(HOUSE_READ_KEY, {}) || {}; return m[hrKey(house)] || ''; } catch (_e) { return ''; } }
+  function setHouseRead(house, v, leagueId) { const m = lsGet(HOUSE_READ_KEY, {}) || {}; if (hrKey(house)) { if (v) m[hrKey(house)] = v; else delete m[hrKey(house)]; lsSet(HOUSE_READ_KEY, m); } if (leagueId) setLeague(leagueId, { wear: v }); }
 
   // League fields Coach uses (e.g. wear: how the inside plays on this league: 'opens' | 'holds' | '').
   function setLeague(id, patch) {
@@ -2035,7 +2043,7 @@
     KEYS,
     $, $all,
     lsGet, lsSet, localDate, targetBox, setTargetBox, boxFor, rule31Pref, setRule31Pref, isSportRatio, wireRule31,
-    getLeagues, addLeague, getLeagueById, setLeague, leagueByName,
+    getLeagues, addLeague, getLeagueById, setLeague, leagueByName, houseReadOptions, houseRead, setHouseRead,
     parseCSV,
     ensureCSVLoaded, loadSampleArsenal, isRetired, activeOnly, arsenalTemplateCSV,
     customBalls,

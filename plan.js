@@ -276,6 +276,7 @@
     // How the inside plays on this league (the bowler's own read): 'opens' | 'holds' | ''.
     let wear = opts.wear || '';
     try { if (!wear && opts.league && BT().leagueByName) { const lgO = BT().leagueByName(opts.league, opts.house); wear = (lgO && lgO.wear) || ''; } } catch (_e) {}
+    try { if (!wear && BT().houseRead) wear = BT().houseRead(opts.house, '') || ''; } catch (_e) {}
     const today = opts.date || BT().localDate();
     const sess = sessionsAt(houseLabel);
     const out = { title: `Game Plan: ${houseLabel || 'pick a house'}`, sub: [], sections: [], house: houseLabel, lefty };
@@ -546,6 +547,8 @@
         items.push(`<b>Reads early</b> (on your mark): 2 & 1 ${dIn}.${wear === 'opens' ? ` The ${dIn} opens up here: keep moves small.` : ''}`);
         items.push(`<b>Goes long</b>: 2 & 1 ${dOut}, or a stronger ball.`);
       }
+      { const HR = { easy: '<b>House read: plays easy.</b> Room to miss: pick the line that carries, not the safest one.', sport: '<b>House read: tight, sport-like.</b> Small moves (1 & ½), accuracy over hook, and your most predictable ball.', dry: `<b>House read: dry backends.</b> Expect a hard turn late: keep it in front of you, and a smoother / later ball if it jumps.`, burn: `<b>House read: burns up fast.</b> Plan your first move ${dIn} early (game 1 to 2) and keep a weaker ball ready.`, carry: `<b>House read: carrydown.</b> Late in the night it holds and goes long: move ${dOut} or go stronger, not ${dIn}.` };
+        if (HR[wear]) items.unshift(HR[wear]); }
       items.push('<b>Pocket but not carrying</b>: ball reaction, not line. Check release, then a ball change or a small move.');
       items.push('<b>Missed your mark</b>: repeat the shot.');
       const mv = sess.map(s => s.summary && s.summary.moves && s.summary.moves.text).filter(Boolean)[0];

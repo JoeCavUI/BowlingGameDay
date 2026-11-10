@@ -58,6 +58,9 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v139-beta76
+- 🏠 "How the left plays" is now **House read** (Plan and Game Day): Plays easy, Tight (sport-like), Dry backends, Burns up fast, Carrydown, plus the old Left opens up / Left stays oily. Works without a league (saved on the house; on the league too when one is picked). The Plan's If / then adds one line for the read; Coach keeps moves small on a tight house.
+
 ## Changes in v138-beta75
 - 🔔 Carry over/under: Coach spots ringing AND flat corner pins on good shots from about the same line (no new inputs; uses the Ringing / Flat tags). First pair: hold, don't chase a single 10. 3+: a line move based on where the breakpoint sits vs the pattern's exit board (Rule of 31: length − 31), plus the smoothest ball in tonight's bag.
 - Game Day Coach no longer suggests surface changes. Surface ideas appear only in the Plan (house book) and the post-game review.

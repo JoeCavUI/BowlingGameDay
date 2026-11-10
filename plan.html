@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Plan</title>
-  <link rel="stylesheet" href="styles.css?v=138" />
+  <link rel="stylesheet" href="styles.css?v=139" />
 </head>
 <body data-page="plan">
   <div class="navlinks"></div>
@@ -31,7 +31,7 @@
       </div>
       <div class="pl-row">
         <div><label for="pLeague">League <span class="small">(optional)</span></label><select id="pLeague" class="input"></select></div>
-        <div><label for="pWear" id="pWearLbl">How the left plays</label><select id="pWear" class="input" disabled><option value="">Not sure / mixed</option><option value="opens">Opens up (two-handers)</option><option value="holds">Stays oily (friction outside)</option></select></div>
+        <div><label for="pWear" id="pWearLbl">House read</label><select id="pWear" class="input"></select></div>
       </div>
       <div class="pl-row">
         <div><label for="pSet">Bag <span class="small">(optional)</span></label><select id="pSet" class="input"></select></div>
@@ -60,13 +60,13 @@
     </div>
   </div>
 
-  <script src="app.js?v=138"></script>
-  <script src="pinpal.js?v=138"></script>
-  <script src="history.js?v=138"></script>
-  <script src="chart.js?v=138"></script>
-  <script src="eyes.js?v=138"></script>
-  <script src="plan.js?v=138"></script>
-  <script src="insight.js?v=138"></script>
+  <script src="app.js?v=139"></script>
+  <script src="pinpal.js?v=139"></script>
+  <script src="history.js?v=139"></script>
+  <script src="chart.js?v=139"></script>
+  <script src="eyes.js?v=139"></script>
+  <script src="plan.js?v=139"></script>
+  <script src="insight.js?v=139"></script>
   <script>
   (function () {
     BT.renderNav('plan');
@@ -108,9 +108,9 @@
     }
     function syncWear() {
       const lefty = /^l/i.test(String((BT.lsGet(BT.KEYS.BOWLER, {}) || {}).handedness || ''));
-      $('#pWearLbl').textContent = `How the ${lefty ? 'right' : 'left'} plays`;
-      const l = $('#pLeague').value ? BT.getLeagueById($('#pLeague').value) : null;
-      $('#pWear').disabled = !l; $('#pWear').value = (l && l.wear) || '';
+      const lg = $('#pLeague').value && $('#pLeague').value !== '__add' ? $('#pLeague').value : '';
+      $('#pWear').innerHTML = BT.houseReadOptions(lefty).map(([v, t]) => `<option value="${v}">${esc(t)}</option>`).join('');
+      $('#pWear').value = BT.houseRead($('#pHouse').value, lg) || '';
     }
     const r31Sync = BT.wireRule31($('#pR31'), () => (BTPlan.patterns().find(p => p.name === $('#pPat').value) || {}).ratio);
     $('#pPat').addEventListener('change', () => r31Sync());
@@ -133,7 +133,7 @@
       }
       syncWear();
     });
-    $('#pWear').addEventListener('change', () => { if ($('#pLeague').value) BT.setLeague($('#pLeague').value, { wear: $('#pWear').value }); });
+    $('#pWear').addEventListener('change', () => { const lg = $('#pLeague').value && $('#pLeague').value !== '__add' ? $('#pLeague').value : ''; BT.setHouseRead($('#pHouse').value, $('#pWear').value, lg); });
 
     // 🎯 Matchup & risk, 📓 your PinPal notes, 🧪 your house notes (tested against your games).
     function insightHtml(p) {
@@ -192,7 +192,7 @@
 
     function buildNow() {
       const lgO = $('#pLeague').value ? BT.getLeagueById($('#pLeague').value) : null;
-      const opts = { house: $('#pHouse').value.trim(), lanes: BT.formatLanes($('#pLanes').value), event: $('#pEvent').value, leagueId: lgO ? lgO.id : '', league: lgO ? lgO.name : '', wear: (lgO && lgO.wear) || '', setName: $('#pSet').value, patternName: $('#pPat').value, r31: $('#pR31').checked, count: Number($('#pCount').value) };
+      const opts = { house: $('#pHouse').value.trim(), lanes: BT.formatLanes($('#pLanes').value), event: $('#pEvent').value, leagueId: lgO ? lgO.id : '', league: lgO ? lgO.name : '', wear: BT.houseRead($('#pHouse').value, lgO ? lgO.id : '') || '', setName: $('#pSet').value, patternName: $('#pPat').value, r31: $('#pR31').checked, count: Number($('#pCount').value) };
       if (!opts.house) { $('#pStatus').textContent = 'Type or pick where you\'re bowling.'; $('#pHouse').focus(); return; }
       try { plan = BTPlan.build(opts); } catch (e) { console.error(e); $('#pStatus').textContent = 'Could not build the plan: ' + (e && e.message ? e.message : e); return; }
       BT.lsSet(LAST, opts);

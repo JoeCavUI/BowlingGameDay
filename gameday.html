@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=138" />
+  <link rel="stylesheet" href="styles.css?v=139" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -45,12 +45,8 @@
                 <select id="league" class="input" style="flex:1"></select>
                 <button class="btn secondary" id="addLeagueBtn" type="button">Add</button>
               </div>
-              <label for="leagueWear" style="margin-top:8px" id="leagueWearLbl">How the left plays on this league</label>
-              <select id="leagueWear" class="input" disabled>
-                <option value="">Not sure / mixed</option>
-                <option value="opens">Left opens up (two-handers, high revs)</option>
-                <option value="holds">Left stays oily (friction outside & down lane)</option>
-              </select>
+              <label for="leagueWear" style="margin-top:8px" id="leagueWearLbl">House read</label>
+              <select id="leagueWear" class="input"></select>
             </div>
             <div>
               <label>Lanes / Pair</label>
@@ -324,15 +320,15 @@
     </div>
   </div>
 
-  <script src="app.js?v=138"></script>
-  <script src="coach.js?v=138"></script>
-  <script src="pinpal.js?v=138"></script>
-  <script src="history.js?v=138"></script>
-  <script src="chart.js?v=138"></script>
-  <script src="plan.js?v=138"></script>
-  <script src="insight.js?v=138"></script>
-  <script src="eyes.js?v=138"></script>
-  <script src="cloud.js?v=138"></script>
+  <script src="app.js?v=139"></script>
+  <script src="coach.js?v=139"></script>
+  <script src="pinpal.js?v=139"></script>
+  <script src="history.js?v=139"></script>
+  <script src="chart.js?v=139"></script>
+  <script src="plan.js?v=139"></script>
+  <script src="insight.js?v=139"></script>
+  <script src="eyes.js?v=139"></script>
+  <script src="cloud.js?v=139"></script>
   <script>
     BT.renderNav('gameday');
     BT.wireReadAloud(document.getElementById('coachSpeak'), () => { const q = document.querySelector('#coachText .gd-q1'), full = document.querySelector('#coachFull'); if (q && full && full.hidden) return q.innerText; return ((document.getElementById('coachText') || {}).innerText || '').split('\n').filter(l => !/^(Why & what's next|What Coach is using|Why ›|Less ‹)/i.test(l.trim())).join('\n'); });
@@ -2097,7 +2093,7 @@ function saveCurrentSessionDraft() {
         pastMoves: pastMovesHere(),
         line: { feet: el.feet.value, arrows: el.arrows.value, bp: el.bp.value, targetFt: el.tdist ? Number(el.tdist.value) || 15 : 15 },
         history: historyFor(),
-        wear: (() => { try { const l = el.league.value ? BT.getLeagueById(el.league.value) : null; return (l && l.wear) || ''; } catch (_e) { return ''; } })(),
+        wear: (() => { try { return BT.houseRead(el.house.value, el.league.value) || ''; } catch (_e) { return ''; } })(),
         plan: planFor(),
         motion: { vector: (r, b) => BT.motionVector(r, b), distance: (a, b) => BT.motionDistance(a, b) },
         ballInfo: (r) => ({ cover: BT.ballCover(r), coverName: BT.ballCoverName ? BT.ballCoverName(r) : '', strength: BT.ballCoverStrength ? BT.ballCoverStrength(r).value : null, grit: BT.surfaceToGrit(BT.ballSurface(r)), asym: /asym/i.test(BT.ballCore(r) || ''), known: !!(String(BT.ballSurface(r) || '').trim() && BT.ballRG(r) && BT.ballDiff(r)) }),
@@ -2702,15 +2698,10 @@ function sessionSummary(shots) {
       function syncLeagueWear() {
         if (!wearSel) return;
         const lefty = (() => { try { return isLeftyBowler(); } catch (_e) { return false; } })();
-        const dIn = lefty ? 'right' : 'left', DIn = lefty ? 'Right' : 'Left';
-        document.getElementById('leagueWearLbl').textContent = `How the ${dIn} plays on this league`;
-        wearSel.options[1].text = `${DIn} opens up (two-handers, high revs)`;
-        wearSel.options[2].text = `${DIn} stays oily (friction outside & down lane)`;
-        const l = el.league.value ? BT.getLeagueById(el.league.value) : null;
-        wearSel.disabled = !l;
-        wearSel.value = (l && l.wear) || '';
+        wearSel.innerHTML = BT.houseReadOptions(lefty).map(([v, t]) => `<option value="${v}">${escapeHtml(t)}</option>`).join('');
+        wearSel.value = BT.houseRead(el.house.value, el.league.value) || '';
       }
-      if (wearSel) wearSel.addEventListener('change', () => { if (!el.league.value) return; BT.setLeague(el.league.value, { wear: wearSel.value }); markCoachDirty(); try { autoCoach(); } catch (_e) {} });
+      if (wearSel) wearSel.addEventListener('change', () => { BT.setHouseRead(el.house.value, wearSel.value, el.league.value); markCoachDirty(); try { autoCoach(); } catch (_e) {} });
       el.house.addEventListener('change', () => syncLeagueWear());
       el.league.addEventListener('wearsync', () => syncLeagueWear());
       setTimeout(syncLeagueWear, 0);

@@ -1248,7 +1248,7 @@
           const last = W[W.length - 1], prev = W.slice(-3, -1);
           const prevOk = prev.every(c => c.strike || Math.abs(c.lean || 0) < 1);
           const dIn = prof.deeper || 'left', dOut = prof.outside || 'right';
-          const small = wear === 'opens' ? ` Keep it small: the ${dIn} opens up on this league.` : wear === 'holds' ? ` The ${dIn} holds on this league, so this move is safe.` : '';
+          const small = wear === 'sport' ? ' Keep it small: this house plays tight.' : wear === 'opens' ? ` Keep it small: the ${dIn} opens up on this league.` : wear === 'holds' ? ` The ${dIn} holds on this league, so this move is safe.` : '';
           if (prevOk && (last.lean || 0) >= 1) out.ready = { dir: 'early', text: `⚡ First sign the lane is changing: that one came in higher / read earlier than the two before it. If your next good shot does the same, make the move right away: feet 1 ${dIn}, eyes ½ ${dIn}.${small}` };
           else if (prevOk && (last.lean || 0) <= -1) out.ready = { dir: 'late', text: (ctx.traffic && ctx.traffic.carry >= 2)
             ? `⚡ First sign the lane is changing: that one held longer / came in lighter. With ${ctx.traffic.carry} urethane / plastic bowlers on the pair this is likely carrydown: if the next good shot does the same, try a stronger ball or a touch less speed before moving ${dOut}.`
