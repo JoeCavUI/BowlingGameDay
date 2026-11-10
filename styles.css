@@ -964,3 +964,6 @@ body.gd-seasoned .gd-help{display:none}
 .goal-banner { margin: 8px 0; padding: 10px 12px; border-radius: 12px; background: rgba(99,230,210,.10); border: 1px solid rgba(99,230,210,.45); font-size: 15px; }
 .goal-banner.ok { background: rgba(74,222,128,.12); border-color: rgba(74,222,128,.5); }
 .goal-banner.miss { background: rgba(248,113,113,.10); border-color: rgba(248,113,113,.5); }
+
+/* Season review */
+.sr-l{margin:6px 0 0;padding-left:20px}.sr-l li{margin:5px 0;line-height:1.35}

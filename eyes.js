@@ -188,6 +188,13 @@
         out.push({ id: `g1carry:${ctx.ball}:${P.length}`, text: `🐢 Game 1: ${ctx.ball} is in the pocket (${P.length}×) but ${X.length ? 'only 1 strike' : 'not carrying'}. Change balls now, don't wait for game 2.${alt ? ` Best here: ${alt.ball} ${alt.feet}/${alt.arrows} (${alt.x} strikes in ${alt.n}).` : ''}`, why: 'Pocket hits that leave pins mean the ball isn\'t matching the pattern. A ball change fixes carry faster than a line move.' });
       }
     }
+    // 📉 Your low game: past 3-game nights show this game runs 8+ pins under the others; heads-up for its first 2 frames
+    if (game >= 2) {
+      const inG = real.filter(s => (Number(s.gameNo) || 1) === game).length;
+      if (inG < 2) { const G = { 1: [], 2: [], 3: [] }; (ctx.sessions || []).forEach(s => { const sc = s && ((Array.isArray(s.scores) && s.scores.length) ? s.scores : (s.pinpal && s.pinpal.scores)); if (Array.isArray(sc) && sc.length >= 3) [1, 2, 3].forEach(i => G[i].push(Number(sc[i - 1]) || 0)); });
+        if (G[1].length >= 3 && G[game]) { const av = [1, 2, 3].map(i => G[i].reduce((a, b) => a + b, 0) / G[i].length), me = av[game - 1], oth = av.filter((_, i) => i !== game - 1);
+          if (oth.every(v => v - me >= 8)) out.push({ id: `lowgame:${game}`, text: `📉 Game ${game} is your low game (${Math.round(me)} vs ${oth.map(Math.round).join('/')}). Watch the first 2 frames for transition; have your first move ready.`, why: `Averages over ${G[1].length} three-game nights: ${av.map((v, i) => `G${i + 1} ${Math.round(v)}`).join(' · ')}.` }); } }
+    }
     let ph = null; try { ph = pairHistory(ctx.house, ctx.lanes, lefty); } catch (_e) {}
     let usual = null;
     if (ph && ph.games >= 10) { const [a, b] = ph.L; if (a.f >= 60 && b.f >= 60 && Math.abs(ph.z) >= 2) { const more = a.idx > b.idx ? a : b, less = more === a ? b : a; usual = { more, less }; } }

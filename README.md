@@ -58,6 +58,10 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v137-beta74
+- 🧭 Season review (Scores menu): reads every logged night (3+ needed) for what keeps going right, what keeps going wrong, habits, and the top 3 to work on, ranked by cost. "Make #1 my next goal" feeds the goal loop.
+- 📉 Game Day heads-up when a game is your low game (8+ under the others over 3+ three-game nights), shown for its first 2 frames.
+
 ## Changes in v136-beta73: Off the deck, slow starts, goal loop
 - Game Day: "Off the deck" is step 3 of every shot; eyeball score weights off-the-deck (35) and the full routine (15).
 - Game 1 alert: 3 pocket hits that don't carry with one ball → change balls now.
