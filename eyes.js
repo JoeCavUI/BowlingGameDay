@@ -46,7 +46,7 @@
       const lv = BT().standingPins(x); const single = lv.length === 1 && lv[0] === C;
       const leftC = x.second.left.length === 1 && x.second.left[0] === C;
       if (single) { o.att++; if (!x.second.left.length) o.made++; }
-      if (leftC) { o.missed++; const m = x.second.miss; if (m === 'inside' || m === 'channel' || m === 'thin') o[m]++; else o.unknown++; const bl = x.second.ball || x.ball || '?'; o.missBalls[bl] = (o.missBalls[bl] || 0) + 1; } });
+      if (leftC && single) { o.missed++; const m = x.second.miss; if (m === 'inside' || m === 'channel' || m === 'thin') o[m]++; else o.unknown++; const bl = x.second.ball || x.ball || '?'; o.missBalls[bl] = (o.missBalls[bl] || 0) + 1; } });
     const sides = [['channel', o.channel], ['inside', o.inside], ['thin', o.thin]].sort((a, b) => b[1] - a[1]);
     o.pattern = sides[0][1] >= 2 && sides[0][1] > sides[1][1] ? sides[0][0] : '';
     o.tip = o.pattern === 'channel' ? `Missing the ${C} to the channel points to alignment: check your feet and target on the ${C} (you may be lined up too thin or drifting).`

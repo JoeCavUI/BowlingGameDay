@@ -60,7 +60,7 @@ Then open http://localhost:3000
 
 ## Changes in v137-beta74
 - 🧭 Season review (Scores menu): reads every logged night (3+ needed) for what keeps going right, what keeps going wrong, habits, and the top 3 to work on, ranked by cost. "Make #1 my next goal" feeds the goal loop.
-- 🎯 Trends: 10-pin spares chart (7-pin for a lefty), Game Day nights only, with a bar per night showing which side you missed (right / channel, left / crossed over, chopped, not noted) and a season total.
+- 🎯 Trends: 10-pin spares (7-pin for a lefty), single-pin leaves only, Game Day nights: make % by night plus a pie of Spare / Missed right / Missed left. "Chopped" no longer offered when only the corner pin was left.
 - 📉 Game Day heads-up when a game is your low game (8+ under the others over 3+ three-game nights), shown for its first 2 frames.
 
 ## Changes in v136-beta73: Off the deck, slow starts, goal loop

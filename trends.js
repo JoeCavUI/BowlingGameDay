@@ -38,7 +38,9 @@
       if (row.strike == null) row.strike = Math.round(real.filter(s => !BT.standingPins(s).length).length / real.length * 1000) / 10;
       try { const rp = C && C.repeatability ? C.repeatability(shots, bw) : null; row.repeat = rp ? rp.score : null; } catch (_e) {}
       try { const e = C && C.eyeballScore ? C.eyeballScore(shots, bw) : null; row.eye = e && e.n ? e.score : null; } catch (_e) {}
-      try { const cs = root.BTEyes ? root.BTEyes.cornerSpares(shots, /^l/i.test(String(bw.handedness || ''))) : null; if (cs && (cs.att || cs.missed)) { row.ten = cs.att ? Math.round(cs.made / cs.att * 100) : null; row.tenX = { att: cs.att, made: cs.made, channel: cs.channel, inside: cs.inside, thin: cs.thin, unknown: cs.unknown, pin: cs.pin }; } } catch (_e) {}
+      try { const cs = root.BTEyes ? root.BTEyes.cornerSpares(shots, /^l/i.test(String(bw.handedness || ''))) : null; if (cs && (cs.att || cs.missed)) { row.ten = cs.att ? Math.round(cs.made / cs.att * 100) : null; const C1 = cs.pin, t = { att: 0, made: 0, channel: 0, inside: 0, unknown: 0, pin: C1 };
+        shots.forEach(z => { if (!z || z.type === 'gameStart' || !z.second || !Array.isArray(z.second.left)) return; const lv = BT.standingPins(z); if (!(lv.length === 1 && lv[0] === C1)) return; t.att++; if (!z.second.left.length) { t.made++; return; } const m = z.second.miss; if (m === 'channel' || m === 'inside') t[m]++; else t.unknown++; });
+        row.tenX = t; } } catch (_e) {}
       try { const el = C && C.elementsReport ? C.elementsReport(shots, bw, (Array.isArray(pats) ? pats : []).find(q => q && q.name === x.pattern) || null) : null; if (el) el.elements.forEach(e => { row['el_' + e.key] = e.score; }); } catch (_e) {}
     });
     return rows.filter(r => r.d).sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0);
@@ -73,33 +75,32 @@
       const per = f.m * Math.max(1, Math.min(10, pts.length - 1)), span = Math.max(1, Math.min(10, pts.length - 1)), small = Math.abs(f.m * (pts.length - 1)) < (def.pct ? 2 : 2);
       note = small ? `Trend: flat over these ${pts.length} nights.` : `Trend: ${f.m > 0 ? 'up' : 'down'} ${r1(Math.abs(per))}${def.pct ? ' points' : ' pins'} per ${span} nights, over ${pts.length} nights.`; } }
     svg += `<rect x="${PL}" y="0" width="${W - PL - PR}" height="${H}" fill="transparent" class="tr-hit"/><line class="tr-x" x1="0" x2="0" y1="${PT}" y2="${H - PB}" style="display:none"/><circle class="tr-sel" r="5" style="display:none"/>`;
-    const below = def.below ? def.below(R, x, N) : '';
+    const below = def.below ? def.below(R) : '';
     const last = pts[pts.length - 1];
     return `<div class="panel tr-card" data-k="${def.k}"><div class="tr-h"><b>${def.t}</b><span class="tr-last">${def.fmt ? def.fmt(last.v) : last.v}${def.pct ? '%' : ''} <span class="small dim">last night</span></span></div>
       <svg viewBox="0 0 ${W} ${H}" class="tr-svg" role="img" aria-label="${esc(def.t)} by night, ${pts.length} nights">${svg}</svg>${below}
       <div class="tr-tip small" aria-live="polite">${note || `${pts.length} nights. Tap the chart to see a night.`}</div></div>`;
   }
 
-  // ---------- corner pin (10 for a righty, 7 for a lefty): which side you miss, night by night ----------
-  const SIDES = [['channel', 'tr-m-ch'], ['inside', 'tr-m-in'], ['thin', 'tr-m-th'], ['unknown', 'tr-m-un']];
+  // ---------- corner pin (10 for a righty, 7 for a lefty), single-pin leaves only: made, missed right, missed left ----------
   const lefty = () => { try { return /^l/i.test(String((root.BT.lsGet(root.BT.KEYS.BOWLER, {}) || {}).handedness || '')); } catch (_e) { return false; } };
-  const sideName = (k) => lefty() ? { channel: 'Left (channel)', inside: 'Right (crossed over)', thin: 'Chopped', unknown: 'Not noted' }[k] : { channel: 'Right (channel)', inside: 'Left (crossed over)', thin: 'Chopped', unknown: 'Not noted' }[k];
-  function tenTip(r) { const t = r.tenX; if (!t) return ''; const m = SIDES.filter(([k]) => t[k]).map(([k]) => `${t[k]} ${{ channel: lefty() ? 'left' : 'right', inside: lefty() ? 'right' : 'left', thin: 'chopped', unknown: 'not noted' }[k]}`).join(', '); return ` (${t.made} of ${t.att})${m ? ` · missed: ${m}` : ''}`; }
-  function tenBelow(R, x, N) {
-    const rows = R.map((r, i) => ({ i, t: r.tenX })).filter(o => o.t), H2 = 54, top = 14, base = H2 - 4;
-    if (!rows.length) return '';
-    const mx = Math.max(2, ...rows.map(o => SIDES.reduce((a, [k]) => a + (o.t[k] || 0), 0)));
-    const bw = Math.max(4, Math.min(14, (W - PL - PR) / Math.max(N, 1) * 0.6)), u = (base - top) / mx;
-    let svg = `<line x1="${PL - 8}" x2="${W - PR}" y1="${base}" y2="${base}" class="tr-grid"/>`;
-    rows.forEach(o => { let y0 = base; SIDES.forEach(([k, c]) => { const n = o.t[k] || 0; if (!n) return; const h = n * u; if (y0 === base && n) svg += `<text x="${x(o.i).toFixed(1)}" y="${(base - SIDES.reduce((a2, [k2]) => a2 + (o.t[k2] || 0), 0) * u - 3).toFixed(1)}" class="tr-ax" text-anchor="middle">${SIDES.reduce((a2, [k2]) => a2 + (o.t[k2] || 0), 0)}</text>`; svg += `<rect x="${(x(o.i) - bw / 2).toFixed(1)}" y="${(y0 - h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" class="${c}" rx="1.5"/>`; y0 -= h; }); });
-    const tot = { att: 0, made: 0 }; SIDES.forEach(([k]) => tot[k] = 0); rows.forEach(o => { ['att', 'made'].concat(SIDES.map(s => s[0])).forEach(k => tot[k] += o.t[k] || 0); });
-    const pin = rows[0].t.pin, missed = SIDES.reduce((a, [k]) => a + tot[k], 0);
-    const called = [['channel', tot.channel], ['inside', tot.inside]].sort((a, b) => b[1] - a[1]);
-    const lean = called[0][1] >= 2 && called[0][1] > called[1][1] ? (called[0][0] === 'channel' ? `Most called misses go ${sideName('channel').split(' ')[0].toLowerCase()}, into the channel: that points to alignment (feet and target).` : `Most called misses go ${sideName('inside').split(' ')[0].toLowerCase()}, crossing over: the ball is hooking. Flatten it out or use your spare ball.`) : '';
-    return `<div class="small" style="margin-top:6px"><b>Missed ${pin}s by side</b> <span class="dim">(each bar = one night)</span></div>
-      <svg viewBox="0 0 ${W} ${H2}" class="tr-svg" role="img" aria-label="Missed ${pin} pins by side, by night">${svg}</svg>
-      <div class="tr-key small">${SIDES.map(([k, c]) => `<span><i class="tr-sw ${c}"></i>${sideName(k)} ${tot[k]}</span>`).join('')}</div>
-      <div class="small">Just the ${pin} left: ${tot.made} of ${tot.att} made (${tot.att ? Math.round(tot.made / tot.att * 100) : 0}%). Bars count every time the ${pin} stayed up after your spare shot (${missed}), including when it was part of a bigger leave.${tot.unknown ? ` ${tot.unknown} not noted: tap the side after a miss so this fills in.` : ''} ${lean}</div>`;
+  const parts = (t) => { const L = lefty(); return [['made', 'Spare', 'tr-p-ok', t.made], [L ? 'inside' : 'channel', 'Missed right', 'tr-p-r', t[L ? 'inside' : 'channel']], [L ? 'channel' : 'inside', 'Missed left', 'tr-p-l', t[L ? 'channel' : 'inside']], ['unknown', 'Missed, side not noted', 'tr-p-un', t.unknown]]; };
+  function tenTip(r) { const t = r.tenX; if (!t || !t.att) return ''; const P = parts(t); return ` (${t.made} of ${t.att})${t.att > t.made ? ` · missed: ${P.slice(1).filter(p => p[3]).map(p => `${p[3]} ${p[0] === 'unknown' ? 'not noted' : p[1].split(' ')[1]}`).join(', ')}` : ''}`; }
+  function tenBelow(R) {
+    const tot = { att: 0, made: 0, channel: 0, inside: 0, unknown: 0 }; let pin = 10;
+    R.forEach(r => { if (!r.tenX) return; pin = r.tenX.pin; Object.keys(tot).forEach(k => tot[k] += r.tenX[k] || 0); });
+    if (!tot.att) return '';
+    const P = parts(tot).filter(p => p[3]), cx = 60, cy = 60, rr = 52, ri = 30; let a0 = -Math.PI / 2, svg = '';
+    const pt = (a, r) => `${(cx + r * Math.cos(a)).toFixed(2)},${(cy + r * Math.sin(a)).toFixed(2)}`;
+    if (P.length === 1) svg = `<circle cx="${cx}" cy="${cy}" r="${(rr + ri) / 2}" fill="none" stroke-width="${rr - ri}" class="${P[0][2]}s"/>`;
+    else P.forEach(p => { const a1 = a0 + p[3] / tot.att * Math.PI * 2, big = a1 - a0 > Math.PI ? 1 : 0;
+      svg += `<path d="M${pt(a0, rr)} A${rr},${rr} 0 ${big} 1 ${pt(a1, rr)} L${pt(a1, ri)} A${ri},${ri} 0 ${big} 0 ${pt(a0, ri)}Z" class="${p[2]}"/>`; a0 = a1; });
+    svg += `<text x="${cx}" y="${cy - 1}" text-anchor="middle" class="tr-pie-n">${Math.round(tot.made / tot.att * 100)}%</text><text x="${cx}" y="${cy + 13}" text-anchor="middle" class="tr-ax">made</text>`;
+    const R2 = tot.channel + tot.inside, right = lefty() ? tot.inside : tot.channel, left = R2 - right;
+    const lean = R2 >= 3 && right !== left ? (right > left ? `Most misses go right, into the channel: that points to alignment (feet and target).` : `Most misses go left, crossing over: the ball is hooking. Flatten it out or use your spare ball.`) : '';
+    return `<div class="tr-pie"><svg viewBox="0 0 120 120" class="tr-pie-svg" role="img" aria-label="Single ${pin}-pin: ${tot.made} made of ${tot.att}">${svg}</svg>
+      <div class="tr-pie-key small"><div class="dim">Just the ${pin} left, ${tot.att} times</div>${parts(tot).filter(p => p[0] !== 'unknown' || p[3]).map(p => `<div><i class="tr-sw ${p[2]}"></i>${p[1]} <b>${p[3]}</b> <span class="dim">${Math.round(p[3] / tot.att * 100)}%</span></div>`).join('')}</div></div>
+      ${lean || tot.unknown ? `<div class="small">${lean}${tot.unknown ? ` ${tot.unknown} miss${tot.unknown === 1 ? '' : 'es'} with no side: tap Left or Right after a miss so the chart fills in.` : ''}</div>` : ''}`;
   }
 
   // ---------- page ----------
