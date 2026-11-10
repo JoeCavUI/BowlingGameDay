@@ -211,12 +211,13 @@
               <div id="readsQuality" class="gd-r1"></div>
               <div id="laneInfoWrap" style="display:none"><label class="gd-laneinfo"><input type="checkbox" id="laneInfo" /> 👀 Bad shot, but it still told me about the lane</label><div class="small dim" style="margin:2px 0 6px">Tick it when the miss showed you the pattern (it held, it hooked, it didn't come back). Coach still won't call a move off one bad shot, but it counts the read.</div></div>
               <div id="faultWrap" class="gd-fault" style="display:none">
-                <div class="gd-rl">What do you think happened? <span class="small">(optional, one tap)</span></div>
+                <div class="gd-rl">What do you think happened? <span class="small">(optional)</span></div>
                 <div id="readsFault" class="gd-r1"></div>
-                <div class="gd-myfault"><button type="button" class="gd-addfault" id="addFaultBtn">+ Add your own</button></div>
+                <div class="gd-myfault"><button type="button" class="gd-addfault" id="addFaultBtn">✏️ Edit list</button></div>
                 <div id="myFaultBox" style="display:none;margin-top:8px">
-                  <div style="display:flex;gap:8px"><input id="myFaultIn" class="input" maxlength="40" placeholder="What it felt like" style="flex:1" /><button type="button" class="btn" id="myFaultAdd">Add</button></div>
-                  <div id="myFaultList" class="small" style="margin-top:6px"></div>
+                  <div class="small dim" style="margin-bottom:4px">Rename (✏️) or take off (✕) any reason. Shots already tagged keep it.</div>
+                  <div id="myFaultList" class="small"></div>
+                  <div style="display:flex;gap:8px;margin-top:8px"><input id="myFaultIn" class="input" maxlength="40" placeholder="Add your own reason" style="flex:1" /><button type="button" class="btn" id="myFaultAdd">Add</button></div>
                 </div>
               </div>
               <div class="gd-rl">Ball reaction</div>
@@ -695,16 +696,26 @@ function selectedPills(container) {
       });
     }
 
+    // Poor-shot reason: one dropdown. Your used reasons (most used first) and your own; the rest behind "More reasons…".
+    let faultMore = false;
+    function faultCounts() { const cnt = {}; try { (BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || []).concat([{ shots: sessionShots }]).forEach(x => (x && x.shots || []).forEach(z => { if (z && z.fault) cnt[z.fault] = (cnt[z.fault] || 0) + 1; })); } catch (_e) {} return cnt; }
+    function faultValue() { const sel = el.readsFault && el.readsFault.querySelector('#faultSel'); return sel ? sel.value : ''; }
     function renderFaultPills(select) {
       if (!el.readsFault || !window.BTCoach || !BTCoach.allFaults) return;
-      const cur = select || singlePillValue(el.readsFault, '');
-      pillButtonsCustom(el.readsFault, BTCoach.allFaults().map(f => ({ val: escapeHtml(f.v), label: f.mine ? '✍️ ' + escapeHtml(f.l) : f.l })));
-      wireQualityPills(el.readsFault);
-      if (cur) { const b = BT.$all('button[data-pill]', el.readsFault).find(x => x.getAttribute('data-pill') === cur); if (b) { b.classList.add('active'); b.style.outline = '2px solid rgba(80,227,194,0.45)'; } }
+      const cur = select != null ? select : faultValue();
+      const cnt = faultCounts(), L = BTCoach.allFaults();
+      const used = L.filter(f => f.mine || cnt[f.v] || f.v === cur).sort((a, b) => (cnt[b.v] || 0) - (cnt[a.v] || 0)), rest = L.filter(f => !used.includes(f));
+      const opt = (f) => `<option value="${escapeHtml(f.v)}"${f.v === cur ? ' selected' : ''}>${f.mine ? '✍️ ' : ''}${escapeHtml(f.l)}${cnt[f.v] ? ` (${cnt[f.v]})` : ''}</option>`;
+      const showAll = faultMore || !used.length;
+      el.readsFault.innerHTML = `<select id="faultSel" class="input gd-faultsel" aria-label="What happened"><option value="">What happened? (optional)</option>${used.map(opt).join('')}${rest.length ? (showAll ? `<optgroup label="Other reasons">${rest.map(opt).join('')}</optgroup>` : '<option value="__more">＋ More reasons…</option>') : ''}</select>`;
+      const sel = el.readsFault.querySelector('#faultSel');
+      sel.addEventListener('change', () => { if (sel.value === '__more') { faultMore = true; renderFaultPills(''); setTimeout(() => { try { el.readsFault.querySelector('#faultSel').focus(); } catch (_e) {} }, 0); } });
     }
     function renderMyFaultList() {
-      const box = BT.$('#myFaultList'); if (!box) return; const mine = BTCoach.myFaults();
-      box.innerHTML = mine.length ? `Your reasons: ${mine.map(t => `<span class="gd-mychip">${escapeHtml(t)} <button type="button" data-rmfault="${escapeHtml(t)}" aria-label="Remove">✕</button></span>`).join(' ')}` : 'Your reasons stay on the list for every shot. Coach learns their pattern like the others.';
+      const box = BT.$('#myFaultList'); if (!box) return;
+      const cnt = faultCounts(), L = BTCoach.allFaults().filter(f => f.mine || cnt[f.v]).sort((a, b) => (cnt[b.v] || 0) - (cnt[a.v] || 0)), H = BTCoach.hiddenFaults();
+      box.innerHTML = (L.length ? L.map(f => `<span class="gd-mychip">${f.mine ? '✍️ ' : ''}${escapeHtml(f.l)}${cnt[f.v] ? ` <span class="dim">${cnt[f.v]}</span>` : ''} <button type="button" data-edfault="${escapeHtml(f.v)}" aria-label="Rename">✏️</button><button type="button" data-rmfault="${escapeHtml(f.v)}" aria-label="Remove">✕</button></span>`).join(' ') : '<span class="dim">Reasons you use show up here.</span>')
+        + (H.length ? `<div style="margin-top:6px" class="dim">Taken off: ${H.map(v => `<span class="gd-mychip">${escapeHtml(BTCoach.faultLabel(v))} <button type="button" data-unhide="${escapeHtml(v)}" aria-label="Put back">↩︎</button></span>`).join(' ')}</div>` : '');
     }
     // 🤔 The reason list only shows once you tap Poor.
     function updateFaultVis() { const w = BT.$('#faultWrap'); if (!w) return; const on = selectedPills(el.readsQuality).includes('Poor execution');
@@ -739,6 +750,7 @@ function selectedPills(container) {
       try { const li = BT.$('#laneInfo'); if (li) li.checked = false; } catch (_e) {}
       try { paintLaneRead(); } catch (_e) {}
       try { changedSel.clear(); paintChanged(); } catch (_e) {}
+      try { faultMore = false; renderFaultPills(''); } catch (_e) {}
 	      [el.readsQuality, el.readsMiss, el.readsBallObs, el.readsPocket, el.readsExit, el.readsSpeed, el.readsFault].forEach(c => {
 	        if (!c) return;
         BT.$all('button[data-pill]', c).forEach(b => {
@@ -2363,7 +2375,7 @@ function saveCurrentSessionDraft() {
         // New coaching layers
         speedTrend: singlePillValue(el.readsSpeed, 'unknown'),
         swing: swingFeel || '',
-        fault: execQuality === 1 ? singlePillValue(el.readsFault, '') : '',
+        fault: execQuality === 1 ? (faultValue() === '__more' ? '' : faultValue()) : '',
         laneInfo: (execQuality === 1 || missRead === 'leftMiss' || missRead === 'rightMiss') && !!(BT.$('#laneInfo') && BT.$('#laneInfo').checked),
         laneRead: laneReadFor(info.gameNo || currentGameNumber()) || (() => { try { const t = BTCoach.noteTags(el.notes.value, isLeftyBowler()); return (t && t.laneRead) || ''; } catch (_e) { return ''; } })(),
         adjust: null,
@@ -2631,11 +2643,18 @@ function sessionSummary(shots) {
       wireQualityPills(el.readsSpeed);
       renderFaultPills();
       // + Add your own reason: saved on this phone and kept on the list
-      BT.$('#addFaultBtn').addEventListener('click', () => { const b = BT.$('#myFaultBox'); b.style.display = b.style.display === 'none' ? '' : 'none'; renderMyFaultList(); if (b.style.display === '') BT.$('#myFaultIn').focus(); });
+      BT.$('#addFaultBtn').addEventListener('click', () => { const b = BT.$('#myFaultBox'); b.style.display = b.style.display === 'none' ? '' : 'none'; renderMyFaultList(); });
       const addMine = () => { const t = BT.$('#myFaultIn').value.trim(); if (!t) return; BTCoach.setMyFaults([...BTCoach.myFaults(), t]); BT.$('#myFaultIn').value = ''; renderFaultPills('my:' + t); renderMyFaultList(); };
       BT.$('#myFaultAdd').addEventListener('click', addMine);
       BT.$('#myFaultIn').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addMine(); } });
-      BT.$('#myFaultList').addEventListener('click', (e) => { const x = e.target.closest('[data-rmfault]'); if (!x) return; const t = x.getAttribute('data-rmfault'); if (!confirm(`Take "${t}" off your list? Shots already tagged with it keep it.`)) return; BTCoach.setMyFaults(BTCoach.myFaults().filter(y => y !== t)); renderFaultPills(); renderMyFaultList(); });
+      BT.$('#myFaultList').addEventListener('click', (e) => {
+        const ed = e.target.closest('[data-edfault]'), rm = e.target.closest('[data-rmfault]'), un = e.target.closest('[data-unhide]');
+        if (ed) { const v = ed.getAttribute('data-edfault'), t = prompt('Rename this reason:', BTCoach.faultLabel(v)); if (t == null) return; BTCoach.setFaultLabel(v, t); }
+        else if (rm) { const v = rm.getAttribute('data-rmfault'); if (!confirm(`Take "${BTCoach.faultLabel(v)}" off your list? Shots already tagged with it keep it.`)) return;
+          if (/^my:/.test(v)) BTCoach.setMyFaults(BTCoach.myFaults().filter(x => 'my:' + x !== v)); else BTCoach.hideFault(v); }
+        else if (un) BTCoach.unhideFault(un.getAttribute('data-unhide'));
+        else return;
+        renderFaultPills(); renderMyFaultList(); });
       el.readsQuality.addEventListener('click', () => setTimeout(updateFaultVis, 0));
       el.readsMiss.addEventListener('click', () => setTimeout(updateFaultVis, 0));
 

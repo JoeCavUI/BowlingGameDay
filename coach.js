@@ -1749,12 +1749,21 @@
   ];
   // Physical feelings only: where the ball went (missed the mark) is already logged under Your mark.
   // Your own reasons are saved as 'my:<text>' and learned like the others.
-  const faultLabel = (v) => /^my:/.test(String(v || '')) ? String(v).slice(3) : (FAULTS.find(f => f.v === v) || {}).l || ({ target: 'Missed my target' }[v]) || v;
+  // Your edits: renamed labels (any reason) and reasons you've taken off your dropdown. Shots keep their tag either way.
+  const FAULT_LABELS_KEY = 'bt_fault_labels_v1', FAULT_HIDE_KEY = 'bt_fault_hidden_v1';
+  const jget = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? d : v; } catch (_e) { return d; } };
+  const jset = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_e) {} };
+  const faultLabels = () => { const o = jget(FAULT_LABELS_KEY, {}); return o && typeof o === 'object' ? o : {}; };
+  const setFaultLabel = (v, label) => { const o = faultLabels(); const t = String(label || '').trim().slice(0, 40); if (t) o[v] = t; else delete o[v]; jset(FAULT_LABELS_KEY, o); };
+  const hiddenFaults = () => { const a = jget(FAULT_HIDE_KEY, []); return Array.isArray(a) ? a : []; };
+  const hideFault = (v) => jset(FAULT_HIDE_KEY, [...new Set([...hiddenFaults(), v])]);
+  const unhideFault = (v) => jset(FAULT_HIDE_KEY, hiddenFaults().filter(x => x !== v));
+  const faultLabel = (v) => faultLabels()[v] || (/^my:/.test(String(v || '')) ? String(v).slice(3) : (FAULTS.find(f => f.v === v) || {}).l || ({ target: 'Missed my target' }[v]) || v);
   const MY_FAULTS_KEY = 'bt_my_faults_v1';
   const myFaults = () => { try { const a = JSON.parse(localStorage.getItem(MY_FAULTS_KEY) || '[]'); return Array.isArray(a) ? a.filter(x => typeof x === 'string' && x.trim()) : []; } catch (_e) { return []; } };
   const setMyFaults = (a) => { try { localStorage.setItem(MY_FAULTS_KEY, JSON.stringify([...new Set(a.map(x => String(x).trim()).filter(Boolean))].slice(0, 20))); } catch (_e) {} };
   // Built-in list (Not sure last) with your own reasons before Not sure.
-  const allFaults = () => { const base = FAULTS.filter(f => f.v !== 'unsure'); return [...base, ...myFaults().map(t => ({ v: 'my:' + t, l: t, mine: true })), FAULTS.find(f => f.v === 'unsure')]; };
+  const allFaults = (opt) => { const base = FAULTS.filter(f => f.v !== 'unsure'); const H = (opt && opt.all) ? [] : hiddenFaults(); return [...base, ...myFaults().map(t => ({ v: 'my:' + t, l: t, mine: true })), FAULTS.find(f => f.v === 'unsure')].filter(f => !H.includes(f.v)).map(f => Object.assign({}, f, { l: faultLabel(f.v) })); };
   // s: a logged shot; lefty: boolean. Returns { fit: 'fits'|'off'|'learn'|'na', side, room, text }.
   function faultRead(s, lefty) {
     if (!s || !s.fault) return null;
@@ -1821,5 +1830,5 @@
     else if (D.carry >= O.carry + 15) text = `Deeper (slide ${D.feet}) carried better on good shots: ${D.carry}% vs ${O.carry}%.`;
     return { rows, text };
   }
-  root.BTCoach = { energyAngle, noteTags, noteMix, repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
+  root.BTCoach = { setFaultLabel, hiddenFaults, hideFault, unhideFault, energyAngle, noteTags, noteMix, repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
 })(typeof window !== 'undefined' ? window : globalThis);

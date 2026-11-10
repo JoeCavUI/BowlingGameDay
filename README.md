@@ -61,6 +61,7 @@ Then open http://localhost:3000
 ## Changes in v138-beta75
 - 🔔 Carry over/under: Coach spots ringing AND flat corner pins on good shots from about the same line (no new inputs; uses the Ringing / Flat tags). First pair: hold, don't chase a single 10. 3+: a line move based on where the breakpoint sits vs the pattern's exit board (Rule of 31: length − 31), plus the smoothest ball in tonight's bag.
 - Game Day Coach no longer suggests surface changes. Surface ideas appear only in the Plan (house book) and the post-game review.
+- Poor-shot reason is now one dropdown: only the reasons you've used (most used first, with counts) and your own; the rest behind "＋ More reasons…". ✏️ Edit list: rename or remove any reason (↩︎ puts a removed one back); tagged shots keep their reason.
 - House book, Plan, post-game review and Season review flag houses with carry over/under (e.g. Imperial: 3 of 3 nights).
 
 ## Changes in v137-beta74

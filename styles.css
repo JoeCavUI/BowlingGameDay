@@ -973,3 +973,6 @@ body.gd-seasoned .gd-help{display:none}
 .tr-p-ok{fill:#5fd3b5}.tr-p-r{fill:#e0707a}.tr-p-l{fill:#e3b341}.tr-p-un{fill:#8a8f98;opacity:.6}.tr-p-oks{stroke:#5fd3b5}.tr-p-rs{stroke:#e0707a}.tr-p-ls{stroke:#e3b341}.tr-p-uns{stroke:#8a8f98}
 .tr-sw.tr-p-ok{background:#5fd3b5}.tr-sw.tr-p-r{background:#e0707a}.tr-sw.tr-p-l{background:#e3b341}.tr-sw.tr-p-un{background:#8a8f98;opacity:.6}
 .tr-pie{display:flex;align-items:center;gap:14px;margin:8px 0 4px}.tr-pie-svg{width:120px;height:120px;flex:none}.tr-pie-key div{margin:3px 0}.tr-pie-n{font-size:18px;font-weight:700;fill:var(--text)}
+.gd-faultmore{width:auto;min-width:150px;padding:7px 10px;border-radius:999px;margin:2px 0;font-size:14px}
+.gd-faultsel{width:100%;padding:9px 10px;border-radius:10px;font-size:15px;margin:2px 0}
+.gd-mychip button+button{margin-left:2px}
