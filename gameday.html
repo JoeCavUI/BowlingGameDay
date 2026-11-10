@@ -132,6 +132,7 @@
         </details>
         <details class="panel gd-fold" id="hbFold" style="display:none"><summary><span class="gd-fold-title">📒 House book</span> <span class="small" id="hbSum"></span></summary><div id="hbBody" style="margin-top:8px"></div></details>
 
+        <div id="goalBox"></div>
         <!-- Coach: the one thing to do next -->
         <div class="panel gd-coach" id="coachPanel">
           <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
@@ -187,7 +188,10 @@
           <div class="gd-q" style="margin-top:14px"><span class="gd-qnum">2</span><b>Pocket</b></div>
           <div id="readsPocket" style="margin-top:6px"></div>
 
-          <div class="gd-q" style="margin-top:14px"><span class="gd-qnum">3</span><b>Pins left</b> <span class="small">(tap nothing for a strike)</span></div>
+          <div class="gd-q" style="margin-top:14px"><span class="gd-qnum">3</span><b>Off the deck</b> <span class="small" id="exitHint"></span></div>
+          <div id="readsExit" class="gd-r1" style="margin-top:6px"></div>
+
+          <div class="gd-q" style="margin-top:14px"><span class="gd-qnum">4</span><b>Pins left</b> <span class="small">(tap nothing for a strike)</span></div>
           <div id="quickResults" class="qr-row" style="margin-top:8px"></div>
           <div style="margin-top:10px">
             <div class="deck-row">
@@ -200,7 +204,7 @@
           </div>
 
           <details class="gd-subfold" id="moreReads" style="margin-top:12px">
-            <summary><span class="gd-qnum">4</span><b>More reads</b> <span class="small">(optional: execution, reaction, exit, speed, notes)</span></summary>
+            <summary><span class="gd-qnum">5</span><b>More reads</b> <span class="small">(optional: execution, reaction, speed, notes)</span></summary>
             <div style="margin-top:8px">
               <div class="small" style="margin-bottom:6px">Skip any you didn't notice. Tap again to clear.</div>
               <div class="gd-rl">Execution</div>
@@ -217,8 +221,6 @@
               </div>
               <div class="gd-rl">Ball reaction</div>
               <div id="readsBallObs" class="gd-r1"></div>
-              <div class="gd-rl">Exit off the deck</div>
-              <div id="readsExit" class="gd-r1"></div>
               <div class="gd-rl">Speed vs normal <span class="small">(by feel)</span></div>
               <div id="readsSpeed" class="gd-r1"></div>
               <label style="margin-top:10px;display:block">Notes</label>
@@ -2567,7 +2569,9 @@ function sessionSummary(shots) {
       if (eyeball && eyeball.n) {
         const p = eyeball.parts || {};
         const bits = [`Mark tracked ${p.mark ?? '—'}%`, `Pocket ${p.pocket ?? '—'}%`];
-        if (p.exit != null) bits.push(`Exit watched ${p.exit}% of pocket hits`);
+        if (p.exit != null) bits.push(`Off the deck ${p.exit}% of pocket hits`);
+        if (p.routine != null) bits.push(`Full routine ${p.routine}%`);
+        if (eyeball.tip) bits.push(eyeball.tip);
         if (p.keyPin != null) bits.push(`Key pin seen ${p.keyPin}%`);
         const rep5 = rep ? `\n\nREPEATABILITY ${rep.score}%\n` + rep.parts.map(p => `   · ${p.label} ${p.score}%: ${p.text}`).join('\n') : '';
         const el5 = rep5 + (elements ? '\n\n5 SCORING ELEMENTS\n' + elements.elements.map(e => `${e.icon} ${e.key}${e.score != null ? ' ' + e.score + '%' : ''}: ${e.text}` + (e.subs || []).map(x => `\n   · ${x.label}${x.score != null ? ' ' + x.score + '%' : ''}: ${x.text}`).join('')).join('\n') + (elements.drill ? `\n\nWork on ${elements.weakest}: ${elements.drill}` : '') : '');
@@ -2617,6 +2621,7 @@ function sessionSummary(shots) {
       pillButtonsCustom(el.readsBallObs, ballObs);
       pillButtonsCustom(el.readsPocket, pocketObs);
       pillButtonsCustom(el.readsExit, exitObs);
+      { const h = BT.$('#exitHint'); if (h) h.textContent = isLeftyBowler() ? '(right = still turning · left = rolled out)' : '(left = still turning · right = rolled out)'; }
       pillButtonsCustom(el.readsSpeed, speedObs);
       wireQualityPills(el.readsQuality);
 	      wireQualityPills(el.readsMiss);
@@ -3089,6 +3094,7 @@ function sessionSummary(shots) {
     window.addEventListener('pageshow', () => setTimeout(updateLineMath, 350));
 
     // Tonight: one-line summary; opens itself until the must-haves are set.
+    function renderGoal() { const b = BT.$('#goalBox'); if (b && BT.goalBanner) b.innerHTML = BT.goalBanner(el.house.value); }
     function renderHouseBook() {
       const f = BT.$('#hbFold'); if (!f || !window.BTEyes || !BTEyes.houseBook) return;
       let hb = null; try { hb = BTEyes.houseBook(el.house.value, BT.formatLanes ? BT.formatLanes(el.lanes.value) : el.lanes.value, BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || [], isLeftyBowler()); } catch (_e) {}
@@ -3098,7 +3104,7 @@ function sessionSummary(shots) {
     }
     function updateSetupSummary() {
       const box = BT.$('#setupSummary'), fold = BT.$('#setupFold');
-      try { renderHouseBook(); } catch (_e) {}
+      try { renderHouseBook(); } catch (_e) {} try { renderGoal(); } catch (_e) {}
       if (!box || !fold) return;
       const txt = (sel) => (sel && sel.value && sel.selectedIndex >= 0) ? sel.options[sel.selectedIndex].text : '';
       const parts = [el.house.value && el.house.value, el.lanes.value.trim(), el.pattern.value && txt(el.pattern), el.set.value && el.set.value].filter(Boolean);

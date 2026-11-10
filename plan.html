@@ -168,7 +168,7 @@
       const extra = insightHtml(p);
       const foot = `<div class="pl-foot">${p.basedOn && p.basedOn.length ? 'Based on ' + p.basedOn.map(esc).join(', ') + '. ' : ''}Built by Coach, ${today}.</div>`;
       let hbH = ''; try { if (window.BTEyes && BTEyes.houseBook) { const bw = BT.lsGet(BT.KEYS.BOWLER, {}) || {}, lf = /^l/i.test(String(bw.handedness || '')); hbH = BTEyes.houseBookHtml(BTEyes.houseBook($('#pHouse').value.trim(), BT.formatLanes($('#pLanes').value), BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || [], lf), lf, { noLines: true }); } } catch (_e) {}
-      $('#planOut').innerHTML = `<div class="panel pl-sheet">${head}${empty}${secs}${extra}${foot}</div>` + (hbH ? `<div class="panel">${hbH}</div>` : '');
+      $('#planOut').innerHTML = (BT.goalBanner ? BT.goalBanner($('#pHouse').value.trim()) : '') + `<div class="panel pl-sheet">${head}${empty}${secs}${extra}${foot}</div>` + (hbH ? `<div class="panel">${hbH}</div>` : '');
       wireNotes();
       $('#planActions').style.display = '';
       $('#pSaveBag').style.display = p.recBag && p.recBag.length ? '' : 'none';

@@ -681,8 +681,8 @@
     const last = C[C.length - 1];
     const pocketShots = C.filter(c => c.pocketHit);
     const exitSeen = pocketShots.filter(c => c.exitRaw !== "Didn't notice").length;
-    if (last && last.pocketHit && last.exitRaw === "Didn't notice" && pocketShots.length >= 2 && exitSeen / pocketShots.length < 0.6) {
-      res.notes.push(`👀 Best ball is your eyeball: on your next pocket hit, watch where the ball leaves the deck${prof.lefty ? '' : ''} and what the ${kp} does.`);
+    if (last && last.pocketHit && last.exitRaw === "Didn't notice" && pocketShots.length >= 2 && exitSeen / pocketShots.length < 0.8) {
+      res.notes.unshift(`👀 Off the deck: ${exitSeen} of ${pocketShots.length} pocket hits watched tonight. Full routine every shot: mark → breakpoint → pocket → watch it leave the deck and what the ${kp} does.`);
     }
     return res;
   }
@@ -700,12 +700,20 @@
     const corner = prof.lefty ? '7' : '10';
     const cornerLeaves = C.filter(c => c.pocketHit && (pinsText(c.shot) === corner || ['Flat 10', 'Ringing 10'].includes(c.shot.leaveTag)));
     const key = pct(cornerLeaves.filter(c => c.keyPin && c.keyPin !== 'unknown').length, cornerLeaves.length);
-    const parts = [[mark, 40], [pocket, 25], [exit, 25], [key, 10]].filter(([v]) => v !== null);
+    // Full routine: mark, pocket and off-the-deck all watched on the same shot (pocket hits and strikes).
+    const routine = pct(ph.filter(c => String(c.shot.miss || 'didntTrack') !== 'didntTrack' && String(c.shot.pocket || 'Unknown') !== 'Unknown' && c.exitRaw !== "Didn't notice").length, ph.length);
+    const parts = [[mark, 25], [pocket, 15], [exit, 35], [routine, 15], [key, 10]].filter(([v]) => v !== null);
     const wsum = parts.reduce((a, [, w]) => a + w, 0);
     const score = Math.round(parts.reduce((a, [v, w]) => a + v * w, 0) / (wsum || 1) * 100);
     const label = score >= 85 ? 'Sharp eye' : score >= 65 ? 'Good eye' : score >= 45 ? 'Building' : 'Foggy';
     const r = (v) => v === null ? null : Math.round(v * 100);
-    return { score, label, n: C.length, parts: { mark: r(mark), pocket: r(pocket), exit: r(exit), keyPin: r(key) }, pocketHits: ph.length, cornerLeaves: cornerLeaves.length };
+    const P = { mark: r(mark), pocket: r(pocket), exit: r(exit), routine: r(routine), keyPin: r(key) };
+    const NAMES = { mark: 'your mark', pocket: 'the pocket', exit: 'off the deck', routine: 'the full routine', keyPin: 'the key pin' };
+    const weakest = Object.entries(P).filter(([, v]) => v != null).sort((a, b) => a[1] - b[1])[0];
+    const exitSeenN = ph.filter(c => c.exitRaw !== "Didn't notice").length;
+    return { score, label, n: C.length, parts: P, pocketHits: ph.length, exitSeen: exitSeenN, cornerLeaves: cornerLeaves.length,
+      weakest: weakest && weakest[1] < 70 ? { key: weakest[0], name: NAMES[weakest[0]], pct: weakest[1] } : null,
+      tip: weakest && weakest[1] < 70 ? (weakest[0] === 'exit' || weakest[0] === 'routine' ? `Watch it off the deck: ${exitSeenN} of ${ph.length} pocket hits tonight. Mark → breakpoint → pocket → off the deck, every shot.` : `Weakest: ${NAMES[weakest[0]]} (${weakest[1]}%).`) : '' };
   }
 
   // ---------- Five Elements ----------
@@ -746,9 +754,9 @@
     const pat = patternProfile(pattern);
     const C = (shots || []).filter(s => s && s.type !== 'gameStart' && !s.isFill).map(s => classify(s, prof.lefty));
     if (C.length < 3) return null;
-    const pct = (a, b) => b ? Math.round(a / b * 100) : null;
+    const pct = (a, b) => b >= 5 ? Math.round(a / b * 100) : null; // under 5 shots: not enough to grade
     const of = (a, b) => `${a} of ${b}`;
-    const sub = (label, score, text) => ({ label, score, text });
+    const sub = (label, score, text) => ({ label, score, text: score == null && /\b[0-4] of [1-4]\b/.test(text) ? text + " (not enough yet to grade)" : text });
     const chg = (c, k) => Array.isArray(c.shot.changed) && c.shot.changed.includes(k);
     const out = [];
 
@@ -1147,7 +1155,7 @@
     const C = (shots || []).filter(s => s && s.type !== 'gameStart' && !s.isFill).map(s => classify(s, prof.lefty));
     const R = moveReviews(C, prof);
     const cnt = (f) => R.filter(f).length;
-    const res = { made: R.length, good: cnt(r => r.goodCall), afterPoor: cnt(r => r.afterPoor), tooSoon: cnt(r => r.tooSoon), whileStriking: cnt(r => r.whileStriking), wrongDir: cnt(r => r.wrongDir), worked: cnt(r => r.result === 'worked'), didnt: cnt(r => r.result === 'didnt') };
+    const res = { made: R.length, good: cnt(r => r.goodCall || r.result === 'worked'), afterPoorBad: cnt(r => r.afterPoor && r.result !== 'worked'), afterPoor: cnt(r => r.afterPoor), tooSoon: cnt(r => r.tooSoon), whileStriking: cnt(r => r.whileStriking), wrongDir: cnt(r => r.wrongDir), worked: cnt(r => r.result === 'worked'), didnt: cnt(r => r.result === 'didnt') };
     const bits = [`${res.made} made`];
     if (res.made) bits.push(`${res.good} good call${res.good === 1 ? '' : 's'}`);
     if (res.worked) bits.push(`${res.worked} worked`);
@@ -1157,7 +1165,7 @@
     if (res.whileStriking) bits.push(`${res.whileStriking} while striking`);
     if (res.wrongDir) bits.push(`${res.wrongDir} the wrong way`);
     res.text = res.made ? `🔁 Your moves: ${bits.join(' · ')}.` : '🔁 Your moves: none tonight.';
-    res.tip = res.afterPoor ? 'Next time: repeat the shot after a missed mark before you move.'
+    res.tip = res.afterPoorBad ? 'Next time: repeat the shot after a missed mark before you move.'
       : res.tooSoon ? 'Next time: wait for 2 good shots that say the same thing before you move.'
       : res.wrongDir ? 'Next time: follow the miss. Hooking early, move in; holding, move out.'
       : res.didnt ? 'When a move doesn\'t help after 3 good shots, go back or move further, don\'t sit on it.'

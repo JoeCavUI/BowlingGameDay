@@ -179,6 +179,15 @@
     const out = [], lefty = !!ctx.lefty, shots = ctx.shots || [], game = ctx.gameNow || 1;
     const real = shots.filter(s => s && s.type !== 'gameStart' && !s.isFill);
     const tl = tonightLanes(shots, ctx.lanes, lefty);
+    // 🐢 Game 1, in the pocket but not carrying with this ball: switch now, don't wait (3+ pocket hits, ≤1 strike)
+    if (game === 1 && ctx.ball) {
+      const mine = real.filter(s => (Number(s.gameNo) || 1) === 1 && s.ball === ctx.ball);
+      const P = mine.filter(s => BT().isPocketHit(s)), X = mine.filter(s => !BT().standingPins(s).length);
+      if (P.length >= 3 && X.length <= 1 && P.length - X.length >= 3) {
+        let alt = null; try { const lm = laneMap(ctx.house, ctx.lanes, ctx.sessions); const rows = lm ? lm.rows.filter(r => r.ball !== ctx.ball) : []; alt = rows.sort((a, b) => (b.x / b.n) - (a.x / a.n))[0] || null; } catch (_e) {}
+        out.push({ id: `g1carry:${ctx.ball}:${P.length}`, text: `🐢 Game 1: ${ctx.ball} is in the pocket (${P.length}×) but ${X.length ? 'only 1 strike' : 'not carrying'}. Change balls now, don't wait for game 2.${alt ? ` Best here: ${alt.ball} ${alt.feet}/${alt.arrows} (${alt.x} strikes in ${alt.n}).` : ''}`, why: 'Pocket hits that leave pins mean the ball isn\'t matching the pattern. A ball change fixes carry faster than a line move.' });
+      }
+    }
     let ph = null; try { ph = pairHistory(ctx.house, ctx.lanes, lefty); } catch (_e) {}
     let usual = null;
     if (ph && ph.games >= 10) { const [a, b] = ph.L; if (a.f >= 60 && b.f >= 60 && Math.abs(ph.z) >= 2) { const more = a.idx > b.idx ? a : b, less = more === a ? b : a; usual = { more, less }; } }
