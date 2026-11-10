@@ -58,6 +58,12 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v136-beta73: Off the deck, slow starts, goal loop
+- Game Day: "Off the deck" is step 3 of every shot; eyeball score weights off-the-deck (35) and the full routine (15).
+- Game 1 alert: 3 pocket hits that don't carry with one ball → change balls now.
+- Night review: slow-start headline (pins game 1 cost, what fixed it); one goal for next time, shown on Game Day / Game Plan and graded next night.
+- Coach said / you did links moves within 3 frames only; moves that worked count as good calls; grades need 5+ shots; spare-ball check on 10-pin misses.
+
 ## Changes in v135-beta72: VLS ⇄ Dual angle
 - Arsenal (Edit a ball, Add a ball): type Storm VLS (pin-to-PAP × PSA-to-PAP × pin buffer) or dual angle (drill × pin-to-PAP × VAL) and the app fills in the other (spherical conversion on a 27" ball).
 - Symmetric balls use a 5¾" pin-to-PSA (PSA ends up in the thumb hole after drilling, per Mo Pinel); asymmetric uses the spec-sheet pin-to-PSA.
