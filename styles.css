@@ -967,3 +967,6 @@ body.gd-seasoned .gd-help{display:none}
 
 /* Season review */
 .sr-l{margin:6px 0 0;padding-left:20px}.sr-l li{margin:5px 0;line-height:1.35}
+.tr-m-ch{fill:#e0707a}.tr-m-in{fill:#e3b341}.tr-m-th{fill:#7aa7e0}.tr-m-un{fill:var(--muted,#8a8f98);opacity:.55}
+.tr-sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}.tr-sw.tr-m-ch{background:#e0707a}.tr-sw.tr-m-in{background:#e3b341}.tr-sw.tr-m-th{background:#7aa7e0}.tr-sw.tr-m-un{background:var(--muted,#8a8f98);opacity:.55}
+.tr-key i.tr-sw{width:10px;height:10px;border-top:0;margin-right:4px}.tr-card .tr-key{flex-wrap:wrap;gap:6px 12px;margin-bottom:4px}

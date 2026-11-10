@@ -38,6 +38,7 @@
       if (row.strike == null) row.strike = Math.round(real.filter(s => !BT.standingPins(s).length).length / real.length * 1000) / 10;
       try { const rp = C && C.repeatability ? C.repeatability(shots, bw) : null; row.repeat = rp ? rp.score : null; } catch (_e) {}
       try { const e = C && C.eyeballScore ? C.eyeballScore(shots, bw) : null; row.eye = e && e.n ? e.score : null; } catch (_e) {}
+      try { const cs = root.BTEyes ? root.BTEyes.cornerSpares(shots, /^l/i.test(String(bw.handedness || ''))) : null; if (cs && (cs.att || cs.missed)) { row.ten = cs.att ? Math.round(cs.made / cs.att * 100) : null; row.tenX = { att: cs.att, made: cs.made, channel: cs.channel, inside: cs.inside, thin: cs.thin, unknown: cs.unknown, pin: cs.pin }; } } catch (_e) {}
       try { const el = C && C.elementsReport ? C.elementsReport(shots, bw, (Array.isArray(pats) ? pats : []).find(q => q && q.name === x.pattern) || null) : null; if (el) el.elements.forEach(e => { row['el_' + e.key] = e.score; }); } catch (_e) {}
     });
     return rows.filter(r => r.d).sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0);
@@ -51,6 +52,7 @@
     const den = n * sxx - sx * sx; if (!den) return null; const m = (n * sxy - sx * sy) / den; return { m, b: (sy - m * sx) / n };
   }
   function chart(def, R, P, N) {
+    if (def.own) { R = R.filter(r => r[def.k] != null); N = R.length; }
     const pts = R.map((r, i) => ({ i, v: r[def.k], r })).filter(p => p.v != null && Number.isFinite(p.v));
     if (pts.length < 2) return `<div class="panel tr-card"><div class="tr-h"><b>${def.t}</b></div><div class="small dim">${def.none || 'Not enough nights logged yet.'}</div></div>`;
     const vs = pts.map(p => p.v); let lo = Math.min(...vs), hi = Math.max(...vs);
@@ -60,7 +62,7 @@
     const ticks = [lo, (lo + hi) / 2, hi].map(v => Math.round(v));
     let svg = ticks.map(v => `<line x1="${PL}" x2="${W - PR}" y1="${y(v)}" y2="${y(v)}" class="tr-grid"/><text x="${PL - 4}" y="${y(v) + 3}" class="tr-ax" text-anchor="end">${v}${def.pct ? '%' : ''}</text>`).join('');
     // x labels: first and last night, and a middle one
-    [0, Math.floor((N - 1) / 2), N - 1].filter((v, k, a) => a.indexOf(v) === k && R[v]).forEach((i, k, a) => { const [yy, mm] = R[i].d.split('-'); svg += `<text x="${x(i)}" y="${H - 5}" class="tr-ax" text-anchor="${k === 0 ? 'start' : k === a.length - 1 ? 'end' : 'middle'}">${MON[Number(mm) - 1]} '${yy.slice(2)}</text>`; });
+    [0, Math.floor((N - 1) / 2), N - 1].filter((v, k, a) => a.indexOf(v) === k && R[v]).forEach((i, k, a) => { const [yy, mm, dd] = R[i].d.split('-'); svg += `<text x="${x(i)}" y="${H - 5}" class="tr-ax" text-anchor="${k === 0 ? 'start' : k === a.length - 1 ? 'end' : 'middle'}">${MON[Number(mm) - 1]} ${def.own ? Number(dd) : `'${yy.slice(2)}`}</text>`; });
     const path = pts.map((p, k) => `${k ? 'L' : 'M'}${x(p.i).toFixed(1)},${y(p.v).toFixed(1)}`).join('');
     svg += `<path d="${path}" class="tr-line"/>`;
     const dotR = pts.length > 60 ? 2 : pts.length > 25 ? 3 : 4;
@@ -71,10 +73,33 @@
       const per = f.m * Math.max(1, Math.min(10, pts.length - 1)), span = Math.max(1, Math.min(10, pts.length - 1)), small = Math.abs(f.m * (pts.length - 1)) < (def.pct ? 2 : 2);
       note = small ? `Trend: flat over these ${pts.length} nights.` : `Trend: ${f.m > 0 ? 'up' : 'down'} ${r1(Math.abs(per))}${def.pct ? ' points' : ' pins'} per ${span} nights, over ${pts.length} nights.`; } }
     svg += `<rect x="${PL}" y="0" width="${W - PL - PR}" height="${H}" fill="transparent" class="tr-hit"/><line class="tr-x" x1="0" x2="0" y1="${PT}" y2="${H - PB}" style="display:none"/><circle class="tr-sel" r="5" style="display:none"/>`;
+    const below = def.below ? def.below(R, x, N) : '';
     const last = pts[pts.length - 1];
     return `<div class="panel tr-card" data-k="${def.k}"><div class="tr-h"><b>${def.t}</b><span class="tr-last">${def.fmt ? def.fmt(last.v) : last.v}${def.pct ? '%' : ''} <span class="small dim">last night</span></span></div>
-      <svg viewBox="0 0 ${W} ${H}" class="tr-svg" role="img" aria-label="${esc(def.t)} by night, ${pts.length} nights">${svg}</svg>
+      <svg viewBox="0 0 ${W} ${H}" class="tr-svg" role="img" aria-label="${esc(def.t)} by night, ${pts.length} nights">${svg}</svg>${below}
       <div class="tr-tip small" aria-live="polite">${note || `${pts.length} nights. Tap the chart to see a night.`}</div></div>`;
+  }
+
+  // ---------- corner pin (10 for a righty, 7 for a lefty): which side you miss, night by night ----------
+  const SIDES = [['channel', 'tr-m-ch'], ['inside', 'tr-m-in'], ['thin', 'tr-m-th'], ['unknown', 'tr-m-un']];
+  const lefty = () => { try { return /^l/i.test(String((root.BT.lsGet(root.BT.KEYS.BOWLER, {}) || {}).handedness || '')); } catch (_e) { return false; } };
+  const sideName = (k) => lefty() ? { channel: 'Left (channel)', inside: 'Right (crossed over)', thin: 'Chopped', unknown: 'Not noted' }[k] : { channel: 'Right (channel)', inside: 'Left (crossed over)', thin: 'Chopped', unknown: 'Not noted' }[k];
+  function tenTip(r) { const t = r.tenX; if (!t) return ''; const m = SIDES.filter(([k]) => t[k]).map(([k]) => `${t[k]} ${{ channel: lefty() ? 'left' : 'right', inside: lefty() ? 'right' : 'left', thin: 'chopped', unknown: 'not noted' }[k]}`).join(', '); return ` (${t.made} of ${t.att})${m ? ` · missed: ${m}` : ''}`; }
+  function tenBelow(R, x, N) {
+    const rows = R.map((r, i) => ({ i, t: r.tenX })).filter(o => o.t), H2 = 54, top = 14, base = H2 - 4;
+    if (!rows.length) return '';
+    const mx = Math.max(2, ...rows.map(o => SIDES.reduce((a, [k]) => a + (o.t[k] || 0), 0)));
+    const bw = Math.max(4, Math.min(14, (W - PL - PR) / Math.max(N, 1) * 0.6)), u = (base - top) / mx;
+    let svg = `<line x1="${PL - 8}" x2="${W - PR}" y1="${base}" y2="${base}" class="tr-grid"/>`;
+    rows.forEach(o => { let y0 = base; SIDES.forEach(([k, c]) => { const n = o.t[k] || 0; if (!n) return; const h = n * u; if (y0 === base && n) svg += `<text x="${x(o.i).toFixed(1)}" y="${(base - SIDES.reduce((a2, [k2]) => a2 + (o.t[k2] || 0), 0) * u - 3).toFixed(1)}" class="tr-ax" text-anchor="middle">${SIDES.reduce((a2, [k2]) => a2 + (o.t[k2] || 0), 0)}</text>`; svg += `<rect x="${(x(o.i) - bw / 2).toFixed(1)}" y="${(y0 - h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" class="${c}" rx="1.5"/>`; y0 -= h; }); });
+    const tot = { att: 0, made: 0 }; SIDES.forEach(([k]) => tot[k] = 0); rows.forEach(o => { ['att', 'made'].concat(SIDES.map(s => s[0])).forEach(k => tot[k] += o.t[k] || 0); });
+    const pin = rows[0].t.pin, missed = SIDES.reduce((a, [k]) => a + tot[k], 0);
+    const called = [['channel', tot.channel], ['inside', tot.inside]].sort((a, b) => b[1] - a[1]);
+    const lean = called[0][1] >= 2 && called[0][1] > called[1][1] ? (called[0][0] === 'channel' ? `Most called misses go ${sideName('channel').split(' ')[0].toLowerCase()}, into the channel: that points to alignment (feet and target).` : `Most called misses go ${sideName('inside').split(' ')[0].toLowerCase()}, crossing over: the ball is hooking. Flatten it out or use your spare ball.`) : '';
+    return `<div class="small" style="margin-top:6px"><b>Missed ${pin}s by side</b> <span class="dim">(each bar = one night)</span></div>
+      <svg viewBox="0 0 ${W} ${H2}" class="tr-svg" role="img" aria-label="Missed ${pin} pins by side, by night">${svg}</svg>
+      <div class="tr-key small">${SIDES.map(([k, c]) => `<span><i class="tr-sw ${c}"></i>${sideName(k)} ${tot[k]}</span>`).join('')}</div>
+      <div class="small">Just the ${pin} left: ${tot.made} of ${tot.att} made (${tot.att ? Math.round(tot.made / tot.att * 100) : 0}%). Bars count every time the ${pin} stayed up after your spare shot (${missed}), including when it was part of a bigger leave.${tot.unknown ? ` ${tot.unknown} not noted: tap the side after a miss so this fills in.` : ''} ${lean}</div>`;
   }
 
   // ---------- page ----------
@@ -84,6 +109,7 @@
     { k: 'eye', t: '👁️ Eyeball score', none: 'Comes from nights you log in Game Day: your mark, the pocket, the exit and the key pin.' },
     { k: 'strike', t: 'Strikes', pct: 1, fmt: (v) => Math.round(v) },
     { k: 'spare', t: 'Spares', pct: 1, fmt: (v) => Math.round(v) },
+    { k: 'ten', t: '🎯 Corner pin spares', pct: 1, none: 'Comes from nights you log in Game Day.', below: tenBelow, tip: tenTip, own: 1 },
     { k: 'pocket', t: 'Pocket hits', pct: 1, none: 'Comes from nights you log in Game Day.' },
     { k: 'carry', t: 'Carry (strikes on pocket hits)', pct: 1, none: 'Comes from nights you log in Game Day.' },
     { k: 'series', t: 'Series (3 games)' },
@@ -102,6 +128,7 @@
     let R = all.filter(r => !P.house || r.h === P.house).filter(r => !P.lanes || r.lanes === P.lanes).filter(r => !P.league || r.lg === P.league);
     if (/^\d{4}$/.test(P.period)) R = R.filter(r => r.d.startsWith(P.period)); else if (P.period) R = R.filter(r => r.d >= cut(Number(P.period)));
     const N = R.length;
+    DEFS.find(d => d.k === 'ten').t = `🎯 ${lefty() ? 7 : 10}-pin spares`;
     box.innerHTML = `<div class="panel tr-filters">
         <div class="tr-frow">
           <label>Period<select class="input" id="trPeriod"><option value="3"${P.period === '3' ? ' selected' : ''}>Last 3 months</option><option value="6"${P.period === '6' ? ' selected' : ''}>Last 6 months</option><option value="12"${P.period === '12' ? ' selected' : ''}>Last 12 months</option>${years.map(y => `<option value="${y}"${P.period === y ? ' selected' : ''}>${y}</option>`).join('')}<option value=""${!P.period ? ' selected' : ''}>All time</option></select></label>
@@ -124,14 +151,15 @@
     // Tap / drag on a chart: the nearest night, with its value, and a link to its review.
     box.querySelectorAll('.tr-card[data-k]').forEach(card => {
       const k = card.dataset.k, def = DEFS.concat(ELS).find(d => d.k === k), svg = card.querySelector('svg'), tip = card.querySelector('.tr-tip');
-      const pts = R.map((r, i) => ({ i, v: r[k], r })).filter(p => p.v != null && Number.isFinite(p.v)); if (!svg || pts.length < 2) return;
+      const RR = def.own ? R.filter(r => r[k] != null) : R, NN = RR.length;
+      const pts = RR.map((r, i) => ({ i, v: r[k], r })).filter(p => p.v != null && Number.isFinite(p.v)); if (!svg || pts.length < 2) return;
       const base = tip.innerHTML;
-      const pick = (ev) => { const bb = svg.getBoundingClientRect(), vx = (ev.clientX - bb.left) / bb.width * W; const fi = (vx - PL) / (W - PL - PR) * (N - 1);
+      const pick = (ev) => { const bb = svg.getBoundingClientRect(), vx = (ev.clientX - bb.left) / bb.width * W; const fi = (vx - PL) / (W - PL - PR) * (NN - 1);
         const p = pts.reduce((m, q) => Math.abs(q.i - fi) < Math.abs(m.i - fi) ? q : m, pts[0]);
         const dots = svg.querySelectorAll('.tr-dot'), c = dots[pts.indexOf(p)]; if (!c) return;
         const cx = c.getAttribute('cx'), cy = c.getAttribute('cy'), xl = svg.querySelector('.tr-x'), sel = svg.querySelector('.tr-sel');
         xl.setAttribute('x1', cx); xl.setAttribute('x2', cx); xl.style.display = ''; sel.setAttribute('cx', cx); sel.setAttribute('cy', cy); sel.style.display = '';
-        tip.innerHTML = `<b>${fmtD(p.r.d)}</b> · ${esc(p.r.h)}${p.r.lanes ? ' ' + esc(p.r.lanes) : ''} · <b>${def.fmt ? def.fmt(p.v) : p.v}${def.pct ? '%' : ''}</b>${p.r.sid && opts.openNight ? ` · <button type="button" class="cl-link" data-open="${esc(p.r.sid)}">Open night</button>` : ''}`;
+        tip.innerHTML = `<b>${fmtD(p.r.d)}</b> · ${esc(p.r.h)}${p.r.lanes ? ' ' + esc(p.r.lanes) : ''} · <b>${def.fmt ? def.fmt(p.v) : p.v}${def.pct ? '%' : ''}</b>${def.tip ? def.tip(p.r) : ''}${p.r.sid && opts.openNight ? ` · <button type="button" class="cl-link" data-open="${esc(p.r.sid)}">Open night</button>` : ''}`;
         const ob = tip.querySelector('[data-open]'); if (ob) ob.onclick = () => opts.openNight(ob.dataset.open); };
       svg.addEventListener('pointerdown', pick); svg.addEventListener('pointermove', (ev) => { if (ev.buttons || ev.pointerType === 'mouse') pick(ev); });
       svg.addEventListener('mouseleave', () => { svg.querySelector('.tr-x').style.display = 'none'; svg.querySelector('.tr-sel').style.display = 'none'; tip.innerHTML = base; });
