@@ -103,11 +103,13 @@
     // ---------- the night so far ----------
     const MARKOK = { noMiss: 1, rightRecovered: 1, leftHeld: 1 };
     function soFar(i) {
-      const upto = steps.slice(0, i + 1).filter(x => !x.isFill);
+      // Every ball counts (fill balls too): strikes for this game, and for the night so far.
+      const upto = steps.slice(0, i + 1), g0 = Number(steps[i].gameNo) || 1, inG = upto.filter(x => (Number(x.gameNo) || 1) === g0);
+      const gStr = inG.filter(isX).length, gN = inG.length;
       const str = upto.filter(isX).length, pocket = upto.filter(x => BT.isPocketHit(x)).length;
       const tr = upto.filter(x => String(x.miss || 'didntTrack') !== 'didntTrack' && x.miss !== 'na'), mk = tr.filter(x => MARKOK[x.miss]).length;
       const sp = upto.filter(x => !isX(x) && x.second && Array.isArray(x.second.left)), made = sp.filter(x => x.second.left.length === 0).length;
-      return { n: upto.length, str, pocket, mark: tr.length ? Math.round(mk / tr.length * 100) : null, spares: sp.length ? `${made}/${sp.length}` : '—' };
+      return { n: upto.length, str, gStr, gN, g0, pocket, mark: tr.length ? Math.round(mk / tr.length * 100) : null, spares: sp.length ? `${made}/${sp.length}` : '—' };
     }
     function gameCard(i) {
       const x = steps[i], g = Number(x.gameNo) || 1;
@@ -146,8 +148,8 @@
     el('rect', { x: X0, y: TOP, width: X1 - X0, height: FOUL - TOP, fill: 'url(#rpWood)' }, svg);
     for (let b = 5; b < 39; b += 5) el('line', { x1: xOf(b) , x2: xOf(b), y1: TOP, y2: FOUL, stroke: 'rgba(0,0,0,.06)', 'stroke-width': 1 }, svg);
     if (patLen) { const yo = yOf(patLen); el('rect', { x: X0, y: yo, width: X1 - X0, height: FOUL - yo, fill: 'rgba(56,132,255,.13)' }, svg); el('line', { x1: X0, x2: X1, y1: yo, y2: yo, stroke: 'rgba(56,132,255,.55)', 'stroke-dasharray': '4 4' }, svg); const t = el('text', { x: X0 + 4, y: yo + 12, 'text-anchor': 'start', class: 'rp-lbl' }, svg); t.textContent = `oil ends ${patLen} ft`; }
-    // Arrows (15 ft) and dots (7 ft)
-    for (let b = 5; b <= 35; b += 5) { const x = xOf(b), y = yOf(15) - (Math.abs(b - 20) / 5) * 0; el('path', { d: `M${x} ${y - 6} L${x - 2.6} ${y + 3} L${x + 2.6} ${y + 3} Z`, fill: '#3b2a1a' }, svg); }
+    // Arrows: a V, 12–16 ft (5 & 35 boards nearest the foul line, the center 20 board farthest); dots at 7 ft
+    for (let b = 5; b <= 35; b += 5) { const x = xOf(b), y = yOf(16 - (Math.abs(b - 20) / 5) * (4 / 3)); el('path', { d: `M${x} ${y - 6} L${x - 2.6} ${y + 3} L${x + 2.6} ${y + 3} Z`, fill: '#3b2a1a' }, svg); }
     [3, 5, 8, 11, 14, 26, 29, 32, 35, 37].forEach(b => el('circle', { cx: xOf(b), cy: yOf(7), r: 1.3, fill: '#3b2a1a' }, svg));
     el('line', { x1: X0, x2: X1, y1: FOUL, y2: FOUL, stroke: '#b91c1c', 'stroke-width': 2 }, svg);
     // Pin deck + pins
@@ -174,8 +176,8 @@
       if (c) c.frames.forEach(fr => { if (fr.cum != null) { cum = fr.cum; thru = fr.no; } });
       if (gc.last && gc.final != null && (cum == null || thru < 10)) { $('rpScore').textContent = gc.final; $('rpThru').textContent = 'final'; }
       else { const gap = c && c.frames.some(fr => fr.marks.includes('?') && fr.no < (x.isFill ? 10 : Number(x.frame) || 0)); $('rpScore').textContent = cum != null ? cum : '—'; $('rpThru').textContent = cum != null ? `thru ${thru}` : gap ? 'needs 2nd balls' : ''; }
-      const so = j >= 0 ? soFar(j) : { n: 0, str: 0, pocket: 0, mark: null, spares: '—' };
-      $('rpSide').innerHTML = `<div class="rp-k">STRIKES</div><div class="rp-v">${so.str}/${so.n}</div><div class="rp-k">POCKET</div><div class="rp-v">${so.n ? Math.round(so.pocket / so.n * 100) : 0}%</div><div class="rp-k">MARK</div><div class="rp-v">${so.mark != null ? so.mark + '%' : '—'}</div><div class="rp-k">SPARES</div><div class="rp-v">${so.spares}</div>`;
+      const so = j >= 0 ? soFar(j) : { n: 0, str: 0, gStr: 0, gN: 0, g0: Number(x.gameNo) || 1, pocket: 0, mark: null, spares: '—' };
+      $('rpSide').innerHTML = `<div class="rp-k">STRIKES G${so.g0 || ''}</div><div class="rp-v">${so.gStr ?? 0}/${so.gN ?? 0}</div><div class="rp-k">NIGHT</div><div class="rp-v rp-v2">${so.str}/${so.n}</div><div class="rp-k">POCKET</div><div class="rp-v">${so.n ? Math.round(so.pocket / so.n * 100) : 0}%</div><div class="rp-k">MARK</div><div class="rp-v">${so.mark != null ? so.mark + '%' : '—'}</div><div class="rp-k">SPARES</div><div class="rp-v">${so.spares}</div>`;
       const P = paths[i].info, lv = standing(x);
       const line = [P.feet, P.arrows].every(v => v != null) ? `${P.feet}/${P.arrows}${P.bp != null ? '/' + P.bp : ''}` : '';
       const res = isX(x) ? 'Strike' : lv.join('-') + (x.second && Array.isArray(x.second.left) ? (x.second.left.length ? ` → ${x.second.left.join('-')} left` : ' → spare') : '');
