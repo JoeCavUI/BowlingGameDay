@@ -58,6 +58,9 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v141-beta78 (held)
+- Pro view lane cards now add up to Tonight: a shot saved without its lane gets it from the frame order (and the card says how many).
+
 ## Changes in v140-beta77
 - 🏠 House & pair card at the top of the Plan: by-game averages vs your Game Day average, ball × game strike grid, where your feet went, condition chips (house read, pattern / exit board, carry over/under, carrydown, tougher lane, pocket / carry), and one forecast box clearly labeled "theory, not history". Uses the pair when it has 3+ nights, else the whole house.
 - 🛢️ Night review: "On the pair: plastic / urethane" dropdowns to set or fix who was on the pair for any past night; it counts in the carrydown comparison.
