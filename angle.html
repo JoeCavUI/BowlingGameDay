@@ -351,9 +351,11 @@
     const bpFits = (c) => { const L0 = (c.len || 45); return c.bpFt != null && c.bpFt >= L0 - 12 && c.bpFt <= L0 + 8; };
     const half = (x) => Math.round(x * 2) / 2;
     function fixGoal(c) {
-      if (mode === 'pin' || !c.len) return null;
-      const D = c.len, here = c.at(D);
-      if (c.bp != null) { const reach = bpFits(c); if (!reach) return { D, here, goal: c.bp, why: `reach your breakpoint (board ${fmt(c.bp)}) at the end of the oil` }; return null; } // your own breakpoint beats the rule-of-31 estimate
+      if (mode === 'pin') return null;
+      // No pattern length picked: your breakpoint still gets fixes, measured at 45 ft (same spot the breakpoint check uses).
+      if (!c.len && c.bp == null) return null;
+      const D = c.len || 45, here = c.at(D);
+      if (c.bp != null) { const reach = bpFits(c); if (!reach) return { D, here, goal: c.bp, why: `reach your breakpoint (board ${fmt(c.bp)}) ${c.len ? 'at the end of the oil' : 'by 45 ft'}` }; return null; } // your own breakpoint beats the rule-of-31 estimate
       if (c.box) { const hb = c.at(c.box.fm); if (hb < c.box.b1 - 0.5 || hb > c.box.b2 + 0.5) return { D: c.box.fm, here: hb, goal: c.box.bm, why: `go through the middle of your box (board ${fmt(c.box.bm)} at ${r1(c.box.fm)} ft)` }; return null; }
       if (c.exit != null && Math.abs(here - c.exit) > (c.rc === 'sport' ? 1 : 2)) return { D, here, goal: c.exit, why: `leave the oil at the exit point (board ${c.exit})` };
       return null;

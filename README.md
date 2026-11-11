@@ -58,6 +58,9 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v140-beta77 (held)
+- 🛠️ Angles: Ways to fix it shows again when no pattern length is picked (your breakpoint is checked at 45 ft, same as the warning).
+
 ## Changes in v139-beta76
 - 🏠 "How the left plays" is now **House read** (Plan and Game Day): Plays easy, Tight (sport-like), Dry backends, Burns up fast, Carrydown, plus the old Left opens up / Left stays oily. Works without a league (saved on the house; on the league too when one is picked). The Plan's If / then adds one line for the read; Coach keeps moves small on a tight house.
 
