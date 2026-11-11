@@ -2123,11 +2123,8 @@ function saveCurrentSessionDraft() {
         if (ln.length) cells.push(['This line', `${ln.filter(X).length}X / ${ln.length}`, `P ${pc(ln.filter(P).length, ln.length)}% · ${since} since move`]);
         const lanes = BT.formatLanes ? BT.formatLanes(el.lanes.value) : el.lanes.value;
         // Lane cards: a shot saved without its lane (lanes typed in after it was logged, or a scorecard fix) gets it from the frame order, so the two lanes add up to Tonight.
-        const pr = parseLanePair(el.lanes.value).map(String); let guessed = 0;
-        const byLane = (() => { if (pr.length !== 2) return all; const out = []; const fr = {}; all.forEach(x => { const g = Number(x.gameNo) || 1; fr[g] = fr[g] || 0;
-            let ln = String(x.lane || '').replace(/[^0-9]/g, '');
-            if (!ln) { const f = x.isFill ? Math.max(0, fr[g] - 1) : fr[g]; const L = gameStartsLeft(g); ln = (f % 2 === 0) === L ? pr[0] : pr[1]; guessed++; }
-            if (!x.isFill) fr[g]++; out.push(Object.assign({}, x, { lane: ln })); }); return out; })();
+        // Lane cards: a shot saved without tonight's lane (or with a stray one) gets it from the frame order, the same fix Scores makes, so the two lanes add up to Tonight.
+        let guessed = 0; const byLane = (() => { try { const cp = { lanes, shots: all.map(x => Object.assign({}, x)) }; guessed = BT.inferLanes(cp) || 0; return cp.shots; } catch (_e) { return all; } })();
         if (window.BTEyes) { const tt = BTEyes.tonightTough(byLane, lanes), tl = BTEyes.tonightLanes(byLane, lanes, lefty);
           if (tt) [tt.a, tt.b].forEach(o => { const t2 = tl && (tl.a || tl.more) ? [tl.a, tl.b, tl.more, tl.less].filter(Boolean).find(q => q.l === o.l) : null; cells.push([`Lane ${o.l}`, `${o.x}X / ${o.n}`, `P ${o.p}/${o.n}${t2 ? ` · high ${t2.hi} · light ${t2.lo}` : ''}${guessed ? ` · ${guessed} lane${guessed === 1 ? '' : 's'} from frame order` : ''}`]); });
           const cs = BTEyes.cornerSpares(all, lefty); if (cs.att || cs.missed) cells.push([`${cs.pin}-pin spares`, `${cs.made}/${cs.att}`, cs.missed ? `missed ${cs.missed}${['channel', 'inside', 'thin'].filter(k => cs[k]).map(k => ` · ${k} ${cs[k]}`).join('')}` : 'no misses']); }
