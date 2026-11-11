@@ -59,6 +59,7 @@ Then open http://localhost:3000
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
 ## Changes in v141-beta78 (held)
+- 🎬 Replay: down-lane tracers (boards 15/25 at 34–37 ft, 10/30 at 40–43 ft) and the Baker Box drawn on the lane, each with a checkbox (remembered).
 - ▶️ Replay: strikes shown for this game and for the night, every ball counted (fill balls included). Arrows drawn as a real V: 5 and 35 boards nearest the foul line (~12 ft), the center arrow farthest (~16 ft).
 - Pro view lane cards now add up to Tonight: a shot saved without its lane gets it from the frame order (and the card says how many).
 

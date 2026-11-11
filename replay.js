@@ -127,6 +127,7 @@
         <div class="rp-score"><div id="rpScore">—</div><div class="rp-sub" id="rpThru"></div></div></div>
       <div class="rp-stage"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" id="rpSvg"></svg>
         <div class="rp-side" id="rpSide"></div></div>
+      <div class="rp-ovl"><label><input type="checkbox" id="rpTr" /> Tracers</label><label><input type="checkbox" id="rpBox" /> Baker Box <span class="rp-ovn" id="rpBoxN"></span></label></div>
       <div class="rp-chip" id="rpChip"></div>
       <div class="rp-card" id="rpCard"></div>
       <div class="rp-ctl">
@@ -151,6 +152,21 @@
     // Arrows: a V, 12–16 ft (5 & 35 boards nearest the foul line, the center 20 board farthest); dots at 7 ft
     for (let b = 5; b <= 35; b += 5) { const x = xOf(b), y = yOf(16 - (Math.abs(b - 20) / 5) * (4 / 3)); el('path', { d: `M${x} ${y - 6} L${x - 2.6} ${y + 3} L${x + 2.6} ${y + 3} Z`, fill: '#3b2a1a' }, svg); }
     [3, 5, 8, 11, 14, 26, 29, 32, 35, 37].forEach(b => el('circle', { cx: xOf(b), cy: yOf(7), r: 1.3, fill: '#3b2a1a' }, svg));
+    // Down-lane tracers (range finders: boards 15 & 25 at 34–37 ft, boards 10 & 30 at 40–43 ft) and the Baker Box: each one a checkbox, remembered.
+    const OVL_KEY = 'bt_replay_overlays_v1';
+    const ovl = (() => { try { return Object.assign({ tracers: true, box: true }, JSON.parse(localStorage.getItem(OVL_KEY) || '{}')); } catch (_e) { return { tracers: true, box: true }; } })();
+    const gTr = el('g', {}, svg), gBox = el('g', {}, svg);
+    [[15, 34, 37], [25, 34, 37], [10, 40, 43], [30, 40, 43]].forEach(([b, f0, f1]) => el('line', { x1: xOf(b), x2: xOf(b), y1: yOf(f0), y2: yOf(f1), stroke: '#3b2a1a', 'stroke-width': 2, 'stroke-linecap': 'round', opacity: 0.75 }, gTr));
+    let boxNote = '';
+    try { const ratio = pat && num(pat.ratio); const bf = BT.boxFor ? BT.boxFor(patLen || 40, ratio, { speedDominant: /speed/i.test(String(bowler.dominance || '')) }) : null;
+      if (bf && !bf.off) { const f1 = bf.early38 && bf.b2 <= 10 ? bf.early38 : bf.f1, xa = xOf(bf.b1 - 0.5), xb = xOf(bf.b2 + 0.5);
+        el('rect', { x: Math.min(xa, xb), y: yOf(bf.f2), width: Math.abs(xb - xa), height: yOf(f1) - yOf(bf.f2), fill: 'rgba(74,222,128,.18)', stroke: 'rgba(22,163,74,.85)', 'stroke-width': 1.2, 'stroke-dasharray': '3 2', rx: 2 }, gBox);
+        const t = el('text', { x: (xa + xb) / 2, y: yOf(bf.f2) - 3, 'text-anchor': 'middle', class: 'rp-lbl' }, gBox); t.textContent = 'Baker Box'; }
+      else boxNote = bf && bf.off === 'sport' ? 'not for this sport pattern' : 'turned off on Angles'; } catch (_e) {}
+    const paintOvl = () => { gTr.style.display = ovl.tracers ? '' : 'none'; gBox.style.display = ovl.box ? '' : 'none'; };
+    paintOvl();
+    [['rpTr', 'tracers'], ['rpBox', 'box']].forEach(([id, k]) => { const c = $(id); if (!c) return; c.checked = !!ovl[k]; c.addEventListener('change', () => { ovl[k] = c.checked; try { localStorage.setItem(OVL_KEY, JSON.stringify(ovl)); } catch (_e) {} paintOvl(); }); });
+    if (boxNote && $('rpBoxN')) { $('rpBoxN').textContent = `(${boxNote})`; $('rpBox').disabled = true; }
     el('line', { x1: X0, x2: X1, y1: FOUL, y2: FOUL, stroke: '#b91c1c', 'stroke-width': 2 }, svg);
     // Pin deck + pins
     el('rect', { x: X0, y: TOP, width: X1 - X0, height: yOf(59) - TOP, fill: 'rgba(255,255,255,.08)' }, svg);
