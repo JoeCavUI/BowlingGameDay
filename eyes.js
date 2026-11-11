@@ -155,9 +155,10 @@
     let tough = null; try { const all = use.flatMap(s => s.shots || []); tough = lanes ? tonightTough(all, lanes) : null; } catch (_e) {}
     let mix = null; try { const pl = (() => { const P = (root.BT && BT().lsGet) ? (BT().lsGet('bt_oil_patterns_v1', []) || []) : []; const pn = (use.find(s => s.pattern) || {}).pattern; const m = P.find(p => pn && p.name === pn && p.length) || P.find(p => String(p.center || '').toLowerCase().replace(/[^a-z0-9]/g, '') === hk && p.length); return m ? Number(m.length) : null; })();
       const per = use.map(s => tenMix(s.shots, lefty, pl)).filter(Boolean); if (per.length >= 2) { const all = tenMix(use.flatMap(s => s.shots || []), lefty, pl); if (all) mix = Object.assign(all, { nights: per.length, of: use.length }); } } catch (_e) {}
+    let cd = null; try { const T = use.map(s => ({ t: trafficOf(s), c: carrySign(s.shots, lefty) })).filter(o => o.t && o.t.carry >= 1 && o.c); if (T.length) cd = { n: T.length, signs: T.filter(o => o.c.sign).length, carry: Math.max(...T.map(o => o.t.carry)), plastic: Math.max(...T.map(o => o.t.plastic || 0)), est: T.some(o => o.t.est), drift: T.map(o => o.c.drift).filter(Number.isFinite) }; } catch (_e) {}
     const moves = rows.filter(r => r.mv), worked = moves.filter(r => r.mv.ok);
     const avgMove = moves.length ? { g: Math.round(moves.reduce((a, r) => a + r.mv.g, 0) / moves.length), deeper: moves.filter(r => deep(r.mv.d) === 'deeper').length } : null;
-    return { house, lanes, pair: onPair.length > 0, nights: rows, lm, cs, tough, moves, worked, avgMove, deep, mix };
+    return { house, lanes, pair: onPair.length > 0, nights: rows, lm, cs, tough, moves, worked, avgMove, deep, mix, cd };
   }
 
   function houseBookHtml(hb, lefty, opt) {
@@ -171,6 +172,8 @@
     if (!opt.noLines) [2, 3].forEach(g => { const b = hb.lm && hb.lm.byGame[g]; if (b && (!best || b.feet !== best.feet || b.arrows !== best.arrows || b.ball !== best.ball)) L.push(`<li><b>Game ${g}:</b> ${esc(b.ball)} ${esc(b.feet)}/${esc(b.arrows)} has worked best (${b.x} in ${b.n}).</li>`); });
     if (hb.avgMove) L.push(`<li><b>First move:</b> usually in game ${hb.avgMove.g}; ${hb.avgMove.deeper} of ${hb.moves.length} nights you went deeper. ${hb.worked.length} of ${hb.moves.length} first moves worked (2 of the next 3 in the pocket).</li>`);
     if (hb.tough && hb.tough.tough) L.push(`<li><b>Lanes:</b> ${esc(hb.tough.tough.l)} has been tougher ${hb.tough.kind === 'pocket' ? 'to get to the pocket' : 'to strike'} (pocket ${hb.tough.tough.p}/${hb.tough.tough.n} vs ${hb.tough.easy.p}/${hb.tough.easy.n}).</li>`);
+    if (hb.cd && hb.cd.signs >= 1) { const c = hb.cd, dOut = lefty ? 'left' : 'right';
+      L.push(`<li><b>🛢️ Carrydown:</b> ${c.plastic ? 'plastic' : 'urethane'} on the pair${c.est ? ' (from your league roster)' : ''}, and on ${c.signs} of ${c.n} of those nights the ball held later: you ended up moving ${dOut}, not in. Expect the back end to get weaker by game 2: don't chase it ${lefty ? 'right' : 'left'}; get outside the track (${dOut}) or go to an earlier-reading ball, and a touch less speed lets it read.${opt.surface !== false ? ' Before you go: a ball that reads earlier (more surface) is the one to bring.' : ''}</li>`); }
     if (hb.mix) { const m = hb.mix, deepD = lefty ? 'right' : 'left', outD = lefty ? 'left' : 'right';
       const where = m.zone === 'outside' ? ` Your breakpoint (about board ${m.bp}) is well outside the exit board (about ${m.exB} on ${m.patLen} ft), so the ball is finishing out in the dry: start 2 and 1 ${deepD} of your usual line.`
         : m.zone === 'inside' ? ` Your breakpoint (about board ${m.bp}) is at or inside the exit board (about ${m.exB} on ${m.patLen} ft): the ball is turning in the mud. Let it travel further out before it turns.`
@@ -181,6 +184,45 @@
     return `<div class="hb"><div class="hb-h">📒 House book: ${esc(hb.house)}${hb.lanes ? ` · ${esc(hb.lanes)}` : ''}</div><div class="small dim">${hb.nights.length} night${hb.nights.length === 1 ? '' : 's'} logged ${hb.pair ? 'on this pair' : 'here'}.</div>${L.length ? `<ul class="hb-l">${L.join('')}</ul>` : ''}<div class="hb-sub">Last nights here</div><ul class="hb-l">${nightLi}</ul></div>`;
   }
 
+
+
+  // ---------- 🛢️ Carrydown: plastic / urethane on the pair push oil down the lane; the ball holds and goes long later in the night ----------
+  // Who was on the pair: saved with the night (traffic), or estimated from the league roster (your teammates only).
+  function trafficOf(sess) {
+    if (!sess) return null;
+    if (sess.traffic) return Object.assign({ est: false }, sess.traffic);
+    try { const L = (BT().getLeagues ? BT().getLeagues() : []) || []; const k = (t) => String(t || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      let lg = sess.leagueId ? L.find(l => l.id === sess.leagueId) : null;
+      if (!lg) { const at = L.filter(l => l.roster && k(l.houseId) && (k(l.houseId) === k(sess.house) || k(sess.house).startsWith(k(l.houseId)) || k(l.houseId).startsWith(k(sess.house)))); if (at.length === 1) lg = at[0]; }
+      if (!lg || !Array.isArray(lg.roster)) return null;
+      const mates = lg.roster.filter(p => !p.me), ure = mates.filter(p => p.ball === 'urethane').length, plastic = mates.filter(p => p.ball === 'plastic').length;
+      return { est: true, ure, plastic, carry: ure + plastic };
+    } catch (_e) { return null; }
+  }
+  // How the night moved: feet drift (+ = moved in, the usual breakdown; − = moved out, the ball holding) and light / flat share after game 1.
+  function carrySign(shots, lefty) {
+    const sh = (shots || []).filter(z => z && z.type !== 'gameStart' && !z.isFill);
+    const g = (z) => Number(z.gameNo) || 1, md = (a) => { const b = a.filter(Number.isFinite).sort((x, y) => x - y); return b.length ? b[Math.floor(b.length / 2)] : null; };
+    const games = [...new Set(sh.map(g))].sort((a, b) => a - b); if (games.length < 2) return null;
+    const ft = (G) => md(sh.filter(z => g(z) === G).map(z => Number(z.feet)));
+    const f1 = ft(games[0]), fL = ft(games[games.length - 1]);
+    const weak = (z) => /light/i.test(String(z.pocket || '')) || z.leaveTag === 'Flat 10' || z.leaveTag === 'Flat 7' || z.keyPin === 'weak' || z.laneRead === 'less' || (Array.isArray(z.obs) && z.obs.includes('Carrydown'));
+    const rate = (a) => a.length ? a.filter(weak).length / a.length : 0;
+    const early = sh.filter(z => g(z) === games[0]), late = sh.filter(z => g(z) !== games[0]);
+    const drift = f1 != null && fL != null ? fL - f1 : null, wE = rate(early), wL = rate(late);
+    const sign = (drift != null && drift <= -1) || (drift != null && drift <= 0 && wL >= wE + 0.08);
+    return { drift, f1, fL, weakEarly: Math.round(wE * 100), weakLate: Math.round(wL * 100), sign };
+  }
+  // Nights with vs without plastic / urethane on the pair.
+  function carryCompare(sessions, lefty) {
+    const W = [], O = [];
+    (sessions || []).forEach(s => { const t = trafficOf(s), c = carrySign(s.shots, lefty); if (!c) return; const sh = (s.shots || []).filter(z => z && z.type !== 'gameStart' && !z.isFill), ph = sh.filter(z => BT().isPocketHit(z)), x = ph.filter(z => !BT().standingPins(z).length).length;
+      const row = { house: s.house, at: s.savedAt, drift: c.drift, sign: c.sign, weakLate: c.weakLate, carry: ph.length ? x / ph.length : null, est: t ? t.est : null };
+      (t && t.carry >= 1 ? W : O).push(row); });
+    const avg = (a, k) => { const v = a.map(r => r[k]).filter(Number.isFinite); return v.length ? v.reduce((p, q) => p + q, 0) / v.length : null; };
+    const sum = (a) => ({ n: a.length, drift: avg(a, 'drift'), carry: avg(a, 'carry'), weakLate: avg(a, 'weakLate'), signs: a.filter(r => r.sign).length, est: a.filter(r => r.est).length });
+    return { with: sum(W), without: sum(O), withHouses: W.map(r => r.house) };
+  }
 
   // ---------- 🔔 Carry over/under: ringing AND flat corner pins on good pocket shots, about the same line ----------
   // Ringing 10 (6 wraps around) = too much energy / angle; flat 10 (6 lies down) = too little. Both off one line = the reaction isn't repeating.
@@ -267,5 +309,5 @@
     if (best && real.length <= 1 && game === 1) out.push({ id: 'map', text: `🗺️ Your best line here: ${best.ball} ${best.feet}/${best.arrows}${best.bp != null ? '/' + best.bp : ''}: ${best.x} strikes in ${best.n}.`, why: `From ${nt(best.nights)} you logged ${lm.pair ? 'on this pair' : 'at this house'}: pocket ${Math.round(best.p / best.n * 100)}%.`, angle: { slide: best.feet, target: best.arrows, bp: best.bp } });
     return out.filter(x => !x.late).concat(out.filter(x => x.late));
   }
-  root.BTEyes = { signals, tenMix, houseBook, houseBookHtml, cornerSpares, tonightLanes, tonightTough, pairHistory, transition, ballFade, laneMap, leaveSide };
+  root.BTEyes = { signals, tenMix, trafficOf, carrySign, carryCompare, houseBook, houseBookHtml, cornerSpares, tonightLanes, tonightTough, pairHistory, transition, ballFade, laneMap, leaveSide };
 })(typeof window !== 'undefined' ? window : globalThis);

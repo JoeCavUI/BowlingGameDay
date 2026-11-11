@@ -976,3 +976,17 @@ body.gd-seasoned .gd-help{display:none}
 .gd-faultmore{width:auto;min-width:150px;padding:7px 10px;border-radius:999px;margin:2px 0;font-size:14px}
 .gd-faultsel{width:100%;padding:9px 10px;border-radius:10px;font-size:15px;margin:2px 0}
 .gd-mychip button+button{margin-left:2px}
+/* House & pair card */
+.hc-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.hc-lbl{font-size:12px;color:var(--muted,#9aa0a6);margin:10px 0 4px}
+.hc-games{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;text-align:center}
+.hc-g{background:rgba(255,255,255,.05);border-radius:8px;padding:6px}.hc-gl{font-size:11px;opacity:.8}.hc-gv{font-weight:700}.hc-gv span{font-weight:400;font-size:12px}
+.hc-g.hc-up{background:rgba(95,211,181,.16);color:#5fd3b5}.hc-g.hc-dn{background:rgba(224,112,122,.16);color:#e0707a}.hc-g.hc-lo{outline:1px solid rgba(224,112,122,.5)}
+.hc-t{width:100%;border-collapse:separate;border-spacing:3px;table-layout:fixed;font-size:13px}.hc-h td{font-size:11px;opacity:.7;text-align:center}.hc-h td:first-child{width:42%}
+.hc-b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hc-c{text-align:center;border-radius:6px;background:rgba(255,255,255,.05);padding:3px 0}
+.hc-c.hc-up{background:rgba(95,211,181,.16);color:#5fd3b5}.hc-c.hc-dn{background:rgba(224,112,122,.16);color:#e0707a}.hc-c.hc-na{background:none;opacity:.5}
+.hc-svg{width:100%;height:auto}
+.hc-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.hc-chip{font-size:12px;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.07)}.hc-chip.hc-warn{background:rgba(227,179,65,.18);color:#e3b341}
+.hc-fc{border:1px dashed rgba(227,179,65,.55);border-radius:8px;padding:8px 10px;margin-top:10px;font-size:14px;line-height:1.45}.hc-fcl{font-size:11px;color:#e3b341;margin-bottom:2px}
+.hc-t{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(3,minmax(0,1fr));gap:3px;width:auto;font-size:13px;align-items:center}
+.hc-h{font-size:11px;opacity:.7;text-align:center}.hc-c small{display:block;font-size:10px;opacity:.7}

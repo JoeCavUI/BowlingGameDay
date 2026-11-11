@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Plan</title>
-  <link rel="stylesheet" href="styles.css?v=139" />
+  <link rel="stylesheet" href="styles.css?v=140" />
 </head>
 <body data-page="plan">
   <div class="navlinks"></div>
@@ -60,13 +60,14 @@
     </div>
   </div>
 
-  <script src="app.js?v=139"></script>
-  <script src="pinpal.js?v=139"></script>
-  <script src="history.js?v=139"></script>
-  <script src="chart.js?v=139"></script>
-  <script src="eyes.js?v=139"></script>
-  <script src="plan.js?v=139"></script>
-  <script src="insight.js?v=139"></script>
+  <script src="app.js?v=140"></script>
+  <script src="pinpal.js?v=140"></script>
+  <script src="history.js?v=140"></script>
+  <script src="chart.js?v=140"></script>
+  <script src="eyes.js?v=140"></script>
+  <script src="housecard.js?v=140"></script>
+  <script src="plan.js?v=140"></script>
+  <script src="insight.js?v=140"></script>
   <script>
   (function () {
     BT.renderNav('plan');
@@ -168,7 +169,8 @@
       const extra = insightHtml(p);
       const foot = `<div class="pl-foot">${p.basedOn && p.basedOn.length ? 'Based on ' + p.basedOn.map(esc).join(', ') + '. ' : ''}Built by Coach, ${today}.</div>`;
       let hbH = ''; try { if (window.BTEyes && BTEyes.houseBook) { const bw = BT.lsGet(BT.KEYS.BOWLER, {}) || {}, lf = /^l/i.test(String(bw.handedness || '')); hbH = BTEyes.houseBookHtml(BTEyes.houseBook($('#pHouse').value.trim(), BT.formatLanes($('#pLanes').value), BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || [], lf), lf, { noLines: true }); } } catch (_e) {}
-      $('#planOut').innerHTML = (BT.goalBanner ? BT.goalBanner($('#pHouse').value.trim()) : '') + `<div class="panel pl-sheet">${head}${empty}${secs}${extra}${foot}</div>` + (hbH ? `<div class="panel">${hbH}</div>` : '');
+      let hcH = ''; try { if (window.BTHouseCard) { const bw = BT.lsGet(BT.KEYS.BOWLER, {}) || {}, lf = /^l/i.test(String(bw.handedness || '')); hcH = BTHouseCard.html(BTHouseCard.build($('#pHouse').value.trim(), BT.formatLanes($('#pLanes').value), BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || [], lf), lf); } } catch (e) { console.error(e); }
+      $('#planOut').innerHTML = (BT.goalBanner ? BT.goalBanner($('#pHouse').value.trim()) : '') + hcH + `<div class="panel pl-sheet">${head}${empty}${secs}${extra}${foot}</div>` + (hbH ? `<div class="panel">${hbH}</div>` : '');
       wireNotes();
       $('#planActions').style.display = '';
       $('#pSaveBag').style.display = p.recBag && p.recBag.length ? '' : 'none';

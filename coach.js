@@ -1218,6 +1218,11 @@
       if (C.length >= 3) sideNotes(out, C, W, prof, patternProfile(ctx && ctx.pattern));
       if (C.length >= 2) moveNotes(out, C, prof);
       laneNotes(out, C, prof);
+      // 🛢️ Carrydown building (game 2+): the ball holds later than game 1 and right moves are working. Stronger with plastic / urethane on the pair.
+      try { const E = root.BTEyes, T = ctx && ctx.traffic, c = E && E.carrySign ? E.carrySign(all, prof.lefty) : null;
+        if (c && c.sign && ((T && T.carry >= 1) || (c.drift != null && c.drift <= -2)) && !(out.notes || []).some(n => /^🛢️ Carrydown/.test(n))) {
+          const dIn = prof.deeper || 'left', dOut = prof.outside || 'right'; let ball = ''; try { ball = suggestBall('late', ctx, prof); } catch (_e) {}
+          (out.notes = out.notes || []).unshift(`🛢️ Carrydown${T && T.carry >= 1 ? ` (${T.carry} plastic / urethane on the pair)` : ''}: the ball is holding later than game 1${c.drift != null && c.drift < 0 ? ` (you've moved ${Math.abs(c.drift)} ${dOut})` : ''}${c.weakLate > c.weakEarly ? `, light / flat hits ${c.weakEarly}% → ${c.weakLate}%` : ''}. Don't chase it ${dIn}. Pick one: get outside the track (feet 2 ${dOut}, eyes 1 ${dOut}); ${ball ? `go to ${ball}, it reads earlier` : 'an earlier-reading ball from tonight\'s bag'}; or take a touch of speed off (about ½ mph) so it reads sooner.`); out.carrydown = c; } } catch (_e) {}
       // 🔔 Carry over/under (no new inputs: uses the ringing / flat tags you already log). Game Day: line + tonight's bag only, never surface.
       try { const E = root.BTEyes, pat = patternProfile(ctx && ctx.pattern);
         const mix = E && E.tenMix ? E.tenMix(all.slice(-24), prof.lefty, pat && pat.length) : null;
@@ -1250,8 +1255,8 @@
           const dIn = prof.deeper || 'left', dOut = prof.outside || 'right';
           const small = wear === 'sport' ? ' Keep it small: this house plays tight.' : wear === 'opens' ? ` Keep it small: the ${dIn} opens up on this league.` : wear === 'holds' ? ` The ${dIn} holds on this league, so this move is safe.` : '';
           if (prevOk && (last.lean || 0) >= 1) out.ready = { dir: 'early', text: `⚡ First sign the lane is changing: that one came in higher / read earlier than the two before it. If your next good shot does the same, make the move right away: feet 1 ${dIn}, eyes ½ ${dIn}.${small}` };
-          else if (prevOk && (last.lean || 0) <= -1) out.ready = { dir: 'late', text: (ctx.traffic && ctx.traffic.carry >= 2)
-            ? `⚡ First sign the lane is changing: that one held longer / came in lighter. With ${ctx.traffic.carry} urethane / plastic bowlers on the pair this is likely carrydown: if the next good shot does the same, try a stronger ball or a touch less speed before moving ${dOut}.`
+          else if (prevOk && (last.lean || 0) <= -1) out.ready = { dir: 'late', text: (ctx.traffic && ctx.traffic.carry >= 1)
+            ? `⚡ First sign the lane is changing: that one held longer / came in lighter. With ${ctx.traffic.carry} urethane / plastic bowler${ctx.traffic.carry === 1 ? '' : 's'} on the pair this is likely carrydown: if the next good shot does the same, don't chase it ${dIn}: try an earlier-reading ball or a touch less speed, or move ${dOut} to get outside the track.`
             : `⚡ First sign the lane is changing: that one held longer / came in lighter than the two before it. If your next good shot does the same, make the move right away: feet 1 ${dOut}, eyes ½ ${dOut}.` };
         }
       } catch (_e) {}
@@ -1263,7 +1268,7 @@
           const T = ctx.traffic, dIn = prof.deeper || 'left', dOut = prof.outside || 'right';
           const parts = [];
           if (T && T.gameGap) parts.push(`About ${T.gameGap} shots have gone down on this lane since you were last on it${T.sameSideShare != null && T.sameSide ? `, about ${Math.round(T.gameGap * T.sameSideShare)} of them reactive on your side (${T.sameSide} other ${T.sameSide === 1 ? 'bowler' : 'bowlers'}${T.twoHand ? `, ${T.twoHand} two-handed` : ''})` : ''}.`);
-          if (T && T.carry >= 2) parts.push(`${T.carry} on the pair throw urethane or plastic: by now they've pushed oil down the lane, so expect a weaker back end.`);
+          if (T && T.carry >= 1) parts.push(`${T.carry} on the pair throw${T.carry === 1 ? 's' : ''} urethane or plastic: by now they've pushed oil down the lane, so expect a weaker back end.`);
           const hb = ctx.history && ctx.history.byGame;
           if (hb && hb[1] && hb[gNext]) { const d = Math.round(hb[gNext] - hb[1]); if (Math.abs(d) >= 4) parts.push(`Your game ${gNext} here averages ${Math.abs(d)} pins ${d < 0 ? 'below' : 'above'} game 1${d < 0 ? ': the lanes usually change on you' : ''}.`); }
           const pm = ctx.pastMoves && ctx.pastMoves[gNext];
