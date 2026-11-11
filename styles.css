@@ -990,3 +990,4 @@ body.gd-seasoned .gd-help{display:none}
 .hc-fc{border:1px dashed rgba(227,179,65,.55);border-radius:8px;padding:8px 10px;margin-top:10px;font-size:14px;line-height:1.45}.hc-fcl{font-size:11px;color:#e3b341;margin-bottom:2px}
 .hc-t{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(3,minmax(0,1fr));gap:3px;width:auto;font-size:13px;align-items:center}
 .hc-h{font-size:11px;opacity:.7;text-align:center}.hc-c small{display:block;font-size:10px;opacity:.7}
+.nr-pair{margin-top:8px;font-size:14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}.nr-pairsel{width:auto;min-width:56px;padding:4px 8px}

@@ -804,6 +804,8 @@
           ${R.goalPrev ? `<div class="goal-banner ${R.goalPrev.r.ok ? 'ok' : 'miss'}">${R.goalPrev.r.ok ? '✅' : '❌'} <b>Last time's goal:</b> ${esc(R.goalPrev.g.text)} <span class="small">(${esc(R.goalPrev.r.why)})</span></div>` : ''}
           ${R.goalNext ? `<div class="goal-banner">🎯 <b>Goal for next time:</b> ${esc(R.goalNext.text)}</div>` : ''}
           ${R.eye ? `<div class="nr-eye"><b>👁️ Eyeball ${R.eye.score}</b> (${esc(R.eye.label)}) · mark ${R.eye.parts.mark ?? '—'}% · pocket ${R.eye.parts.pocket ?? '—'}% · <b>off the deck ${R.eye.parts.exit ?? '—'}%</b>${R.eye.parts.routine != null ? ` · full routine ${R.eye.parts.routine}%` : ''}${R.eye.tip ? `<div class="small" style="opacity:1">${esc(R.eye.tip)}</div>` : ''}</div>` : ''}
+          ${(() => { let t = null; try { t = window.BTEyes && BTEyes.trafficOf ? BTEyes.trafficOf(s) : null; } catch (_e) {} const opt = (v) => [0, 1, 2, 3, 4, 5].map(n => `<option value="${n}"${n === (v || 0) ? ' selected' : ''}>${n}</option>`).join('');
+            return `<div class="nr-pair no-print">🛢️ On the pair: plastic <select id="nrPl" class="input nr-pairsel">${opt(t && t.plastic)}</select> urethane <select id="nrUr" class="input nr-pairsel">${opt(t && t.ure)}</select> <span class="small dim" id="nrPairNote">${!t ? 'not set' : t.est ? 'from your league roster: fix it if it\'s wrong' : 'saved'}</span></div>`; })()}
           <div class="small dim" style="margin-top:6px">${statLine(R.all)} · good or OK shots ${R.okPct}%<span class="no-print"> · double tap for the shot log</span></div>
         </div>
         ${pinpalPanel(s, true)}
@@ -836,6 +838,8 @@
       lastReviewText = R.speech;
       BT.$('#nrShots').onclick = () => jumpToShots();
       BT.$('#nrReplay').onclick = () => { if (window.BTReplay) BTReplay.open(s); };
+      { const sv = () => { const pl = Number(BT.$('#nrPl').value) || 0, ur = Number(BT.$('#nrUr').value) || 0; s.traffic = Object.assign({}, s.traffic || {}, { plastic: pl, ure: ur, carry: pl + ur, edited: true }); BT.lsSet(BT.KEYS.GAME_SESSIONS, sessions); const n = BT.$('#nrPairNote'); if (n) n.textContent = 'saved'; };
+        ['#nrPl', '#nrUr'].forEach(id => { const e = BT.$(id); if (e) e.addEventListener('change', sv); }); }
       BT.$('#nrFile').onclick = () => {
         // Save the review as a file through the iPhone share sheet (Save to Files, Mail, Messages…). No printing involved.
         const box = el.details.cloneNode(true); box.querySelectorAll('button, .no-print, .ra-btn, script').forEach(n => n.remove()); box.querySelectorAll('details').forEach(d => d.setAttribute('open', ''));
