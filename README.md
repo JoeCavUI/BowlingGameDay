@@ -58,7 +58,8 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
-## Changes in v141-beta78 (held)
+## Changes in v141-beta78
+- ⚡ A planned speed change carries on: tap Speed under Changed since last shot once, then keep marking Slower (or Faster); those shots count as planned until you mark Same or go the other way.
 - 🎬 Replay: down-lane tracers (boards 15/25 at 34–37 ft, 10/30 at 40–43 ft) and the Baker Box drawn on the lane, each with a checkbox (remembered).
 - ▶️ Replay: strikes shown for this game and for the night, every ball counted (fill balls included). Arrows drawn as a real V: 5 and 35 boards nearest the foul line (~12 ft), the center arrow farthest (~16 ft).
 - Pro view lane cards now add up to Tonight: shots saved on Game Day without tonight's lane (blank or stray) get it from the frame order, the same fix Scores already made (the card says how many).

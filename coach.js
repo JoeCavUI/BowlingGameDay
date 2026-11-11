@@ -757,7 +757,10 @@
     const pct = (a, b) => b >= 5 ? Math.round(a / b * 100) : null; // under 5 shots: not enough to grade
     const of = (a, b) => `${a} of ${b}`;
     const sub = (label, score, text) => ({ label, score, text: score == null && /\b[0-4] of [1-4]\b/.test(text) ? text + " (not enough yet to grade)" : text });
-    const chg = (c, k) => Array.isArray(c.shot.changed) && c.shot.changed.includes(k);
+    const chg0 = (c, k) => Array.isArray(c.shot.changed) && c.shot.changed.includes(k);
+    // A planned speed change carries on while you keep throwing it the same way (slower stays planned until you mark Same or change the other way).
+    const carrySpd = new Set(); { let on = ''; C.slice().sort((a, b) => (a.shot.at || 0) - (b.shot.at || 0)).forEach(c => { if (chg0(c, 'speed') && c.speed && c.speed !== 'same') on = c.speed; else if (on && c.speed === on) carrySpd.add(c); else if (c.speed && c.speed !== 'unknown') on = ''; }); }
+    const chg = (c, k) => chg0(c, k) || (k === 'speed' && carrySpd.has(c));
     const out = [];
 
     // 1. DIRECTION: Geometry · Targeting · Posture (ball placement isn't graded: your eyes are on the target, not the foul line)
