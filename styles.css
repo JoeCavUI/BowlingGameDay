@@ -993,3 +993,4 @@ body.gd-seasoned .gd-help{display:none}
 .nr-pair{margin-top:8px;font-size:14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}.nr-pairsel{width:auto;min-width:56px;padding:4px 8px}
 .rp-v.rp-v2{font-size:14px;opacity:.85}
 .rp-ovl{display:flex;justify-content:center;gap:18px;font-size:14px;padding:2px 12px 4px;color:#cbd5e1}.rp-ovl label{display:flex;align-items:center;gap:6px}.rp-ovl input{width:18px;height:18px}.rp-ovn{font-size:12px;opacity:.7}
+.bxc-grid{gap:6px;margin-bottom:10px}.bxc{padding:8px 10px;margin:0}.bxc-h{display:flex;justify-content:space-between;align-items:baseline;gap:6px;font-size:13px;margin-bottom:4px}.bxc .tag{font-size:12px}.bxc-open{opacity:.55;border-style:dashed}.bxc-crowd{border-color:#ffc400}

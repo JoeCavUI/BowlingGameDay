@@ -1732,7 +1732,20 @@
       const esc = (t) => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
       const color = { high: 'var(--danger)', med: '#ffc400', low: 'rgba(255,255,255,0.25)' };
       const noProfile = !(bowler.mphLine || bowler.rpm);
-      box.innerHTML = (noProfile ? `<div class="setup-banner small">Fill in your speed and rev rate on the <a href="bowler.html">Bowler page</a> to unlock the bowler-vs-ball checks.</div>` : '') +
+      // 🧺 Barnes boxes as the same 2 × 3 chart as the Barnes chart page (bag only), instead of a wordy line.
+      let gridH = '';
+      if (scope.startsWith('set:')) {
+        const isSp = (r) => { try { if (BT.isSpareBall) return BT.isSpareBall(r); } catch (_e) {} return /plastic|poly/i.test(String(BT.ballCover(r) || '')); };
+        const play = rows.filter(r => !isSp(r));
+        if (play.length >= 2) {
+          const B = {}; play.forEach(r => { const c = BT.matrixCellForRow(r); (B[`${c.strength}|${c.shape}`] = B[`${c.strength}|${c.shape}`] || []).push(BT.ballName(r)); });
+          const cellH = (k, t) => { const a = (B[k] || []).sort(); const crowd = a.length >= 3 && a.length / play.length >= 0.4;
+            return `<div class="panel bxc${a.length ? '' : ' bxc-open'}${crowd ? ' bxc-crowd' : ''}"><div class="bxc-h"><b>${t}</b><span class="small">${a.length ? a.length + (a.length === 1 ? ' ball' : ' balls') : 'open'}</span></div><div>${a.map(n => `<span class="tag">${esc(n)}</span>`).join('')}</div></div>`; };
+          gridH = `<div class="small" style="margin:2px 0 6px"><b>🧺 Barnes boxes</b> · ${Object.keys(B).length} of 6 filled${rows.length > play.length ? ` · spare ball not shown` : ''}</div><div class="grid-2 bxc-grid">${[['STRONG|SMOOTH', 'STRONG • SMOOTH'], ['STRONG|SHARP', 'STRONG • SHARP'], ['MEDIUM|SMOOTH', 'MEDIUM • SMOOTH'], ['MEDIUM|SHARP', 'MEDIUM • SHARP'], ['WEAK|SMOOTH', 'WEAK • SMOOTH'], ['WEAK|SHARP', 'WEAK • SHARP']].map(([k, t]) => cellH(k, t)).join('')}</div>`;
+          findings = findings.filter(f => !/^Barnes boxes|^Missing categories/.test(f.title));
+        }
+      }
+      box.innerHTML = (noProfile ? `<div class="setup-banner small">Fill in your speed and rev rate on the <a href="bowler.html">Bowler page</a> to unlock the bowler-vs-ball checks.</div>` : '') + gridH +
         (findings.length ? findings.map(f => `
           <div class="list-item" style="border-left:4px solid ${color[f.level]};margin-bottom:6px;border-radius:0 10px 10px 0;background:rgba(255,255,255,0.03)">
             <div><b>${f.icon} ${esc(f.title)}</b></div>
