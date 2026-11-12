@@ -317,6 +317,11 @@
         </div>
       </div>
 
+      <div class="panel tune-box" style="margin-top:14px;padding:12px;background:#111">
+        <div style="font-weight:900">📈 Barnes box</div>
+        <div id="tuneBoxMini" class="tbm"></div>
+        <div id="tuneChartPreview" class="small" style="margin-top:6px;opacity:1"></div>
+      </div>
       <div class="panel" style="margin-top:14px;padding:12px;background:#111">
         <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-end;flex-wrap:wrap">
           <div>
@@ -350,10 +355,6 @@
         <div class="small dim" id="tuneCareInfo" style="margin-top:6px"></div>
       </div>
 
-      <div class="panel" style="margin-top:14px;padding:12px;background:#111">
-        <div style="font-weight:900">📈 On your Barnes chart</div>
-        <div id="tuneChartPreview" class="small" style="margin-top:6px;opacity:1"></div>
-      </div>
 
       <div class="panel" style="margin-top:14px;padding:12px;background:#111">
         <div style="font-weight:900">Role match preview</div>
@@ -1688,6 +1689,16 @@
         }
       } catch (_e) {}
       out.innerHTML = txt;
+      // Mini 6-box: where it is now, and where it lands if you save these settings (sliders and surface).
+      try {
+        let dest = now.rowKey;
+        if (!same) dest = BTChart.withSurface(row, surfacePresetByIndex(tune.surface.value).surface, bowler).rowKey;
+        const m = txt.match(/With these sliders: <b>([^<]+)<\/b>/); if (m) { const R = BTChart.ROWS || []; const hit = R.find(r => BTChart.label(r.key) === m[1]); if (hit) dest = hit.key; }
+        const K = [['STRONG|SMOOTH', 'Strong • Smooth'], ['STRONG|SHARP', 'Strong • Sharp'], ['MEDIUM|SMOOTH', 'Medium • Smooth'], ['MEDIUM|SHARP', 'Medium • Sharp'], ['WEAK|SMOOTH', 'Weak • Smooth'], ['WEAK|SHARP', 'Weak • Sharp']];
+        const mini = BT.$('#tuneBoxMini');
+        if (mini) mini.innerHTML = `<div class="tbm-g">${K.map(([k, t]) => `<div class="tbm-c${k === now.rowKey ? ' tbm-now' : ''}${k === dest && dest !== now.rowKey ? ' tbm-dest' : ''}">${t}${k === now.rowKey ? '<span>now</span>' : ''}${k === dest && dest !== now.rowKey ? '<span>if saved</span>' : ''}</div>`).join('')}</div>`
+          + (dest !== now.rowKey ? `<div class="tbm-warn">⚠️ Saving moves ${escH(tune.currentName)} from <b>${BTChart.label(now.rowKey)}</b> to <b>${BTChart.label(dest)}</b>. Coach, the Game Plan and your bags will use the new box.</div>` : '');
+      } catch (_e) {}
     }
 
     // ---- Arsenal check ----
