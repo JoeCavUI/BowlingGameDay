@@ -58,7 +58,7 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
-## Changes in v147-beta84 (held)
+## Changes in v147-beta84
 - 🎯 Spare ball rule on Game Day (default): right-side spares (3, 6, 9, 10) with your spare ball, left side with the ball you threw first; or every spare, or the 10 only (mirrored for lefties). The 2nd-ball screen has a quick "2nd ball with" dropdown, preset by the rule, to change it for that shot. "Fix past nights with this rule" puts the spare ball on past spares the rule covers.
 
 ## Changes in v146-beta83
