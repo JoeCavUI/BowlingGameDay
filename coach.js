@@ -985,6 +985,7 @@
       const crowded = Object.entries(cells).sort((a, b) => b[1].length - a[1].length)[0];
       if (crowded && crowded[1].length >= 3 && crowded[1].length / n >= 0.4) add('med', '🧺', `Crowded: ${crowded[1].length} of ${n} balls are ${crowded[0]}`, `${crowded[1].slice(0, 4).join(', ')}${crowded[1].length > 4 ? ` and ${crowded[1].length - 4} more` : ''}. ${empty.length ? 'Nothing in: ' + empty.join(', ') + '.' : ''}`, empty.length ? `Your next ball (or a resurface) should fill ${empty[0]}.` : 'Consider retiring or changing the surface on one of them.');
       else if (empty.length >= 3) add('low', '🧺', 'Missing categories', `Nothing in: ${empty.join(', ')}.`, `When you add a ball, aim for ${empty[0]}.`);
+      else add('low', '🧺', `Barnes boxes: ${Object.keys(cells).length} of 6 filled`, all.filter(k => cells[k]).map(k => `${k}: ${cells[k].join(', ')}`).join(' · ') + '.', empty.length ? `Open: ${empty.join(', ')}. Fine if you don't need them for this house.` : 'Every box covered.');
 
       // Near-duplicates
       const vecs = play.map(b => ({ name: b.name, v: ctx.motion.vector(b.row, ctx.bowler) }));
@@ -1022,7 +1023,7 @@
         if (heavy >= 0.6 && avgStrength <= 0.45) add('med', '🛢️', 'Your bag is light for the oil you bowl on', `${Math.round(heavy * 100)}% of your logged nights are on long or heavy patterns, but your balls are mostly weaker.`, 'Add a strong, sanded solid for these conditions.');
       }
       // Balls in a saved bag that never get thrown
-      const bagBalls = new Set((ctx.sets || []).flatMap(st => (st.balls || []).map(x => typeof x === 'string' ? x : x && x.name)).filter(Boolean));
+      const bagBalls = ctx.scope === 'bag' ? new Set(balls.map(b => b.name)) : new Set((ctx.sets || []).flatMap(st => (st.balls || []).map(x => typeof x === 'string' ? x : x && x.name)).filter(Boolean));
       const thrown = new Set(sessions.slice(0, 8).flatMap(s => (s.shots || []).map(x => x.ball)).filter(Boolean));
       const idle = [...bagBalls].filter(b => !thrown.has(b));
       if (idle.length && sessions.length >= 4) add('low', '💤', `${idle.length === 1 ? idle[0] + ' hasn\'t' : idle.length + ' bagged balls haven\'t'} been thrown lately`, `${idle.slice(0, 4).join(', ')}: no shots in your last ${Math.min(8, sessions.length)} sessions.`, 'Fine as a backup. If it never comes out, it may be dead weight in the bag.');

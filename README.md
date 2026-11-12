@@ -58,6 +58,10 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v142-beta79 (held)
+- 🩺 Arsenal check always shows the Barnes boxes for a bag (filled / open), not only when a box is crowded or 3+ are empty.
+- 💤 "Not thrown lately" checks only the bag you picked (was every saved bag).
+
 ## Changes in v141-beta78
 - ⚡ A planned speed change carries on: tap Speed under Changed since last shot once, then keep marking Slower (or Faster); those shots count as planned until you mark Same or go the other way.
 - 🎬 Replay: down-lane tracers (boards 15/25 at 34–37 ft, 10/30 at 40–43 ft) and the Baker Box drawn on the lane, each with a checkbox (remembered).
