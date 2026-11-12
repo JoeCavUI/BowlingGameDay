@@ -58,7 +58,7 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
-## Changes in v145-beta82 (held)
+## Changes in v145-beta82
 - 🎚️ Ball tune: the Barnes box now sits right under the sliders with a live 6-box mini chart (now / if saved) and a caution when saving would move the ball to a different box.
 
 ## Changes in v144-beta81
