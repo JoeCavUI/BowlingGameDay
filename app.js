@@ -6,7 +6,7 @@
 
 (function () {
   // Bump this string each build so pages can display it and cache-bust resources.
-  const APP_VERSION = 'v143-beta80';
+  const APP_VERSION = 'v144-beta81';
   const KEYS = {
     CSV_CACHE: 'bt_csv_cache_v1',          // stringified { savedAt, name, rows }
     BOWLER: 'bt_bowler_v1',               // stringified object
@@ -1511,8 +1511,12 @@
     const lm = layoutMotionMods(row);
     const strength2 = clamp(strength + (tw.hook * MATRIX_TWEAK) + (lm.hook * 0.60) - (lm.length * 0.25), 0, 1);
     shape = clamp(shape + (lm.shape * 0.70) + (lm.backend * 0.15), 0, 1);
+    // Drill angle (pin-to-PAP angle): smaller = quicker, more angular turn; larger = earlier, smoother arc. Centered at 60°.
+    const da = asNum(getField(row, ['Drill Angle', 'DrillAngle'], ''));
+    const daAdj = Number.isFinite(da) && da > 0 ? clamp((60 - da) / 30, -1, 1) * 0.10 : 0;
+    shape = clamp(shape + daAdj, 0, 1);
 
-    return { strength: strength2, shape, layoutType: lm.kind };
+    return { strength: strength2, shape, layoutType: lm.kind, drillAdj: daAdj };
   }
 
   function strengthBucket(strength) {

@@ -58,6 +58,9 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v144-beta81
+- 🧺 Barnes boxes: drill angle now counts toward shape (smaller = sharper, larger = smoother, centered at 60°), alongside pin-to-PAP which already did.
+
 ## Changes in v143-beta80
 - 🩺 Arsenal check shows a bag's Barnes boxes as the same 6-box chart as the Barnes chart page (open boxes dashed, crowded box outlined), instead of a text line.
 
