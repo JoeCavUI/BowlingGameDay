@@ -59,7 +59,7 @@ Then open http://localhost:3000
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
 ## Changes in v147-beta84 (held)
-- 🎯 Spare ball rule on Game Day: "Use it on: every spare / right-side spares only (3, 6, 9, 10) / the 10 pin only" (mirrored for lefties), kept until changed. Other spares are logged with the strike ball. "Fix past nights with this rule" puts the spare ball on past spares the rule covers.
+- 🎯 Spare ball rule on Game Day (default): right-side spares (3, 6, 9, 10) with your spare ball, left side with the ball you threw first; or every spare, or the 10 only (mirrored for lefties). The 2nd-ball screen has a quick "2nd ball with" dropdown, preset by the rule, to change it for that shot. "Fix past nights with this rule" puts the spare ball on past spares the rule covers.
 
 ## Changes in v146-beta83
 - 🧪 Gap lab (Arsenal → Gaps & ideas): every active ball as drilled and surfaced, on your speed and revs. Finds the biggest gap inside your arsenal's range first, then the next-biggest once that one is filled. Each gap gets test ideas cheapest first: a surface on a ball you own, a new layout on another of a ball you own, or a new-ball spec. Surfaces you've already had (resurface log) and ideas marked "Testing this" are skipped.

@@ -998,3 +998,4 @@ body.gd-seasoned .gd-help{display:none}
 .gl-gap{border-left:4px solid #8a8f98;padding:8px 10px;margin-bottom:10px;background:rgba(255,255,255,.03);border-radius:0 10px 10px 0}.gl-big{border-left-color:#ff6b6b}.gl-medium{border-left-color:#ffc400}.gl-small{border-left-color:#63e6d2}
 .gl-h{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline;margin-bottom:4px}
 .gl-idea{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid rgba(255,255,255,.06);font-size:14px;flex-wrap:wrap}.gl-k{font-size:12px;font-weight:700;opacity:.85;margin-right:4px}.gl-btn{padding:5px 10px;font-size:13px}
+.sb-ball{display:flex;align-items:center;gap:8px;margin:6px 0}.sb-ball select{flex:1;padding:6px 8px}
