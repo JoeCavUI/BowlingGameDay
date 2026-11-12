@@ -58,7 +58,7 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
-## Changes in v142-beta79 (held)
+## Changes in v142-beta79
 - 🩺 Arsenal check always shows the Barnes boxes for a bag (filled / open), not only when a box is crowded or 3+ are empty.
 - 💤 "Not thrown lately" checks only the bag you picked (was every saved bag).
 
