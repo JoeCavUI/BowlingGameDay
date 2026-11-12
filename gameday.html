@@ -81,7 +81,7 @@
             <div style="grid-column:1/-1">
               <select id="set" class="input"></select>
               <div id="bagWarn" class="gd-bagwarn" style="display:none"></div>
-              <div class="gd-spare" id="spareRow"><label class="small" style="display:flex;gap:8px;align-items:center;margin:0"><input type="checkbox" id="spareOn" style="width:20px;height:20px" /> 🎯 Bringing my spare ball tonight</label><select class="input" id="spareBall" style="margin-top:6px"></select><div class="small dim" id="spareNote" style="margin-top:4px"></div></div>
+              <div class="gd-spare" id="spareRow"><label class="small" style="display:flex;gap:8px;align-items:center;margin:0"><input type="checkbox" id="spareOn" style="width:20px;height:20px" /> 🎯 Bringing my spare ball tonight</label><select class="input" id="spareBall" style="margin-top:6px"></select><select class="input" id="spareScope" style="margin-top:6px"><option value="all">Use it on: every spare</option><option value="side">Use it on: right-side spares only (3, 6, 9, 10)</option><option value="ten">Use it on: the 10 pin only</option></select><button type="button" class="btn secondary" id="spareFixPast" style="margin-top:6px;display:none">Fix past nights with this rule</button><div class="small dim" id="spareNote" style="margin-top:4px"></div></div>
             </div>
             <div class="gd-tstep" style="grid-column:1/-1"><span class="gd-step-n" id="step3n">3</span><span><b>Who's on the pair</b><span class="gd-tstep-sub">your team and tonight's opponent</span></span><span class="gd-step-st small" id="step3st"></span></div>
             <div class="gd-lineup" style="grid-column:1/-1">
@@ -2761,7 +2761,7 @@ function sessionSummary(shots) {
       const pick = [saved.date === BT.localDate() && saved.name, setObj.spare, O.dualInBag[0], O.only[0], names[0]].find(n => n && names.includes(n));
       sel.value = pick;
       on.checked = saved.date === BT.localDate() ? saved.on !== false : !!(O.only.length || O.dualInBag.length);
-      sel.disabled = !on.checked;
+      sel.disabled = !on.checked; { const sc = BT.$('#spareScope'); if (sc) { sc.style.display = on.checked ? '' : 'none'; if (isLeftyBowler()) { sc.options[1].text = 'Use it on: left-side spares only (2, 4, 7, 8)'; sc.options[2].text = 'Use it on: the 7 pin only'; } } }
       const k = on.checked && sel.value ? spareKind(sel.value) : '';
       note.textContent = !on.checked ? 'No spare ball tonight: Coach adjusts its spare advice for your strike ball.' : k === 'strike' ? `${sel.value} does double duty tonight: strike ball and spare ball. Coach will remind you to flatten your release with it on corner pins.` : 'Coach will say when to use it (10s, 7s and other corner pins).';
     }
@@ -2775,6 +2775,14 @@ function sessionSummary(shots) {
       return { only, dual, bag, dualInBag: dual.filter(n => bagNames.includes(n)), all: [...only, ...dual, ...bag] };
     }
     function spareKind(name) { const O = spareOptions(); return O.only.includes(name) ? (/plastic|poly/i.test(String((BALL_ROW_MAP && BALL_ROW_MAP.get(name) && BT.ballCover(BALL_ROW_MAP.get(name))) || 'plastic')) ? 'plastic' : 'spare') : 'strike'; }
+    // Which spares the spare ball is for (kept until you change it). The other spares are logged with your strike ball.
+    const SPARE_SCOPE_KEY = 'bt_spare_scope_v1';
+    const spareScope = () => { const v = BT.lsGet(SPARE_SCOPE_KEY, 'all'); return ['all', 'side', 'ten'].includes(v) ? v : 'all'; };
+    function spareBallFor(leave) { const c = spareCtx(); if (!c || !c.on || !c.name) return ''; const sc = spareScope(), lefty = isLeftyBowler();
+      const side = lefty ? [2, 4, 7, 8] : [3, 6, 9, 10], corner = lefty ? 7 : 10, L = (leave || []).map(Number);
+      if (sc === 'ten') return L.length === 1 && L[0] === corner ? c.name : '';
+      if (sc === 'side') return L.length && L.every(p => side.includes(p)) ? c.name : '';
+      return c.name; }
     function saveSpare() { BT.lsSet(SPARE_KEY, { date: BT.localDate(), on: !!BT.$('#spareOn').checked, name: BT.$('#spareBall').value || '' }); renderSpare(); markCoachDirty(); }
     // From saved choices (not the screen), so Coach is right even before Tonight has drawn.
     function spareCtx() {
@@ -2787,6 +2795,16 @@ function sessionSummary(shots) {
       return { asked: true, on, name: on ? name : '', kind: on && name ? spareKind(name) : '' };
     }
     { const on = BT.$('#spareOn'), sel = BT.$('#spareBall'); if (on) on.addEventListener('change', saveSpare); if (sel) sel.addEventListener('change', saveSpare); }
+    { const sc = BT.$('#spareScope'); if (sc) { sc.value = spareScope(); sc.addEventListener('change', () => { BT.lsSet(SPARE_SCOPE_KEY, sc.value); markCoachDirty(); paintFix(); }); } }
+    // One-time fix: past nights logged every spare with the strike ball; put the spare ball on the spares this rule covers.
+    function paintFix() { const b = BT.$('#spareFixPast'), on = BT.$('#spareOn'); if (b) b.style.display = on && on.checked && spareScope() !== 'all' ? '' : 'none'; }
+    { const b = BT.$('#spareFixPast'); if (b) { paintFix(); BT.$('#spareOn') && BT.$('#spareOn').addEventListener('change', () => setTimeout(paintFix, 0));
+      b.addEventListener('click', () => { const c = spareCtx(); if (!c || !c.name) return; const S = BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || []; let n = 0;
+        const fix = (shots) => (shots || []).forEach(z => { if (!z || !z.second || z.type === 'gameStart') return; const want = spareBallFor(BT.standingPins(z)); if (want && z.second.ball !== want) { z.second.ball = want; n++; } });
+        S.forEach(x => fix(x.shots)); fix(sessionShots);
+        if (!n) { alert('Nothing to fix: past nights already match.'); return; }
+        if (!confirm(`Set ${c.name} as the spare ball on ${n} past spare${n === 1 ? '' : 's'} this rule covers?`)) return;
+        BT.lsSet(BT.KEYS.GAME_SESSIONS, S); saveCurrentSessionDraft(); b.textContent = `✓ Fixed ${n} spare${n === 1 ? '' : 's'}`; b.disabled = true; markCoachDirty(); }); } }
     el.set.addEventListener('change', () => setTimeout(renderSpare, 0));
     setTimeout(renderSpare, 300);
 
@@ -3010,7 +3028,7 @@ function sessionSummary(shots) {
           if (!sh.isFill && st.frame === 10 && sh.noSecond) sh.tenthSpare = false;
           saveCurrentSessionDraft(); renderLog(); syncNextLane(); updateFrameUI(); afterGameFlow(false); renderGameFlow();
         };
-        on('sbSave', () => { let sp = ''; try { const c = spareCtx(); sp = c && c.on && c.name ? c.name : ''; } catch (_e) {} finish({ second: Object.assign({ left: [...left].sort((a, z) => a - z), spare: left.size === 0, at: Date.now(), ball: sp || sh.ball || '' }, sbMiss ? { miss: sbMiss } : {}) }); });
+        on('sbSave', () => { let sp = ''; try { sp = spareBallFor(BT.standingPins(sh)); } catch (_e) {} finish({ second: Object.assign({ left: [...left].sort((a, z) => a - z), spare: left.size === 0, at: Date.now(), ball: sp || sh.ball || '' }, sbMiss ? { miss: sbMiss } : {}) }); });
         on('sbSkip', () => { if (confirm('Skip the 2nd ball? This game won\'t have a full score.')) finish({ noSecond: true }); });
       }
       on('flowNext', () => { startNextGame(); toast(`Game ${currentGameNumber()} started.`); renderGameFlow(); updateLineMath(); });
