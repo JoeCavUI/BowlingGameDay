@@ -58,6 +58,9 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v146-beta83 (held)
+- 🧪 Gap lab (Arsenal → Gaps & ideas): every active ball as drilled and surfaced, on your speed and revs. Finds the biggest gap inside your arsenal's range first, then the next-biggest once that one is filled. Each gap gets test ideas cheapest first: a surface on a ball you own, a new layout on another of a ball you own, or a new-ball spec. Surfaces you've already had (resurface log) and ideas marked "Testing this" are skipped.
+
 ## Changes in v145-beta82
 - 🎚️ Ball tune: the Barnes box now sits right under the sliders with a live 6-box mini chart (now / if saved) and a caution when saving would move the ball to a different box.
 

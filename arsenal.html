@@ -58,6 +58,11 @@
       <div class="small">What your Barnes chart says: empty boxes, crowded boxes, near-duplicates, big steps, and resurface-before-you-buy ideas.</div>
       <div id="chartFindings" style="margin-top:12px"></div>
     </div>
+    <div class="panel" data-arpage="gaps">
+      <h2 style="margin:0">🧪 Gap lab</h2>
+      <div class="small">Your whole arsenal (layouts, surfaces, covers, cores) on your game: the biggest untested gaps first, and how to test into them.</div>
+      <div id="gapLab" style="margin-top:12px"></div>
+    </div>
 
     <details class="panel gd-fold" data-arpage="barnes">
       <summary><span class="gd-fold-title">Matrix list view</span> <span class="small">(the same six boxes as a list)</span></summary>
@@ -374,6 +379,7 @@
   <script src="app.js?v=145"></script>
   <script src="coach.js?v=145"></script>
   <script src="chart.js?v=145"></script>
+  <script src="gaplab.js?v=145"></script>
   <script src="pinpal.js?v=145"></script>
   <script src="history.js?v=145"></script>
   <script src="plan.js?v=145"></script>
@@ -1527,6 +1533,7 @@
       if (who) who.textContent = (bowler.mphLine || bowler.rpm) ? ` (${[bowler.mphLine && bowler.mphLine + ' mph', bowler.rpm && bowler.rpm + ' rpm'].filter(Boolean).join(', ')})` : ' (enter your speed and revs on the Bowler page to personalize it)';
       const rows = chartScopeRows();
       const sum = BT.$('#chartSummary'), fnd = BT.$('#chartFindings');
+      try { if (window.BTGapLab) BTGapLab.render(BT.$('#gapLab'), viewRows().filter(r => !r.__proposed), bowler); } catch (e) { console.error(e); }
       if (!rows.filter(r => !r.__proposed).length) {
         box.innerHTML = `<div class="setup-banner"><b>No balls yet.</b><div class="small" style="margin-top:4px;opacity:1">Upload your ball spreadsheet or tap <b>+ Add a ball</b> above.</div>
           <div class="btn-row"><button class="btn secondary" type="button" id="loadSample">Try the sample arsenal (35 balls)</button></div></div>`;
