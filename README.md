@@ -62,7 +62,7 @@ Then open http://localhost:3000
 - 🌙 Night review headline lists where pins went (pocket hits that didn't strike, shots that missed the pocket, missed spares), biggest first, instead of blaming entry angle.
 - ⚖️ Energy vs angle needs 6+ pocket hits in each spot, shows counts (4 of 9), says when the balls differed, and words the test move plainly.
 - 📏 Rule-of-31 lines say when your pattern length is an estimate ("Unknown house shot").
-- Labels: 5 Scoring Elements say they're grades of your logged shots (not measured angle / revs); Revs says the rpm is from your profile; off-the-deck counts say fill balls aren't counted; lane 10s say "on pocket hits".
+- Labels: 5 Scoring Elements say they're grades of your logged shots (not measured angle / revs); Revs says the rpm is from your profile; fill balls now count everywhere (eyeball score, 5 Scoring Elements, repeatability, moves, Coach, lane cards, Trends, house card), so the counts match; lane 10s say "on pocket hits".
 
 ## Changes in v147-beta84
 - 🎯 Spare ball rule on Game Day (default): right-side spares (3, 6, 9, 10) with your spare ball, left side with the ball you threw first; or every spare, or the 10 only (mirrored for lefties). The 2nd-ball screen has a quick "2nd ball with" dropdown, preset by the rule, to change it for that shot. "Fix past nights with this rule" puts the spare ball on past spares the rule covers.

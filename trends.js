@@ -28,7 +28,7 @@
     const bw = (BT && BT.lsGet(BT.KEYS.BOWLER, {})) || {}, pats = (BT && BT.lsGet(BT.KEYS.OIL_PATTERNS, [])) || [];
     const dOf = (x) => { if (x.date) return String(x.date).slice(0, 10); const t = new Date(x.savedAt || 0); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`; };
     (Array.isArray(sess) ? sess : []).forEach(x => {
-      const shots = (x.shots || []).filter(Boolean).slice().sort((a, b) => (a.at || 0) - (b.at || 0)), real = shots.filter(s => s.type !== 'gameStart' && !s.isFill);
+      const shots = (x.shots || []).filter(Boolean).slice().sort((a, b) => (a.at || 0) - (b.at || 0)), real = shots.filter(s => s.type !== 'gameStart');
       if (real.length < 3) return;
       const d = dOf(x); let row = rows.find(r => r.d === d && (norm(r.h) === norm(x.house) || norm(r.h).includes(norm(x.house)) || norm(x.house).includes(norm(r.h))));
       if (!row) { row = { d, h: x.house || '', lanes: x.lanes || '', lg: x.leagueName || '', games: 0, avg: null, high: null, series: null, strike: null, spare: null, src: 'gd' }; rows.push(row); }

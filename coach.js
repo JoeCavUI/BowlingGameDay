@@ -693,12 +693,12 @@
   // Eyeball score: how much of what matters you actually watched (0–100).
   function eyeballScore(shots, bowler) {
     const prof = bowlerProfile(bowler);
-    const C = (shots || []).filter(s => s && s.type !== 'gameStart' && !s.isFill).map(s => classify(s, prof.lefty));
+    const C = (shots || []).filter(s => s && s.type !== 'gameStart').map(s => classify(s, prof.lefty));
     if (!C.length) return { score: 0, label: '—', parts: {}, n: 0 };
     const pct = (a, b) => b ? a / b : null;
     const mark = pct(C.filter(c => String(c.shot.miss || 'didntTrack') !== 'didntTrack').length, C.length);
     const pocket = pct(C.filter(c => String(c.shot.pocket || 'Unknown') !== 'Unknown' || c.strike).length, C.length);
-    const ph = C.filter(c => c.pocketHit);
+    const ph = C.filter(c => (root.BT && root.BT.isPocketHit) ? root.BT.isPocketHit(c.shot) : c.pocketHit); // same pocket count as the rest of the report
     const exit = pct(ph.filter(c => c.exitRaw !== "Didn't notice").length, ph.length);
     const corner = prof.lefty ? '7' : '10';
     const cornerLeaves = C.filter(c => c.pocketHit && (pinsText(c.shot) === corner || ['Flat 10', 'Ringing 10'].includes(c.shot.leaveTag)));
@@ -716,7 +716,7 @@
     const exitSeenN = ph.filter(c => c.exitRaw !== "Didn't notice").length;
     return { score, label, n: C.length, parts: P, pocketHits: ph.length, exitSeen: exitSeenN, cornerLeaves: cornerLeaves.length,
       weakest: weakest && weakest[1] < 70 ? { key: weakest[0], name: NAMES[weakest[0]], pct: weakest[1] } : null,
-      tip: weakest && weakest[1] < 70 ? (weakest[0] === 'exit' || weakest[0] === 'routine' ? `Watch it off the deck: ${exitSeenN} of ${ph.length} first-ball pocket hits tonight (fill balls not counted). Mark → breakpoint → pocket → off the deck, every shot.` : `Weakest: ${NAMES[weakest[0]]} (${weakest[1]}%).`) : '' };
+      tip: weakest && weakest[1] < 70 ? (weakest[0] === 'exit' || weakest[0] === 'routine' ? `Watch it off the deck: ${exitSeenN} of ${ph.length} pocket hits tonight. Mark → breakpoint → pocket → off the deck, every shot.` : `Weakest: ${NAMES[weakest[0]]} (${weakest[1]}%).`) : '' };
   }
 
   // ---------- Five Elements ----------
@@ -755,7 +755,7 @@
   function elementsReport(shots, bowler, pattern) {
     const prof = bowlerProfile(bowler);
     const pat = patternProfile(pattern);
-    const C = (shots || []).filter(s => s && s.type !== 'gameStart' && !s.isFill).map(s => classify(s, prof.lefty));
+    const C = (shots || []).filter(s => s && s.type !== 'gameStart').map(s => classify(s, prof.lefty));
     if (C.length < 3) return null;
     const pct = (a, b) => b >= 5 ? Math.round(a / b * 100) : null; // under 5 shots: not enough to grade
     const of = (a, b) => `${a} of ${b}`;
@@ -865,7 +865,7 @@
   // time you threw it there. Moves you make on purpose aren't misses: the line part compares like with like.
   function repeatability(shots, bowler) {
     const prof = bowlerProfile(bowler);
-    const C = (shots || []).filter(s => s && s.type !== 'gameStart' && !s.isFill).map(s => classify(s, prof.lefty));
+    const C = (shots || []).filter(s => s && s.type !== 'gameStart').map(s => classify(s, prof.lefty));
     if (C.length < 4) return null;
     const pct = (a, b) => b ? Math.round(a / b * 100) : null;
     const parts = [];
@@ -952,7 +952,7 @@
     const recent = (ctx.sessions || []).slice(0, 6);
     let tiredNights = 0;
     for (const s of recent) {
-      const shots = (s.shots || []).filter(x => x && x.type !== 'gameStart' && !x.isFill);
+      const shots = (s.shots || []).filter(x => x && x.type !== 'gameStart');
       const games = [...new Set(shots.map(x => x.gameNo || 1))].sort((a, b) => a - b);
       if (games.length < 2) continue;
       const first = shots.filter(x => (x.gameNo || 1) === games[0]), lastG = shots.filter(x => (x.gameNo || 1) === games[games.length - 1]);
@@ -1159,7 +1159,7 @@
   }
   function moveSummary(shots, bowler) {
     const prof = bowlerProfile(bowler);
-    const C = (shots || []).filter(s => s && s.type !== 'gameStart' && !s.isFill).map(s => classify(s, prof.lefty));
+    const C = (shots || []).filter(s => s && s.type !== 'gameStart').map(s => classify(s, prof.lefty));
     const R = moveReviews(C, prof);
     const cnt = (f) => R.filter(f).length;
     const res = { made: R.length, good: cnt(r => r.goodCall || r.result === 'worked'), afterPoorBad: cnt(r => r.afterPoor && r.result !== 'worked'), afterPoor: cnt(r => r.afterPoor), tooSoon: cnt(r => r.tooSoon), whileStriking: cnt(r => r.whileStriking), wrongDir: cnt(r => r.wrongDir), worked: cnt(r => r.result === 'worked'), didnt: cnt(r => r.result === 'didnt') };
@@ -1219,7 +1219,7 @@
     const out = evaluateCore(ctx);
     try {
       const prof = bowlerProfile(ctx && ctx.bowler);
-      const all = ((ctx && ctx.shots) || []).filter(s => s && s.type !== 'gameStart' && !s.isFill);
+      const all = ((ctx && ctx.shots) || []).filter(s => s && s.type !== 'gameStart');
       const C = all.map(s => classify(s, prof.lefty));
       const W = C.filter(c => (c.execution !== 'poor' || c.laneInfo)).slice(-5);
       if (C.length >= 3) sideNotes(out, C, W, prof, patternProfile(ctx && ctx.pattern));
@@ -1324,7 +1324,7 @@
     ctx = ctx || {};
     const prof = bowlerProfile(ctx.bowler);
     const pat = patternProfile(ctx.pattern);
-    const all = (ctx.shots || []).filter(s => s && s.type !== 'gameStart' && !s.isFill);
+    const all = (ctx.shots || []).filter(s => s && s.type !== 'gameStart');
     const C = all.map(s => classify(s, prof.lefty));
     const res = { status: 'start', tone: 'info', headline: '', why: '', next: '', notes: [], ballSuggestion: '', read: '', profileLine: '', patternLine: '', compass: null };
 
@@ -1829,7 +1829,7 @@
 
   // ⚖️ Energy vs angle: how deep you stood vs how the ball finished (pocket, carry, rolled out vs still turning).
   function energyAngle(shots, lefty) {
-    const C = (shots || []).filter(s => s && s.type !== 'gameStart' && !s.isFill && Number.isFinite(Number(s.feet))).map(s => classify(s, lefty)).filter(c => c.execution !== 'poor' || c.laneInfo); // good shots only
+    const C = (shots || []).filter(s => s && s.type !== 'gameStart' && Number.isFinite(Number(s.feet))).map(s => classify(s, lefty)).filter(c => c.execution !== 'poor' || c.laneInfo); // good shots only
     if (C.length < 8) return null;
     const by = {}; C.forEach(c => { const f = Math.round(Number(c.shot.feet)); const o = by[f] = by[f] || { feet: f, n: 0, p: 0, x: 0, weak: 0, strong: 0, bp: [] }; o.n++; if (c.pocketHit) o.p++; if (c.strike) o.x++; if (c.finish === 'weak') o.weak++; if (c.finish === 'strong') o.strong++; if (Number.isFinite(Number(c.shot.bp))) o.bp.push(Number(c.shot.bp)); });
     const rows = Object.values(by).filter(o => o.n >= 3).sort((a, b) => a.feet - b.feet).map(o => ({ ...o, bp: o.bp.length ? Math.round(o.bp.reduce((a, b) => a + b, 0) / o.bp.length * 10) / 10 : null, carry: o.p ? Math.round(o.x / o.p * 100) : 0, pocket: Math.round(o.p / o.n * 100) }));

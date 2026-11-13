@@ -31,7 +31,7 @@
   function tonightLanes(shots, lanes, lefty) {
     const pr = pairOf(lanes); if (pr.length < 2) return null;
     const by = {}; pr.forEach(l => { by[l] = { n: 0, hi: 0, lo: 0 }; });
-    shots.filter(s => s && s.type !== 'gameStart' && !s.isFill && by[String(s.lane)] && counts(s)).forEach(s => { const b = by[String(s.lane)], v = shotSide(s, lefty); b.n++; if (v > 0) b.hi++; if (v < 0) b.lo++; });
+    shots.filter(s => s && s.type !== 'gameStart' && by[String(s.lane)] && counts(s)).forEach(s => { const b = by[String(s.lane)], v = shotSide(s, lefty); b.n++; if (v > 0) b.hi++; if (v < 0) b.lo++; });
     const [a, b] = pr.map(l => ({ l, ...by[l], idx: by[l].n ? (by[l].hi - by[l].lo) / by[l].n : 0 }));
     if (a.n < 4 || b.n < 4) return null;
     const d = a.idx - b.idx; if (Math.abs(d) < 0.35) return { same: true, a, b };
@@ -121,7 +121,7 @@
     const nights = (sessions || []).filter(s => s && String(s.house || '').toLowerCase().replace(/[^a-z0-9]/g, '') === hk);
     const onPair = nights.filter(s => !lanes || s.lanes === lanes), use = onPair.length ? onPair : nights;
     const m = {};
-    use.forEach(s => (s.shots || []).forEach(x => { if (!x || x.type === 'gameStart' || x.isFill || x.feet == null || x.arrows == null) return;
+    use.forEach(s => (s.shots || []).forEach(x => { if (!x || x.type === 'gameStart' || x.feet == null || x.arrows == null) return;
       const k = `${x.ball || '?'}|${x.feet}|${x.arrows}`, g = Number(x.gameNo) || 1; const o = m[k] = m[k] || { ball: x.ball || '?', feet: x.feet, arrows: x.arrows, n: 0, x: 0, p: 0, bp: {}, games: {}, nights: new Set() };
       o.n++; o.nights.add(s.id); if (!BT().standingPins(x).length) o.x++; if (BT().isPocketHit(x)) o.p++; if (x.bp != null) o.bp[x.bp] = (o.bp[x.bp] || 0) + 1; const gg = o.games[g] = o.games[g] || { n: 0, x: 0 }; gg.n++; if (!BT().standingPins(x).length) gg.x++; }));
     const rows = Object.values(m).filter(o => o.n >= 5).map(o => ({ ...o, nights: o.nights.size, bp: Object.entries(o.bp).sort((a, b) => b[1] - a[1])[0] ? Number(Object.entries(o.bp).sort((a, b) => b[1] - a[1])[0][0]) : null, sc: (o.x + 0.25 * (o.p - o.x)) / (o.n + 2) })) // strikes first, a little credit for pocket hits that didn't carry
@@ -201,7 +201,7 @@
   }
   // How the night moved: feet drift (+ = moved in, the usual breakdown; − = moved out, the ball holding) and light / flat share after game 1.
   function carrySign(shots, lefty) {
-    const sh = (shots || []).filter(z => z && z.type !== 'gameStart' && !z.isFill);
+    const sh = (shots || []).filter(z => z && z.type !== 'gameStart');
     const g = (z) => Number(z.gameNo) || 1, md = (a) => { const b = a.filter(Number.isFinite).sort((x, y) => x - y); return b.length ? b[Math.floor(b.length / 2)] : null; };
     const games = [...new Set(sh.map(g))].sort((a, b) => a - b); if (games.length < 2) return null;
     const ft = (G) => md(sh.filter(z => g(z) === G).map(z => Number(z.feet)));
@@ -229,7 +229,7 @@
   function tenMix(shots, lefty, patLen) {
     const C = lefty ? 7 : 10, good = (z) => !(Number(z.executionQuality) === 1 || z.miss === 'leftMiss' || z.miss === 'rightMiss');
     const R = [], F = [];
-    (shots || []).filter(z => z && z.type !== 'gameStart' && !z.isFill && good(z) && BT().isPocketHit(z)).forEach(z => {
+    (shots || []).filter(z => z && z.type !== 'gameStart' && good(z) && BT().isPocketHit(z)).forEach(z => {
       const lv = BT().standingPins(z); if (!(lv.length === 1 && lv[0] === C)) return;
       const t = String(z.leaveTag || ''), k = String(z.keyPin || '');
       if (t === 'Ringing 10' || t === 'Ringing 7' || k === 'wrap') R.push(z); else if (t === 'Flat 10' || t === 'Flat 7' || k === 'weak') F.push(z);
@@ -247,7 +247,7 @@
   // ---------- the signals Game Day shows, most useful first (each: id, text, why)
   function signals(ctx) {
     const out = [], lefty = !!ctx.lefty, shots = ctx.shots || [], game = ctx.gameNow || 1;
-    const real = shots.filter(s => s && s.type !== 'gameStart' && !s.isFill);
+    const real = shots.filter(s => s && s.type !== 'gameStart');
     const tl = tonightLanes(shots, ctx.lanes, lefty);
     // 🐢 Game 1, in the pocket but not carrying with this ball: switch now, don't wait (3+ pocket hits, ≤1 strike)
     if (game === 1 && ctx.ball) {

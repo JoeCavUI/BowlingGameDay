@@ -18,7 +18,7 @@
     const pairN = lanes ? at.filter(s => s.lanes === lanes) : [];
     const use = pairN.length >= 3 ? pairN : at, scope = pairN.length >= 3 ? 'pair' : 'house';
     const X = (z) => !BT().standingPins(z).length;
-    const shotsOf = (s) => (s.shots || []).filter(z => z && z.type !== 'gameStart' && !z.isFill);
+    const shotsOf = (s) => (s.shots || []).filter(z => z && z.type !== 'gameStart');
     const gOf = (z) => Number(z.gameNo) || 1;
     // by game vs your overall
     const G = { 1: [], 2: [], 3: [] }, GA = { 1: [], 2: [], 3: [] };
