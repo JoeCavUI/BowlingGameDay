@@ -475,6 +475,7 @@
     // and an iPhone may reload the app any time you switch away.
     const TONIGHT_KEY = 'bt_gameday_tonight_v1';
     function saveTonight() {
+      if (window.__gdFresh) return;
       BT.lsSet(TONIGHT_KEY, { house: el.house.value || '', league: el.league.value || '', lanes: el.lanes.value.trim(), startLane: el.startLane.value || 'left', pattern: el.pattern.value || '', set: el.set.value || '', savedAt: Date.now() });
     }
     function restoreTonight() {
@@ -2592,8 +2593,12 @@ function sessionSummary(shots) {
       } else {
         alert('Saved to Scores.');
       }
+      // 🧹 Fresh start for the next night: house, league, lanes, pattern, bag, who's on the pair, line and any half-entered shot go back to blank.
+      // (Your preferences stay: keep-score mode, lane alternation, spare-ball rule, folds, house reads.)
+      try { [SESSION_KEY, TONIGHT_KEY, LINEUP_KEY, LAST_LINE_KEY, START_LANE_KEY, 'bt_gameday_shot_draft_v1', SPARE_KEY, 'bt_gameday_preferred_set_v1'].forEach(k => localStorage.removeItem(k)); window.__gdFresh = true; sessionShots = []; frameAdj = {}; } catch (_e) {}
       // ☁️ Signed in to cloud backup: copy tonight to the cloud in the background (works only with a connection).
       try { if (window.BTCloud && BTCloud.status().signedIn) BTCloud.autoBackup().then(r => { if (r && r.ok) toast('☁️ Backed up to the cloud.'); else if (r && r.error) toast('☁️ Cloud backup didn\'t go through: ' + r.error + ' It will try again after your next night, or back up from Home → Your data.'); }); } catch (_e) {}
+      setTimeout(() => { try { location.replace('gameday.html'); } catch (_e) { location.reload(); } }, 900);
     }
 
     function resetSession() {
@@ -3170,6 +3175,36 @@ function sessionSummary(shots) {
       mr.addEventListener('toggle', () => { try { localStorage.setItem('bt_gd_more_reads_open', mr.open ? '1' : '0'); } catch (_e) {} });
     })();
     BT.$('#coach').addEventListener('click', refreshCoach);
+    // ✋ Shot in progress: what you've tapped for the next shot survives leaving Game Day, switching apps or the phone closing the app.
+    const SHOT_DRAFT_KEY = 'bt_gameday_shot_draft_v1';
+    const DRAFT_BOXES = ['readsMiss', 'readsPocket', 'readsExit', 'readsQuality', 'readsBallObs', 'readsSpeed'];
+    function saveShotDraft() {
+      try {
+        const pills = {}; DRAFT_BOXES.forEach(id => { const c = document.getElementById(id); if (c) pills[id] = selectedPills(c); });
+        const fs = document.getElementById('faultSel');
+        BT.lsSet(SHOT_DRAFT_KEY, { at: Date.now(), n: sessionShots.length, pills, pins: [...selectedPins], result: resultTag || '', swing: swingFeel || '', changed: [...changedSel], fault: fs ? fs.value : '', notes: (document.getElementById('notes') || {}).value || '', laneReads: Object.assign({}, laneReads) });
+      } catch (_e) {}
+    }
+    function restoreShotDraft() {
+      try {
+        const d = BT.lsGet(SHOT_DRAFT_KEY, null);
+        if (!d || d.n !== sessionShots.length || Date.now() - (d.at || 0) > 12 * 3600 * 1000) return;
+        Object.entries(d.pills || {}).forEach(([id, vals]) => { const c = document.getElementById(id); if (!c) return; (vals || []).forEach(v => { const b = BT.$all('button[data-pill]', c).find(x => x.getAttribute('data-pill') === v); if (b && !b.classList.contains('active')) b.click(); }); });
+        if (Array.isArray(d.pins) && d.pins.length) { selectedPins = new Set(d.pins.map(Number)); updatePinDeckUI(); }
+        if (d.result) { resultTag = d.result; try { updateQuickResultUI(); } catch (_e) {} }
+        if (d.swing) { swingFeel = d.swing; BT.$all('#swingRow [data-swing]').forEach(x => x.classList.toggle('on', x.dataset.swing === swingFeel)); }
+        if (Array.isArray(d.changed)) { d.changed.forEach(k => changedSel.add(k)); try { paintChanged(); } catch (_e) {} }
+        if (d.laneReads) { Object.assign(laneReads, d.laneReads); try { paintLaneRead(); } catch (_e) {} }
+        if (d.fault) { try { renderFaultPills(d.fault); } catch (_e) {} }
+        const nt = document.getElementById('notes'); if (nt && d.notes && !nt.value) nt.value = d.notes;
+      } catch (_e) {}
+    }
+    { let t = null; const later = () => { if (window.__gdFresh) return; clearTimeout(t); t = setTimeout(saveShotDraft, 300); };
+      const sp = document.getElementById('shotPanel') || document.body; sp.addEventListener('click', later, true); sp.addEventListener('change', later, true); sp.addEventListener('input', later, true);
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && !window.__gdFresh) { saveShotDraft(); try { saveCurrentSessionDraft(); saveTonight(); } catch (_e) {} } });
+      window.addEventListener('pagehide', () => { if (window.__gdFresh) return; saveShotDraft(); try { saveCurrentSessionDraft(); saveTonight(); } catch (_e) {} });
+      setTimeout(restoreShotDraft, 400); }
+
     BT.$('#saveSession').addEventListener('click', saveSession);
     BT.$('#nextGame').addEventListener('click', startNextGame);
     BT.$('#resetSession').addEventListener('click', resetSession);
