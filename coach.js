@@ -252,6 +252,7 @@
       house: ratio != null && ratio >= 7,      // typical house shot: forgiving
       box: (p.box && !p.box.off && p.box.b1 != null) ? p.box : null, // 📦 Baker Box, decided by BT.boxFor
       r31: p.r31 !== false, // 📏 Rule of 31 checkbox (off = no exit-point advice)
+      est: /unknown|guess|estimat/i.test(String(p.name || '')), // length is your estimate, not a posted pattern
     };
     // A saved pattern straight from the Oil page (Scores, Trends): use your Baker Box and Rule of 31 settings, as Game Day does.
     if (p.box === undefined && root.BT && root.BT.boxFor) { try { const b = root.BT.boxFor(length, ratio, {}); out.box = !b.off && b.b1 != null ? b : null; } catch (_e) {} }
@@ -315,9 +316,11 @@
       r.status = Math.abs(sl - mSlide) <= tol ? 'on' : pass > focal ? 'inside' : 'outside';
       if (basis === 'box') { r.status = (pass >= box.b1 - 0.5 && pass <= box.b2 + 0.5) ? 'on' : pass > box.b2 ? 'inside' : 'outside'; r.gap = Math.round(pass > box.b2 ? pass - box.b2 : box.b1 - pass); r.passesExact = Math.round(own(pass) * 2) / 2; }
     }
+    if (r && pat && pat.est) r.est = true;
     return r;
   }
-  function lineText(r) {
+  function lineText(r) { const t = lineText0(r); return t && r && r.est && r.basis !== 'box' ? `${t} (Your pattern length is an estimate: a guide, not proof the line is wrong.)` : t; }
+  function lineText0(r) {
     if (!r) return '';
     if (r.tFt && r.tFt !== 15) { const T = (t) => `${t} (at ${r.tFt} ft)`; r = Object.assign({}, r, { target: T(r.target) }); }
     const math = `slide ${r.slide} → lay down ${r.laydown} → target ${r.target} → board ${r.focal}`;
@@ -713,7 +716,7 @@
     const exitSeenN = ph.filter(c => c.exitRaw !== "Didn't notice").length;
     return { score, label, n: C.length, parts: P, pocketHits: ph.length, exitSeen: exitSeenN, cornerLeaves: cornerLeaves.length,
       weakest: weakest && weakest[1] < 70 ? { key: weakest[0], name: NAMES[weakest[0]], pct: weakest[1] } : null,
-      tip: weakest && weakest[1] < 70 ? (weakest[0] === 'exit' || weakest[0] === 'routine' ? `Watch it off the deck: ${exitSeenN} of ${ph.length} pocket hits tonight. Mark → breakpoint → pocket → off the deck, every shot.` : `Weakest: ${NAMES[weakest[0]]} (${weakest[1]}%).`) : '' };
+      tip: weakest && weakest[1] < 70 ? (weakest[0] === 'exit' || weakest[0] === 'routine' ? `Watch it off the deck: ${exitSeenN} of ${ph.length} first-ball pocket hits tonight (fill balls not counted). Mark → breakpoint → pocket → off the deck, every shot.` : `Weakest: ${NAMES[weakest[0]]} (${weakest[1]}%).`) : '' };
   }
 
   // ---------- Five Elements ----------
@@ -835,7 +838,7 @@
     const hand = C.filter(c => chg(c, 'hand'));
     if (hand.length) { const w = hand.filter(c => c.strike || c.pocketHit).length; rSubs.push(sub('Versatility', pct(w, hand.length), `You changed your hand on purpose ${hand.length}×; ${of(w, hand.length)} found the pocket.`)); }
     else rSubs.push(sub('Versatility', null, 'To grade a planned rev change: tap Hand under Changed since last shot.'));
-    out.push({ key: 'Revs', icon: '🔄', score: rScore, subs: rSubs, text: (prof.rpm ? `${prof.rpm} rpm. ` : '') + (rd.length ? `The right amount of hook on ${of(right, rd.length)} shots.` : rSubs[0].text) });
+    out.push({ key: 'Revs', icon: '🔄', score: rScore, subs: rSubs, text: (prof.rpm ? `Profile: ${prof.rpm} rpm (your Bowler page, not measured tonight). ` : '') + (rd.length ? `The right amount of hook on ${of(right, rd.length)} shots.` : rSubs[0].text) });
 
     // 5. ROLL: how the ball finished: exit off the deck and the key pin
     const ph = C.filter(c => c.pocketHit && (c.finish || c.strike));
@@ -1833,11 +1836,18 @@
     if (rows.length < 2) return { rows, text: '' };
     const deep = rows[rows.length - 1], out = rows[0]; // righty: higher slide board = deeper
     const D = lefty ? out : deep, O = lefty ? deep : out; if (O.weak >= 2 && D.p < 3) return { rows, text: '' };
+    // Only call it when each spot has enough pocket hits to mean something, and say when the balls were different.
+    const MIN = 6, enough = D.p >= MIN && O.p >= MIN, cnt = (o) => `${o.x} of ${o.p}`;
+    const ballsAt = (f) => { const m = {}; C.filter(c => Math.round(Number(c.shot.feet)) === f).forEach(c => { m[c.shot.ball || '?'] = (m[c.shot.ball || '?'] || 0) + 1; }); const top = Object.entries(m).sort((a, b) => b[1] - a[1])[0]; return top ? { ball: top[0], share: top[1] / Object.values(m).reduce((a, b) => a + b, 0) } : null; };
+    const bD = ballsAt(D.feet), bO = ballsAt(O.feet), mixed = !(bD && bO && bD.ball === bO.ball && bD.share >= 0.7 && bO.share >= 0.7);
+    const caveat = mixed ? ' Different balls in each spot, so this mixes ball and line.' : '';
+    const outW = lefty ? 'left' : 'right';
     let text = '';
-    if (D.carry + 15 <= O.carry && D.p >= 3) text = `Deeper (slide ${D.feet}) carried ${D.carry}% vs ${O.carry}% from ${O.feet} on good shots: the deeper line may be costing angle. Next time try feet in with the same target, so the ball still gets out to the breakpoint.`;
-    else if (O.weak >= 2 && O.weak >= D.weak + 2) text = `From slide ${O.feet} the ball rolled out ${O.weak}×; from ${D.feet} ${D.weak}×. The outside line burns energy: stay deeper and open the angle (feet in, target the same).`;
-    else if (D.carry >= O.carry + 15) text = `Deeper (slide ${D.feet}) carried better on good shots: ${D.carry}% vs ${O.carry}%.`;
-    return { rows, text };
+    if (!enough) text = (D.p || O.p) ? `Too few pocket hits in each spot to compare (${cnt(D)} from slide ${D.feet}, ${cnt(O)} from ${O.feet}). Needs ${MIN}+ in each.` : '';
+    else if (D.carry + 15 <= O.carry) text = `Deeper (slide ${D.feet}) carried ${cnt(D)} vs ${cnt(O)} from slide ${O.feet} on good shots: the deeper spot may be costing angle. Test: from ${O.feet}, same target, and see if carry holds.${caveat}`;
+    else if (O.weak >= 3 && O.weak >= D.weak + 2) text = `From slide ${O.feet} the ball rolled out ${O.weak}×; from ${D.feet} ${D.weak}×. The outside line may be burning energy: test staying at ${D.feet}.${caveat}`;
+    else if (D.carry >= O.carry + 15) text = `Deeper (slide ${D.feet}) carried ${cnt(D)} vs ${cnt(O)} from slide ${O.feet} on good shots.${caveat}`;
+    return { rows, text, enough, mixed };
   }
   root.BTCoach = { setFaultLabel, hiddenFaults, hideFault, unhideFault, energyAngle, noteTags, noteMix, repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
 })(typeof window !== 'undefined' ? window : globalThis);

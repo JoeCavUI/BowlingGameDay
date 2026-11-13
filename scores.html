@@ -542,10 +542,13 @@
       const p = pc(all.pocket, all.n), c = pc(all.carry, all.pocket);
       let headline;
       if (!all.n) headline = 'No shots logged.';
-      else if (p >= 70 && c < 70) headline = `You hit the pocket on ${p}% of shots but only ${c}% of those struck. The pins you lost came from how the ball entered the pocket, not from missing it.`;
-      else if (p < 60) headline = `You found the pocket on ${p}% of shots. Getting there more often is where tonight's pins were.`;
-      else if (c >= 70) headline = `Pocket ${p}% and carry ${c}%: you got there and it carried.`;
-      else headline = `Pocket ${p}%, carry ${c}%.`;
+      else {
+        // Where the frames went, all three ways, biggest first: no single cause unless the counts say so.
+        const pMiss = all.n - all.pocket, cMiss = all.pocket - all.carry, sMiss = tally.second - tally.spares;
+        const W = [[cMiss, `${cMiss} pocket hit${cMiss === 1 ? '' : 's'} that didn't strike`], [pMiss, `${pMiss} shot${pMiss === 1 ? '' : 's'} that missed the pocket`], [sMiss, `${sMiss} missed spare${sMiss === 1 ? '' : 's'}`]].filter(w => w[0] > 0).sort((a, z) => z[0] - a[0]);
+        const lead = W.length >= 2 && W[0][0] >= W[1][0] * 2 ? ` The biggest share: ${W[0][1].replace(/^\d+ /, '')}.` : W.length >= 2 ? ' No single cause: more than one of these mattered.' : '';
+        headline = `Pocket ${p}%, carry ${c}%.${W.length ? ` Where pins went: ${W.map(w => w[1]).join(", ")}.${lead}` : ' You got there and it carried.'}`;
+      }
       // What tonight says (up to 3)
       const T = [];
       const lineKey = (x) => `${x.feet ?? '—'}/${x.arrows ?? '—'}${x.bp != null ? '/' + x.bp : ''}`;
@@ -591,7 +594,7 @@
         const [a, b] = lanes, pa = pc(a.m.pocket, a.m.n), pb = pc(b.m.pocket, b.m.n), sa = pc(a.m.strikes, a.m.n), sb = pc(b.m.strikes, b.m.n);
         if (Math.abs(pa - pb) >= 10 || Math.abs(sa - sb) >= 15) { const tough = pa + sa < pb + sb ? a : b, easy = tough === a ? b : a; const dP = Math.abs(pa - pb) >= 5, dS = Math.abs(sa - sb) >= 5; laneNote = `Lane ${tough.lane} was tougher: ${[dP && `pocket ${pc(tough.m.pocket, tough.m.n)}% vs ${pc(easy.m.pocket, easy.m.n)}%`, dS && `strikes ${pc(tough.m.strikes, tough.m.n)}% vs ${pc(easy.m.strikes, easy.m.n)}%`].filter(Boolean).join(', ')} on ${easy.lane}. Next time here, watch your first shots on ${tough.lane} closely.`;
           if (tough.miss && tough.poorMiss * 2 >= tough.miss) laneNote += ` But ${tough.poorMiss} of its ${tough.miss} misses were poor shots: on good shots it was ${tough.goodP} of ${tough.good} to the pocket, so part of that is execution, not the lane.`;
-          { const eC = pc(easy.m.carry, easy.m.pocket); if (pc(easy.m.pocket, easy.m.n) >= 80 && eC <= 50) laneNote += ` Lane ${easy.lane} got you to the pocket but carried only ${eC}%${easy.ten >= 3 ? ` (${easy.ten} single ${lefty ? '7' : '10'}-pins)` : ''}: that's energy at the pins, not your line.`; } }
+          { const eC = pc(easy.m.carry, easy.m.pocket); if (pc(easy.m.pocket, easy.m.n) >= 80 && eC <= 50) laneNote += ` Lane ${easy.lane} got you to the pocket but carried only ${eC}%${easy.ten >= 3 ? ` (${easy.ten} single ${lefty ? '7' : '10'}s on pocket hits)` : ''}: that's energy at the pins, not your line.`; } }
         else laneNote = 'Both lanes played about the same.';
       }
       let five = null, moves = null, rep = null, repG = {};
@@ -817,7 +820,7 @@
         ${R.moves || R.said.length ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px">${R.moves ? `<b>${R.moves.text}</b>${R.moves.tip ? `<div class="small" style="margin-top:6px;opacity:1">${R.moves.tip}</div>` : ''}` : ''}${R.said.length ? `<div style="margin-top:8px"><b>🗣️ Coach said / you did</b>${R.said.map(t => `<div class="small" style="margin-top:4px;opacity:1">${esc(t)}</div>`).join('')}</div>` : ''}</div>` : ''}
         ${R.faults.length ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🤔 Poor shots: what you felt</b><ul class="nr-list">${R.faults.map(l => `<li>${l}</li>`).join('')}</ul></div>` : ''}
         ${R.rep ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🔁 Repeatability tonight: ${R.rep.score}%</b><div class="small" style="margin-top:2px">How well you repeated your shot, from what you logged. Moves you made on purpose don't count against you.</div><ul class="nr-subs">${R.rep.parts.map(p => `<li><b>${p.label} ${p.score}%:</b> ${p.text}.</li>`).join('')}</ul>${Object.keys(R.repG || {}).length > 1 ? `<div class="small" style="margin-top:6px;opacity:1">By game: ${Object.entries(R.repG).map(([g, v]) => `G${g} ${v}%`).join(' · ')}</div>` : ''}${R.rep.tip ? `<div class="small" style="margin-top:8px;color:var(--accent);opacity:1">${R.rep.tip}</div>` : ''}</div>` : ''}
-        ${R.five ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🎳 The 5 Scoring Elements tonight</b>${R.five.elements.map(e => `<div class="small" style="margin-top:6px;opacity:1">${e.icon} <b>${e.key}${e.score != null ? ': ' + e.score + '%' : ''}</b>. ${e.text}</div>${(e.subs || []).length ? `<ul class="nr-subs">${e.subs.map(x => `<li><b>${x.label}${x.score != null ? ' ' + x.score + '%' : ''}:</b> ${x.text}</li>`).join('')}</ul>` : ''}`).join('')}<div class="small" style="margin-top:8px">From Del Warren's 5 Scoring Elements (Kegel). Grades only what you logged.</div>${R.five.drill ? `<div class="small" style="margin-top:8px;color:var(--accent);opacity:1"><b>Work on ${R.five.weakest}:</b> ${R.five.drill}</div>` : ''}</div>` : ''}
+        ${R.five ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🎳 The 5 Scoring Elements tonight</b><div class="small dim">Scores = % of your logged shots the app graded good for each element: from your reads and line, not a measured angle or rev rate.</div>${R.five.elements.map(e => `<div class="small" style="margin-top:6px;opacity:1">${e.icon} <b>${e.key}${e.score != null ? ': ' + e.score + '%' : ''}</b>. ${e.text}</div>${(e.subs || []).length ? `<ul class="nr-subs">${e.subs.map(x => `<li><b>${x.label}${x.score != null ? ' ' + x.score + '%' : ''}:</b> ${x.text}</li>`).join('')}</ul>` : ''}`).join('')}<div class="small" style="margin-top:8px">From Del Warren's 5 Scoring Elements (Kegel). Grades only what you logged.</div>${R.five.drill ? `<div class="small" style="margin-top:8px;color:var(--accent);opacity:1"><b>Work on ${R.five.weakest}:</b> ${R.five.drill}</div>` : ''}</div>` : ''}
         <details class="panel gd-subfold no-print" style="padding:12px;margin-top:10px">
           <summary><b>More details</b> <span class="small">(eyeball score, arsenal audit)</span></summary>
 
