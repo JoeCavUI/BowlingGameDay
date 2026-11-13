@@ -58,7 +58,7 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
-## Changes in v149-beta86 (held)
+## Changes in v149-beta86
 - 🧹 After Save session, Game Day starts blank for the next night: house, league, lanes, starting lane, pattern, bag, who's on the pair, line and any half-entered shot. Preferences stay (keep-score mode, lane alternation, spare-ball rule, folds, house reads).
 - ✋ A shot in progress (mark, pocket, off the deck, quality, reason, ball / speed reads, pins, swing, changes, notes) is kept when you leave Game Day, switch apps or the phone closes the app; everything is also saved the moment the app goes to the background.
 
