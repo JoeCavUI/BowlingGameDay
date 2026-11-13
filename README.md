@@ -58,7 +58,7 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
-## Changes in v148-beta85 (held)
+## Changes in v148-beta85
 - 🌙 Night review headline lists where pins went (pocket hits that didn't strike, shots that missed the pocket, missed spares), biggest first, instead of blaming entry angle.
 - ⚖️ Energy vs angle needs 6+ pocket hits in each spot, shows counts (4 of 9), says when the balls differed, and words the test move plainly.
 - 📏 Rule-of-31 lines say when your pattern length is an estimate ("Unknown house shot").
