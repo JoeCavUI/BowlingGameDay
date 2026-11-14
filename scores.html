@@ -88,6 +88,7 @@
     <div data-secpage="nights">
     <div class="panel" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       <button class="btn secondary" id="refresh">Refresh</button>
+      <button class="btn secondary" id="snNew" title="A practice session, or a night you didn't log in Game Day">📡 New night from sensor file</button>
       <button class="btn danger" id="clearAll">Clear all sessions</button>
       <div class="small" id="count"></div>
     </div>
@@ -148,6 +149,7 @@
   <script src="replay.js?v=149"></script>
   <script src="trends.js?v=149"></script>
   <script src="season.js?v=149"></script>
+  <script src="sensor.js?v=149"></script>
   <script>
     BT.renderNav('scores');
     // 🗂️ Scores: menu first, then History (search your PinPal games) or Game Day nights (review each night).
@@ -237,6 +239,17 @@
           </div>
         </div>`;
       }).join('') || `<div class="list-item small">No sessions saved yet. Go to Game Day → Save Session.</div>`;
+      // 📡 Sensor-only sessions (practice, or a night you didn't log in Game Day). Kept apart, so they never count in league stats.
+      if (window.BTSensor) { const S = BTSensor.sessions(); if (S.length) {
+        el.list.innerHTML += `<div class="small" style="margin:14px 2px 6px"><b>📡 Sensor sessions</b> · practice and nights not logged here; not counted in league stats</div>` + S.map(x => {
+          const st = BTSensor.stats(x.throws || []), dt = new Date(x.savedAt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+          return `<div class="list-item" data-sid="${x.id}" style="cursor:pointer"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div>
+            <div style="font-weight:900">📡 ${dt}</div><div class="small">${(x.throws || []).length} throws${x.ball ? ' · ' + BTSensor.esc(x.ball) : x.sensorBall ? ' · ' + BTSensor.esc(x.sensorBall) : ''}</div>
+            <div class="small">${st.speed ? BTSensor.fmt('speed', st.speed.avg) + ' mph' : ''}${st.rpm ? ' · ' + BTSensor.fmt('rpm', st.rpm.avg) + ' rpm' : ''}${st.rot ? ' · ' + BTSensor.fmt('rot', st.rot.avg) + '° rotation' : ''}</div></div>
+            <button class="btn danger" data-sdel="${x.id}" style="min-width:110px">Remove</button></div></div>`; }).join('');
+        BT.$all('[data-sid]', el.list).forEach(div => div.addEventListener('click', (e) => { if (e.target && e.target.matches('button[data-sdel]')) return; showSensorSession(div.getAttribute('data-sid')); }));
+        BT.$all('button[data-sdel]', el.list).forEach(b => b.addEventListener('click', () => { if (!confirm('Remove this sensor session?')) return; BTSensor.saveSessions(BTSensor.sessions().filter(x => x.id !== b.getAttribute('data-sdel'))); renderList(); el.details.innerHTML = ''; el.detailHint.textContent = 'Tap a night to see its review.'; }));
+      } }
 
       BT.$all('[data-id]', el.list).forEach(div => {
         let t = 0;
@@ -724,6 +737,43 @@
       const fr = c.frames.slice(); while (fr.length < 10) fr.push({ no: fr.length + 1, marks: [''], cum: null });
       return `<div class="sc-card">${fr.map(cell).join('')}</div>`;
     }
+    // 📡 Add sensor data to a saved night: pick the CSV, say which ball the sensor was in, then each throw is matched to that ball's shots by time.
+    function sensorImport(s) {
+      BTSensor.css();
+      BTSensor.pickFile((text, name) => {
+        const P = BTSensor.parse(text), box = BT.$('#nrSensorBox'); if (!box) return;
+        box.style.display = '';
+        if (P.error) { box.innerHTML = `<b>📡 Sensor</b><div class="small" style="margin-top:6px">${BTSensor.esc(P.error)}</div>`; return; }
+        const balls = [...new Set((s.shots || []).filter(x => x && x.type !== 'gameStart').flatMap(x => [x.ball, x.second && x.second.ball]).filter(Boolean))];
+        const guess = BTSensor.guessBall(s, P);
+        const day = (t) => new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        const shotTimes = (s.shots || []).map(x => x && x.at).filter(Boolean), nightDay = shotTimes.length ? day(Math.min(...shotTimes)) : day(s.savedAt);
+        const fileDay = day(P.throws[0].t), other = fileDay !== nightDay;
+        box.innerHTML = `<b>📡 Sensor</b><div class="small" style="margin-top:6px">${P.throws.length} throws in <b>${BTSensor.esc(name)}</b>${P.ballName ? ` (the sensor app calls the ball "${BTSensor.esc(P.ballName)}")` : ''}, ${fileDay}.${other ? ` <b style="color:var(--warn,#c60)">This night was ${nightDay}: is it the right file?</b>` : ''}</div>
+          <div class="sn-pick"><span class="small">Sensor was in</span><select id="snBall" class="input">${balls.map(b => `<option${b === guess ? ' selected' : ''}>${BTSensor.esc(b)}</option>`).join('')}</select><button type="button" class="btn" id="snGo">Match throws</button></div>
+          <div class="small dim" style="margin-top:4px">Only shots with this ball are matched: spare-ball shots aren't expected to have a throw.</div>`;
+        BT.$('#snGo').onclick = () => {
+          const ball = BT.$('#snBall').value, r = BTSensor.attach(s, P, ball, name);
+          BT.lsSet(BT.KEYS.GAME_SESSIONS, sessions); showDetails(s.id);
+          setTimeout(() => { const b = BT.$('#nrSensorBox'); if (b) { b.insertAdjacentHTML('afterbegin', `<div class="goal-banner ${r.pairs.length ? 'ok' : 'miss'}" style="margin-bottom:8px">${r.pairs.length ? `✅ Matched <b>${r.pairs.length}</b> of ${r.events} ${BTSensor.esc(ball)} shots.` : `❌ No throws matched ${BTSensor.esc(ball)} shots. Check the file is from this night and the ball is right.`}${r.extra.length ? ` ${r.extra.length} throw${r.extra.length === 1 ? '' : 's'} had no logged shot (warm-up, practice or a missed log).` : ''}</div>`); b.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, 60);
+        };
+      });
+    }
+    // 📡 A sensor file on its own: a practice session, or a night you didn't log in Game Day.
+    function showSensorSession(id) {
+      const x = BTSensor.sessions().find(o => o.id === id); if (!x) return;
+      BTSensor.css(); activeSessionId = null; el.detailHint.textContent = '';
+      const d = new Date(x.savedAt);
+      el.details.innerHTML = `<div class="panel nr-head" style="padding:12px"><div class="nr-title">📡 ${d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} · sensor session</div>
+          <div class="small">${BTSensor.esc(x.file || '')}${x.kind === 'practice' ? ' · practice: not counted in league stats' : ''}</div></div>
+        <div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>📡 Sensor</b>${BTSensor.reviewHTML(null, x)}</div>
+        <details class="panel gd-subfold" style="padding:12px;margin-top:10px"><summary><b>Every throw</b></summary>${BTSensor.throwListHTML(x.throws || [])}</details>`;
+      const h = el.details.querySelector('.nr-head'); if (h) h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    { const b = BT.$('#snNew'); if (b) b.onclick = () => { if (!window.BTSensor) return; BTSensor.pickFile((text, name) => {
+        const P = BTSensor.parse(text); if (P.error) return alert(P.error);
+        const linked = P.ballName ? (BTSensor.lsGet(BTSensor.MAP_KEY, {}) || {})[P.ballName] : '';
+        const o = BTSensor.newSession(P, name, linked || ''); renderList(); showSensorSession(o.id); }); }; }
     function jumpToShots() { const L = BT.$('#nrShotLog'); if (L) L.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     // Double tap (works on iPhone, where dblclick isn't reliable): two taps within 350 ms.
     function onDoubleTap(node, fn) { if (!node) return; let t = 0; node.addEventListener('click', (e) => { const now = Date.now(); if (now - t < 350) { t = 0; e.preventDefault(); fn(e); } else t = now; }); }
@@ -797,6 +847,7 @@
           <button type="button" class="btn secondary" id="nrPdf">📄 Save as PDF</button>
           <button type="button" class="btn secondary" id="nrFile">📤 Save to Files</button>
           <button type="button" class="btn secondary" id="nrShots">📋 Shot log</button>
+          <button type="button" class="btn secondary" id="nrSensor">📡 ${s.sensorData ? 'Replace sensor data' : 'Add sensor data'}</button>
         </div>
         <div class="panel nr-head" id="nrHead" style="padding:12px" title="Double tap for the shot log">
           <div class="nr-title">${title}</div>
@@ -812,6 +863,7 @@
           <div class="small dim" style="margin-top:6px">${statLine(R.all)} · good or OK shots ${R.okPct}%<span class="no-print"> · double tap for the shot log</span></div>
         </div>
         ${pinpalPanel(s, true)}
+        <div class="panel nr-sec" id="nrSensorBox" style="padding:12px;margin-top:10px;${s.sensorData ? '' : 'display:none'}">${s.sensorData ? `<b>📡 Sensor</b>${window.BTSensor ? BTSensor.reviewHTML(s) : ''}` : ''}</div>
         ${R.takeaways.length ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>💡 What tonight says</b><ol class="nr-list">${R.takeaways.map(t => `<li><b>${t.k}:</b> ${t.t}</li>`).join('')}</ol></div>` : ''}
         ${R.games.length > 1 || (R.games[0] && R.games[0].score != null) ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>🎯 Game by game</b>${R.games.map(g => `<div class="nr-row"><button type="button" class="nr-gscore" data-gscore="${g.no}" aria-label="Edit game ${g.no} score"><b>Game ${g.no}${g.score != null ? ': ' + g.score : ''}</b> <span class="small">✎</span></button>${g.card ? scorecard(g.card, s) : ''}<div class="small">${statLine(g.m)}${R.repG && R.repG[g.no] != null ? ` · repeat ${R.repG[g.no]}%` : ''}</div>${g.notes.length ? `<div class="small" style="opacity:1">${g.notes.join(' · ')}</div>` : ''}</div>`).join('')}</div>` : ''}
         ${R.lanes.length ? `<div class="panel nr-sec" style="padding:12px;margin-top:10px"><b>↔️ Lanes</b>${R.lanes.map(l => `<div class="nr-row"><b>Lane ${esc(l.lane)}</b><div class="small">${statLine(l.m)}</div><div class="small dim">${l.miss ? `missed the pocket ${l.miss}× (${l.poorMiss} poor shot${l.poorMiss === 1 ? '' : 's'}) · ` : ''}good shots to the pocket ${l.goodP} of ${l.good}${l.ten ? ` · single ${lefty0 ? '7' : '10'}: ${l.ten}` : ''}</div>${l.byG.length > 1 ? `<div class="small dim">${l.byG.map(o => `G${o.g}: pocket ${o.m.pocket}/${o.m.n}, ${o.m.strikes} X`).join(' · ')}</div>` : ''}</div>`).join('')}${R.laneNote ? `<div class="small nr-note">${R.laneNote}</div>` : ''}</div>` : ''}
@@ -840,6 +892,7 @@
       `;
       lastReviewText = R.speech;
       BT.$('#nrShots').onclick = () => jumpToShots();
+      { const b = BT.$('#nrSensor'); if (b && window.BTSensor) b.onclick = () => sensorImport(s); }
       BT.$('#nrReplay').onclick = () => { if (window.BTReplay) BTReplay.open(s); };
       { const sv = () => { const pl = Number(BT.$('#nrPl').value) || 0, ur = Number(BT.$('#nrUr').value) || 0; s.traffic = Object.assign({}, s.traffic || {}, { plastic: pl, ure: ur, carry: pl + ur, edited: true }); BT.lsSet(BT.KEYS.GAME_SESSIONS, sessions); const n = BT.$('#nrPairNote'); if (n) n.textContent = 'saved'; };
         ['#nrPl', '#nrUr'].forEach(id => { const e = BT.$(id); if (e) e.addEventListener('change', sv); }); }

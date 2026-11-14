@@ -82,6 +82,7 @@
               <select id="set" class="input"></select>
               <div id="bagWarn" class="gd-bagwarn" style="display:none"></div>
               <div class="gd-spare" id="spareRow"><label class="small" style="display:flex;gap:8px;align-items:center;margin:0"><input type="checkbox" id="spareOn" style="width:20px;height:20px" /> 🎯 Bringing my spare ball tonight</label><select class="input" id="spareBall" style="margin-top:6px"></select><select class="input" id="spareScope" style="margin-top:6px"><option value="side">Right-side spares (3, 6, 9, 10); left side with your 1st-ball ball</option><option value="all">Every spare</option><option value="ten">The 10 pin only</option></select><button type="button" class="btn secondary" id="spareFixPast" style="margin-top:6px;display:none">Fix past nights with this rule</button><div class="small dim" id="spareNote" style="margin-top:4px"></div></div>
+              <div class="gd-spare" id="sensorRow"><label class="small" style="display:flex;gap:8px;align-items:center;margin:0"><input type="checkbox" id="snOn" style="width:20px;height:20px" /> 📡 Ball sensor tonight</label><select class="input" id="snBallSel" style="margin-top:6px" aria-label="Sensor is in"></select><button type="button" class="btn secondary" id="snWarm" style="margin-top:6px">📡 Warm-up sensor file</button><div class="small dim" id="snNote" style="margin-top:4px"></div></div>
             </div>
             <div class="gd-tstep" style="grid-column:1/-1"><span class="gd-step-n" id="step3n">3</span><span><b>Who's on the pair</b><span class="gd-tstep-sub">your team and tonight's opponent</span></span><span class="gd-step-st small" id="step3st"></span></div>
             <div class="gd-lineup" style="grid-column:1/-1">
@@ -329,6 +330,7 @@
   <script src="insight.js?v=149"></script>
   <script src="eyes.js?v=149"></script>
   <script src="cloud.js?v=149"></script>
+  <script src="sensor.js?v=149"></script>
   <script>
     BT.renderNav('gameday');
     BT.wireReadAloud(document.getElementById('coachSpeak'), () => { const q = document.querySelector('#coachText .gd-q1'), full = document.querySelector('#coachFull'); if (q && full && full.hidden) return q.innerText; return ((document.getElementById('coachText') || {}).innerText || '').split('\n').filter(l => !/^(Why & what's next|What Coach is using|Why ›|Less ‹)/i.test(l.trim())).join('\n'); });
@@ -2572,6 +2574,7 @@ function sessionSummary(shots) {
         games: currentGameNumber(),
         scores, scoredInApp: !!scoredInApp,
         shots: [...sessionShots],
+        sensor: sensorCtx(),
       };
       let sessions = BT.lsGet(BT.KEYS.GAME_SESSIONS, []);
       // Saving the same night twice (double tap, or save → reopen → save) replaces it instead of adding a copy.
@@ -2595,7 +2598,7 @@ function sessionSummary(shots) {
       }
       // 🧹 Fresh start for the next night: house, league, lanes, pattern, bag, who's on the pair, line and any half-entered shot go back to blank.
       // (Your preferences stay: keep-score mode, lane alternation, spare-ball rule, folds, house reads.)
-      try { [SESSION_KEY, TONIGHT_KEY, LINEUP_KEY, LAST_LINE_KEY, START_LANE_KEY, 'bt_gameday_shot_draft_v1', SPARE_KEY, 'bt_gameday_preferred_set_v1'].forEach(k => localStorage.removeItem(k)); window.__gdFresh = true; sessionShots = []; frameAdj = {}; } catch (_e) {}
+      try { [SESSION_KEY, TONIGHT_KEY, LINEUP_KEY, LAST_LINE_KEY, START_LANE_KEY, 'bt_gameday_shot_draft_v1', SPARE_KEY, SENSOR_KEY, 'bt_gameday_preferred_set_v1'].forEach(k => localStorage.removeItem(k)); window.__gdFresh = true; sessionShots = []; frameAdj = {}; } catch (_e) {}
       // ☁️ Signed in to cloud backup: copy tonight to the cloud in the background (works only with a connection).
       try { if (window.BTCloud && BTCloud.status().signedIn) BTCloud.autoBackup().then(r => { if (r && r.ok) toast('☁️ Backed up to the cloud.'); else if (r && r.error) toast('☁️ Cloud backup didn\'t go through: ' + r.error + ' It will try again after your next night, or back up from Home → Your data.'); }); } catch (_e) {}
       setTimeout(() => { try { location.replace('gameday.html'); } catch (_e) { location.reload(); } }, 900);
@@ -2812,6 +2815,45 @@ function sessionSummary(shots) {
         BT.lsSet(BT.KEYS.GAME_SESSIONS, S); saveCurrentSessionDraft(); b.textContent = `✓ Fixed ${n} spare${n === 1 ? '' : 's'}`; b.disabled = true; markCoachDirty(); }); } }
     el.set.addEventListener('change', () => setTimeout(renderSpare, 0));
     setTimeout(renderSpare, 300);
+    // 📡 Ball sensor tonight: which ball it's in (remembered night to night) and an optional warm-up file as tonight's baseline.
+    // The sensor data itself comes in on Scores → the night's review → Add sensor data. Nothing here adds a tap per shot.
+    const SENSOR_KEY = 'bt_gameday_sensor_v1';
+    function sensorCtx() { const t = BT.lsGet(SENSOR_KEY, null) || {}; if (t.date !== BT.localDate() || !t.on || !t.ball) return null; return { ball: t.ball, baseline: t.baseline || null }; }
+    function renderSensor() {
+      const on = BT.$('#snOn'), sel = BT.$('#snBallSel'), warm = BT.$('#snWarm'), note = BT.$('#snNote'); if (!on || !sel || !window.BTSensor) return;
+      const pref = BT.lsGet(BTSensor.PREF_KEY, {}) || {}, t = BT.lsGet(SENSOR_KEY, null) || {}, today = t.date === BT.localDate();
+      const setObj = (BT.lsGet(BT.KEYS.ARSENAL_SETS, []) || []).find(x => x.name === el.set.value) || null;
+      const bag = setObj ? setBallNames(setObj) : [];
+      const want = (today && t.ball) || pref.ball || '';
+      const names = bag.length ? bag.slice() : (want ? [want] : []);
+      if (want && !names.includes(want)) names.unshift(want);
+      sel.innerHTML = names.length ? names.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('') : '<option value="">Pick tonight’s bag first</option>';
+      sel.value = names.includes(want) ? want : (names[0] || '');
+      on.checked = today ? !!t.on : !!pref.on;
+      sel.style.display = warm.style.display = on.checked ? '' : 'none';
+      const B = today && t.on && t.baseline;
+      if (!on.checked) note.textContent = 'Using a Witsee or other ball sensor? Tick this and say which ball it’s in. No extra taps while you bowl.';
+      else if (B && B.stats) { const st = B.stats, f = BTSensor.fmt; note.innerHTML = `<b>Warm-up baseline</b> (${B.n} throws): ${[st.speed && f('speed', st.speed.avg) + ' mph', st.rpm && f('rpm', st.rpm.avg) + ' rpm', st.rot && f('rot', st.rot.avg) + '° rotation', st.tilt && f('tilt', st.tilt.avg) + '° tilt', st.loft && 'loft ' + f('loft', st.loft.avg) + ' ft'].filter(Boolean).join(' · ')}`; }
+      else note.textContent = `Sensor in ${sel.value || 'your ball'}: only that ball's shots get sensor data. After bowling, add the file on Scores → this night → 📡 Add sensor data. Warmed up with the sensor? Add that file now as tonight's baseline.`;
+    }
+    function saveSensor(extra) {
+      const on = !!(BT.$('#snOn') && BT.$('#snOn').checked), ball = BT.$('#snBallSel') ? BT.$('#snBallSel').value : '';
+      const t = BT.lsGet(SENSOR_KEY, null) || {}, today = t.date === BT.localDate();
+      BT.lsSet(SENSOR_KEY, Object.assign({ date: BT.localDate(), on, ball, baseline: today ? t.baseline || null : null }, extra || {}));
+      if (window.BTSensor) BT.lsSet(BTSensor.PREF_KEY, { on, ball });
+      renderSensor();
+    }
+    { const on = BT.$('#snOn'), sel = BT.$('#snBallSel'), warm = BT.$('#snWarm');
+      if (on) on.addEventListener('change', () => saveSensor());
+      if (sel) sel.addEventListener('change', () => saveSensor());
+      if (warm) warm.addEventListener('click', () => { if (!window.BTSensor) return; BTSensor.pickFile((text, name) => {
+        const P = BTSensor.parse(text); if (P.error) { alert(P.error); return; }
+        const hrs = (Date.now() - P.throws[P.throws.length - 1].t) / 3600000;
+        if (hrs > 12 && !confirm(`That file's last throw was ${Math.round(hrs)} hours ago. Use it as tonight's warm-up anyway?`)) return;
+        const T = P.throws.map(x => { const o = {}; ['t', 'speed', 'rpm', 'rot', 'tilt', 'loft', 'swing', 'skid', 'hook', 'roll', 'papO', 'papU'].forEach(f => { if (x[f] != null) o[f] = x[f]; }); return o; });
+        saveSensor({ baseline: { file: name, n: T.length, at: Date.now(), stats: BTSensor.stats(T), throws: T } }); }); }); }
+    el.set.addEventListener('change', () => setTimeout(renderSensor, 0));
+    setTimeout(renderSensor, 320); setTimeout(renderSensor, 1200);
 
     // Bag ↔ house. Coming from "Save & go to Game Day", the bag's house, lanes, league and oil fill in Tonight.
     // Oil follows the house: a pattern saved for another house is swapped for this house's newest one, or cleared.
