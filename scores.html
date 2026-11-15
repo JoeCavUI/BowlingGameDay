@@ -608,7 +608,9 @@
         if (Math.abs(pa - pb) >= 10 || Math.abs(sa - sb) >= 15) { const tough = pa + sa < pb + sb ? a : b, easy = tough === a ? b : a; const dP = Math.abs(pa - pb) >= 5, dS = Math.abs(sa - sb) >= 5; laneNote = `Lane ${tough.lane} was tougher: ${[dP && `pocket ${pc(tough.m.pocket, tough.m.n)}% vs ${pc(easy.m.pocket, easy.m.n)}%`, dS && `strikes ${pc(tough.m.strikes, tough.m.n)}% vs ${pc(easy.m.strikes, easy.m.n)}%`].filter(Boolean).join(', ')} on ${easy.lane}. Next time here, watch your first shots on ${tough.lane} closely.`;
           if (tough.miss && tough.poorMiss * 2 >= tough.miss) laneNote += ` But ${tough.poorMiss} of its ${tough.miss} misses were poor shots: on good shots it was ${tough.goodP} of ${tough.good} to the pocket, so part of that is execution, not the lane.`;
           { const eC = pc(easy.m.carry, easy.m.pocket); if (pc(easy.m.pocket, easy.m.n) >= 80 && eC <= 50) laneNote += ` Lane ${easy.lane} got you to the pocket but carried only ${eC}%${easy.ten >= 3 ? ` (${easy.ten} single ${lefty ? '7' : '10'}s on pocket hits)` : ''}: that's energy at the pins, not your line.`; } }
-        else laneNote = 'Both lanes played about the same.';
+        else { const md = (xs) => { const v = xs.map(x => Number(x.feet)).filter(Number.isFinite).sort((p, q) => p - q); return v.length ? v[Math.floor(v.length / 2)] : null; };
+          const fa = md(lanesM[a.lane]), fb = md(lanesM[b.lane]);
+          laneNote = fa != null && fb != null && Math.abs(fa - fb) >= 1 ? `You played lane ${a.lane} from about ${fa} and lane ${b.lane} from about ${fb}: with separate lines, both lanes played about the same, so the split worked.` : 'Both lanes played about the same.'; }
       }
       let five = null, moves = null, rep = null, repG = {};
       try { if (window.BTCoach && BTCoach.repeatability) { rep = BTCoach.repeatability(chron, bowler); repG = BTCoach.repeatByGame(chron, bowler); } } catch (_e) {}
@@ -676,7 +678,9 @@
         const first = gs[0], last = gs[gs.length - 1];
         if (first && last && lineKey(first) !== lineKey(last)) notes.push(`line ${lineKey(first)} → ${lineKey(last)}`);
         const bs = [...new Set(gs.map(x => x.ball).filter(Boolean))]; if (bs.length) notes.push(bs.length === 1 ? bs[0] : `balls: ${bs.join(', ')}`);
-        const mv = gs.filter((x, i) => i && (x.feet !== gs[i - 1].feet || x.arrows !== gs[i - 1].arrows)).length; if (mv) notes.push(`${mv} move${mv === 1 ? '' : 's'}`);
+        const twoL = new Set(gs.map(x => x.lane).filter(Boolean)).size === 2;
+        const mv = gs.filter((x, i) => { if (!i) return false; let p = gs[i - 1]; if (twoL && x.lane) { p = null; for (let j = i - 1; j >= 0; j--) if (gs[j].lane === x.lane) { p = gs[j]; break; } } return p && (x.feet !== p.feet || x.arrows !== p.arrows); }).length; if (mv) notes.push(`${mv} move${mv === 1 ? '' : 's'}`);
+        if (twoL) { const lk = (ln) => { const a = gs.filter(x => x.lane === ln); return a.length ? lineKey(a[a.length - 1]) : ''; }; const L = [...new Set(gs.map(x => x.lane).filter(Boolean))].sort(); const k1 = lk(L[0]), k2 = lk(L[1]); if (k1 && k2 && k1 !== k2) notes.push(`lane ${L[0]} ${k1} · lane ${L[1]} ${k2}`); }
         { const rd = (gs.find(x => x.laneRead) || {}).laneRead; if (rd) notes.push(`your read: ${rd === 'more' ? 'hooking more' : rd === 'less' ? 'hooking less' : 'same'}`); }
         let card = null; try { const all = chron.filter(x => x.type !== 'gameStart' && (Number(x.gameNo) || 1) === g); const c = BT.scoreGame(all); if (c.frames.some(f => f.shot && (f.shot.second || f.shot.noSecond)) || c.complete) card = c; } catch (_e) {}
         return { no: g, score: scoreFor(g) ?? (card && card.complete ? card.total : null), m, notes, card };

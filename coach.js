@@ -1067,16 +1067,20 @@
     const own = (v) => (v != null && prof.lefty && v > 20) ? 40 - v : v; // + = deeper in every case
     const lineKey = (c) => `${c.feet ?? '?'}/${c.arrows ?? '?'}`;
     const changes = [];
+    // Two lanes, two lines: a move is a change from your last shot on the SAME lane, not from the other lane's line.
+    const lanesSeen = new Set(C.map(c => c.shot && c.shot.lane).filter(Boolean));
+    const prevOf = (i) => { const ln = C[i].shot && C[i].shot.lane; if (lanesSeen.size === 2 && ln) { for (let j = i - 1; j >= 0; j--) if (C[j].shot && C[j].shot.lane === ln) return j; return -1; } return i - 1; };
     for (let i = 1; i < C.length; i++) {
-      const a = C[i - 1], b = C[i];
+      const pj = prevOf(i); if (pj < 0) continue;
+      const a = C[pj], b = C[i];
       const lineMoved = (a.feet != null && b.feet != null && a.feet !== b.feet) || (a.arrows != null && b.arrows != null && a.arrows !== b.arrows);
       const ballChanged = !!(a.ball && b.ball && a.ball !== b.ball);
-      if (lineMoved || ballChanged) changes.push({ i, lineMoved, ballChanged });
+      if (lineMoved || ballChanged) changes.push({ i, pj, lineMoved, ballChanged });
     }
     const good = (c) => (c.strike && c.hit !== 'brooklyn') || c.hit === 'flush'; // clean result
     const rate = (arr) => arr.length ? arr.filter(good).length / arr.length : null;
     return changes.map((ch, k) => {
-      const i = ch.i, prev = C[i - 1], cur = C[i];
+      const i = ch.i, prev = C[ch.pj != null ? ch.pj : i - 1], cur = C[i];
       const start = k ? changes[k - 1].i : 0;
       const end = k + 1 < changes.length ? changes[k + 1].i : C.length;
       const before = C.slice(start, i).filter(c => (c.execution !== 'poor' || c.laneInfo));
