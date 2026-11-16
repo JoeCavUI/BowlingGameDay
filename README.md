@@ -58,6 +58,9 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v152-beta89 (held)
+- 🎳 Replay: "Pins view" button shows the shot from behind the pin deck looking back up the lane (perspective lane, 3-D pins, ball and trail; pins left standing stay up). Remembered; "Lane view" switches back.
+
 ## Changes in v151-beta88
 - 🛣️ Two lanes, two lines: when you play a different line on each lane, a "move" is a change from your last shot on the same lane (moves, "right after a poor shot", game notes). The game line shows each lane's line, and the lane note says when separate lines made both lanes play the same.
 

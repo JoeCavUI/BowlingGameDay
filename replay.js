@@ -125,9 +125,9 @@
       <div class="rp-top"><button type="button" class="rp-x" aria-label="Close replay">✕</button>
         <div class="rp-title"><div id="rpTitle">GAME 1 · FRAME 1</div><div class="rp-sub" id="rpSub"></div></div>
         <div class="rp-score"><div id="rpScore">—</div><div class="rp-sub" id="rpThru"></div></div></div>
-      <div class="rp-stage"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" id="rpSvg"></svg>
+      <div class="rp-stage"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" id="rpSvg"></svg><svg viewBox="0 0 360 560" preserveAspectRatio="xMidYMid meet" id="rpSvg3" style="display:none"></svg><div class="rp-3dcap" id="rp3cap" style="display:none">Seen from behind the pins: your right is on the left.</div>
         <div class="rp-side" id="rpSide"></div></div>
-      <div class="rp-ovl"><label><input type="checkbox" id="rpTr" /> Tracers</label><label><input type="checkbox" id="rpBox" /> Baker Box <span class="rp-ovn" id="rpBoxN"></span></label></div>
+      <div class="rp-ovl"><button type="button" class="rp-view" id="rpView" aria-pressed="false">🎳 Pins view</button><label><input type="checkbox" id="rpTr" /> Tracers</label><label><input type="checkbox" id="rpBox" /> Baker Box <span class="rp-ovn" id="rpBoxN"></span></label></div>
       <div class="rp-chip" id="rpChip"></div>
       <div class="rp-card" id="rpCard"></div>
       <div class="rp-ctl">
@@ -178,6 +178,53 @@
     const ball = el('circle', { r: 5.5, fill: '#111827', stroke: '#f9fafb', 'stroke-width': 1.6 }, svg);
     const bpDot = el('circle', { r: 4.5, fill: 'none', stroke: '#1e3a8a', 'stroke-width': 1.6, 'stroke-dasharray': '2 1.5', opacity: 0 }, svg);
     const tgDot = el('circle', { r: 4.5, fill: 'none', stroke: '#1e3a8a', 'stroke-width': 1.6, 'stroke-dasharray': '2 1.5', opacity: 0 }, svg);
+
+    // ---------- 🎳 Pins view: the same shot seen from behind the pin deck, looking back up the lane ----------
+    const svg3 = $('rpSvg3');
+    const ftOfY = (y) => y >= FOUL - LEN * 0.87 ? (FOUL - y) / (LEN * 0.87) * 58 : 58 + (FOUL - LEN * 0.87 - y) / (LEN * 0.13) * 6;
+    const BFT = 41.5 / 39 / 12, CAMF = 72, CAMH = 4.2, F3 = 860, HY = 96, CX3 = 180;
+    const pr = (lat, ft, h) => { const z = Math.max(1.2, CAMF - ft); return [CX3 - F3 * (lat * BFT) / z, HY + F3 * (CAMH - (h || 0)) / z, z]; };
+    const fromScreen = (x, y) => [(x - CX) / BW, ftOfY(y)];
+    { const lw = 19.5, gw = 19.5 + 8.7;
+      const poly = (pts, att) => el('polygon', Object.assign({ points: pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ') }, att), svg3);
+      el('rect', { x: 0, y: 0, width: 360, height: 560, fill: '#0b0d12' }, svg3);
+      poly([pr(-gw - 3, 0, -0.1), pr(gw + 3, 0, -0.1), pr(gw + 3, 66, -0.1), pr(-gw - 3, 66, -0.1)], { fill: '#2f3340' });            // capping
+      poly([pr(-gw, 0, -0.25), pr(gw, 0, -0.25), pr(gw, 66, -0.25), pr(-gw, 66, -0.25)], { fill: '#41475a' });                       // gutters
+      const lg3 = el('linearGradient', { id: 'rpWood3', x1: '0', x2: '0', y1: '0', y2: '1' }, el('defs', {}, svg3));
+      [['0', '#9c7442'], ['0.55', '#d6a560'], ['1', '#e8c27c']].forEach(([o, c]) => el('stop', { offset: o, 'stop-color': c }, lg3));
+      poly([pr(-lw, 0), pr(lw, 0), pr(lw, 63.8), pr(-lw, 63.8)], { fill: 'url(#rpWood3)' });
+      poly([pr(-lw, 59.2), pr(lw, 59.2), pr(lw, 63.8), pr(-lw, 63.8)], { fill: 'rgba(255,240,170,.55)' });                           // pin deck
+      for (let b = -15; b <= 15; b += 5) { const a1 = pr(b, 0), a2 = pr(b, 59); el('line', { x1: a1[0], y1: a1[1], x2: a2[0], y2: a2[1], stroke: 'rgba(80,45,10,.18)', 'stroke-width': 0.8 }, svg3); }
+      if (patLen) { const a1 = pr(-lw, patLen), a2 = pr(lw, patLen); el('line', { x1: a1[0], y1: a1[1], x2: a2[0], y2: a2[1], stroke: 'rgba(56,132,255,.6)', 'stroke-width': 1.2, 'stroke-dasharray': '4 3' }, svg3); }
+      for (let bb = 5; bb <= 35; bb += 5) { const lat = lefty ? (bb - 20) : (20 - bb), ft = 16 - (Math.abs(bb - 20) / 5) * (4 / 3), q = pr(lat, ft), r = Math.max(1.2, 300 / q[2] / 12); el('path', { d: `M${q[0]} ${q[1] + r * 1.4} L${q[0] - r * 0.6} ${q[1] - r * 0.5} L${q[0] + r * 0.6} ${q[1] - r * 0.5} Z`, fill: '#3b2a1a' }, svg3); }
+      const f1 = pr(-lw, 0), f2 = pr(lw, 0); el('line', { x1: f1[0], y1: f1[1], x2: f2[0], y2: f2[1], stroke: '#dc2626', 'stroke-width': 1.2 }, svg3);
+    }
+    const tr3 = el('polyline', { fill: 'none', 'stroke-width': 2.2, 'stroke-linecap': 'round', opacity: 0.95 }, svg3);
+    const tr3b = el('polyline', { fill: 'none', stroke: '#93c5fd', 'stroke-width': 2, 'stroke-dasharray': '5 4', opacity: 0 }, svg3);
+    const ball3 = el('circle', { fill: '#111827', stroke: '#f9fafb', 'stroke-width': 1.2 }, svg3);
+    const pin3 = {}; svg3.style.transition = 'none'; const order = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].sort((a, b) => PIN[a][1] - PIN[b][1]);
+    order.forEach(p => { const [lat, ft] = PIN[p], base = pr(lat, ft, 0), z = base[2], hpx = F3 * 1.25 / z, wpx = F3 * 0.4 / z;
+      const g = el('g', { class: 'rp3-pin' }, svg3), x = base[0], y = base[1], u = (k) => y - hpx * k;
+      el('ellipse', { cx: x, cy: y, rx: wpx * 0.55, ry: wpx * 0.12, fill: 'rgba(0,0,0,.35)' }, g);
+      el('path', { d: `M${x - wpx * 0.22} ${y} C${x - wpx * 0.62} ${u(0.25)} ${x - wpx * 0.55} ${u(0.5)} ${x - wpx * 0.2} ${u(0.66)} C${x - wpx * 0.12} ${u(0.74)} ${x - wpx * 0.28} ${u(0.86)} ${x - wpx * 0.22} ${u(0.93)} C${x - wpx * 0.18} ${u(1.02)} ${x + wpx * 0.18} ${u(1.02)} ${x + wpx * 0.22} ${u(0.93)} C${x + wpx * 0.28} ${u(0.86)} ${x + wpx * 0.12} ${u(0.74)} ${x + wpx * 0.2} ${u(0.66)} C${x + wpx * 0.55} ${u(0.5)} ${x + wpx * 0.62} ${u(0.25)} ${x + wpx * 0.22} ${y} Z`, fill: '#f8fafc', stroke: 'rgba(0,0,0,.15)', 'stroke-width': 0.6 }, g);
+      [0.73, 0.79].forEach(k => el('rect', { x: x - wpx * 0.17, y: u(k) - hpx * 0.02, width: wpx * 0.34, height: hpx * 0.035, fill: '#dc2626' }, g));
+      g.style.transformOrigin = `${x}px ${y}px`; g.style.transformBox = 'view-box'; pin3[p] = g; });
+    function draw3d() {
+      if (svg3.style.display === 'none') return;
+      const proj = (pts) => pts.map(([x, y]) => { const [lat, ft] = fromScreen(x, y); const q = pr(lat, Math.min(ft, 62.8), 0); return q[0].toFixed(1) + ',' + q[1].toFixed(1); }).join(' ');
+      const tp = (trail.getAttribute('points') || '').trim(); tr3.setAttribute('points', tp ? proj(tp.split(' ').map(s => s.split(',').map(Number))) : ''); tr3.setAttribute('stroke', trail.getAttribute('stroke') || '#5eead4');
+      const o2 = Number(trail2.getAttribute('opacity') || 0); tr3b.setAttribute('opacity', o2 ? '0.9' : '0');
+      if (o2) tr3b.setAttribute('points', proj([[+trail2.getAttribute('x1'), +trail2.getAttribute('y1')], [+trail2.getAttribute('x2'), +trail2.getAttribute('y2')]]));
+      const bo = ball.getAttribute('opacity'); ball3.setAttribute('opacity', bo || '0');
+      if (bo !== '0') { const [lat, ft] = fromScreen(+ball.getAttribute('cx'), +ball.getAttribute('cy')), r = F3 * 0.355 / Math.max(1.2, CAMF - Math.min(ft, 63.5)), q = pr(lat, Math.min(ft, 63.5), 0); ball3.setAttribute('cx', q[0]); ball3.setAttribute('cy', q[1] - r); ball3.setAttribute('r', r); }
+      for (let p = 1; p <= 10; p++) { const up = pinEl[p].style.opacity === '1' || pinEl[p].style.opacity === ''; pin3[p].style.opacity = up ? '1' : '0'; }
+      // the ball goes behind the pins it hasn't reached yet
+      const bf = bo !== '0' ? fromScreen(+ball.getAttribute('cx'), +ball.getAttribute('cy'))[1] : 0;
+      order.forEach(p => { if (PIN[p][1] > bf) svg3.appendChild(pin3[p]); }); if (bf >= 60) svg3.insertBefore(ball3, pin3[order.find(p => PIN[p][1] > bf)] || null);
+    }
+    { const VK = 'bt_replay_view_v1', btn = $('rpView'); let v3 = false; try { v3 = localStorage.getItem(VK) === '3d'; } catch (_e) {}
+      const paintV = () => { svg.style.display = v3 ? 'none' : ''; svg3.style.display = v3 ? '' : 'none'; $('rp3cap').style.display = v3 ? '' : 'none'; btn.setAttribute('aria-pressed', v3 ? 'true' : 'false'); btn.classList.toggle('on', v3); btn.textContent = v3 ? '🛣️ Lane view' : '🎳 Pins view'; ['rpTr', 'rpBox'].forEach(id => { const c = $(id); if (c && c.parentElement) c.parentElement.style.display = v3 ? 'none' : ''; }); };
+      btn.addEventListener('click', () => { v3 = !v3; try { localStorage.setItem(VK, v3 ? '3d' : '2d'); } catch (_e) {} paintV(); draw3d(); }); paintV(); }
 
     // ---------- state + drawing ----------
     let i = 0, t = 0, playing = true, speed = 1, raf = 0, lastTs = 0, drawnI = -1, shownI = -1;
@@ -234,7 +281,7 @@
     function loop(ts) {
       if (!lastTs) lastTs = ts; const dt = ts - lastTs; lastTs = ts;
       if (playing) { t += dt * speed / DUR; if (t >= 1) { if (i < steps.length - 1) { i++; t = 0; } else { t = 1; playing = false; $('rpPlay').textContent = '▶'; } } }
-      frame(t); raf = requestAnimationFrame(loop);
+      frame(t); try { draw3d(); } catch (_e) {} raf = requestAnimationFrame(loop);
     }
     const go = (n) => { i = clamp(n, 0, steps.length - 1); t = playing ? 0 : 0.999; drawnI = -1; frame(t); };
     $('rpPrev').onclick = () => go(t > 0.25 && playing ? i : i - 1);
