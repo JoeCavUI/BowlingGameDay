@@ -58,6 +58,14 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v153-beta90 (held)
+- 📐 Angle element says which way: "Which way" from your high vs light pocket reads; the Angle drill follows it (high → feet in / later ball; light → follow the miss / earlier ball; mixed → shape not repeating, hold the line).
+- 🗣️ Coach said / you did: when you stayed, shows the next shots' pocket and strikes, and says when staying was the better call.
+- 🔁 House book / Plan: "Repeating here" when your last 2–3 nights at a house missed the same way (high or light) or had the same top poor-shot reason.
+- ⚠️ Game by game flags 3+ balls in one game (shots per ball) and says to give a ball 3–4 frames.
+- ⚡ Speed isn't graded until 5 shots have a speed read.
+- 🎯 A ball you only ever throw at spares (never a first ball) counts as a spare ball; a spare ball picked by name now checks its cover too.
+
 ## Changes in v152-beta89
 - 🎳 Replay: "Pins view" button shows the shot from behind the pin deck looking back up the lane (perspective lane, 3-D pins, ball and trail; pins left standing stay up). Remembered; "Lane view" switches back.
 

@@ -805,7 +805,7 @@
       const worked = planned.filter(c => c.strike || c.pocketHit).length;
       sSubs.push(sub('Versatility', pct(worked, planned.length), `You changed speed on purpose ${planned.length}× (${planned.filter(c => c.speed === 'faster').length} faster, ${planned.filter(c => c.speed === 'slower').length} slower); ${of(worked, planned.length)} found the pocket.`));
     } else sSubs.push(sub('Versatility', null, 'To grade a planned speed change: tap Speed under Changed since last shot, then Faster or Slower.'));
-    out.push({ key: 'Speed', icon: '⚡', score: sScore, subs: sSubs, text: unplanned.length ? `Your normal speed on ${of(same, unplanned.length)} shots.` : 'Tap Speed vs normal to grade speed.' });
+    { const few = unplanned.length < 5 && !planned.length; out.push({ key: 'Speed', icon: '⚡', score: few ? null : sScore, subs: few ? [] : sSubs, quiet: few, text: few ? (unplanned.length ? `Speed logged on ${unplanned.length} shot${unplanned.length === 1 ? '' : 's'}: needs 5 to grade.` : 'Not graded: no speed reads logged.') : `Your normal speed on ${of(same, unplanned.length)} shots.` }); }
 
     // 3. ANGLE: breakpoint → pocket, and where the ball turns (the mud)
     const aSubs = [];
@@ -819,6 +819,10 @@
       aText = `${of(good, withGeo.length)} shots with a breakpoint logged finished well.` + (steepBad ? ` ${steepBad} came in too strong on a big-swing line.` : '') + (directBad ? ` ${directBad} were weak on a straight-up line.` : '');
       aSubs.push(sub('Entry', aScore, aText)); aText = `${aScore}% of shots with a breakpoint finished well.`;
     }
+    let angleDir = '';
+    { const nx = C.filter(c => c.pocketHit && !c.strike), hi = nx.filter(c => /high/i.test(String(c.shot.pocket || ''))).length, lo = nx.filter(c => /light/i.test(String(c.shot.pocket || ''))).length;
+      if (hi + lo >= 4) { const tot = hi + lo; angleDir = hi >= lo * 2 ? 'high' : lo >= hi * 2 ? 'light' : 'mixed';
+        aSubs.push(sub('Which way', null, angleDir === 'high' ? `Pocket hits that didn't strike: ${hi} high, ${lo} light. Too much angle, or the ball read early: less angle or a later / cleaner ball.` : angleDir === 'light' ? `Pocket hits that didn't strike: ${lo} light, ${hi} high. Not enough angle, or the ball arrived weak: follow the miss with your feet, or an earlier ball.` : `Pocket hits that didn't strike: ${hi} high, ${lo} light: no single direction, so it's the shape not repeating, not the angle.`)); } }
     const exB = exitBoardFor(pat);
     if (exB != null) {
       const withBp = C.filter(c => c.bp != null);
@@ -827,7 +831,7 @@
         aSubs.push(sub('Exit point', pct(withBp.length - mud.length, withBp.length), mud.length ? `Turned in the mud (breakpoint at or inside board ${exB}) on ${of(mud.length, withBp.length)} shots.` : `Turned in the dry, outside board ${exB}, on every logged shot.`));
       }
     }
-    out.push({ key: 'Angle', icon: '📐', score: aScore, subs: aSubs, text: aText });
+    out.push({ key: 'Angle', icon: '📐', score: aScore, subs: aSubs, text: aText, dir: angleDir });
 
     // 4. REVS: how much the ball hooked for you, and changing your hand on purpose
     const rd = C.filter(c => c.early || c.long || c.pocketHit || c.strike);
@@ -856,6 +860,10 @@
       Revs: 'Hand drill: 3 shots with your normal hand, 3 with less (quieter hand), 3 with more. Same line. Watch how much the ball hooks.',
       Roll: 'Finish drill: 10 pocket shots. Call the exit (left / straight / right) and the 6-pin out loud before the pins settle.',
     };
+    const angEl = out.find(x => x.key === 'Angle'), outW = prof.lefty ? 'right' : 'left';
+    if (angEl && angEl.dir === 'high') DRILL.Angle = `Angle drill (your misses were high): keep your target and move your feet 1 and 2 boards ${outW}, 3 shots each, or try a later ball from the same spot. Watch whether the 4-pin and 9-pin stop staying.`;
+    else if (angEl && angEl.dir === 'light') DRILL.Angle = `Angle drill (your misses were light): keep your target and move your feet 1 and 2 boards ${prof.lefty ? 'left' : 'right'}, 3 shots each, or try an earlier ball from the same spot. Watch the 6-pin and 10-pin.`;
+    else if (angEl && angEl.dir === 'mixed') DRILL.Angle = 'Angle drill: high and light from the same line means the shape isn\'t repeating. Same line, 9 shots, same speed: log the pocket each time before you move.';
     return { model: 'kegel5', elements: out, weakest: weakest ? weakest.key : '', drill: weakest ? DRILL[weakest.key] : '' };
   }
 

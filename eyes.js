@@ -156,9 +156,15 @@
     let mix = null; try { const pl = (() => { const P = (root.BT && BT().lsGet) ? (BT().lsGet('bt_oil_patterns_v1', []) || []) : []; const pn = (use.find(s => s.pattern) || {}).pattern; const m = P.find(p => pn && p.name === pn && p.length) || P.find(p => String(p.center || '').toLowerCase().replace(/[^a-z0-9]/g, '') === hk && p.length); return m ? Number(m.length) : null; })();
       const per = use.map(s => tenMix(s.shots, lefty, pl)).filter(Boolean); if (per.length >= 2) { const all = tenMix(use.flatMap(s => s.shots || []), lefty, pl); if (all) mix = Object.assign(all, { nights: per.length, of: use.length }); } } catch (_e) {}
     let cd = null; try { const T = use.map(s => ({ t: trafficOf(s), c: carrySign(s.shots, lefty) })).filter(o => o.t && o.t.carry >= 1 && o.c); if (T.length) cd = { n: T.length, signs: T.filter(o => o.c.sign).length, carry: Math.max(...T.map(o => o.t.carry)), plastic: Math.max(...T.map(o => o.t.plastic || 0)), est: T.some(o => o.t.est), drift: T.map(o => o.c.drift).filter(Number.isFinite) }; } catch (_e) {}
+    // 🔁 Repeats over your last nights here (newest 3): which way pocket hits missed, and the poor-shot reason you felt most.
+    let rep = null; try { const last = nights.slice().sort((a, b) => b.savedAt - a.savedAt).slice(0, 3);
+      const lean = last.map(s => { const sh = (s.shots || []).filter(z => z && z.type !== 'gameStart'); const nx = sh.filter(z => BT().isPocketHit(z) && BT().standingPins(z).length); const hi = nx.filter(z => /high/i.test(String(z.pocket || ''))).length, lo = nx.filter(z => /light/i.test(String(z.pocket || ''))).length; return hi + lo >= 3 ? (hi >= lo * 2 ? 'high' : lo >= hi * 2 ? 'light' : '') : ''; });
+      const faults = last.map(s => { const m = {}; (s.shots || []).forEach(z => { if (z && z.fault) m[z.fault] = (m[z.fault] || 0) + 1; }); const t = Object.entries(m).sort((a, b) => b[1] - a[1])[0]; return t && t[1] >= 2 ? t[0] : ''; });
+      const runOf = (a) => { if (!a[0]) return null; let n = 0; while (n < a.length && a[n] === a[0]) n++; return n >= 2 ? { v: a[0], n } : null; };
+      rep = { lean: runOf(lean), fault: runOf(faults) }; } catch (_e) {}
     const moves = rows.filter(r => r.mv), worked = moves.filter(r => r.mv.ok);
     const avgMove = moves.length ? { g: Math.round(moves.reduce((a, r) => a + r.mv.g, 0) / moves.length), deeper: moves.filter(r => deep(r.mv.d) === 'deeper').length } : null;
-    return { house, lanes, pair: onPair.length > 0, nights: rows, lm, cs, tough, moves, worked, avgMove, deep, mix, cd };
+    return { house, lanes, pair: onPair.length > 0, nights: rows, lm, cs, tough, moves, worked, avgMove, deep, mix, cd, rep };
   }
 
   function houseBookHtml(hb, lefty, opt) {
@@ -172,6 +178,11 @@
     if (!opt.noLines) [2, 3].forEach(g => { const b = hb.lm && hb.lm.byGame[g]; if (b && (!best || b.feet !== best.feet || b.arrows !== best.arrows || b.ball !== best.ball)) L.push(`<li><b>Game ${g}:</b> ${esc(b.ball)} ${esc(b.feet)}/${esc(b.arrows)} has worked best (${b.x} in ${b.n}).</li>`); });
     if (hb.avgMove) L.push(`<li><b>First move:</b> usually in game ${hb.avgMove.g}; ${hb.avgMove.deeper} of ${hb.moves.length} nights you went deeper. ${hb.worked.length} of ${hb.moves.length} first moves worked (2 of the next 3 in the pocket).</li>`);
     if (hb.tough && hb.tough.tough) L.push(`<li><b>Lanes:</b> ${esc(hb.tough.tough.l)} has been tougher ${hb.tough.kind === 'pocket' ? 'to get to the pocket' : 'to strike'} (pocket ${hb.tough.tough.p}/${hb.tough.tough.n} vs ${hb.tough.easy.p}/${hb.tough.easy.n}).</li>`);
+    if (hb.rep && (hb.rep.lean || hb.rep.fault)) { const r = hb.rep, inW = lefty ? 'right' : 'left', outW = lefty ? 'left' : 'right';
+      const parts = [];
+      if (r.lean) parts.push(r.lean.v === 'high' ? `your pocket misses were <b>high</b> your last ${r.lean.n} nights here: start 1 ${inW} with feet and eyes, or with a later ball` : `your pocket misses were <b>light</b> your last ${r.lean.n} nights here: start 1 ${outW}, or with an earlier ball`);
+      if (r.fault) { let fl = r.fault.v; try { fl = root.BTCoach && root.BTCoach.faultLabel ? root.BTCoach.faultLabel(fl) : fl; } catch (_e) {} parts.push(`"${esc(fl)}" was your top poor-shot reason ${r.fault.n} nights running: that's the one to fix first`); }
+      L.unshift(`<li><b>🔁 Repeating here:</b> ${parts.join('; ')}.</li>`); }
     if (hb.cd && hb.cd.signs >= 1) { const c = hb.cd, dOut = lefty ? 'left' : 'right';
       L.push(`<li><b>🛢️ Carrydown:</b> ${c.plastic ? 'plastic' : 'urethane'} on the pair${c.est ? ' (from your league roster)' : ''}, and on ${c.signs} of ${c.n} of those nights the ball held later: you ended up moving ${dOut}, not in. Expect the back end to get weaker by game 2: don't chase it ${lefty ? 'right' : 'left'}; get outside the track (${dOut}) or go to an earlier-reading ball, and a touch less speed lets it read.${opt.surface !== false ? ' Before you go: a ball that reads earlier (more surface) is the one to bring.' : ''}</li>`); }
     if (hb.mix) { const m = hb.mix, deepD = lefty ? 'right' : 'left', outD = lefty ? 'left' : 'right';

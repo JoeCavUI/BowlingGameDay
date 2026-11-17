@@ -663,7 +663,7 @@
           let j = -1; for (let q = i + 1; q < R1.length; q++) { if (R1[q].feet !== R1[q - 1].feet || R1[q].arrows !== R1[q - 1].arrows) { j = q; break; } }
           if (used.has(j)) return; used.add(j);
           const at = `G${x.gameNo || 1} F${x.frame}`, adv = `feet ${n} ${m[2].toLowerCase()}${m[3] ? `, eyes ${m[3]} ${m[4].toLowerCase()}` : ''}`;
-          if (j < 0 || j - i > 3 || (Number(R1[j].gameNo) || 1) !== (Number(x.gameNo) || 1)) { said.push(`${at}: Coach said ${adv}. You stayed on ${lineKey(x)} for the next 3 frames.`); return; }
+          if (j < 0 || j - i > 3 || (Number(R1[j].gameNo) || 1) !== (Number(x.gameNo) || 1)) { const nx = R1.slice(i + 1, i + 4).filter(z => (Number(z.gameNo) || 1) === (Number(x.gameNo) || 1)), nX = nx.filter(isX).length, np = nx.filter(isP).length; said.push(`${at}: Coach said ${adv}. You stayed on ${lineKey(x)}: next ${nx.length} shot${nx.length === 1 ? '' : 's'} ${np} in the pocket, ${nX} strike${nX === 1 ? '' : 's'}${nx.length && nX * 2 >= nx.length ? ' (staying was the better call)' : ''}.`); return; }
           const a = R1[j - 1], b = R1[j], dF = (b.feet ?? a.feet) - (a.feet ?? b.feet), dA = (b.arrows ?? a.arrows) - (a.arrows ?? b.arrows);
           const dir = Math.sign(dF || dA), nx = R1.slice(j, j + 3), np = nx.filter(isP).length, nX = nx.filter(isX).length;
           const did = dir === want ? 'You moved that way' : dir === -want ? 'You moved the other way' : 'You changed your line';
@@ -678,6 +678,7 @@
         const first = gs[0], last = gs[gs.length - 1];
         if (first && last && lineKey(first) !== lineKey(last)) notes.push(`line ${lineKey(first)} → ${lineKey(last)}`);
         const bs = [...new Set(gs.map(x => x.ball).filter(Boolean))]; if (bs.length) notes.push(bs.length === 1 ? bs[0] : `balls: ${bs.join(', ')}`);
+        if (bs.length >= 3) { const per = bs.map(n => gs.filter(x => x.ball === n).length); notes.push(`⚠️ ${bs.length} balls in one game (${per.join('/')} shots): too few on any one to read it. Give a ball 3–4 frames before switching.`); }
         const twoL = new Set(gs.map(x => x.lane).filter(Boolean)).size === 2;
         const mv = gs.filter((x, i) => { if (!i) return false; let p = gs[i - 1]; if (twoL && x.lane) { p = null; for (let j = i - 1; j >= 0; j--) if (gs[j].lane === x.lane) { p = gs[j]; break; } } return p && (x.feet !== p.feet || x.arrows !== p.arrows); }).length; if (mv) notes.push(`${mv} move${mv === 1 ? '' : 's'}`);
         if (twoL) { const lk = (ln) => { const a = gs.filter(x => x.lane === ln); return a.length ? lineKey(a[a.length - 1]) : ''; }; const L = [...new Set(gs.map(x => x.lane).filter(Boolean))].sort(); const k1 = lk(L[0]), k2 = lk(L[1]); if (k1 && k2 && k1 !== k2) notes.push(`lane ${L[0]} ${k1} · lane ${L[1]} ${k2}`); }

@@ -666,7 +666,15 @@
     const mk = ballCareFor(n).spare;
     if (mk === true) return true;
     if (mk === false || mk === 'dual') return false; // 'dual' = strike ball that doubles as your spare ball
-    return !!row && /polyester|plastic|spare/i.test(String(ballCover(row) || ''));
+    let r = row; if (!r && n) { try { const c = lsGet(KEYS.CSV_CACHE, null); r = withCustomBalls((c && c.rows) || []).find(x => ballName(x) === n) || null; } catch (_e) {} }
+    if (r && /polyester|plastic|spare/i.test(String(ballCover(r) || ''))) return true;
+    return usedOnlyOnSpares(n);
+  }
+  // A ball you've only ever thrown at spares (never a first ball) is a spare ball, even if it isn't marked.
+  function usedOnlyOnSpares(n) {
+    if (!n) return false;
+    try { let first = 0, sec = 0; (lsGet(KEYS.GAME_SESSIONS, []) || []).forEach(s => (s.shots || []).forEach(z => { if (!z || z.type === 'gameStart') return; if (z.ball === n) first++; if (z.second && z.second.ball === n) sec++; }));
+      return first === 0 && sec >= 2; } catch (_e) { return false; }
   }
   // Your active spare balls (marked first, then plastic / polyester), from your whole list.
   function spareBallNames() {
