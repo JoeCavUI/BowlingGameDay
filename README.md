@@ -65,6 +65,14 @@ Then open http://localhost:3000
 - ⚠️ Game by game flags 3+ balls in one game (shots per ball) and says to give a ball 3–4 frames.
 - ⚡ Speed isn't graded until 5 shots have a speed read.
 - 🎯 A ball you only ever throw at spares (never a first ball) counts as a spare ball; a spare ball picked by name now checks its cover too.
+- 🎒 Plan bag: change-up balls are named for what they fix ("If it reads early / carry drops", "If it goes long / light", "Cleaner / Stronger still"), not a game number. Line added: keep the start ball while it's working.
+- 🏅 Best at the house: a ball left out for looking like one in the bag, but scoring 3+ higher here, is called out as that ball's backup.
+- 🔀 Game Day: good shots with one ball going high, then light, then high (2+ each) → "the reaction isn't repeating; change balls, not lines."
+- 🎳 "Fades here" heads-up says "keep it while it's working" when tonight's strike rate with it is 50%+.
+- 📊 Night review: "Pocket held, carry dropped" when pocket % stays and carry falls 25+ points game to game, with high vs light on the late misses.
+- 🔔 Carry over/under needs 2+ ringing and 2+ flat corner pins and says "possible"; carrydown chip says "possible".
+- 🏷️ Sources shown: house read "(your read)", pattern length "(you entered)", exit board "(estimate)".
+- 📏 Layout labels show the pin-to-PAP number; a blank or 0 pin-to-PAP reads "layout not entered" instead of a guess.
 
 ## Changes in v152-beta89
 - 🎳 Replay: "Pins view" button shows the shot from behind the pin deck looking back up the lane (perspective lane, 3-D pins, ball and trail; pins left standing stay up). Remembered; "Lane view" switches back.

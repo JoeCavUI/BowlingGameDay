@@ -1248,13 +1248,13 @@
         if (mix) { const deep = prof.deeper || (prof.lefty ? 'right' : 'left'), outd = prof.outside || (prof.lefty ? 'left' : 'right');
           let t;
           if (mix.n < 3) t = `🔔 Carry over/under: a ringing ${mix.pin} and a flat ${mix.pin} from about the same line. Your line is close; the reaction isn't repeating. Don't chase a single ${mix.pin}: hold your feet and target, and move only if 2 of the same ${mix.pin} come in a row.`;
-          else { const z = mix.zone === 'outside' ? `Your breakpoint (about ${mix.bp}) is well outside the exit board (about ${mix.exB} on ${mix.patLen} ft), so the ball is finishing out in the dry. Move feet 2 ${deep}, eyes 1 ${deep} so it leaves the oil near board ${mix.exB}.`
-              : mix.zone === 'inside' ? `Your breakpoint (about ${mix.bp}) is at or inside the exit board (about ${mix.exB} on ${mix.patLen} ft): it's turning in the mud. Move feet 2 ${outd}, eyes 1 ${outd} so it gets further out before it turns.`
+          else { const z = mix.zone === 'outside' ? `Your breakpoint (about ${mix.bp}) is well outside the exit board (about ${mix.exB}: app estimate from the ${mix.patLen} ft you entered), so the ball is finishing out in the dry. Move feet 2 ${deep}, eyes 1 ${deep} so it leaves the oil near board ${mix.exB}.`
+              : mix.zone === 'inside' ? `Your breakpoint (about ${mix.bp}) is at or inside the exit board (about ${mix.exB}: app estimate from the ${mix.patLen} ft you entered): it's turning in the mud. Move feet 2 ${outd}, eyes 1 ${outd} so it gets further out before it turns.`
               : mix.lean === 'flat' ? `Mostly flat (${mix.flat} of ${mix.n}): the ball is giving up energy. Move feet 2 ${deep}, eyes 1 ${deep} to keep it in the oil longer.`
               : mix.lean === 'ring' ? `Mostly ringing (${mix.ring} of ${mix.n}): too much angle. Move feet 2 ${outd}, eyes 1 ${outd} for a straighter line.`
               : `Even split: your line is right; it's the ball's shape.`;
             let ball = ''; try { ball = suggestBall('overunder', ctx, prof); } catch (_e) {}
-            t = `🔔 Carry over/under${mix.zone === 'inside' ? ' in the mud' : ''}: ${mix.ring} ringing and ${mix.flat} flat ${mix.pin}s on good shots from about the same line. ${z} ${ball ? `Smoother, more predictable shape in tonight's bag: ${ball}.` : `Nothing in tonight's bag is smoother: stay with your ball and move only your line.`}`; }
+            t = `🔔 Possible carry over/under${mix.zone === 'inside' ? ' in the mud' : ''}: ${mix.ring} ringing and ${mix.flat} flat ${mix.pin}s on good shots from about the same line. ${z} ${ball ? `Smoother, more predictable shape in tonight's bag: ${ball}.` : `Nothing in tonight's bag is smoother: stay with your ball and move only your line.`}`; }
           if (!(out.notes || []).some(n => /^🔔 Carry over\/under/.test(n))) (out.notes = out.notes || []).unshift(t);
           out.carryOU = mix; } } catch (_e) {}
       missPatternNote(out, C);

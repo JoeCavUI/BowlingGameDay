@@ -1422,7 +1422,7 @@
     const pinLoc = ballPinLocation(row).toLowerCase();
     const pin = ballPAP(row);
     if (pinLoc.includes('down')) return 'control';
-    if (Number.isFinite(pin)) return pin < 3.0 ? 'short' : pin <= 4.25 ? 'flare' : pin <= 5.6 ? 'long' : 'xlong';
+    if (Number.isFinite(pin) && pin > 0) return pin < 3.0 ? 'short' : pin <= 4.25 ? 'flare' : pin <= 5.6 ? 'long' : 'xlong';
     if (pinLoc.includes('short')) return 'short';
     return 'benchmark';
   }
@@ -1431,7 +1431,7 @@
     const kind = layoutTypeFromRow(row);
     if (kind === 'control') return { kind, hook: +0.05, length: -0.15, backend: -0.10, shape: -0.10, asym: -0.02 };
     const pin = ballPAP(row);
-    if (Number.isFinite(pin)) return Object.assign({ kind }, pinCurve(pin));
+    if (Number.isFinite(pin) && pin > 0) return Object.assign({ kind }, pinCurve(pin));
     if (kind === 'short') return { kind, hook: -0.05, length: -0.10, backend: -0.15, shape: -0.15, asym: -0.04 };
     return { kind, hook: 0, length: 0, backend: 0, shape: 0, asym: 0 };
   }

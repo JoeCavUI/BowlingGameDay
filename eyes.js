@@ -186,10 +186,10 @@
     if (hb.cd && hb.cd.signs >= 1) { const c = hb.cd, dOut = lefty ? 'left' : 'right';
       L.push(`<li><b>🛢️ Carrydown:</b> ${c.plastic ? 'plastic' : 'urethane'} on the pair${c.est ? ' (from your league roster)' : ''}, and on ${c.signs} of ${c.n} of those nights the ball held later: you ended up moving ${dOut}, not in. Expect the back end to get weaker by game 2: don't chase it ${lefty ? 'right' : 'left'}; get outside the track (${dOut}) or go to an earlier-reading ball, and a touch less speed lets it read.${opt.surface !== false ? ' Before you go: a ball that reads earlier (more surface) is the one to bring.' : ''}</li>`); }
     if (hb.mix) { const m = hb.mix, deepD = lefty ? 'right' : 'left', outD = lefty ? 'left' : 'right';
-      const where = m.zone === 'outside' ? ` Your breakpoint (about board ${m.bp}) is well outside the exit board (about ${m.exB} on ${m.patLen} ft), so the ball is finishing out in the dry: start 2 and 1 ${deepD} of your usual line.`
-        : m.zone === 'inside' ? ` Your breakpoint (about board ${m.bp}) is at or inside the exit board (about ${m.exB} on ${m.patLen} ft): the ball is turning in the mud. Let it travel further out before it turns.`
+      const where = m.zone === 'outside' ? ` Your breakpoint (about board ${m.bp}) is well outside the exit board (about ${m.exB}: app estimate from the ${m.patLen} ft you entered), so the ball is finishing out in the dry: start 2 and 1 ${deepD} of your usual line.`
+        : m.zone === 'inside' ? ` Your breakpoint (about board ${m.bp}) is at or inside the exit board (about ${m.exB}: app estimate from the ${m.patLen} ft you entered): the ball is turning in the mud. Let it travel further out before it turns.`
         : m.lean === 'flat' ? ` Mostly flat: start a little deeper (${deepD}) so it keeps its energy.` : m.lean === 'ring' ? ` Mostly ringing: start a little straighter (${outD}).` : '';
-      L.push(`<li><b>⚠️ Carry over/under:</b> ringing and flat ${m.pin}s on good shots from the same line (about ${m.feet} at the feet) on ${m.nights} of ${m.of} nights: ${m.ring} ringing, ${m.flat} flat. The line is close; the reaction isn't repeating.${where} On Game Day: don't chase a single ${m.pin}; open with your smoothest, most predictable ball.${opt.surface !== false ? ` Before you go: a smoother shape helps here (a symmetric ball, shine knocked down a step).` : ''}</li>`); }
+      L.push(`<li><b>⚠️ Possible carry over/under:</b> ringing and flat ${m.pin}s on good shots from the same line (about ${m.feet} at the feet) on ${m.nights} of ${m.of} nights: ${m.ring} ringing, ${m.flat} flat. The line is close; the reaction isn't repeating.${where} On Game Day: don't chase a single ${m.pin}; open with your smoothest, most predictable ball.${opt.surface !== false ? ` Before you go: a smoother shape helps here (a symmetric ball, shine knocked down a step).` : ''}</li>`); }
     if (hb.cs && (hb.cs.att || hb.cs.missed)) L.push(`<li><b>${hb.cs.pin}-pin spares:</b> ${hb.cs.made} of ${hb.cs.att}${hb.cs.missed ? `; missed ${hb.cs.missed}${['channel', 'inside', 'thin'].filter(k => hb.cs[k]).map(k => `, ${hb.cs[k]} ${k}`).join('')}` : ''}.</li>`);
     const nightLi = hb.nights.slice(0, 4).map(r => `<li><b>${dt(r.date)}</b>${r.scores.length ? ` · ${r.scores.join(' · ')}` : ''}${r.s.lanes && !hb.pair ? ` · ${esc(r.s.lanes)}` : ''}<br><span class="small">Opened ${esc(r.open.ball || '?')} ${esc(r.open.line)} (${r.open.x}X in ${r.open.n} in game 1).${r.mv ? ` First move G${r.mv.g} F${r.mv.f}: ${r.mv.boards}&${r.mv.eyes} ${hb.deep(r.mv.d)} → ${esc(r.mv.to)}${r.mv.ok ? ' ✅ worked' : ' ✗ didn\'t settle it'}.` : ' No line move.'}${r.sw ? ` Ball switch G${r.sw.g} F${r.sw.f}: ${esc(r.sw.from)} → ${esc(r.sw.to)} (${r.sw.x}X in next ${r.sw.n}).` : ''}</span></li>`).join('');
     return `<div class="hb"><div class="hb-h">📒 House book: ${esc(hb.house)}${hb.lanes ? ` · ${esc(hb.lanes)}` : ''}</div><div class="small dim">${hb.nights.length} night${hb.nights.length === 1 ? '' : 's'} logged ${hb.pair ? 'on this pair' : 'here'}.</div>${L.length ? `<ul class="hb-l">${L.join('')}</ul>` : ''}<div class="hb-sub">Last nights here</div><ul class="hb-l">${nightLi}</ul></div>`;
@@ -245,7 +245,7 @@
       const t = String(z.leaveTag || ''), k = String(z.keyPin || '');
       if (t === 'Ringing 10' || t === 'Ringing 7' || k === 'wrap') R.push(z); else if (t === 'Flat 10' || t === 'Flat 7' || k === 'weak') F.push(z);
     });
-    if (!R.length || !F.length) return null;
+    if (R.length < 2 || F.length < 2) return null; // 2+ of each: one of each is just two shots
     const nf = (a, f) => a.map(f).map(Number).filter(Number.isFinite), md = (a) => { if (!a.length) return null; const b = a.slice().sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; };
     const fR = md(nf(R, z => z.feet)), fF = md(nf(F, z => z.feet)), bp = md(nf(R.concat(F), z => z.bp));
     const same = fR == null || fF == null || Math.abs(fR - fF) <= 2;
@@ -269,6 +269,15 @@
         out.push({ id: `g1carry:${ctx.ball}:${P.length}`, text: `🐢 Game 1: ${ctx.ball} is in the pocket (${P.length}×) but ${X.length ? 'only 1 strike' : 'not carrying'}. Change balls now, don't wait for game 2.${alt ? ` Best here: ${alt.ball} ${alt.feet}/${alt.arrows} (${alt.x} strikes in ${alt.n}).` : ''}`, why: 'Pocket hits that leave pins mean the ball isn\'t matching the pattern. A ball change fixes carry faster than a line move.' });
       }
     }
+    // 🔀 Over/under: good shots with this ball going high, then light, then high. The reaction isn't repeating,
+    // so a line move won't fix it; change balls (not a surface change: that's for the Plan and the review).
+    if (ctx.ball) {
+      const good = (z) => !(Number(z.executionQuality) === 1 || z.miss === 'leftMiss' || z.miss === 'rightMiss');
+      const seq = real.filter(s => s.ball === ctx.ball && !(Number(s.shotNo) >= 2) && good(s) && BT().standingPins(s).length).slice(-6)
+        .map(s => /high|brooklyn/i.test(String(s.pocket || '')) ? 'H' : /light/i.test(String(s.pocket || '')) ? 'L' : '').filter(Boolean);
+      const h = seq.filter(x => x === 'H').length, l = seq.length - h; let flips = 0; for (let i = 1; i < seq.length; i++) if (seq[i] !== seq[i - 1]) flips++;
+      if (h >= 2 && l >= 2 && flips >= 2) out.push({ id: `ou:${ctx.ball}:${seq.length}`, text: `🔀 ${ctx.ball}: good shots are going high, then light (${seq.join(' ')}). The reaction isn't repeating, so a move won't fix it. Change balls to a smoother, more predictable one.`, why: `Last ${seq.length} good shots with ${ctx.ball} that left pins: ${h} high, ${l} light, ${flips} switches. Pulls and misses are left out.` });
+    }
     // 📉 Your low game: past 3-game nights show this game runs 8+ pins under the others; heads-up for its first 2 frames
     if (game >= 2) {
       const inG = real.filter(s => (Number(s.gameNo) || 1) === game).length;
@@ -290,7 +299,8 @@
       if (tr.move) out.push({ id: 'move2', text: `⏱️ Here you've usually made your first move in game 2 around frame ${tr.move.frame} (${Math.abs(tr.move.boards)} board${Math.abs(tr.move.boards) === 1 ? '' : 's'} ${(tr.move.boards > 0) !== lefty ? 'left' : 'right'} with your feet).`, why: `From ${nt(tr.move.n)} you logged here.` });
     }
     if (game === 3 && real.filter(s => Number(s.gameNo) === 3).length <= 2 && tr.drop && tr.drop.d <= -8) out.push({ id: 'drop3', text: `⏱️ On this pair your game 3s average ${Math.round(-tr.drop.d)} less than game 1s. Watch for the lanes changing.`, why: `Game 1: ${r1(tr.drop.g1.avg)} over ${gm(tr.drop.g1.n)}; game 3: ${r1(tr.drop.g3.avg)} over ${gm(tr.drop.g3.n)} (PinPal).` });
-    if (game >= 2 && ctx.ball) { let bf = null; try { bf = ballFade(ctx.house, ctx.ball); } catch (_e) {} if (bf && bf.d <= -10) out.push({ id: 'fade', text: `🎳 ${ctx.ball} fades here: its game 3s average ${Math.round(-bf.d)} below its game 1s.`, why: `Game 1: ${r1(bf.g1.avg)} over ${gm(bf.g1.n)}; game 3: ${r1(bf.g3.avg)} over ${gm(bf.g3.n)} (PinPal).` }); }
+    if (game >= 2 && ctx.ball) { let bf = null; try { bf = ballFade(ctx.house, ctx.ball); } catch (_e) {} if (bf && bf.d <= -10) { const tn = real.filter(s => s.ball === ctx.ball && !s.isSpare && !(Number(s.shotNo) >= 2)), tx = tn.filter(s => !BT().standingPins(s).length).length; const ok = tn.length >= 6 && tx / tn.length >= 0.5;
+      out.push({ id: 'fade', text: `🎳 ${ctx.ball} fades here: its game 3s average ${Math.round(-bf.d)} below its game 1s.${ok ? ` Tonight it's ${tx} of ${tn.length}: keep it while it's working.` : ' Change for a reason (reads early, carry drops), not the game number.'}`, why: `Game 1: ${r1(bf.g1.avg)} over ${gm(bf.g1.n)}; game 3: ${r1(bf.g3.avg)} over ${gm(bf.g3.n)} (PinPal).` }); } }
     // 📝 Your notes on this ball: tonight first, then past nights here
     const NM = root.BTCoach && root.BTCoach.noteMix;
     if (NM && ctx.ball) {

@@ -800,7 +800,7 @@
         ['Layout'],
         ['Pin-to-PAP', x => inch(g(x.r, ['PAP#1']) || g(x.r, ['PAP']))], ['PSA-to-PAP', x => inch(g(x.r, ['PSA#1']))], ['Pin buffer', x => inch(g(x.r, ['Val#1']))],
         ['Drill angle', x => deg(g(x.r, ['Drill Angle']))], ['VAL angle', x => deg(g(x.r, ['Val']))], ['Total angle', x => deg(g(x.r, ['Total Angle']))],
-        ['Layout type', x => ({ short: 'Short pin', long: 'Long pin', xlong: 'Very long pin', flare: 'High flare', control: 'Pin down', benchmark: 'Benchmark' }[x.v.layoutType] || '—')], ['Pin', x => esc(g(x.r, ['Pin Location']) || '—')],
+        ['Layout type', x => ({ short: 'Short pin', long: 'Long pin', xlong: 'Very long pin', flare: 'High flare', control: 'Pin down', benchmark: 'Layout not entered' }[x.v.layoutType] || '—')], ['Pin', x => esc(g(x.r, ['Pin Location']) || '—')],
         ['For you (on paper)'],
         ['Barnes box', x => x.p ? esc(BTChart.label(x.p.rowKey)) : '—'], ['Early → Late', x => x.p ? `${Math.round(x.p.x)} · ${esc(BTChart.timingWord(x.p.timing))}` : '—'],
         ['Hook', x => Math.round(x.v.hook * 100)], ['Length', x => Math.round(x.v.length * 100)], ['Backend', x => Math.round(x.v.backend * 100)],
@@ -835,7 +835,7 @@
       const psa = g(['PSA']);
       const vPin = g(['PAP#1']) || g(['PAP']), vPsa = g(['PSA#1']), vBuf = g(['Val#1']);
       const drill = g(['Drill Angle', 'DrillAngle']), pin2 = g(['PAP']), valA = g(['Val']), tot = g(['Total Angle', 'TotalAngle']);
-      const kind = { short: 'Short pin', long: 'Long pin', xlong: 'Very long pin', flare: 'High flare', control: 'Pin down (control)', benchmark: 'Benchmark' }[BT.motionVector(row, BT.lsGet(BT.KEYS.BOWLER, {}) || {}).layoutType] || '—';
+      const kind = { short: 'Short pin', long: 'Long pin', xlong: 'Very long pin', flare: 'High flare', control: 'Pin down (control)', benchmark: 'Layout not entered' }[BT.motionVector(row, BT.lsGet(BT.KEYS.BOWLER, {}) || {}).layoutType] || '—';
       let chart = '';
       try { const bowler = BT.lsGet(BT.KEYS.BOWLER, {}) || {}; const p = BTChart.place([row], bowler)[0]; if (p) chart = `${BTChart.label(p.rowKey)}, ${BTChart.timingWord(p.timing)} for you`; } catch (_e) {}
       const cell = (l, v, wide) => `<div class="bs-cell${wide ? ' bs-wide' : ''}"><div class="bs-l">${l}</div><div class="bs-v">${v}</div></div>`;
@@ -1504,7 +1504,7 @@
     const CF_KEY = 'bt_chart_filters_v1';
     const cfGet = () => { try { return JSON.parse(localStorage.getItem(CF_KEY) || '{}') || {}; } catch (_e) { return {}; } };
     const cfSet = (o) => { try { localStorage.setItem(CF_KEY, JSON.stringify(o)); } catch (_e) {} };
-    const LAYOUT_L = { short: 'Short pin (under 3")', flare: 'Medium pin (3–4¼")', long: 'Long pin (4¼–5⅝")', xlong: 'Very long pin (over 5⅝")', control: 'Pin down', benchmark: 'Unknown / benchmark' };
+    const LAYOUT_L = { short: 'Short pin (under 3")', flare: 'Medium pin (3–4¼")', long: 'Long pin (4¼–5⅝")', xlong: 'Very long pin (over 5⅝")', control: 'Pin down', benchmark: 'Layout not entered' };
     const CF = {
       cover: { label: 'Cover', of: (r) => { const c = String(BT.ballCover(r) || '').toLowerCase(); return /ure/.test(c) ? 'Urethane' : /pearl/.test(c) ? 'Pearl' : /hybrid/.test(c) ? 'Hybrid' : /solid/.test(c) ? 'Solid' : /poly|plastic/.test(c) ? 'Plastic' : ''; } },
       core: { label: 'Core', of: (r) => { const c = String(BT.getField(r, ['Core'], '') || '').toLowerCase(); return /asym/.test(c) ? 'Asymmetric' : /sym/.test(c) ? 'Symmetric' : ''; } },

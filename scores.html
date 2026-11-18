@@ -641,12 +641,19 @@
       let energy = null; try { energy = BTCoach.energyAngle(real, lefty); } catch (_e) {}
       if (energy && energy.text) T.push({ k: 'Energy vs angle', t: energy.text });
       // 🔔 Carry over/under: ringing AND flat corner pins on good shots from about the same line (surface talk is fine here, after the night)
+      // 📊 Pocket held, carry dropped: a carry problem, not an aim problem. Say so before anyone moves for it.
+      { const gm = gNos.map(g => metrics(real.filter(x => (Number(x.gameNo) || 1) === g))).filter(m => m.n >= 6);
+        if (gm.length >= 2) { const pk = (m) => Math.round(m.pocket / m.n * 100), cr = (m) => m.pocket ? Math.round(m.carry / m.pocket * 100) : 0, a = gm[0], z = gm[gm.length - 1];
+          if (a.pocket >= 4 && z.pocket >= 4 && pk(z) >= pk(a) - 10 && cr(a) - cr(z) >= 25) {
+            const hl = z.highLeft > z.lightLeft ? `mostly high (${z.highLeft} high, ${z.lightLeft} light)` : z.lightLeft > z.highLeft ? `mostly light (${z.lightLeft} light, ${z.highLeft} high)` : 'not clearly high or light';
+            T.push({ k: 'Pocket held, carry dropped', t: `Pocket ${gm.map(pk).join('% → ')}%, carry ${gm.map(cr).join('% → ')}% game by game. You were still finding the pocket, so this was carry, not aim. The late misses were ${hl}. Next time, when the hits stay in the pocket but stop carrying, watch high or light before moving${z.highLeft === z.lightLeft ? '; mixed high and light points to the ball, not your line' : ''}.` });
+          } } }
       { let mix = null; try { const P = BT.lsGet('bt_oil_patterns_v1', []) || []; const pt = P.find(p => p.name === s.pattern) || null; mix = window.BTEyes && BTEyes.tenMix ? BTEyes.tenMix(real, lefty, pt && pt.length) : null; } catch (_e) {}
         if (mix) { const deep = lefty ? 'right' : 'left', outd = lefty ? 'left' : 'right';
-          const z = mix.zone === 'outside' ? `Your breakpoint (about ${mix.bp}) was well outside the exit board (about ${mix.exB} on ${mix.patLen} ft): the ball finished out in the dry. Next time start 2 and 1 ${deep}.`
-            : mix.zone === 'inside' ? `Your breakpoint (about ${mix.bp}) was at or inside the exit board (about ${mix.exB} on ${mix.patLen} ft): it turned in the mud. Next time let it get further out (2 and 1 ${outd}).`
+          const z = mix.zone === 'outside' ? `Your breakpoint (about ${mix.bp}) was well outside the exit board (about ${mix.exB}: app estimate from the ${mix.patLen} ft you entered): the ball finished out in the dry. Next time start 2 and 1 ${deep}.`
+            : mix.zone === 'inside' ? `Your breakpoint (about ${mix.bp}) was at or inside the exit board (about ${mix.exB}: app estimate from the ${mix.patLen} ft you entered): it turned in the mud. Next time let it get further out (2 and 1 ${outd}).`
             : mix.lean === 'flat' ? `Mostly flat: start a little deeper (${deep}).` : mix.lean === 'ring' ? `Mostly ringing: start a little straighter (${outd}).` : '';
-          T.push({ k: 'Carry over/under', t: `${mix.ring} ringing and ${mix.flat} flat ${mix.pin}s on good shots from about the same line (around ${mix.feet} at the feet). The line was close; the ball's reaction wasn't repeating. ${z} Equipment: a smoother, more predictable shape helps here: a symmetric ball, or knock the shine down a step on the ball you use.` }); } }
+          T.push({ k: 'Possible carry over/under', t: `${mix.ring} ringing and ${mix.flat} flat ${mix.pin}s on good shots from about the same line (around ${mix.feet} at the feet). The line was close; the ball's reaction may not have been repeating (watch it through the pins to confirm). ${z} Equipment: a smoother, more predictable shape helps here: a symmetric ball, or knock the shine down a step on the ball you use.` }); } }
       // 🎯 Corner-pin spares (10 for righties, 7 for lefties): makes and which way you miss
       { let cs = null; try { cs = window.BTEyes ? BTEyes.cornerSpares(real, lefty) : null; } catch (_e) {}
         if (cs && (cs.att || cs.missed)) { const noted = cs.channel + cs.inside + cs.thin;

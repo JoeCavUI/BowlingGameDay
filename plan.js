@@ -47,7 +47,7 @@
     const coreS = String(BT().getField(row, ['Core'], '') || '').toLowerCase();
     const core = /asym/.test(coreS) ? 'Asymmetric' : /sym/.test(coreS) ? 'Symmetric' : '';
     const v = BT().motionVector(row, b);
-    const layout = { short: 'Short pin', long: 'Long pin', xlong: 'Very long pin', flare: 'High flare', control: 'Pin down', benchmark: 'Benchmark' }[v.layoutType] || '';
+    const layout = { short: 'Short pin', long: 'Long pin', xlong: 'Very long pin', flare: 'High flare', control: 'Pin down', benchmark: '' }[v.layoutType] || '';
     let box = '', x = null;
     try { const p = root.BTChart.place([row], b)[0]; box = root.BTChart.label(p.rowKey); x = p.x; } catch (_e) {}
     return { cover, core, layout, box, x, v };
@@ -141,12 +141,11 @@
     const ordered = picked.slice().sort((p, q) => (p.t.x ?? 50) - (q.t.x ?? 50));
     const motion = (p) => (p.t.x ?? 50) < x0 ? 'earlier / more ball' : 'later / cleaner';
     const role = (p) => { const j = job.get(p);
-      if (j === 'fresh') return 'Fresh (game 1): start with';
-      if (j === 'transition') return 'Transition (game 2)';
-      if (j === 'burn') return 'Burn (game 3)';
-      if (j === 'transition?') return `Transition (${motion(p)})`;
-      if (j === 'burn?') return `Burn (${motion(p)})`;
-      return (p.t.x ?? 50) < x0 ? 'Earlier / more ball' : 'Later / cleaner'; };
+      if (j === 'fresh') return 'Start with';
+      // Change-ups are named for what they fix, not a game number: change for a reason, not a frame count.
+      const early = (p.t.x ?? 50) < x0, side = picked.filter(q => q !== picked[0] && ((q.t.x ?? 50) < x0) === early).sort((a, z) => Math.abs((a.t.x ?? 50) - x0) - Math.abs((z.t.x ?? 50) - x0)), k = side.indexOf(p);
+      if (k > 0) return early ? 'Stronger still' : 'Cleaner still';
+      return early ? 'If it goes long / light' : 'If it reads early / carry drops'; };
     const roleTag = (p) => role(p) + (p.os ? '' : p.ownN ? ` · only ${gm(p.ownN)} here` : ' · untested here');
     const gm = (n) => `${n} game${n === 1 ? '' : 's'}`;
     const condWhy = (p) => { const j = String(job.get(p) || '').replace('?', ''); const c = p.cond && p.cond[j]; return c ? `${CL[j]} here: ${c.avg} over ${gm(c.n)} (your ${CL[j]} here average ${cBase[j]})` : (job.get(p) || '').endsWith('?') ? `no ball that fits the bag has beaten your ${CL[j]} average here (4+ games), so this one is picked for its motion` : ''; };
@@ -156,7 +155,8 @@
     const GN = { fresh: 'G1s', transition: 'G2s', burn: 'G3s' };
     const shortWhy = (p) => { const j = String(job.get(p) || '').replace('?', ''), c = p.cond && p.cond[j];
       return [c ? `${GN[j]} here ${c.avg} (${c.n}) vs your ${cBase[j]}` : p.os ? `${p.os.avg} over ${gm(p.os.n)} here` : p.predK ? 'untested here; picked for its specs' : 'no record here', p.po ? `pair ${p.po.avg} (${p.po.n})` : ''].filter(Boolean).join(' · '); };
-    ordered.forEach(p => items.push(`<b>${role(p)}: ${esc(p.n)}</b> <span class="dim">${[p.t.cover, p.t.core && p.t.core.replace(/metric(al)?/i, '').trim(), p.t.layout].filter(Boolean).map(esc).join(' · ')}</span><br>${shortWhy(p)}`));
+    ordered.forEach(p => items.push(`<b>${role(p)}: ${esc(p.n)}</b> <span class="dim">${[p.t.cover, p.t.core && p.t.core.replace(/metric(al)?/i, '').trim(), (() => { let d = null; try { d = BT().ballPAP(byName[p.n].row); } catch (_e) {} return p.t.layout ? p.t.layout + (Number.isFinite(d) && d > 0 ? ` ${d}″` : '') : 'layout not entered'; })()].filter(Boolean).map(esc).join(' · ')}</span><br>${shortWhy(p)}`));
+    items.push('<span class="dim">Keep the start ball while it\'s working. Change balls for a reason (reads early, goes long, carry drops), not a game number.</span>');
     if (picked.length < count) items.push(`Only ${picked.length} of your balls read far enough apart to be worth bringing; more would overlap.`);
     { const sp = spareBalls(); const dual = (BT().dualSpareNames ? BT().dualSpareNames() : []).filter(n => ordered.some(p => p.n === n)); if (dual.length) items.push(`<b>${esc(dual[0])}</b> doubles as your spare ball${sp.length ? `, so you can leave ${esc(sp[0])} home` : ''}.`); else items.push(sp.length ? `Spare ball: <b>${esc(sp[0])}</b>.` : 'Spare ball: none marked (Arsenal → ball → 🎯 Spare ball).'); }
     const roles = {}; ordered.forEach(q => { roles[q.n] = roleTag(q); });
@@ -173,7 +173,8 @@
         const near = ordered.filter(p => p.t.x != null && s.t.x != null && Math.abs(p.t.x - s.t.x) < 10).sort((a, z) => Math.abs(a.t.x - s.t.x) - Math.abs(z.t.x - s.t.x))[0];
         const rec = s.rs && s.rs.avg <= s.os.avg - 8;
         if (s.lastD && s.lastD < yrCut) note = `not thrown here since ${monYr(s.lastD)}${near ? `; plays like ${esc(near.n)}` : ''}`;
-        else if (near) { const j = String(job.get(near) || '').replace('?', ''), c = near.cond && near.cond[j]; note = `plays like ${esc(near.n)}, which got the ${role(near).replace(/:.*$/, '').toLowerCase()} spot`; }
+        else if (near && s.os && near.os && s.os.avg >= near.os.avg + 3) note = `same look as ${esc(near.n)} but higher here (${s.os.avg} vs ${near.os.avg}): bring it as ${esc(near.n)}'s backup`;
+        else if (near) { const j = String(job.get(near) || '').replace('?', ''), c = near.cond && near.cond[j]; note = `plays like ${esc(near.n)}, already in the bag`; }
         else if (rec) note = `lower lately (${s.rs.avg} in the last 12 months)`;
         else note = 'others scored higher for each job';
       }
@@ -548,7 +549,7 @@
         items.push(`<b>Goes long</b>: 2 & 1 ${dOut}, or a stronger ball.`);
       }
       { const HR = { easy: '<b>House read: plays easy.</b> Room to miss: pick the line that carries, not the safest one.', sport: '<b>House read: tight, sport-like.</b> Small moves (1 & ½), accuracy over hook, and your most predictable ball.', dry: `<b>House read: dry backends.</b> Expect a hard turn late: keep it in front of you, and a smoother / later ball if it jumps.`, burn: `<b>House read: burns up fast.</b> Plan your first move ${dIn} early (game 1 to 2) and keep a weaker ball ready.`, carry: `<b>House read: carrydown.</b> Late in the night it holds and goes long: move ${dOut} or go stronger, not ${dIn}.` };
-        if (HR[wear]) items.unshift(HR[wear]); }
+        if (HR[wear]) items.unshift(HR[wear].replace('</b>', '</b> <span class="dim">(your read)</span>')); }
       items.push('<b>Pocket but not carrying</b>: ball reaction, not line. Check release, then a ball change or a small move.');
       items.push('<b>Missed your mark</b>: repeat the shot.');
       const mv = sess.map(s => s.summary && s.summary.moves && s.summary.moves.text).filter(Boolean)[0];
