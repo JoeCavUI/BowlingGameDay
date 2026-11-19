@@ -73,6 +73,7 @@ Then open http://localhost:3000
 - 🔔 Carry over/under needs 2+ ringing and 2+ flat corner pins and says "possible"; carrydown chip says "possible".
 - 🏷️ Sources shown: house read "(your read)", pattern length "(you entered)", exit board "(estimate)".
 - 📏 Layout labels show the pin-to-PAP number; a blank or 0 pin-to-PAP reads "layout not entered" instead of a guess.
+- 🎳 Splits: double wood (2-8, 3-9) is no longer called a split. Side-by-side leaves (4-5, 8-9…) still count as splits, now in PinPal history too.
 
 ## Changes in v152-beta89
 - 🎳 Replay: "Pins view" button shows the shot from behind the pin deck looking back up the lane (perspective lane, 3-D pins, ball and trail; pins left standing stay up). Remembered; "Lane view" switches back.

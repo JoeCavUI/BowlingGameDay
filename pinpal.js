@@ -159,7 +159,7 @@
   function isSplit(pins) { // headpin down, two or more pins with a gap (standard definition, simplified)
     if (pins.length < 2 || pins.includes(1)) return false;
     const groups = [[1], [2, 3], [4, 5, 6], [7, 8, 9, 10]];
-    const adj = { 2: [3, 4, 5, 8], 3: [2, 5, 6, 9], 4: [2, 5, 7, 8], 5: [2, 3, 4, 6, 8, 9], 6: [3, 5, 9, 10], 7: [4, 8], 8: [4, 5, 7, 9], 9: [5, 6, 8, 10], 10: [6, 9] };
+    const adj = { 2: [4, 5, 8], 3: [5, 6, 9], 4: [2, 7, 8], 5: [2, 3, 8, 9], 6: [3, 9, 10], 7: [4], 8: [2, 4, 5], 9: [3, 5, 6], 10: [6] }; // diagonals + double wood (2-8, 3-9); side-by-side = split
     const seen = new Set([pins[0]]); const st = [pins[0]];
     while (st.length) { const p = st.pop(); (adj[p] || []).forEach(q => { if (pins.includes(q) && !seen.has(q)) { seen.add(q); st.push(q); } }); }
     return seen.size < pins.length;

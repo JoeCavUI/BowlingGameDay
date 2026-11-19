@@ -1901,7 +1901,9 @@
   function standingPins(x) { if (!x || isStrikeShotX(x)) return []; if (Array.isArray(x.leavePins) && x.leavePins.length) return x.leavePins.slice(); const t = String(x.leaveTag || ((x.leaves || [])[0]) || ''); const m = t.match(/\d+/g); return m ? [...new Set(m.map(Number).filter(n => n >= 1 && n <= 10))] : []; }
   // USBC: a split = headpin down and at least one pin down between (or ahead of and between) the pins left standing.
   // Same-row pins never touch, so standing pins must connect through the diagonal neighbors to not be a split.
-  const DIAG = [[1, 2], [1, 3], [2, 4], [2, 5], [3, 5], [3, 6], [4, 7], [4, 8], [5, 8], [5, 9], [6, 9], [6, 10]];
+  // Touching pins: diagonal neighbors, plus double wood (a pin directly behind another: 1-5, 2-8, 3-9), which isn't a split.
+  // Side-by-side pins (2-3, 4-5, 8-9…) with the headpin down ARE splits (fit-in splits).
+  const DIAG = [[1, 2], [1, 3], [2, 4], [2, 5], [3, 5], [3, 6], [4, 7], [4, 8], [5, 8], [5, 9], [6, 9], [6, 10], [1, 5], [2, 8], [3, 9]];
   function isSplit(pins) {
     const S = new Set((pins || []).map(Number)); if (S.has(1) || S.size < 2) return false;
     const start = [...S][0], seen = new Set([start]), q = [start];
