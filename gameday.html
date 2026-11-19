@@ -161,10 +161,11 @@
             </select>
           </div>
           <div class="small gd-help" style="margin-top:6px">Slide = the board under the inside of your slide foot at the foul line. Target = the board your eyes are on, at the distance you pick.</div>
-          <div class="gd-changed"><span class="small"><b>Changed since last shot</b> (optional)</span>
-            <div id="changedPills" class="gd-chg"><button type="button" data-chg="feet">Feet / eyes</button><button type="button" data-chg="speed">Speed</button><button type="button" data-chg="loft">Loft</button><button type="button" data-chg="hand">Hand</button><button type="button" data-chg="ball">Ball</button></div>
+          <div class="gd-changed"><span class="small"><b>LASER</b>: what changed since last shot? (optional)</span>
+            <div id="changedPills" class="gd-chg"><button type="button" data-chg="loft"><b>L</b>oft</button><button type="button" data-chg="feet"><b>A</b>im (feet / eyes)</button><button type="button" data-chg="speed"><b>S</b>peed</button><button type="button" data-chg="ball"><b>E</b>quipment (ball)</button><button type="button" data-chg="hand"><b>R</b>elease (hand)</button></div>
             <div id="whyRow" class="gd-why" style="display:none;margin-top:8px"><span class="small"><b>Why?</b> What did you see? (optional)</span>
-              <div id="whyPills" class="gd-chg"><button type="button" data-why="gaveUp">Gave up downlane</button><button type="button" data-why="skid">Skidding too far</button><button type="button" data-why="sharp">Backend too sharp</button><button type="button" data-why="early">Hooked early</button><button type="button" data-why="missPocket">Missed the pocket</button><button type="button" data-why="feel">Just a feel</button></div>
+              <div id="whyPills" class="gd-chg"><button type="button" data-why="gaveUp">Gave up downlane</button><button type="button" data-why="skid">Skidding too far</button><button type="button" data-why="sharp">Backend too sharp</button><button type="button" data-why="early">Hooked early</button><button type="button" data-why="missPocket">Missed the pocket</button><button type="button" data-why="feel">Just a feel</button><span id="whyMine" style="display:contents"></span><button type="button" id="whyAdd">＋ My own reason</button><button type="button" id="whyEditBtn" style="display:none">Edit</button></div>
+              <div id="whyNew" style="display:none;margin-top:6px;gap:6px;align-items:center"><input id="whyNewText" type="text" maxlength="40" placeholder="What did you see?" style="flex:1;min-width:0"><button type="button" class="btn" id="whyNewSave">Add</button></div>
               <div id="whyPast" class="small" style="margin-top:6px;opacity:.85"></div></div>
           </div>
           </div>
@@ -2097,7 +2098,29 @@ function saveCurrentSessionDraft() {
       const past = document.getElementById('whyPast');
       if (past) { let t = ''; try { if (whySel) t = BTCoach.whyLearnText(whySel, BTCoach.whyLearn(BT.lsGet(BT.KEYS.GAME_SESSIONS, []), BT.lsGet(BT.KEYS.BOWLER, {}))); } catch (_e) {} past.textContent = t; }
     }
-    document.querySelectorAll('#whyPills [data-why]').forEach(b => b.addEventListener('click', () => { whySel = whySel === b.dataset.why ? '' : b.dataset.why; paintWhy(); }));
+    // Your own reasons (saved, reused, removable: tap ✕ while editing).
+    const WHY_MINE_KEY = 'bt_why_custom_v1'; let whyEdit = false;
+    const whyMine = () => { const a = BT.lsGet(WHY_MINE_KEY, []); return Array.isArray(a) ? a : []; };
+    function paintWhyMine() {
+      const box = document.getElementById('whyMine'); if (!box) return;
+      const esc2 = (t) => String(t).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+      box.innerHTML = whyMine().map(t => `<button type="button" data-why="c:${esc2(t)}">${esc2(t)}${whyEdit ? ' ✕' : ''}</button>`).join('');
+      const ed = document.getElementById('whyEditBtn'); if (ed) { ed.style.display = whyMine().length ? '' : 'none'; ed.textContent = whyEdit ? 'Done' : 'Edit'; }
+    }
+    document.getElementById('whyPills').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-why]'); if (!b) return;
+      const w = b.dataset.why;
+      if (whyEdit && /^c:/.test(w)) { BT.lsSet(WHY_MINE_KEY, whyMine().filter(t => t !== w.slice(2))); if (whySel === w) whySel = ''; paintWhyMine(); paintWhy(); return; }
+      whySel = whySel === w ? '' : w; paintWhy();
+    });
+    document.getElementById('whyAdd').addEventListener('click', () => { const nw = document.getElementById('whyNew'); nw.style.display = nw.style.display === 'flex' ? 'none' : 'flex'; if (nw.style.display === 'flex') document.getElementById('whyNewText').focus(); });
+    document.getElementById('whyEditBtn').addEventListener('click', () => { whyEdit = !whyEdit; paintWhyMine(); paintWhy(); });
+    document.getElementById('whyNewSave').addEventListener('click', () => {
+      const inp = document.getElementById('whyNewText'), t = String(inp.value || '').trim().replace(/\s+/g, ' ').slice(0, 40); if (!t) return;
+      const list = whyMine(); if (!list.some(x => x.toLowerCase() === t.toLowerCase())) list.push(t); BT.lsSet(WHY_MINE_KEY, list);
+      whySel = 'c:' + (list.find(x => x.toLowerCase() === t.toLowerCase())); inp.value = ''; document.getElementById('whyNew').style.display = 'none'; paintWhyMine(); paintWhy();
+    });
+    paintWhyMine();
     document.querySelectorAll('#changedPills [data-chg]').forEach(b => b.addEventListener('click', () => setTimeout(paintWhy, 0)));
     ['feet', 'arrows', 'ball'].forEach(k => { const n = el[k]; if (n) { n.addEventListener('change', paintWhy); n.addEventListener('input', paintWhy); } });
     setTimeout(paintWhy, 300);
