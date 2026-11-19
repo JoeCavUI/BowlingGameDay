@@ -648,6 +648,14 @@
             const hl = z.highLeft > z.lightLeft ? `mostly high (${z.highLeft} high, ${z.lightLeft} light)` : z.lightLeft > z.highLeft ? `mostly light (${z.lightLeft} light, ${z.highLeft} high)` : 'not clearly high or light';
             T.push({ k: 'Pocket held, carry dropped', t: `Pocket ${gm.map(pk).join('% → ')}%, carry ${gm.map(cr).join('% → ')}% game by game. You were still finding the pocket, so this was carry, not aim. The late misses were ${hl}. Next time, when the hits stay in the pocket but stop carrying, watch high or light before moving${z.highLeft === z.lightLeft ? '; mixed high and light points to the ball, not your line' : ''}.` });
           } } }
+      // 🗣️ Why you changed: what you saw, whether your logs agreed, and whether the change fixed it.
+      try { const R = BTCoach.whyReview(real, bowler);
+        if (R.length) { const KL = { feet: 'feet / eyes', speed: 'speed', loft: 'loft', hand: 'hand', ball: 'ball' };
+          const li = R.map(r => { const k = r.kinds.length ? r.kinds.map(x => KL[x]).join(' + ') : 'a change';
+            const eye = r.afterPoor ? 'seen on a missed shot (lane read)' : r.against >= 2 && !r.agree ? `your logs said the opposite (${r.against} of ${r.nb})` : r.agree ? `logs agreed (${r.agree} of ${r.nb})` : 'no logs to check';
+            const res = !r.fix ? 'not enough shots after to judge' : r.fix.ok ? `<b>fixed it</b> (${r.fix.clean} of ${r.fix.n} strikes or flush)` : `<b>didn't fix it</b> (${r.fix.pk} of ${r.fix.n} in the pocket, ${r.fix.clean} strikes or flush)`;
+            return `G${r.gameNo} F${r.frame}: "${r.label}" → ${k}. ${eye[0].toUpperCase() + eye.slice(1)}; ${res}.`; });
+          T.push({ k: '🗣️ Why you changed', t: li.join('<br>') }); } } catch (_e) {}
       { let mix = null; try { const P = BT.lsGet('bt_oil_patterns_v1', []) || []; const pt = P.find(p => p.name === s.pattern) || null; mix = window.BTEyes && BTEyes.tenMix ? BTEyes.tenMix(real, lefty, pt && pt.length) : null; } catch (_e) {}
         if (mix) { const deep = lefty ? 'right' : 'left', outd = lefty ? 'left' : 'right';
           const z = mix.zone === 'outside' ? `Your breakpoint (about ${mix.bp}) was well outside the exit board (about ${mix.exB}: app estimate from the ${mix.patLen} ft you entered): the ball finished out in the dry. Next time start 2 and 1 ${deep}.`

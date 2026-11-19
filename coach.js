@@ -1242,6 +1242,7 @@
       const W = C.filter(c => (c.execution !== 'poor' || c.laneInfo)).slice(-5);
       if (C.length >= 3) sideNotes(out, C, W, prof, patternProfile(ctx && ctx.pattern));
       if (C.length >= 2) moveNotes(out, C, prof);
+      try { whyNotes(out, C); } catch (_e) {}
       laneNotes(out, C, prof);
       // 🛢️ Carrydown building (game 2+): the ball holds later than game 1 and right moves are working. Stronger with plastic / urethane on the pair.
       try { const E = root.BTEyes, T = ctx && ctx.traffic, c = E && E.carrySign ? E.carrySign(all, prof.lefty) : null;
@@ -1339,6 +1340,7 @@
       out.eyeball = eyeballScore(ctx && ctx.shots, ctx && ctx.bowler);
       // One verdict per move: if the move note already spoke, drop the separate "is working" line.
       if (out.notes && out.notes.some(n => /^(↔️ Since you|↩️ That change didn't help)/.test(n))) out.notes = out.notes.filter(n => !/^✅ Your last change/.test(n));
+      if (out.whyVerdict && out.notes) out.notes = out.notes.filter(n => !/^(✅ Your last change|↔️ Since you|↩️ That change didn't help)/.test(n));
     } catch (_e) {}
     return out;
   }
@@ -1872,5 +1874,73 @@
     else if (D.carry >= O.carry + 15) text = `Deeper (slide ${D.feet}) carried ${cnt(D)} vs ${cnt(O)} from slide ${O.feet} on good shots.${caveat}`;
     return { rows, text, enough, mixed };
   }
-  root.BTCoach = { setFaultLabel, hiddenFaults, hideFault, unhideFault, energyAngle, noteTags, noteMix, repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
+
+  // ---------- 🗣️ Why you changed: what the bowler saw, checked against the logs, and scored over time ----------
+  // The reason rides on the first shot after a change (any LASER change: feet / eyes, speed, loft, hand, ball).
+  const WHY = { gaveUp: 'Gave up downlane', skid: 'Skidding too far', sharp: 'Backend too sharp', early: 'Hooked early', missPocket: 'Missed the pocket', feel: 'Just a feel' };
+  const CHG_LABEL = { feet: 'Feet / eyes', speed: 'Speed', loft: 'Loft', hand: 'Hand', ball: 'Ball' };
+  // Does this shot's log back up what you saw? +1 agrees, -1 says the opposite, 0 no read.
+  function whySays(reason, c) {
+    if (reason === 'missPocket') return c.pocketHit || (c.strike && c.hit !== 'brooklyn') ? -1 : 1;
+    if (c.strike && c.hit !== 'brooklyn') return 0;
+    const weak = c.finish === 'weak' || c.lean < 0 || c.long, strong = c.finish === 'strong' || c.lean > 0 || c.early;
+    if (reason === 'gaveUp' || reason === 'skid') return weak && !strong ? 1 : strong && !weak ? -1 : 0;
+    if (reason === 'early' || reason === 'sharp') return strong && !weak ? 1 : weak && !strong ? -1 : 0;
+    return 0;
+  }
+  const whyOpp = (r) => r === 'missPocket' ? 'in the pocket' : (r === 'gaveUp' || r === 'skid') ? 'high / early or strong at the pins' : 'light / long or weak at the pins';
+  // Did the change fix what you saw? First 3–4 good shots after it.
+  function whyFixed(reason, A) {
+    const n = A.length; if (n < 3) return null;
+    const clean = A.filter(c => (c.strike && c.hit !== 'brooklyn') || c.hit === 'flush').length;
+    const pk = A.filter(c => c.pocketHit || (c.strike && c.hit !== 'brooklyn')).length;
+    const bad = reason === 'feel' ? n - clean : A.filter(c => whySays(reason, c) === 1).length;
+    return { ok: reason === 'feel' ? pk * 3 >= n * 2 && clean * 2 >= n : bad <= 1 && pk * 3 >= n * 2, bad, clean, pk, n };
+  }
+  function whyReview(C) {
+    const out = [], idx = C.map((c, i) => i).filter(i => C[i].shot && WHY[C[i].shot.why]);
+    idx.forEach((i, k) => {
+      const s = C[i].shot, why = s.why, kinds = (Array.isArray(s.changed) ? s.changed : []).filter(x => CHG_LABEL[x]);
+      const prev = C[i - 1] || null, afterPoor = !!(prev && prev.execution === 'poor');
+      const usable = (c) => c.execution !== 'poor' || c.laneInfo;
+      const B = C.slice(Math.max(0, i - 6), i).filter(usable).slice(-3);
+      const agree = B.filter(c => whySays(why, c) === 1).length, against = B.filter(c => whySays(why, c) === -1).length;
+      const end = k + 1 < idx.length ? idx[k + 1] : C.length;
+      const A = C.slice(i, end).filter(usable).slice(0, 4);
+      out.push({ i, why, label: WHY[why], kinds, afterPoor, prevMiss: prev ? prev.missSide || '' : '', prevLean: prev ? prev.lean : 0, agree, against, nb: B.length, fix: whyFixed(why, A), gameNo: C[i].gameNo, frame: s.frame });
+    });
+    return out;
+  }
+  const kindsText = (k) => k.length ? k.map(x => CHG_LABEL[x]).join(' + ') : 'your change';
+  // Across nights: for each thing you saw, which kind of change fixed it, and how often your logs agreed with your eye.
+  function whyLearn(sessions, bowler) {
+    const prof = bowlerProfile(bowler), L = {};
+    (sessions || []).forEach(S => {
+      const C = ((S && S.shots) || []).filter(x => x && x.type !== 'gameStart').slice().sort((a, b) => (a.at || 0) - (b.at || 0)).map(s => classify(s, prof.lefty));
+      whyReview(C).forEach(r => { const o = L[r.why] = L[r.why] || { n: 0, agree: 0, against: 0, kinds: {} }; o.n++; if (r.agree && !r.against) o.agree++; if (r.against >= 2 && !r.agree) o.against++;
+        if (r.fix) (r.kinds.length ? r.kinds : ['other']).forEach(k => { const q = o.kinds[k] = o.kinds[k] || { ok: 0, n: 0 }; q.n++; if (r.fix.ok) q.ok++; }); });
+    });
+    return L;
+  }
+  function whyLearnText(why, L) {
+    const o = L && L[why]; if (!o) return '';
+    const ks = Object.entries(o.kinds).filter(([k, q]) => q.n >= 1 && k !== 'other').sort((a, b) => b[1].ok / b[1].n - a[1].ok / a[1].n || b[1].n - a[1].n);
+    const parts = ks.map(([k, q]) => `${CHG_LABEL[k]} fixed it ${q.ok} of ${q.n}`);
+    return parts.length ? `When you saw "${WHY[why]}" before: ${parts.join(', ')}.` : '';
+  }
+  function whyNotes(out, C) {
+    const R = whyReview(C); if (!R.length) return;
+    const r = R[R.length - 1]; if (C.length - r.i > 8) return;
+    const what = kindsText(r.kinds), notes = out.notes = out.notes || [];
+    if (r.fix) {
+      if (r.fix.ok) notes.unshift(`✅ Your change fixed what you saw ("${r.label}"): ${r.why === 'missPocket' || r.why === 'feel' ? `${r.fix.pk} of ${r.fix.n} good shots in the pocket` : `${r.fix.bad} of ${r.fix.n} good shots still ${r.why === 'gaveUp' || r.why === 'skid' ? 'light / weak' : 'high / strong'}`}, ${r.fix.clean} strikes or flush. Keep it.`);
+      else notes.unshift(`↩️ Still "${r.label}" after ${what}: ${r.why === 'missPocket' || r.why === 'feel' ? `${r.fix.pk} of ${r.fix.n} good shots in the pocket` : `${r.fix.bad} of ${r.fix.n} good shots still look that way`}. Try a different kind of change than ${what}.`);
+      out.whyVerdict = true; return;
+    }
+    if (r.afterPoor) notes.unshift(`🗣️ You saw "${r.label}" on a shot that missed your mark, and changed ${what}. Coach counts that as a lane read${r.prevMiss ? ` (missed ${r.prevMiss}${r.prevLean > 0 ? ' and it still hooked' : r.prevLean < 0 ? ' and it held' : ''})` : ''}, not a reaction read. Your next good shots will tell.`);
+    else if (r.against >= 2 && !r.agree) notes.unshift(`🤔 You saw "${r.label}", but ${r.against} of your last ${r.nb} good shots were logged ${whyOpp(r.why)}. Watch the next good shot closely before changing again.`);
+    else if (r.agree) notes.unshift(`🗣️ You saw "${r.label}" and your logs agree (${r.agree} of ${r.nb}). Give the ${what.toLowerCase()} change 3 good shots.`);
+    else notes.unshift(`🗣️ Noted: "${r.label}" → ${what}. Coach checks it over your next 3 good shots.`);
+  }
+  root.BTCoach = { WHY, whyReview: (shots, bowler) => whyReview((shots || []).filter(x => x && x.type !== 'gameStart').map(s => classify(s, bowlerProfile(bowler).lefty))), whyLearn, whyLearnText, setFaultLabel, hiddenFaults, hideFault, unhideFault, energyAngle, noteTags, noteMix, repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
 })(typeof window !== 'undefined' ? window : globalThis);

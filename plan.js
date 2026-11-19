@@ -472,6 +472,18 @@
       } catch (e) { console.error(e); }
     }
 
+    // ---- 🗣️ Your eye: what you saw when you changed, and which kind of change fixed it (all houses)
+    if (root.BTCoach && root.BTCoach.whyLearn) {
+      try {
+        let sessAll = []; try { sessAll = BT().lsGet(BT().KEYS.GAME_SESSIONS, []) || []; } catch (_e) {}
+        const L = root.BTCoach.whyLearn(sessAll, b), items = [];
+        Object.keys(L).sort((x, y) => L[y].n - L[x].n).forEach(w => { const o = L[w]; const t = root.BTCoach.whyLearnText(w, L); if (!t && o.n < 2) return;
+          const eye = o.agree + o.against >= 2 ? ` <span class="dim">(logs agreed ${o.agree} of ${o.agree + o.against})</span>` : '';
+          items.push((t || `"${esc(root.BTCoach.WHY[w])}": ${o.n} changes, not enough shots after to judge yet.`) + eye); });
+        if (items.length) sec('🗣️', 'Your eye: what fixed what you saw', items);
+      } catch (e) { console.error(e); }
+    }
+
     // ---- 🗺️ Lane map: the lines that have worked here, from the nights you logged in Game Day
     if (root.BTEyes) {
       try {

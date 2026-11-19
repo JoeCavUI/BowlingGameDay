@@ -163,6 +163,9 @@
           <div class="small gd-help" style="margin-top:6px">Slide = the board under the inside of your slide foot at the foul line. Target = the board your eyes are on, at the distance you pick.</div>
           <div class="gd-changed"><span class="small"><b>Changed since last shot</b> (optional)</span>
             <div id="changedPills" class="gd-chg"><button type="button" data-chg="feet">Feet / eyes</button><button type="button" data-chg="speed">Speed</button><button type="button" data-chg="loft">Loft</button><button type="button" data-chg="hand">Hand</button><button type="button" data-chg="ball">Ball</button></div>
+            <div id="whyRow" class="gd-why" style="display:none;margin-top:8px"><span class="small"><b>Why?</b> What did you see? (optional)</span>
+              <div id="whyPills" class="gd-chg"><button type="button" data-why="gaveUp">Gave up downlane</button><button type="button" data-why="skid">Skidding too far</button><button type="button" data-why="sharp">Backend too sharp</button><button type="button" data-why="early">Hooked early</button><button type="button" data-why="missPocket">Missed the pocket</button><button type="button" data-why="feel">Just a feel</button></div>
+              <div id="whyPast" class="small" style="margin-top:6px;opacity:.85"></div></div>
           </div>
           </div>
           <div id="lineMath" class="gd-linemath" style="display:none"></div>
@@ -748,7 +751,7 @@ function selectedPills(container) {
       try { setTimeout(paintNotesRead, 0); } catch (_e) {}
       try { const li = BT.$('#laneInfo'); if (li) li.checked = false; } catch (_e) {}
       try { paintLaneRead(); } catch (_e) {}
-      try { changedSel.clear(); paintChanged(); } catch (_e) {}
+      try { changedSel.clear(); paintChanged(); whySel = ''; setTimeout(paintWhy, 0); } catch (_e) {}
       try { faultMore = false; renderFaultPills(''); } catch (_e) {}
 	      [el.readsQuality, el.readsMiss, el.readsBallObs, el.readsPocket, el.readsExit, el.readsSpeed, el.readsFault].forEach(c => {
 	        if (!c) return;
@@ -2077,6 +2080,27 @@ function saveCurrentSessionDraft() {
     const changedSel = new Set();
     function paintChanged() { document.querySelectorAll('#changedPills [data-chg]').forEach(b => b.classList.toggle('on', changedSel.has(b.dataset.chg))); }
     document.querySelectorAll('#changedPills [data-chg]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.chg; changedSel.has(k) ? changedSel.delete(k) : changedSel.add(k); paintChanged(); }));
+    // 🗣️ Why? Shows when anything changed (a pill, or feet / target / ball differ from your last shot on this lane). One tap, optional.
+    let whySel = '';
+    function autoChanged() {
+      const c = new Set();
+      try { const ln = String(nextLaneNumber() || (el.lanePick && el.lanePick.value) || ''); const list = (sessionShots || []).filter(x => x && x.type !== 'gameStart');
+        const prevS = (ln && list.find(x => String(x.lane || '') === ln)) || list[0];
+        if (prevS) { if (el.feet.value && prevS.feet != null && Number(el.feet.value) !== prevS.feet) c.add('feet'); if (el.arrows.value && prevS.arrows != null && Number(el.arrows.value) !== prevS.arrows) c.add('feet'); if (el.ball.value && prevS.ball && el.ball.value !== prevS.ball) c.add('ball'); } } catch (_e) {}
+      return c;
+    }
+    function paintWhy() {
+      const row = document.getElementById('whyRow'); if (!row) return;
+      const show = changedSel.size > 0 || autoChanged().size > 0 || !!whySel;
+      row.style.display = show ? '' : 'none';
+      document.querySelectorAll('#whyPills [data-why]').forEach(b => b.classList.toggle('on', b.dataset.why === whySel));
+      const past = document.getElementById('whyPast');
+      if (past) { let t = ''; try { if (whySel) t = BTCoach.whyLearnText(whySel, BTCoach.whyLearn(BT.lsGet(BT.KEYS.GAME_SESSIONS, []), BT.lsGet(BT.KEYS.BOWLER, {}))); } catch (_e) {} past.textContent = t; }
+    }
+    document.querySelectorAll('#whyPills [data-why]').forEach(b => b.addEventListener('click', () => { whySel = whySel === b.dataset.why ? '' : b.dataset.why; paintWhy(); }));
+    document.querySelectorAll('#changedPills [data-chg]').forEach(b => b.addEventListener('click', () => setTimeout(paintWhy, 0)));
+    ['feet', 'arrows', 'ball'].forEach(k => { const n = el[k]; if (n) { n.addEventListener('change', paintWhy); n.addEventListener('input', paintWhy); } });
+    setTimeout(paintWhy, 300);
 
     function coachContext() {
       const chron = sessionShots.slice().reverse();
@@ -2355,6 +2379,7 @@ function saveCurrentSessionDraft() {
         feet: el.feet.value ? Number(el.feet.value) : null,
         arrows: el.arrows.value ? Number(el.arrows.value) : null,
         changed: (() => { const c = new Set(changedSel); const prevS = (sessionShots || []).find(x => x && x.type !== 'gameStart'); if (prevS) { if (el.feet.value && prevS.feet != null && Number(el.feet.value) !== prevS.feet) c.add('feet'); if (el.arrows.value && prevS.arrows != null && Number(el.arrows.value) !== prevS.arrows) c.add('feet'); if (el.ball.value && prevS.ball && el.ball.value !== prevS.ball) c.add('ball'); } return [...c]; })(),
+        why: whySel || '',
         targetFt: el.tdist ? Number(el.tdist.value) || 15 : 15,
         layOff: (() => { const v = Number((BT.lsGet(BT.KEYS.BOWLER, {}) || {}).laydownOffset); return Number.isFinite(v) && v > 0 ? v : 5; })(),
         bp: el.bp.value ? Number(el.bp.value) : null,
@@ -3224,7 +3249,7 @@ function sessionSummary(shots) {
       try {
         const pills = {}; DRAFT_BOXES.forEach(id => { const c = document.getElementById(id); if (c) pills[id] = selectedPills(c); });
         const fs = document.getElementById('faultSel');
-        BT.lsSet(SHOT_DRAFT_KEY, { at: Date.now(), n: sessionShots.length, pills, pins: [...selectedPins], result: resultTag || '', swing: swingFeel || '', changed: [...changedSel], fault: fs ? fs.value : '', notes: (document.getElementById('notes') || {}).value || '', laneReads: Object.assign({}, laneReads) });
+        BT.lsSet(SHOT_DRAFT_KEY, { at: Date.now(), n: sessionShots.length, pills, pins: [...selectedPins], result: resultTag || '', swing: swingFeel || '', changed: [...changedSel], why: whySel || '', fault: fs ? fs.value : '', notes: (document.getElementById('notes') || {}).value || '', laneReads: Object.assign({}, laneReads) });
       } catch (_e) {}
     }
     function restoreShotDraft() {
@@ -3236,6 +3261,7 @@ function sessionSummary(shots) {
         if (d.result) { resultTag = d.result; try { updateQuickResultUI(); } catch (_e) {} }
         if (d.swing) { swingFeel = d.swing; BT.$all('#swingRow [data-swing]').forEach(x => x.classList.toggle('on', x.dataset.swing === swingFeel)); }
         if (Array.isArray(d.changed)) { d.changed.forEach(k => changedSel.add(k)); try { paintChanged(); } catch (_e) {} }
+        if (d.why) { whySel = d.why; try { paintWhy(); } catch (_e) {} }
         if (d.laneReads) { Object.assign(laneReads, d.laneReads); try { paintLaneRead(); } catch (_e) {} }
         if (d.fault) { try { renderFaultPills(d.fault); } catch (_e) {} }
         const nt = document.getElementById('notes'); if (nt && d.notes && !nt.value) nt.value = d.notes;
