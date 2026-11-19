@@ -58,7 +58,7 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
-## Changes in v154-beta91 (held)
+## Changes in v154-beta91
 - 🗣️ "Why?" on any change: when you change feet / eyes, speed, loft, hand or ball (tapped, or the app sees a new line or ball on that lane), one optional tap says what you saw: Gave up downlane · Skidding too far · Backend too sharp · Hooked early · Missed the pocket · Just a feel. Shows what fixed it last time you saw the same thing.
 - 🤔 Coach checks your eye against your logs: agrees, says when 2+ of your last good shots were logged the opposite way, and treats a reason seen on a missed shot as a lane read. After 3 good shots it judges the change against your reason ("fixed what you saw" / "still giving up"), and that verdict replaces the generic move verdict.
 - 🔤 LASER row: "LASER: what changed since last shot?" with pills in LASER order: Loft · Aim (feet / eyes) · Speed · Equipment (ball) · Release (hand). Coach and the review name changes the same way.
