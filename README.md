@@ -58,6 +58,12 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v154-beta91 (held)
+- ↔️ One verdict per move: when you're still in the pocket after a move (3 of 4+) but strikes are mixed, Coach says "keep it for now" in one line. No more "didn't help" next to "is working".
+- ↩️ "That change didn't help" needs 3+ good shots before the move to compare against (1 of 1 isn't a baseline).
+- 🛢️ "Possible carrydown" with counts (light / flat 3 of 8 → 5 of 10). While you're not being told to move, it's a watch item ("Nothing to change yet. If good shots start going light…") listed below the main call.
+- 👀 Lane notes: when every miss on a lane was a poor shot and good shots all found the pocket, it leads with "the misses were execution." "Pocket but not carrying" no longer says "not your line"; it says to watch high / light and the corner pin first.
+
 ## Changes in v153-beta90
 - 📐 Angle element says which way: "Which way" from your high vs light pocket reads; the Angle drill follows it (high → feet in / later ball; light → follow the miss / earlier ball; mixed → shape not repeating, hold the line).
 - 🗣️ Coach said / you did: when you stayed, shows the next shots' pocket and strikes, and says when staying was the better call.

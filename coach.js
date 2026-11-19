@@ -1113,8 +1113,10 @@
         const pa = rate(a4), pb = rate(b4);
         r.pa = a4.filter(good).length; r.na = a4.length;
         r.pb = b4.filter(good).length; r.nb = b4.length;
-        if (pa >= 0.75 || (pb != null && pa >= pb + 0.25)) r.result = 'worked';
-        else if (pb != null && pa < pb) r.result = 'didnt';
+        r.pkA = a4.filter(x => x.pocketHit || (x.strike && x.hit !== 'brooklyn')).length;
+        // Need 3+ good shots before the move to call it worse: 1 of 1 before isn't a baseline.
+        if (pa >= 0.75 || (pb != null && b4.length >= 3 && pa >= pb + 0.25)) r.result = 'worked';
+        else if (pb != null && b4.length >= 3 && pa < pb) r.result = 'didnt';
         else r.result = 'mixed';
         const leanA = a4.reduce((x, c) => x + c.lean, 0) / a4.length;
         r.after = leanA >= 0.5 ? 'early' : leanA <= -0.5 ? 'late' : '';
@@ -1144,7 +1146,11 @@
       if (last.wrongDir) notes.push(`↔️ You moved ${last.dir > 0 ? prof.deeper : prof.outside}, but your last 2 good shots were ${last.read === 'early' ? 'hooking early' : 'holding'}. Following the miss would be ${last.read === 'early' ? prof.deeper : prof.outside}.`);
       else if (last.rightDir && !last.afterPoor && !last.tooSoon) notes.push(`👍 Good call: your last 2 good shots were ${last.read === 'early' ? 'hooking early' : 'holding'} and you moved ${last.dir > 0 ? prof.deeper : prof.outside}.`);
     }
-    if (last.result === 'didnt') {
+    // Still in the pocket after the move, just not striking every time: one message, keep it.
+    if ((last.result === 'didnt' || last.result === 'mixed') && last.na && last.pkA / last.na >= 0.75) {
+      notes.push(`↔️ Since you ${what}: pocket ${last.pkA} of ${last.na} good shots, strikes or flush ${last.pa} of ${last.na}${last.nb ? ` (${last.pb} of ${last.nb} before)` : ''}. You're holding the pocket, so keep it for now and watch high or light on the next good shots.`);
+      out.moveSaid = true;
+    } else if (last.result === 'didnt') {
       const fix = last.lineMoved && last.after && last.after === last.read ? `It's still ${last.after === 'early' ? 'hooking early' : 'holding'}: move further ${last.read === 'early' ? prof.deeper : prof.outside}.`
         : last.lineMoved && last.after && last.read && last.after !== last.read ? `It flipped to ${last.after === 'early' ? 'hooking early' : 'holding'}: you went too far, so come back about halfway.`
         : `Go back to ${last.ballChanged && !last.lineMoved ? last.fromBall : last.from}, or try a different kind of change.`;
@@ -1239,9 +1245,12 @@
       laneNotes(out, C, prof);
       // 🛢️ Carrydown building (game 2+): the ball holds later than game 1 and right moves are working. Stronger with plastic / urethane on the pair.
       try { const E = root.BTEyes, T = ctx && ctx.traffic, c = E && E.carrySign ? E.carrySign(all, prof.lefty) : null;
-        if (c && c.sign && ((T && T.carry >= 1) || (c.drift != null && c.drift <= -2)) && !(out.notes || []).some(n => /^🛢️ Carrydown/.test(n))) {
+        if (c && c.sign && ((T && T.carry >= 1) || (c.drift != null && c.drift <= -2)) && !(out.notes || []).some(n => /^🛢️ (Possible c|C)arrydown/.test(n))) {
           const dIn = prof.deeper || 'left', dOut = prof.outside || 'right'; let ball = ''; try { ball = suggestBall('late', ctx, prof); } catch (_e) {}
-          (out.notes = out.notes || []).unshift(`🛢️ Carrydown${T && T.carry >= 1 ? ` (${T.carry} plastic / urethane on the pair)` : ''}: the ball is holding later than game 1${c.drift != null && c.drift < 0 ? ` (you've moved ${Math.abs(c.drift)} ${dOut})` : ''}${c.weakLate > c.weakEarly ? `, light / flat hits ${c.weakEarly}% → ${c.weakLate}%` : ''}. Don't chase it ${dIn}. Pick one: get outside the track (feet 2 ${dOut}, eyes 1 ${dOut}); ${ball ? `go to ${ball}, it reads earlier` : 'an earlier-reading ball from tonight\'s bag'}; or take a touch of speed off (about ½ mph) so it reads sooner.`); out.carrydown = c; } } catch (_e) {}
+          const cnts = c.weakLate > c.weakEarly && c.eN ? `, light / flat hits ${c.wEn} of ${c.eN} in game 1 → ${c.wLn} of ${c.lN} since` : '';
+          const opts = `feet 2 ${dOut}, eyes 1 ${dOut} to get outside the track; ${ball ? `${ball}, it reads earlier` : 'an earlier-reading ball from tonight\'s bag'}; or about ½ mph slower so it reads sooner`;
+          const holding = out.status !== 'move';
+          (out.notes = out.notes || [])[holding ? 'push' : 'unshift'](`🛢️ Possible carrydown${T && T.carry >= 1 ? ` (${T.carry} plastic / urethane on the pair)` : ''}: the ball is holding later than game 1${c.drift != null && c.drift < 0 ? ` (you've moved ${Math.abs(c.drift)} ${dOut})` : ''}${cnts}. ${holding ? `Nothing to change yet. If good shots start going light, don't chase it ${dIn}; pick one: ${opts}.` : `Don't chase it ${dIn}. Pick one: ${opts}.`}`); out.carrydown = c; } } catch (_e) {}
       // 🔔 Carry over/under (no new inputs: uses the ringing / flat tags you already log). Game Day: line + tonight's bag only, never surface.
       try { const E = root.BTEyes, pat = patternProfile(ctx && ctx.pattern);
         const mix = E && E.tenMix ? E.tenMix(all.slice(-24), prof.lefty, pat && pat.length) : null;
@@ -1328,6 +1337,8 @@
         }
       }
       out.eyeball = eyeballScore(ctx && ctx.shots, ctx && ctx.bowler);
+      // One verdict per move: if the move note already spoke, drop the separate "is working" line.
+      if (out.notes && out.notes.some(n => /^(↔️ Since you|↩️ That change didn't help)/.test(n))) out.notes = out.notes.filter(n => !/^✅ Your last change/.test(n));
     } catch (_e) {}
     return out;
   }
