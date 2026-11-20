@@ -61,6 +61,7 @@ Then open http://localhost:3000
 ## Changes in v158-beta95 (held)
 - 🕯️ Slow burn: new "Slow burn" Why? reason and ball-note finish. Game Day warns when 2 of your last 5 good pocket shots with a ball leave slow-burn signs (bucket 2-4-5 / 2-4-5-8, a lone 2 or 2-10, flat 10, weak 6; never the 2-8, which is the ball finishing late) and gives the next step: your own record first (e.g. Loft), then a cleaner ball from tonight's bag, plus "not X here" when a change has failed at this house.
 - 🕯️ Plan: "If slow burn shows up here: next steps in order".
+- 🕯️ When slow burn signs show, a "holding / going long" headline is replaced: light hits from slow burn are lost energy, so Coach doesn't send you toward the friction.
 
 ## Changes in v157-beta94
 - 🔀 Carry over/under on Game Day: 2+ weak and 2+ strong leaves from the pocket on good shots → "Carry over/under … (a cliff): more or less energy won't fix it; you want a smoother, more predictable look." One each says it may be the start of over/under and Coach will call it if the next good shots keep switching.

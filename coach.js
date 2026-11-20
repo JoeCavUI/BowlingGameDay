@@ -2039,6 +2039,12 @@
     const L = burnLadder(ctx, prof);
     (out.notes = out.notes || []).unshift(`🕯️ Slow burn may be starting with ${cur}: ${hits.join(', ')} on your last ${G.length} good pocket shots (fine going down, no energy at the pins). Next: ${L.steps[0]}${L.steps[1] ? `; then ${L.steps[1]}` : ''}.${L.avoid.length ? ` Not ${L.avoid.join('; ')}.` : ''}`);
     out.slowBurn = true;
+    // Light hits from slow burn look like "holding / going long". Don't send the bowler toward more friction for it.
+    if (out.situation === 'late' || out.situation === 'carryWeak' || /holding|going long/i.test(String(out.headline || ''))) {
+      out.headline = `🕯️ Slow burn, not a holding lane: the light hits are the ball running out of energy. Don't move toward the friction. Next: ${L.steps[0]}.`;
+      out.situation = 'slowBurn'; out.tone = 'warn';
+      if (Array.isArray(out.ways)) out.ways = out.ways.filter(w => !/toward the friction|feet \d+ boards? (right|left) and your eyes \d+ (right|left) \(toward/i.test(JSON.stringify(w)));
+    }
   }
   root.BTCoach = { burnSign, burnLadder, BALL_NOTE, ballNoteText, ballNoteCheck, WHY, whyLabel, whyReview: (shots, bowler) => whyReview((shots || []).filter(x => x && x.type !== 'gameStart').map(s => classify(s, bowlerProfile(bowler).lefty))), whyLearn, whyLearnText, setFaultLabel, hiddenFaults, hideFault, unhideFault, energyAngle, noteTags, noteMix, repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
 })(typeof window !== 'undefined' ? window : globalThis);
