@@ -58,7 +58,7 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
-## Changes in v159-beta96 (held)
+## Changes in v159-beta96
 - 🕯️ Leave = alarm, motion = diagnosis: slow-burn leaves alone now give "Possible slow burn… on the next good shot, watch: picked up early and straightened = burn; skidded long = needs an earlier read." The "Slow burn, not a holding lane" headline only replaces the line advice when you saw it read early (logged early read, a Slow burn / Gave up / Hooked early tap, or your ball note here). A logged "too long" or "Skidding" tap points to skid instead.
 - 🚫 Ruled-out balls: a ball note at a house saying a ball read early / rolled flat / slow burned keeps that ball off the slow-burn ladder there ("Not Physix Blackout SP here: you saw it read early (11/19)"), on Game Day and in the Plan.
 
