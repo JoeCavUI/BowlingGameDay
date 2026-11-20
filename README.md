@@ -58,7 +58,7 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
-## Changes in v156-beta93 (held)
+## Changes in v156-beta93
 - 📝 Ball notes (night review → 🎳 Balls): for each ball you threw, tap Where it read (Fronts / Midlane / Backend / Went long), How it finished (Strong / Smooth / Rolled flat / Too sharp), Miss room (Lots / Some / Little), plus your own words. Coach checks each note against that night's shots with the ball (too few shots = "a lead") and shows your latest notes per ball in the Plan for that house.
 - 🚫 Strike-ball suggestions never pick a spare ball (TZone / plastic / spare-only), even when it's in tonight's bag.
 - 🌀 Energy call needs the leaves to agree: 2 strong vs 1 weak is mixed, so Coach watches instead of calling a ball or speed change. "Your line is fine" softened.
