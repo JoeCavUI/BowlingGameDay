@@ -472,6 +472,17 @@
       } catch (e) { console.error(e); }
     }
 
+    // ---- 📝 Your ball notes from past nights here (latest per ball), with how many shots backed them
+    if (root.BTCoach && root.BTCoach.ballNoteText) {
+      try {
+        const last = {};
+        sess.slice().sort((a, z) => (a.savedAt || 0) - (z.savedAt || 0)).forEach(S => Object.entries(S.ballNotes || {}).forEach(([bn, nt]) => { const t = root.BTCoach.ballNoteText(nt); if (t) last[bn] = { t, nt, S }; }));
+        const items = Object.entries(last).map(([bn, o]) => { const ck = root.BTCoach.ballNoteCheck(o.nt, o.S.shots, bn, b); const d = o.S.savedAt ? new Date(o.S.savedAt) : null;
+          return `<b>${esc(bn)}</b>${d ? ` <span class="dim">(${d.getMonth() + 1}/${d.getDate()}, ${ck.n} shot${ck.n === 1 ? '' : 's'})</span>` : ''}: ${esc(o.t)}${ck.n < 3 ? ' <span class="dim">· a lead, not proof yet</span>' : ''}`; });
+        if (items.length) sec('📝', 'Your ball notes here', items);
+      } catch (e) { console.error(e); }
+    }
+
     // ---- 🗣️ Your eye: what you saw when you changed, and which kind of change fixed it (all houses)
     if (root.BTCoach && root.BTCoach.whyLearn) {
       try {

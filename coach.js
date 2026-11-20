@@ -525,10 +525,12 @@
     } catch (_e) { return ''; }
   }
 
+  // Strike-ball choices never include a spare ball (plastic / marked spare / only ever thrown at spares).
+  const strikeBag = (ctx) => (ctx.setBalls || []).filter(b => { if (!b || !b.row) return false; try { return !(typeof BT !== 'undefined' && BT.isSpareBall && BT.isSpareBall(b.row)); } catch (_e) { return true; } });
   function suggestBall(sit, ctx, prof) {
     try {
       const m = ctx.motion;
-      const balls = (ctx.setBalls || []).filter(b => b && b.row);
+      const balls = strikeBag(ctx).concat((ctx.setBalls || []).filter(b => b && b.row && b.name === ctx.currentBall && !strikeBag(ctx).includes(b)));
       if (!m || balls.length < 2) return '';
       const cur = balls.find(b => b.name === ctx.currentBall);
       if (!cur) return '';
@@ -560,7 +562,7 @@
   function startingBall(ctx, prof, pat) {
     try {
       const m = ctx.motion;
-      const balls = (ctx.setBalls || []).filter(b => b && b.row);
+      const balls = strikeBag(ctx);
       if (!m || !balls.length) return '';
       const t = { hook: 0.55, length: timingNeed(pat), backend: 0.5 };
       if (pat) {
@@ -605,7 +607,7 @@
       const m = ctx.motion;
       if (!m || !pat) return [];
       const need = timingNeed(pat);
-      return (ctx.setBalls || []).filter(b => b && b.row).map(b => {
+      return strikeBag(ctx).map(b => {
         const t = m.vector(b.row, ctx.bowler).length;
         const gap = t - need;
         const rel = Math.abs(gap) <= TIMING_OK ? 'right' : gap < 0 ? 'early' : 'late';
@@ -1425,7 +1427,7 @@
       if (prof.dom < -0.3 && bt.length < 2 && !planPick) lines.push('Speed-dominant: if the ball skids, favor your earlier-reading ball.');
       // Tonight's bag vs tonight's pattern (only when it matters)
       try {
-        const bag = (ctx.setBalls || []).filter(b => b && b.row);
+        const bag = strikeBag(ctx);
         if (pat && bag.length >= 2 && ctx.matrix) {
           const cells = bag.map(b => ctx.matrix(b.row));
           const info = (b) => ctx.ballInfo ? ctx.ballInfo(b.row) : {};
@@ -1729,7 +1731,7 @@
       const strong = carryFails.filter(c => carryType(c) === 'strong').length;
       const sit = strong > weak ? 'carryStrong' : 'carryWeak';
       const lastT = W[W.length - 1];
-      const agree = Math.max(weak, strong) >= 2 && Math.max(weak, strong) > Math.min(weak, strong);
+      const agree = Math.max(weak, strong) >= 2 && (Math.min(weak, strong) === 0 || Math.max(weak, strong) >= 2 * Math.min(weak, strong) + 1); // 2 vs 1 is mixed, not a call
       // A strike on the last good shot, or leaves that point both ways, is not a reason to change speed.
       if ((lastT && lastT.strike) || !agree) {
         res.status = 'watch'; res.tone = 'info'; res.lens = '🌀 Energy';
@@ -1750,7 +1752,7 @@
       if (wK) eyes.push(`${kp} laid down weak ${wK}×`);
       if (sK) eyes.push(`${kp} hit the kickback / wrapped ${sK}×`);
       const head = sit === 'carryWeak' ? 'The ball is running out of energy before the pins (rolling out).' : 'The ball is arriving with too much energy (still turning hard at the pins).';
-      return decide(sit, head, `In the pocket with ${leaves.join(', ') || 'leaves'}${eyes.length ? ' (' + eyes.join(', ') + ')' : ''}. Your line is fine: this is about how much axis rotation the ball has left when it gets to the pins.`, '🌀 Energy');
+      return decide(sit, head, `In the pocket with ${leaves.join(', ') || 'leaves'}${eyes.length ? ' (' + eyes.join(', ') + ')' : ''}. You're reaching the pocket, so start with energy before line: how much axis rotation the ball has left at the pins.`, '🌀 Energy');
     }
 
     // ---- 8. One-sided room ----
@@ -1890,7 +1892,9 @@
     if (c.strike && c.hit !== 'brooklyn') return 0;
     const weak = c.finish === 'weak' || c.lean < 0 || c.long, strong = c.finish === 'strong' || c.lean > 0 || c.early;
     if (reason === 'gaveUp' || reason === 'skid') return weak && !strong ? 1 : strong && !weak ? -1 : 0;
-    if (reason === 'early' || reason === 'sharp') return strong && !weak ? 1 : weak && !strong ? -1 : 0;
+    // An early read that burns up can still arrive light, so a light hit doesn't argue with "Hooked early"; only going long does.
+    if (reason === 'early') return strong && !weak ? 1 : c.long && !c.early ? -1 : 0;
+    if (reason === 'sharp') return strong && !weak ? 1 : weak && !strong ? -1 : 0;
     return 0;
   }
   const whyOpp = (r) => r === 'missPocket' ? 'in the pocket' : (r === 'gaveUp' || r === 'skid') ? 'high / early or strong at the pins' : 'light / long or weak at the pins';
@@ -1951,5 +1955,39 @@
     else if (r.agree) notes.unshift(`🗣️ You saw "${r.label}" and your logs agree (${r.agree} of ${r.nb}). Give the ${what.toLowerCase()} change 3 good shots.`);
     else notes.unshift(`🗣️ Noted: "${r.label}" → ${what}. Coach checks it over your next 3 good shots.`);
   }
-  root.BTCoach = { WHY, whyLabel, whyReview: (shots, bowler) => whyReview((shots || []).filter(x => x && x.type !== 'gameStart').map(s => classify(s, bowlerProfile(bowler).lefty))), whyLearn, whyLearnText, setFaultLabel, hiddenFaults, hideFault, unhideFault, energyAngle, noteTags, noteMix, repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
+
+  // ---------- 📝 End-of-night ball notes: what each ball did, in your words, checked against the night's logs ----------
+  const BALL_NOTE = {
+    read: { label: 'Where it read', opts: { fronts: 'Fronts', mid: 'Midlane', back: 'Backend', long: 'Went long' } },
+    finish: { label: 'How it finished', opts: { strong: 'Strong', smooth: 'Smooth', flat: 'Rolled flat', sharp: 'Too sharp' } },
+    room: { label: 'Miss room', opts: { lots: 'Lots', some: 'Some', little: 'Little' } },
+  };
+  function ballNoteText(n) {
+    if (!n) return '';
+    const p = ['read', 'finish', 'room'].map(k => n[k] && BALL_NOTE[k].opts[n[k]] ? (k === 'read' ? `read ${BALL_NOTE[k].opts[n[k]].toLowerCase()}` : k === 'room' ? `${BALL_NOTE[k].opts[n[k]].toLowerCase()} miss room` : BALL_NOTE[k].opts[n[k]].toLowerCase()) : '').filter(Boolean);
+    if (n.read === 'long') p[0] = 'went long';
+    return p.join(', ') + (n.text ? `${p.length ? '. ' : ''}"${n.text}"` : '');
+  }
+  // How much the night's shots with that ball back up the note.
+  function ballNoteCheck(note, shots, ball, bowler) {
+    const prof = bowlerProfile(bowler);
+    const C = (shots || []).filter(s => s && s.type !== 'gameStart' && s.ball === ball && !(Number(s.shotNo) >= 2)).map(s => classify(s, prof.lefty));
+    const n = C.length, good = C.filter(c => c.execution !== 'poor');
+    if (!note || !(note.read || note.finish || note.room)) return { n, text: '' };
+    if (n < 3) return { n, text: `${n} shot${n === 1 ? '' : 's'} with it tonight: too few to check, so Coach keeps it as a lead.` };
+    const out = [];
+    // Read timing comes from your lane reads (early / long), not from where it hit: an early read that rolls out arrives light.
+    const early = good.filter(c => c.early).length, late = good.filter(c => c.long).length;
+    const hiH = good.filter(c => !c.strike && c.lean > 0).length, ltH = good.filter(c => !c.strike && c.lean < 0).length;
+    const weak = good.filter(c => !c.strike && (c.finish === 'weak' || c.shot.leaveTag === 'Flat 10')).length, strong = good.filter(c => !c.strike && (c.finish === 'strong' || c.shot.leaveTag === 'Ringing 10')).length;
+    if (note.read === 'fronts' || note.read === 'mid') out.push(early > late ? `logs agree it read early (${early} early vs ${late} long)` : late > early ? `logs say it went long more (${late} long vs ${early} early)` : ltH && (note.finish === 'flat' || weak > strong) ? `${ltH} light / weak hits fit an early read that rolled out` : hiH > ltH ? `${hiH} high hits fit an early read` : '');
+    if (note.read === 'long' || note.read === 'back') out.push(late > early ? `logs agree (${late} long vs ${early} early)` : early > late ? `logs say it read earlier (${early} early vs ${late} long)` : note.read === 'long' && ltH > hiH ? `${ltH} light hits fit it going long` : '');
+    if (note.finish === 'flat') out.push(weak > strong ? `logs agree it finished weak (${weak} vs ${strong} strong)` : strong > weak ? `logs show it finishing strong (${strong} vs ${weak} weak)` : '');
+    if (note.finish === 'strong' || note.finish === 'sharp') out.push(strong > weak ? `logs agree it finished strong (${strong} vs ${weak} weak)` : weak > strong ? `logs show it finishing weak (${weak} vs ${strong} strong)` : '');
+    const poor = C.filter(c => c.execution === 'poor'), saved = poor.filter(c => c.pocketHit || c.strike).length;
+    if (note.room && poor.length) out.push(`${saved} of ${poor.length} missed shots still found the pocket`);
+    const t = out.filter(Boolean);
+    return { n, text: t.length ? `${n} shots: ${t.join('; ')}.` : `${n} shots: nothing in the logs to check it against.` };
+  }
+  root.BTCoach = { BALL_NOTE, ballNoteText, ballNoteCheck, WHY, whyLabel, whyReview: (shots, bowler) => whyReview((shots || []).filter(x => x && x.type !== 'gameStart').map(s => classify(s, bowlerProfile(bowler).lefty))), whyLearn, whyLearnText, setFaultLabel, hiddenFaults, hideFault, unhideFault, energyAngle, noteTags, noteMix, repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
 })(typeof window !== 'undefined' ? window : globalThis);
