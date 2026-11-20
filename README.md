@@ -58,7 +58,7 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
-## Changes in v157-beta94 (held)
+## Changes in v157-beta94
 - 🔀 Carry over/under on Game Day: 2+ weak and 2+ strong leaves from the pocket on good shots → "Carry over/under … (a cliff): more or less energy won't fix it; you want a smoother, more predictable look." One each says it may be the start of over/under and Coach will call it if the next good shots keep switching.
 
 ## Changes in v156-beta93
