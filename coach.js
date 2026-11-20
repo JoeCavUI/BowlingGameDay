@@ -834,11 +834,16 @@
     out.push({ key: 'Angle', icon: '📐', score: aScore, subs: aSubs, text: aText, dir: angleDir });
 
     // 4. REVS: how much the ball hooked for you, and changing your hand on purpose
-    const rd = C.filter(c => c.early || c.long || c.pocketHit || c.strike);
-    const right = rd.filter(c => (c.pocketHit || c.strike) && !c.early && !c.long).length;
-    const early = rd.filter(c => c.early).length, long = rd.filter(c => c.long).length;
+    // Too much hook: read early, a high hit that was hit still turning hard, or the shot before you tapped "Hooked early" / "Backend too sharp".
+    // Too little: went long, a light hit that rolled out, or the shot before "Gave up downlane" / "Skidding too far".
+    const told = new Map(); C.forEach((c, i) => { const w = c.shot && c.shot.why; if (i && (w === 'early' || w === 'sharp')) told.set(C[i - 1], 'more'); if (i && (w === 'gaveUp' || w === 'skid')) told.set(C[i - 1], 'less'); });
+    const tooMuch = (c) => c.early || told.get(c) === 'more' || (!c.strike && c.finish === 'strong');
+    const tooLittle = (c) => c.long || told.get(c) === 'less' || (!c.strike && c.finish === 'weak');
+    const rd = C.filter(c => tooMuch(c) || tooLittle(c) || c.pocketHit || c.strike);
+    const right = rd.filter(c => (c.pocketHit || c.strike) && !tooMuch(c) && !tooLittle(c)).length;
+    const early = rd.filter(tooMuch).length, long = rd.filter(c => tooLittle(c) && !tooMuch(c)).length;
     const rScore = pct(right, rd.length);
-    const rSubs = [sub('Hook', rScore, rd.length ? `Hooked the right amount on ${of(right, rd.length)} shots${early ? `; hooked early ${early}×` : ''}${long ? `; went long ${long}×` : ''}.` : 'Tap the pocket and ball reaction to grade hook.')];
+    const rSubs = [sub('Hook', rScore, rd.length ? `Hooked the right amount on ${of(right, rd.length)} shots${early ? `; too much (early or still turning hard) ${early}×` : ''}${long ? `; too little (long or rolled out) ${long}×` : ''}.` : 'Tap the pocket and ball reaction to grade hook.')];
     const hand = C.filter(c => chg(c, 'hand'));
     if (hand.length) { const w = hand.filter(c => c.strike || c.pocketHit).length; rSubs.push(sub('Versatility', pct(w, hand.length), `You changed your hand on purpose ${hand.length}×; ${of(w, hand.length)} found the pocket.`)); }
     else rSubs.push(sub('Versatility', null, 'To grade a planned rev change: tap Release (hand) in the LASER row.'));
