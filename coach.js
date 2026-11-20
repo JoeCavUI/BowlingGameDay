@@ -841,7 +841,7 @@
     const rSubs = [sub('Hook', rScore, rd.length ? `Hooked the right amount on ${of(right, rd.length)} shots${early ? `; hooked early ${early}×` : ''}${long ? `; went long ${long}×` : ''}.` : 'Tap the pocket and ball reaction to grade hook.')];
     const hand = C.filter(c => chg(c, 'hand'));
     if (hand.length) { const w = hand.filter(c => c.strike || c.pocketHit).length; rSubs.push(sub('Versatility', pct(w, hand.length), `You changed your hand on purpose ${hand.length}×; ${of(w, hand.length)} found the pocket.`)); }
-    else rSubs.push(sub('Versatility', null, 'To grade a planned rev change: tap Hand under Changed since last shot.'));
+    else rSubs.push(sub('Versatility', null, 'To grade a planned rev change: tap Release (hand) in the LASER row.'));
     out.push({ key: 'Revs', icon: '🔄', score: rScore, subs: rSubs, text: (prof.rpm ? `Profile: ${prof.rpm} rpm (your Bowler page, not measured tonight). ` : '') + (rd.length ? `The right amount of hook on ${of(right, rd.length)} shots.` : rSubs[0].text) });
 
     // 5. ROLL: how the ball finished: exit off the deck and the key pin

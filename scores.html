@@ -593,7 +593,7 @@
         const bits = [all.lightLeft && `${all.lightLeft} light`, all.highLeft && `${all.highLeft} high`, all.flushLeft && `${all.flushLeft} flush that still left pins`].filter(Boolean);
         const why = all.lightLeft > all.highLeft && all.lightLeft >= all.flushLeft ? 'Light hits point to the ball arriving weak or late: a bit more angle (feet left, target same) or a stronger / earlier ball.'
           : all.highLeft > all.lightLeft && all.highLeft >= all.flushLeft ? 'High hits point to the ball reading early: a bit less angle or a cleaner / later ball.'
-          : 'Flush hits that leave pins point to entry angle or speed, not your aim.';
+          : 'Flush hits that leave pins: watch the corner pin and the ball\'s finish next time before blaming your line or the ball.';
         T.push({ k: 'What cost pins', t: `${lost} pocket hits didn't strike (${bits.join(', ')}). ${why}` });
       }
       const lanesM = {}; real.forEach(x => { if (x.lane) (lanesM[x.lane] = lanesM[x.lane] || []).push(x); });
@@ -629,7 +629,7 @@
           const verdict = strongN >= 2 && strongN > k.weak * 1.5 ? `Mostly the strong side: the ball is still carrying a lot of energy or coming in steep when it hits. Let it read sooner (feet and eyes ${lefty ? 'left' : 'right'} together) or go smoother.`
             : k.weak >= 2 && k.weak > strongN ? `Mostly weak: the ball is running out of energy before the pins. A little more angle (feet ${lefty ? 'right' : 'left'}, eyes the same) or a stronger / longer ball.`
             : `Tap what the ${K1}-pin did on each one (flat, kickback or ringing) so Coach can tell if the ball is weak or too strong.`;
-          { const wc = T.find(t => t.k === 'What cost pins'); if (wc) wc.t = wc.t.replace(' Flush hits that leave pins point to entry angle or speed, not your aim.', ''); }
+          { const wc = T.find(t => t.k === 'What cost pins'); if (wc) wc.t = wc.t.replace(' Flush hits that leave pins: watch the corner pin and the ball\'s finish next time before blaming your line or the ball.', ''); }
           T.push({ k: `The ${C1}-pin story`, t: `${tens.length} pocket hits left only the ${C1}${lp ? ` (${lp})` : ''}. The ${K1}-pin: ${parts}. ${verdict}` });
         } }
       // 🙂/😬 How your swing felt, by line
@@ -652,7 +652,7 @@
       try { const R = BTCoach.whyReview(real, bowler);
         if (R.length) { const KL = { loft: 'loft', feet: 'aim (feet / eyes)', speed: 'speed', ball: 'equipment (ball)', hand: 'release (hand)' }, KO = Object.keys(KL);
           const li = R.map(r => { const k = r.kinds.length ? r.kinds.slice().sort((a, b) => KO.indexOf(a) - KO.indexOf(b)).map(x => KL[x]).join(' + ') : 'a change';
-            const eye = r.afterPoor ? 'seen on a missed shot (lane read)' : r.custom ? 'your own reason (judged on pocket and carry)' : r.against >= 2 && !r.agree ? `your logs said the opposite (${r.against} of ${r.nb})` : r.agree ? `logs agreed (${r.agree} of ${r.nb})` : 'no logs to check';
+            const eye = r.afterPoor ? 'seen on a missed shot (lane read)' : r.custom ? 'your own reason (judged on pocket and carry)' : r.against >= 2 && !r.agree ? `your logs said the opposite (${r.against} of ${r.nb})` : r.agree ? `logs agreed (${r.agree} of ${r.nb})` : r.nb ? 'shots before were strikes or had no read, so nothing to check' : 'no shots before to check';
             const res = !r.fix ? 'not enough shots after to judge' : r.fix.ok ? `<b>fixed it</b> (${r.fix.clean} of ${r.fix.n} strikes or flush)` : `<b>didn't fix it</b> (${r.fix.pk} of ${r.fix.n} in the pocket, ${r.fix.clean} strikes or flush)`;
             return `G${r.gameNo} F${r.frame}: "${r.label}" → ${k}. ${eye[0].toUpperCase() + eye.slice(1)}; ${res}.`; });
           T.push({ k: '🗣️ Why you changed', t: li.join('<br>') }); } } catch (_e) {}
@@ -875,7 +875,7 @@
           ${R.scores.length ? `<div class="nr-scores">🎳 ${R.scores.map(x => x == null ? '—' : x).join(' · ')} <span class="small">= ${R.scores.reduce((a, b) => a + Number(b || 0), 0)}${s.pinpal ? ' (PinPal)' : ''}</span></div>` : ''}
           <div class="nr-line">${R.headline}</div>
           <div class="nr-tally"><b>${R.tally.total}</b> balls thrown${R.tally.noSecondData ? ' logged' : ''} · <b>${R.all.strikes}</b> strike${R.all.strikes === 1 ? '' : 's'} on ${R.all.n} strike shots${R.tally.fills ? ` (incl. ${R.tally.fills} fill ball${R.tally.fills === 1 ? '' : 's'})` : ''}${R.tally.second ? ` · spares ${R.tally.spares} of ${R.tally.second}` : ''}</div>
-          ${R.goalPrev ? `<div class="goal-banner ${R.goalPrev.r.ok ? 'ok' : 'miss'}">${R.goalPrev.r.ok ? '✅' : '❌'} <b>Last time's goal:</b> ${esc(R.goalPrev.g.text)} <span class="small">(${esc(R.goalPrev.r.why)})</span></div>` : ''}
+          ${R.goalPrev ? `<div class="goal-banner ${R.goalPrev.r.ok ? 'ok' : 'miss'}">${R.goalPrev.r.ok ? '✅' : '❌'} <b>Last time's goal:</b> ${esc(String(R.goalPrev.g.text || '').replace(/\s*\(you saw [^)]*\)/, ''))} <span class="small">(${esc(R.goalPrev.r.why)})</span></div>` : ''}
           ${R.goalNext ? `<div class="goal-banner">🎯 <b>Goal for next time:</b> ${esc(R.goalNext.text)}</div>` : ''}
           ${R.eye ? `<div class="nr-eye"><b>👁️ Eyeball ${R.eye.score}</b> (${esc(R.eye.label)}) · mark ${R.eye.parts.mark ?? '—'}% · pocket ${R.eye.parts.pocket ?? '—'}% · <b>off the deck ${R.eye.parts.exit ?? '—'}%</b>${R.eye.parts.routine != null ? ` · full routine ${R.eye.parts.routine}%` : ''}${R.eye.tip ? `<div class="small" style="opacity:1">${esc(R.eye.tip)}</div>` : ''}</div>` : ''}
           ${(() => { let t = null; try { t = window.BTEyes && BTEyes.trafficOf ? BTEyes.trafficOf(s) : null; } catch (_e) {} const opt = (v) => [0, 1, 2, 3, 4, 5].map(n => `<option value="${n}"${n === (v || 0) ? ' selected' : ''}>${n}</option>`).join('');

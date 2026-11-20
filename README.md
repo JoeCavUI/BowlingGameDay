@@ -58,6 +58,12 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v155-beta92 (held)
+- 🎯 "Last time's goal" no longer repeats last night's stale "you saw X% tonight"; tonight's number shows once.
+- 🧐 "What cost pins": flush hits that leave pins no longer say "not your aim"; it says to watch the corner pin and finish first.
+- 🗣️ Why you changed: "No logs to check" now says why (shots before were strikes, or there were none).
+- 🔄 Revs Versatility points to Release (hand) in the LASER row.
+
 ## Changes in v154-beta91
 - 🗣️ "Why?" on any change: when you change feet / eyes, speed, loft, hand or ball (tapped, or the app sees a new line or ball on that lane), one optional tap says what you saw: Gave up downlane · Skidding too far · Backend too sharp · Hooked early · Missed the pocket · Just a feel. Shows what fixed it last time you saw the same thing.
 - 🤔 Coach checks your eye against your logs: agrees, says when 2+ of your last good shots were logged the opposite way, and treats a reason seen on a missed shot as a lane read. After 3 good shots it judges the change against your reason ("fixed what you saw" / "still giving up"), and that verdict replaces the generic move verdict.
