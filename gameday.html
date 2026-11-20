@@ -164,7 +164,7 @@
           <div class="gd-changed"><span class="small"><b>LASER</b>: what changed since last shot? (optional)</span>
             <div id="changedPills" class="gd-chg"><button type="button" data-chg="loft"><b>L</b>oft</button><button type="button" data-chg="feet"><b>A</b>im (feet / eyes)</button><button type="button" data-chg="speed"><b>S</b>peed</button><button type="button" data-chg="ball"><b>E</b>quipment (ball)</button><button type="button" data-chg="hand"><b>R</b>elease (hand)</button></div>
             <div id="whyRow" class="gd-why" style="display:none;margin-top:8px"><span class="small"><b>Why?</b> What did you see? (optional)</span>
-              <div id="whyPills" class="gd-chg"><button type="button" data-why="gaveUp">Gave up downlane</button><button type="button" data-why="skid">Skidding too far</button><button type="button" data-why="sharp">Backend too sharp</button><button type="button" data-why="early">Hooked early</button><button type="button" data-why="missPocket">Missed the pocket</button><button type="button" data-why="feel">Just a feel</button><span id="whyMine" style="display:contents"></span><button type="button" id="whyAdd">＋ My own reason</button><button type="button" id="whyEditBtn" style="display:none">Edit</button></div>
+              <div id="whyPills" class="gd-chg"><button type="button" data-why="slowBurn">Slow burn</button><button type="button" data-why="gaveUp">Gave up downlane</button><button type="button" data-why="skid">Skidding too far</button><button type="button" data-why="sharp">Backend too sharp</button><button type="button" data-why="early">Hooked early</button><button type="button" data-why="missPocket">Missed the pocket</button><button type="button" data-why="feel">Just a feel</button><span id="whyMine" style="display:contents"></span><button type="button" id="whyAdd">＋ My own reason</button><button type="button" id="whyEditBtn" style="display:none">Edit</button></div>
               <div id="whyNew" style="display:none;margin-top:6px;gap:6px;align-items:center"><input id="whyNewText" type="text" maxlength="40" placeholder="What did you see?" style="flex:1;min-width:0"><button type="button" class="btn" id="whyNewSave">Add</button></div>
               <div id="whyPast" class="small" style="margin-top:6px;opacity:.85"></div></div>
           </div>
@@ -2138,6 +2138,7 @@ function saveCurrentSessionDraft() {
         pattern: (() => { const p0 = (Array.isArray(pats) ? pats : []).find(p => patternName(p) === el.pattern.value) || null; return p0 ? Object.assign({}, p0, { box: boxForPattern(p0), r31: r31Checked() }) : null; })(),
         setBalls: names.map(n => ({ name: n, row: map.get(n) })).filter(b => b.row),
         currentBall: el.ball ? el.ball.value : '',
+        house: el.house ? el.house.value : '',
         gameNow: currentGameNumber(),
         traffic: trafficInfo(),
         spare: (() => { try { return spareCtx(); } catch (_e) { return null; } })(),

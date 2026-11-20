@@ -1250,6 +1250,7 @@
       if (C.length >= 3) sideNotes(out, C, W, prof, patternProfile(ctx && ctx.pattern));
       if (C.length >= 2) moveNotes(out, C, prof);
       try { whyNotes(out, C); } catch (_e) {}
+      try { burnNote(out, C, ctx, prof); } catch (_e) {}
       laneNotes(out, C, prof);
       // 🛢️ Carrydown building (game 2+): the ball holds later than game 1 and right moves are working. Stronger with plastic / urethane on the pair.
       try { const E = root.BTEyes, T = ctx && ctx.traffic, c = E && E.carrySign ? E.carrySign(all, prof.lefty) : null;
@@ -1888,20 +1889,21 @@
 
   // ---------- 🗣️ Why you changed: what the bowler saw, checked against the logs, and scored over time ----------
   // The reason rides on the first shot after a change (any LASER change: feet / eyes, speed, loft, hand, ball).
-  const WHY = { gaveUp: 'Gave up downlane', skid: 'Skidding too far', sharp: 'Backend too sharp', early: 'Hooked early', missPocket: 'Missed the pocket', feel: 'Just a feel' };
+  const WHY = { slowBurn: 'Slow burn (died at breakpoint)', gaveUp: 'Gave up downlane', skid: 'Skidding too far', sharp: 'Backend too sharp', early: 'Hooked early', missPocket: 'Missed the pocket', feel: 'Just a feel' };
   const CHG_LABEL = { loft: 'Loft', feet: 'Aim (feet / eyes)', speed: 'Speed', ball: 'Equipment (ball)', hand: 'Release (hand)' }; // LASER order
   // Does this shot's log back up what you saw? +1 agrees, -1 says the opposite, 0 no read.
   function whySays(reason, c) {
     if (reason === 'missPocket') return c.pocketHit || (c.strike && c.hit !== 'brooklyn') ? -1 : 1;
     if (c.strike && c.hit !== 'brooklyn') return 0;
     const weak = c.finish === 'weak' || c.lean < 0 || c.long, strong = c.finish === 'strong' || c.lean > 0 || c.early;
+    if (reason === 'slowBurn') return burnSign(c) || (weak && !strong) ? 1 : strong && !weak ? -1 : 0;
     if (reason === 'gaveUp' || reason === 'skid') return weak && !strong ? 1 : strong && !weak ? -1 : 0;
     // An early read that burns up can still arrive light, so a light hit doesn't argue with "Hooked early"; only going long does.
     if (reason === 'early') return strong && !weak ? 1 : c.long && !c.early ? -1 : 0;
     if (reason === 'sharp') return strong && !weak ? 1 : weak && !strong ? -1 : 0;
     return 0;
   }
-  const whyOpp = (r) => r === 'missPocket' ? 'in the pocket' : (r === 'gaveUp' || r === 'skid') ? 'high / early or strong at the pins' : 'light / long or weak at the pins';
+  const whyOpp = (r) => r === 'missPocket' ? 'in the pocket' : (r === 'gaveUp' || r === 'skid' || r === 'slowBurn') ? 'high / early or strong at the pins' : 'light / long or weak at the pins';
   // Did the change fix what you saw? First 3–4 good shots after it.
   function whyFixed(reason, A) {
     const n = A.length; if (n < 3) return null;
@@ -1949,7 +1951,7 @@
     const r = R[R.length - 1]; if (C.length - r.i > 8) return;
     const what = kindsText(r.kinds), notes = out.notes = out.notes || [];
     if (r.fix) {
-      if (r.fix.ok) notes.unshift(`✅ Your change fixed what you saw ("${r.label}"): ${r.why === 'missPocket' || r.why === 'feel' ? `${r.fix.pk} of ${r.fix.n} good shots in the pocket` : `${r.fix.bad} of ${r.fix.n} good shots still ${r.why === 'gaveUp' || r.why === 'skid' ? 'light / weak' : 'high / strong'}`}, ${r.fix.clean} strikes or flush. Keep it.`);
+      if (r.fix.ok) notes.unshift(`✅ Your change fixed what you saw ("${r.label}"): ${r.why === 'missPocket' || r.why === 'feel' ? `${r.fix.pk} of ${r.fix.n} good shots in the pocket` : `${r.fix.bad} of ${r.fix.n} good shots still ${r.why === 'gaveUp' || r.why === 'skid' || r.why === 'slowBurn' ? 'light / weak' : 'high / strong'}`}, ${r.fix.clean} strikes or flush. Keep it.`);
       else notes.unshift(`↩️ Still "${r.label}" after ${what}: ${r.why === 'missPocket' || r.why === 'feel' ? `${r.fix.pk} of ${r.fix.n} good shots in the pocket` : `${r.fix.bad} of ${r.fix.n} good shots still look that way`}. Try a different kind of change than ${what}.`);
       out.whyVerdict = true; return;
     }
@@ -1963,7 +1965,7 @@
   // ---------- 📝 End-of-night ball notes: what each ball did, in your words, checked against the night's logs ----------
   const BALL_NOTE = {
     read: { label: 'Where it read', opts: { fronts: 'Fronts', mid: 'Midlane', back: 'Backend', long: 'Went long' } },
-    finish: { label: 'How it finished', opts: { strong: 'Strong', smooth: 'Smooth', flat: 'Rolled flat', sharp: 'Too sharp' } },
+    finish: { label: 'How it finished', opts: { strong: 'Strong', smooth: 'Smooth', flat: 'Rolled flat', burn: 'Slow burn', sharp: 'Too sharp' } },
     room: { label: 'Miss room', opts: { lots: 'Lots', some: 'Some', little: 'Little' } },
   };
   function ballNoteText(n) {
@@ -1986,6 +1988,7 @@
     const weak = good.filter(c => !c.strike && (c.finish === 'weak' || c.shot.leaveTag === 'Flat 10')).length, strong = good.filter(c => !c.strike && (c.finish === 'strong' || c.shot.leaveTag === 'Ringing 10')).length;
     if (note.read === 'fronts' || note.read === 'mid') out.push(early > late ? `logs agree it read early (${early} early vs ${late} long)` : late > early ? `logs say it went long more (${late} long vs ${early} early)` : ltH && (note.finish === 'flat' || weak > strong) ? `${ltH} light / weak hits fit an early read that rolled out` : hiH > ltH ? `${hiH} high hits fit an early read` : '');
     if (note.read === 'long' || note.read === 'back') out.push(late > early ? `logs agree (${late} long vs ${early} early)` : early > late ? `logs say it read earlier (${early} early vs ${late} long)` : note.read === 'long' && ltH > hiH ? `${ltH} light hits fit it going long` : '');
+    if (note.finish === 'burn') { const bs = good.map(burnSign).filter(Boolean); out.push(bs.length ? `${bs.length} slow-burn leave${bs.length === 1 ? '' : 's'} (${[...new Set(bs)].join(', ')})` : strong > weak ? `logs show it finishing strong (${strong} vs ${weak} weak)` : ''); }
     if (note.finish === 'flat') out.push(weak > strong ? `logs agree it finished weak (${weak} vs ${strong} strong)` : strong > weak ? `logs show it finishing strong (${strong} vs ${weak} weak)` : '');
     if (note.finish === 'strong' || note.finish === 'sharp') out.push(strong > weak ? `logs agree it finished strong (${strong} vs ${weak} weak)` : weak > strong ? `logs show it finishing weak (${weak} vs ${strong} strong)` : '');
     const poor = C.filter(c => c.execution === 'poor'), saved = poor.filter(c => c.pocketHit || c.strike).length;
@@ -1993,5 +1996,49 @@
     const t = out.filter(Boolean);
     return { n, text: t.length ? `${n} shots: ${t.join('; ')}.` : `${n} shots: nothing in the logs to check it against.` };
   }
-  root.BTCoach = { BALL_NOTE, ballNoteText, ballNoteCheck, WHY, whyLabel, whyReview: (shots, bowler) => whyReview((shots || []).filter(x => x && x.type !== 'gameStart').map(s => classify(s, bowlerProfile(bowler).lefty))), whyLearn, whyLearnText, setFaultLabel, hiddenFaults, hideFault, unhideFault, energyAngle, noteTags, noteMix, repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
+
+  // ---------- 🕯️ Slow burn: looks fine going down, no energy at the breakpoint ----------
+  // Signs on a non-strike: the bucket (2-4-5, with or without the 8) = rolling out / losing energy too early;
+  // the 2 alone or 2-10 = light / weak; a flat 10 or a weak 6-pin; a finish logged weak. NOT the 2-8 (5 went down:
+  // that's the ball finishing its hook too late, the opposite problem).
+  function burnSign(c, lf) {
+    if (!c || c.strike) return '';
+    let pins = []; try { pins = (typeof BT !== 'undefined' && BT.standingPins) ? BT.standingPins(c.shot) : []; } catch (_e) {}
+    const S = new Set(pins.map(Number)), L = (a) => a.every(p => S.has(p));
+    const lefty = lf != null ? !!lf : !!c.lefty;
+    const two = lefty ? 3 : 2, four = lefty ? 6 : 4, eight = lefty ? 9 : 8, ten = lefty ? 7 : 10;
+    if (L([two, four, 5])) return S.has(eight) ? 'bucket (2-4-5-8)' : 'bucket (2-4-5)';
+    if (S.has(two) && S.has(eight) && !S.has(5)) return '';
+    if (S.has(two) && (S.size === 1 || (S.size === 2 && S.has(ten)))) return S.size === 1 ? '2 pin' : '2-10';
+    const lt = String(c.shot.leaveTag || '');
+    if (/flat/i.test(lt)) return lt.toLowerCase();
+    if (c.finish === 'weak') return 'weak finish';
+    return '';
+  }
+  // The next step when slow burn shows up: your own record first, then a cleaner ball from tonight's bag.
+  function burnLadder(ctx, prof) {
+    const steps = [];
+    let sess = []; try { sess = (typeof BT !== 'undefined' && BT.lsGet) ? (BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || []) : []; } catch (_e) {}
+    const merge = (L) => { const o = {}; ['slowBurn', 'gaveUp'].forEach(w => Object.entries((L[w] || {}).kinds || {}).forEach(([k, q]) => { const t = o[k] = o[k] || { ok: 0, n: 0 }; t.ok += q.ok; t.n += q.n; })); return o; };
+    const all = merge(whyLearn(sess, ctx.bowler));
+    const here = ctx.house ? merge(whyLearn(sess.filter(s => s && s.house === ctx.house), ctx.bowler)) : {};
+    Object.entries(all).filter(([k, q]) => CHG_LABEL[k] && q.ok && q.ok * 2 >= q.n && !(here[k] && here[k].n >= 2 && here[k].ok * 2 < here[k].n))
+      .sort((a, b) => b[1].ok / b[1].n - a[1].ok / a[1].n || b[1].n - a[1].n)
+      .forEach(([k, q]) => steps.push(`${CHG_LABEL[k]} (fixed it ${q.ok} of ${q.n} before)`));
+    let ball = ''; try { ball = suggestBall('carryWeak', ctx, prof); } catch (_e) {}
+    if (ball) steps.push(`${ball} (cleaner through the front, saves energy)`);
+    const avoid = Object.entries(here).filter(([k, q]) => CHG_LABEL[k] && q.n >= 2 && q.ok * 2 < q.n).map(([k, q]) => `${CHG_LABEL[k].toLowerCase()} fixed it only ${q.ok} of ${q.n} here`);
+    if (!steps.length) steps.push('Loft it a touch past the dry fronts, or a cleaner ball');
+    return { steps, avoid };
+  }
+  function burnNote(out, C, ctx, prof) {
+    const cur = ctx && ctx.currentBall; if (!cur) return;
+    const G = C.filter(c => c.shot && c.shot.ball === cur && c.execution !== 'poor' && (c.pocketHit || c.strike || /pocket/i.test(String(c.shot.pocket || '')))).slice(-5);
+    const signs = G.map(c => burnSign(c, prof.lefty)); const hits = signs.filter(Boolean);
+    if (hits.length < 2 || !(signs[signs.length - 1] || signs[signs.length - 2])) return;
+    const L = burnLadder(ctx, prof);
+    (out.notes = out.notes || []).unshift(`🕯️ Slow burn may be starting with ${cur}: ${hits.join(', ')} on your last ${G.length} good pocket shots (fine going down, no energy at the pins). Next: ${L.steps[0]}${L.steps[1] ? `; then ${L.steps[1]}` : ''}.${L.avoid.length ? ` Not ${L.avoid.join('; ')}.` : ''}`);
+    out.slowBurn = true;
+  }
+  root.BTCoach = { burnSign, burnLadder, BALL_NOTE, ballNoteText, ballNoteCheck, WHY, whyLabel, whyReview: (shots, bowler) => whyReview((shots || []).filter(x => x && x.type !== 'gameStart').map(s => classify(s, bowlerProfile(bowler).lefty))), whyLearn, whyLearnText, setFaultLabel, hiddenFaults, hideFault, unhideFault, energyAngle, noteTags, noteMix, repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
 })(typeof window !== 'undefined' ? window : globalThis);

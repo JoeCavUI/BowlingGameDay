@@ -472,6 +472,23 @@
       } catch (e) { console.error(e); }
     }
 
+    // ---- 🕯️ If slow burn shows up here: your own record first, then the bag's cleaner ball
+    if (root.BTCoach && root.BTCoach.whyLearn) {
+      try {
+        let all = []; try { all = BT().lsGet(BT().KEYS.GAME_SESSIONS, []) || []; } catch (_e) {}
+        const merge = (L) => { const o = {}; ['slowBurn', 'gaveUp'].forEach(w => Object.entries((L[w] || {}).kinds || {}).forEach(([k, q]) => { const t = o[k] = o[k] || { ok: 0, n: 0 }; t.ok += q.ok; t.n += q.n; })); return o; };
+        const LBL = { loft: 'Loft', feet: 'Aim (feet / eyes)', speed: 'Speed', ball: 'Equipment (ball)', hand: 'Release (hand)' };
+        const A = merge(root.BTCoach.whyLearn(all, b)), Hh = merge(root.BTCoach.whyLearn(sess, b));
+        const items = [];
+        Object.entries(A).filter(([k, q]) => LBL[k] && q.ok && q.ok * 2 >= q.n && !(Hh[k] && Hh[k].n >= 2 && Hh[k].ok * 2 < Hh[k].n)).sort((x, y) => y[1].ok / y[1].n - x[1].ok / x[1].n)
+          .forEach(([k, q]) => items.push(`<b>${LBL[k]}</b>: fixed "gave up / slow burn" (${q.ok} of ${q.n})`));
+        const cleaner = out.recRoles ? Object.entries(out.recRoles).filter(([n, r]) => /reads early|carry drops|Cleaner still/i.test(r)).map(([n]) => n) : [];
+        if (cleaner.length) items.push(`<b>${esc(cleaner[0])}</b>: the bag's cleaner ball (saves energy for the pins)${cleaner[1] ? `; then ${esc(cleaner[1])}` : ''}`);
+        Object.entries(Hh).filter(([k, q]) => LBL[k] && q.n >= 2 && q.ok * 2 < q.n).forEach(([k, q]) => items.push(`<span class="dim">Not ${LBL[k].toLowerCase()} here: it fixed it only ${q.ok} of ${q.n}.</span>`));
+        if (items.length) { items.unshift('<span class="dim">Signs: bucket (2-4-5 / 2-4-5-8), a lone 2 or 2-10, flat 10s, a weak 6 on good pocket shots. Not the 2-8: that\'s the ball finishing late.</span>'); sec('🕯️', 'If slow burn shows up here: next steps in order', items); }
+      } catch (e) { console.error(e); }
+    }
+
     // ---- 📝 Your ball notes from past nights here (latest per ball), with how many shots backed them
     if (root.BTCoach && root.BTCoach.ballNoteText) {
       try {
