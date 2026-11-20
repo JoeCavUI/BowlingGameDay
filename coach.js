@@ -2025,11 +2025,17 @@
     Object.entries(all).filter(([k, q]) => CHG_LABEL[k] && q.ok && q.ok * 2 >= q.n && !(here[k] && here[k].n >= 2 && here[k].ok * 2 < here[k].n))
       .sort((a, b) => b[1].ok / b[1].n - a[1].ok / a[1].n || b[1].n - a[1].n)
       .forEach(([k, q]) => steps.push(`${CHG_LABEL[k]} (fixed it ${q.ok} of ${q.n} before)`));
-    let ball = ''; try { ball = suggestBall('carryWeak', ctx, prof); } catch (_e) {}
+    // Balls you've already ruled out for this here: your ball notes at this house said it read early / rolled flat / slow burn.
+    const ruled = {};
+    if (ctx.house) sess.filter(s => s && s.house === ctx.house).forEach(S => Object.entries(S.ballNotes || {}).forEach(([bn, nt]) => {
+      if (nt && (nt.read === 'fronts' || nt.read === 'mid' || nt.finish === 'burn' || nt.finish === 'flat')) { const d = S.savedAt ? new Date(S.savedAt) : null;
+        ruled[bn] = `you saw it ${nt.finish === 'burn' ? 'slow burn' : nt.finish === 'flat' && !nt.read ? 'roll flat' : 'read early'}${d ? ` (${d.getMonth() + 1}/${d.getDate()})` : ''}`; } }));
+    let ball = ''; try { const cx = Object.assign({}, ctx, { setBalls: (ctx.setBalls || []).filter(b => !(b && ruled[b.name])) }); ball = suggestBall('carryWeak', cx, prof); } catch (_e) {}
     if (ball) steps.push(`${ball} (cleaner through the front, saves energy)`);
-    const avoid = Object.entries(here).filter(([k, q]) => CHG_LABEL[k] && q.n >= 2 && q.ok * 2 < q.n).map(([k, q]) => `${CHG_LABEL[k].toLowerCase()} fixed it only ${q.ok} of ${q.n} here`);
+    const ruledOut = Object.entries(ruled).filter(([bn]) => bn !== ctx.currentBall && (ctx.setBalls || []).some(b => b && b.name === bn)).map(([bn, why]) => `${bn}: not here, ${why}`);
+    const avoid = ruledOut.concat(Object.entries(here).filter(([k, q]) => CHG_LABEL[k] && q.n >= 2 && q.ok * 2 < q.n).map(([k, q]) => `${CHG_LABEL[k].toLowerCase()} fixed it only ${q.ok} of ${q.n} here`));
     if (!steps.length) steps.push('Loft it a touch past the dry fronts, or a cleaner ball');
-    return { steps, avoid };
+    return { steps, avoid, ruled };
   }
   function burnNote(out, C, ctx, prof) {
     const cur = ctx && ctx.currentBall; if (!cur) return;
@@ -2037,11 +2043,21 @@
     const signs = G.map(c => burnSign(c, prof.lefty)); const hits = signs.filter(Boolean);
     if (hits.length < 2 || !(signs[signs.length - 1] || signs[signs.length - 2])) return;
     const L = burnLadder(ctx, prof);
-    (out.notes = out.notes || []).unshift(`🕯️ Slow burn may be starting with ${cur}: ${hits.join(', ')} on your last ${G.length} good pocket shots (fine going down, no energy at the pins). Next: ${L.steps[0]}${L.steps[1] ? `; then ${L.steps[1]}` : ''}.${L.avoid.length ? ` Not ${L.avoid.join('; ')}.` : ''}`);
+    // The leave is the alarm; what you saw is the diagnosis. Burn needs motion evidence: a logged early read, or you tapped
+    // Slow burn / Gave up / Hooked early, or your ball note here says it reads early or burns. A logged long / skid says the opposite.
+    const R = C.filter(c => c.shot && c.shot.ball === cur).slice(-6);
+    const sawBurn = R.some(c => c.execution !== 'poor' && c.early) || C.slice(-6).some(c => c.shot && ['slowBurn', 'gaveUp', 'early'].includes(c.shot.why)) || !!(L.ruled && L.ruled[cur]);
+    const sawSkid = R.some(c => c.execution !== 'poor' && c.long) || C.slice(-6).some(c => c.shot && c.shot.why === 'skid');
+    const notes = out.notes = out.notes || [];
+    if (!sawBurn || sawSkid) {
+      notes.unshift(`🕯️ Possible slow burn with ${cur}: ${hits.join(', ')} on your last ${G.length} good pocket shots. The leaves are the alarm, not the answer: on the next good shot, watch it. Picked up early and straightened = burn (next: ${L.steps[0]}). Skidded long and turned late = it needs an earlier read instead.${sawSkid ? ' You logged it going long, so skid is the likelier read.' : ''}`);
+      return;
+    }
+    notes.unshift(`🕯️ Slow burn with ${cur}: ${hits.join(', ')} on your last ${G.length} good pocket shots, and you saw it read early. Next: ${L.steps[0]}${L.steps[1] ? `; then ${L.steps[1]}` : ''}.${L.avoid.length ? ` Not ${L.avoid.join('; ')}.` : ''}`);
     out.slowBurn = true;
     // Light hits from slow burn look like "holding / going long". Don't send the bowler toward more friction for it.
     if (out.situation === 'late' || out.situation === 'carryWeak' || /holding|going long/i.test(String(out.headline || ''))) {
-      out.headline = `🕯️ Slow burn, not a holding lane: the light hits are the ball running out of energy. Don't move toward the friction. Next: ${L.steps[0]}.`;
+      out.headline = `🕯️ Slow burn, not a holding lane: you saw it read early, and the light hits are the ball running out of energy. Don't move toward the friction. Next: ${L.steps[0]}.`;
       out.situation = 'slowBurn'; out.tone = 'warn';
       if (Array.isArray(out.ways)) out.ways = out.ways.filter(w => !/toward the friction|feet \d+ boards? (right|left) and your eyes \d+ (right|left) \(toward/i.test(JSON.stringify(w)));
     }
