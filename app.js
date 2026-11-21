@@ -1879,6 +1879,12 @@
     return isStrikeShotX(x) && !/^(Brooklyn|Missed)/.test(pk) && !L.includes('Brooklyn') && x.leaveTag !== 'Brooklyn'; }
   // Lanes for shots saved without one (a game added later, an old night): you alternate lanes every frame, and
   // each new game starts on the other lane (or the same lane, per your Game Day setting). Uses any shot with a lane.
+  // "9-10", "9/10", "9 10" — or digits only from a phone number pad ("910", "2324", "1011"): split into two neighboring lanes.
+  function splitPair(t) {
+    const s = String(t || '').trim(); const m = s.match(/(\d{1,3})\D+(\d{1,3})/); if (m) return [m[1], m[2]];
+    const d = s.replace(/\D/g, ''); for (let i = 1; i < d.length; i++) { const x = Number(d.slice(0, i)), y = Number(d.slice(i)); if (d[i] !== '0' && Math.abs(y - x) === 1) return [String(x), String(y)]; }
+    return [];
+  }
   function inferLanes(sess) {
     const pr = (String((sess && sess.lanes) || '').match(/\d+/g) || []).map(String); if (pr.length < 2) return 0;
     const [A, B] = pr, other = (l) => (String(l) === A ? B : A);
@@ -2114,7 +2120,7 @@
     renderNav,
     speak, stopSpeaking, isSpeaking, wireReadAloud, speechText,
     isTestMode, hasTestData, enterTestMode, exitTestMode, resetTestData, checkForUpdate,
-    exportBackup, buildBackup, appDataKeys, scoreGame, standingPins, isSplit, normPocket, normExit, normMiss, normalizeShot, isPocketHit, inferLanes,
+    exportBackup, buildBackup, appDataKeys, scoreGame, standingPins, isSplit, normPocket, normExit, normMiss, normalizeShot, isPocketHit, inferLanes, splitPair,
     importBackupFile,
     lastBackupAt,
     setupStatus,

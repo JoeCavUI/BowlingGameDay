@@ -63,6 +63,7 @@ Then open http://localhost:3000
 - 🎯 Short pin = measured pin-to-PAP under 3" or your own "SP" in the ball name.
 - 🎯 Night review: "Lane motion & short pin": tonight's motion, short pin strike % vs the rest, and whether it fit your rule.
 - 🎯 Plan: "Short pin: when it plays": your record here and across houses by kind of night (worked = 40%+ strikes with it).
+- ↔️ Lane fill-in works on the iPhone number pad: two lane boxes (the second fills in +1), then tap which lane game 1 started on. Game Day's pair box and Setup "Lanes" accept digits only too ("910" = 9-10, "2324" = 23-24).
 - Lane note "energy at the pins, not your line" in the review reworded (watch high / light and the corner pin first).
 
 ## Changes in v160-beta97
