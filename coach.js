@@ -1500,6 +1500,10 @@
       if (a && b && (a.feet !== b.feet || a.arrows !== b.arrows)) tried.add('Aim');
       if (a && b && a.feet != null && b.feet != null && a.arrows != null && b.arrows != null && Math.abs((b.feet - a.feet) - (b.arrows - a.arrows)) >= 2) tried.add('Angle');
     }
+    // 🗣️ Kinds of change you already made for this same problem tonight that didn't fix it (from your Why? taps).
+    const failedFor = {}; const KMAP = { feet: 'Aim', ball: 'Equipment', loft: 'Loft', speed: 'Speed', hand: 'Release' };
+    const FAM = { early: ['early'], sharp: ['early', 'overunder'], gaveUp: ['carryWeak', 'late'], slowBurn: ['carryWeak', 'late'], skid: ['late'] };
+    try { whyReview(C).filter(r => r.fix && !r.fix.ok && C.length - r.i <= 14).forEach(r => (FAM[r.why] || []).forEach(sit => (r.kinds || []).forEach(k => { if (KMAP[k]) (failedFor[sit] = failedFor[sit] || new Set()).add(KMAP[k]); }))); } catch (_e) {}
 
     // Typical angle on the current line (from target / breakpoint / pocket board)
     const angles = W.map(c => c.angleClass).filter(Boolean);
@@ -1531,7 +1535,7 @@
       res.lens = lens || '';
       lastBallWhy = '';
       const ball = suggestBall(sit, ctx, prof);
-      const step = (tried.has('Aim') && lastChange >= 0) ? 2 : 1;
+      const step = (tried.has('Aim') && lastChange >= 0 && !(failedFor[sit] && failedFor[sit].has('Aim'))) ? 2 : 1; // no bigger move after a move that didn't fix it
       // 🧭 Which question is the answer: right ball or right spot?
       const laneSays = LANE_TIMING[sit] || '';
       const ballState = curT ? curT.rel : 'unknown';
@@ -1559,7 +1563,18 @@
       } else {
         setCompass('?', '?', laneSays ? 'move' : '', laneSays ? `🧭 The ball is reading ${laneSays}. ${pat ? 'Coach can\'t tell yet if it\'s the ball or the spot.' : 'Pick tonight\'s pattern so Coach can tell if it\'s the ball or the spot.'}` : '');
       }
-      const ranked = rankMoves(sit, prof, pat, !!ball, tried, angleClass, favor);
+      const failed = failedFor[sit] || new Set();
+      if (failed.has('Aim') && favor === 'spot') {
+        favor = '';
+        setCompass('?', 'warn', 'move', `🧭 You already moved your feet and eyes for this tonight and it's still ${laneSays || 'doing it'}. A bigger move in the same direction isn't the answer: try a different kind of change.`);
+      }
+      const triedAll = new Set([...tried, ...failed]);
+      let ranked = rankMoves(sit, prof, pat, !!ball, triedAll, angleClass, favor);
+      // What has fixed this same problem for you before (your Why? record across nights) goes first.
+      try { const sess = (typeof BT !== 'undefined' && BT.lsGet) ? (BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || []) : []; const L = whyLearn(sess, ctx.bowler), good = new Set();
+        Object.entries(FAM).filter(([w, sits]) => sits.includes(sit)).forEach(([w]) => Object.entries((L[w] || {}).kinds || {}).forEach(([k, q]) => { if (KMAP[k] && q.ok && q.ok * 2 >= q.n) good.add(KMAP[k]); }));
+        if (good.size) ranked = ranked.filter(m => good.has(m.kind) && !failed.has(m.kind)).concat(ranked.filter(m => !(good.has(m.kind) && !failed.has(m.kind)))); } catch (_e) {}
+      if (failed.size) ranked = ranked.filter(m => !failed.has(m.kind)).concat(ranked.filter(m => failed.has(m.kind)));
       const first = ranked[0], second = ranked[1];
       // Several ways to make the same fix (best first, from the lane + your LASER ratings): you pick, and tap what you did.
       res.options = ranked.slice(0, 3).map(m => ({ kind: m.kind, label: ELEMENT[m.kind], text: moveText(m.kind, sit, prof, pat, ball, step, angleClass) }));

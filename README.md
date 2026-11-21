@@ -58,6 +58,10 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v160-beta97 (held)
+- 🎯 No "bigger move" after a move that didn't fix it: if your Why? record tonight says a kind of change (e.g. Aim: feet / eyes) didn't fix the same problem, Coach moves it to last, doesn't escalate it (no 3-and-2 after a failed 2-and-1), and the compass stops saying "move your feet, keep the ball."
+- ⭐ What fixed this same problem for you before (your Why? record across nights, e.g. Loft for gave up / slow burn) is offered first.
+
 ## Changes in v159-beta96
 - 🕯️ Leave = alarm, motion = diagnosis: slow-burn leaves alone now give "Possible slow burn… on the next good shot, watch: picked up early and straightened = burn; skidded long = needs an earlier read." The "Slow burn, not a holding lane" headline only replaces the line advice when you saw it read early (logged early read, a Slow burn / Gave up / Hooked early tap, or your ball note here). A logged "too long" or "Skidding" tap points to skid instead.
 - 🚫 Ruled-out balls: a ball note at a house saying a ball read early / rolled flat / slow burned keeps that ball off the slow-burn ladder there ("Not Physix Blackout SP here: you saw it read early (11/19)"), on Game Day and in the Plan.
