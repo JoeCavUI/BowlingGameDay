@@ -1834,7 +1834,9 @@
     const m = String(s.miss || 'didntTrack'), pk = String(s.pocket || ''), obs = Array.isArray(s.obs) ? s.obs : [];
     const IN = lefty ? 'right' : 'left';
     const side = /^left/.test(m) ? (IN === 'left' ? 'in' : 'out') : /^right/.test(m) ? (IN === 'right' ? 'in' : 'out') : m === 'noMiss' ? 'hit' : '';
-    const room = m === 'leftHeld' || m === 'rightRecovered' ? 'room' : m === 'leftMiss' || m === 'rightMiss' ? 'tight' : m === 'noMiss' ? 'hit' : '';
+    // Missed the mark but still found the pocket = the lane saved it (room), even if it was tagged a plain miss.
+    const savedPk = (() => { try { return typeof BT !== 'undefined' && BT.isPocketHit ? BT.isPocketHit(s) : /pocket/i.test(pk) || s.leaveTag === 'Strike'; } catch (_e) { return false; } })();
+    const room = m === 'leftHeld' || m === 'rightRecovered' ? 'room' : m === 'leftMiss' || m === 'rightMiss' ? (savedPk ? 'room' : 'tight') : m === 'noMiss' ? 'hit' : '';
     const sp = String(s.speedTrend || ''), fast = sp === 'faster', slow = sp === 'slower';
     const dirTxt = side === 'in' ? `missed ${IN} (inside)` : side === 'out' ? `missed ${IN === 'left' ? 'right' : 'left'} (outside)` : side === 'hit' ? 'hit your mark' : '';
     let fit = 'na';

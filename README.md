@@ -60,6 +60,8 @@ Then open http://localhost:3000
 
 ## Changes in v160-beta97 (held)
 - 🎯 No "bigger move" after a move that didn't fix it: if your Why? record tonight says a kind of change (e.g. Aim: feet / eyes) didn't fix the same problem, Coach moves it to last, doesn't escalate it (no 3-and-2 after a failed 2-and-1), and the compass stops saying "move your feet, keep the ball."
+- 🤔 Poor shots: a missed mark that still found the pocket counts as "held or recovered" (the lane saved it), even when tagged a plain miss. Fixes "0 held or recovered" next to ball notes showing 7 missed shots in the pocket.
+- 🗣️ Why you changed: "logs agreed" needs 2+ (1 of 3 now says "partly agreed"); "didn't fix it" shows how many were still high / light, not only the pocket count.
 - ⭐ What fixed this same problem for you before (your Why? record across nights, e.g. Loft for gave up / slow burn) is offered first.
 
 ## Changes in v159-beta96
