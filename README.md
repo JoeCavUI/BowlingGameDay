@@ -58,6 +58,13 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v161-beta98 (held)
+- 🎯 Lane motion read (Game Day, early in the night): from your opening ball's first 3–6 good shots. Strong / turning hard / high without an early read = "Downlane motion: a short-pin look" (names the short pin in tonight's bag); early read / hooked early / gave up / slow burn = "Fronts reading early: not a short-pin night." Adds your record here on nights like this.
+- 🎯 Short pin = measured pin-to-PAP under 3" or your own "SP" in the ball name.
+- 🎯 Night review: "Lane motion & short pin": tonight's motion, short pin strike % vs the rest, and whether it fit your rule.
+- 🎯 Plan: "Short pin: when it plays": your record here and across houses by kind of night (worked = 40%+ strikes with it).
+- Lane note "energy at the pins, not your line" in the review reworded (watch high / light and the corner pin first).
+
 ## Changes in v160-beta97
 - 🎯 No "bigger move" after a move that didn't fix it: if your Why? record tonight says a kind of change (e.g. Aim: feet / eyes) didn't fix the same problem, Coach moves it to last, doesn't escalate it (no 3-and-2 after a failed 2-and-1), and the compass stops saying "move your feet, keep the ball."
 - 🤔 Poor shots: a missed mark that still found the pocket counts as "held or recovered" (the lane saved it), even when tagged a plain miss. Fixes "0 held or recovered" next to ball notes showing 7 missed shots in the pocket.
