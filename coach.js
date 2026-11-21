@@ -2086,7 +2086,7 @@
   // early read, hooked early, gave up, slow burn = the fronts are reading (no short pin); logged too long = it isn't moving at all.
   function ballRowMap() { const m = new Map(); try { const c = BT.lsGet(BT.KEYS.CSV_CACHE, null); BT.withCustomBalls((c && c.rows) || []).forEach(r => { const n = String(BT.ballName(r) || '').trim(); if (n) m.set(n, r); }); } catch (_e) {} return m; }
   // Your own "SP" naming counts too (e.g. Physix Blackout SP), along with a measured short pin-to-PAP.
-  function isShortPinBall(name, row) { if (/\bSP\b/.test(String(name || ''))) return true; try { return !!row && BT.layoutTypeFromRow(row) === 'short'; } catch (_e) { return false; } }
+  function isShortPinBall(name, row) { if (/\bSP\d*\b/.test(String(name || ''))) return true; try { return !!row && BT.layoutTypeFromRow(row) === 'short'; } catch (_e) { return false; } }
   function laneMotion(C) {
     const first = C.find(c => c.shot && c.shot.ball); if (!first) return null;
     const ball = first.shot.ball;
@@ -2126,6 +2126,28 @@
     if (rec[''].n) p.push(`motion not clear yet: ${rec[''].ok} of ${rec[''].n}`);
     return p.length ? `${p.join('; ')} (worked = 40%+ strikes with it).`.replace(/^w/, 'W') : '';
   }
+
+  // 🏆 League vs tournament (from the league name): fresh tournament shots are where your short pins have won.
+  const isTourn = (lg) => /tourn|doubles|open|championship|polish|singles|scratch|sweeper|classic|qualif/i.test(String(lg || ''));
+  // From your imported PinPal history: short pin vs other first-ball strike % by house and league / tournament.
+  function shortPinHistory() {
+    let H = null; try { H = JSON.parse(localStorage.getItem('bt_history_v1') || 'null'); } catch (_e) {}
+    if (!H || !Array.isArray(H.games) || !Array.isArray(H.balls)) return null;
+    const R = ballRowMap(), out = {}, add = (k, t, x) => { const o = out[k] = out[k] || { sp: [0, 0], ot: [0, 0] }; o[t][0] += x; o[t][1]++; };
+    H.games.forEach(g => { if (!g || g.done === false) return; const kind = isTourn(g.lg) ? 'tourn' : 'league';
+      (g.f || []).forEach(f => { if (!f || f[0] > 10) return; const bi = f[1] >= 0 ? f[1] : g.b; const b = H.balls[bi]; if (!b) return;
+        const t = isShortPinBall(b, R.get(b)) ? 'sp' : 'ot', x = f[2] === 10 ? 1 : 0;
+        add(`${g.h}|${kind}`, t, x); add(`*|${kind}`, t, x); }); });
+    return out;
+  }
+  function shortPinHistoryLines(house) {
+    const S = shortPinHistory(); if (!S) return [];
+    const pc = (a) => a[1] ? Math.round(a[0] / a[1] * 100) : null;
+    const line = (k, label) => { const o = S[k]; if (!o || o.sp[1] < 15) return ''; const a = pc(o.sp), b = pc(o.ot);
+      const v = b == null ? '' : a - b >= 4 ? ' → short pin wins' : b - a >= 4 ? ' → short pin trails' : ' → even';
+      return `${label}: short pin ${a}% (${o.sp[1]} shots) vs ${b == null ? '–' : b + '%'} (${o.ot[1]})${v}`; };
+    return [house ? line(`${house}|tourn`, 'Tournaments here') : '', house ? line(`${house}|league`, 'League here') : '', line('*|tourn', 'All tournaments'), line('*|league', 'All leagues')].filter(Boolean);
+  }
   function motionNote(out, C, ctx) {
     const lm = laneMotion(C); if (!lm || !lm.kind) return;
     if (C.length > 14) return; // early in the night only: this is the opening read
@@ -2133,9 +2155,11 @@
     const sps = bag.filter(b => isShortPinBall(b.name, b.row || R.get(b.name)) && !(typeof BT !== 'undefined' && BT.isSpareBall && b.row && BT.isSpareBall(b.row))).map(b => b.name);
     const curSP = isShortPinBall(cur, R.get(cur));
     let rec = ''; try { const sess = BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || []; const h = ctx.house ? sess.filter(s => s && s.house === ctx.house) : []; const r = shortPinRecord(h, ctx.bowler)[lm.kind]; if (r && r.n) rec = ` Here before, on a night like this: short pin worked ${r.ok} of ${r.n}.`; } catch (_e) {}
+    try { const H = shortPinHistory(); const k = isTourn(ctx.league) ? 'tourn' : 'league'; const o = H && ctx.house && H[`${ctx.house}|${k}`];
+      if (o && o.sp[1] >= 15 && o.ot[1]) rec += ` Your ${k === 'tourn' ? 'tournament' : 'league'} history here: short pin ${Math.round(o.sp[0] / o.sp[1] * 100)}% vs ${Math.round(o.ot[0] / o.ot[1] * 100)}% with the rest.`; } catch (_e) {}
     const notes = out.notes = out.notes || [];
     if (lm.kind === 'down') notes.push(curSP ? `🎯 Downlane motion (${lm.down} of ${lm.n} good shots strong / turning hard with ${lm.ball}): a short-pin look, and you're on one. It should keep you in play.${rec}` : sps.length ? `🎯 Downlane motion (${lm.down} of ${lm.n} good shots strong / turning hard with ${lm.ball}): a short-pin look. ${sps[0]} fits: low flare tames the backend.${rec}` : `🎯 Downlane motion with ${lm.ball}: a short-pin look, but there's no short pin in tonight's bag.${rec}`);
     else if (lm.kind === 'early') notes.push(`🎯 Fronts reading early (${lm.early} of ${lm.n} good shots with ${lm.ball}): not a short-pin night. A short pin reads early and has nothing to come back with; go cleaner with more flare instead.${rec}`);
   }
-  root.BTCoach = { laneMotion: (shots, bowler) => laneMotion((shots || []).filter(x => x && x.type !== 'gameStart').map(s => classify(s, bowlerProfile(bowler).lefty))), isShortPinBall, shortPinNight, shortPinRecord, shortPinRecordText, MOTION_TXT, burnSign, burnLadder, BALL_NOTE, ballNoteText, ballNoteCheck, WHY, whyLabel, whyReview: (shots, bowler) => whyReview((shots || []).filter(x => x && x.type !== 'gameStart').map(s => classify(s, bowlerProfile(bowler).lefty))), whyLearn, whyLearnText, setFaultLabel, hiddenFaults, hideFault, unhideFault, energyAngle, noteTags, noteMix, repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
+  root.BTCoach = { isTourn, shortPinHistory, shortPinHistoryLines, laneMotion: (shots, bowler) => laneMotion((shots || []).filter(x => x && x.type !== 'gameStart').map(s => classify(s, bowlerProfile(bowler).lefty))), isShortPinBall, shortPinNight, shortPinRecord, shortPinRecordText, MOTION_TXT, burnSign, burnLadder, BALL_NOTE, ballNoteText, ballNoteCheck, WHY, whyLabel, whyReview: (shots, bowler) => whyReview((shots || []).filter(x => x && x.type !== 'gameStart').map(s => classify(s, bowlerProfile(bowler).lefty))), whyLearn, whyLearnText, setFaultLabel, hiddenFaults, hideFault, unhideFault, energyAngle, noteTags, noteMix, repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
 })(typeof window !== 'undefined' ? window : globalThis);

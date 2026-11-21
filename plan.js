@@ -478,8 +478,10 @@
         let all = []; try { all = BT().lsGet(BT().KEYS.GAME_SESSIONS, []) || []; } catch (_e) {}
         const tH = root.BTCoach.shortPinRecordText(root.BTCoach.shortPinRecord(sess, b)), tA = root.BTCoach.shortPinRecordText(root.BTCoach.shortPinRecord(all, b));
         const items = ['<span class="dim">Your rule: a short pin needs the lane to give a downlane motion. Read it from your opening ball\'s first good shots: strong / turning hard = short-pin look; early read or gave up = not tonight.</span>'];
-        if (tH) items.push(`<b>Here:</b> ${esc(tH)}`); if (tA && tA !== tH) items.push(`<b>All houses:</b> ${esc(tA)}`);
-        if (tH || tA) sec('🎯', 'Short pin: when it plays', items);
+        const hist = root.BTCoach.shortPinHistoryLines(house);
+        if (hist.length) { items.push('<span class="dim">Your history (PinPal, first-ball strike %): fresh tournament shots are where short pins have won.</span>'); hist.forEach(l => items.push(esc(l))); }
+        if (tH) items.push(`<b>Here (nights you logged a read):</b> ${esc(tH)}`); if (tA && tA !== tH) items.push(`<b>All houses:</b> ${esc(tA)}`);
+        if (tH || tA || hist.length) sec('🎯', 'Short pin: when it plays', items);
       } catch (e) { console.error(e); }
     }
 

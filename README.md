@@ -58,8 +58,9 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
-## Changes in v161-beta98 (held)
+## Changes in v161-beta98
 - 🎯 Lane motion read (Game Day, early in the night): from your opening ball's first 3–6 good shots. Strong / turning hard / high without an early read = "Downlane motion: a short-pin look" (names the short pin in tonight's bag); early read / hooked early / gave up / slow burn = "Fronts reading early: not a short-pin night." Adds your record here on nights like this.
+- 🏆 Plan "Short pin: when it plays" adds your PinPal history split league vs tournament (from the league name): "Tournaments here: short pin 61% vs 45% → short pin wins · League here: 42% vs 42% → even." Game Day's lane-motion note adds your tournament or league record at that house.
 - 🎯 Short pin = measured pin-to-PAP under 3" or your own "SP" in the ball name.
 - 🎯 Night review: "Lane motion & short pin": tonight's motion, short pin strike % vs the rest, and whether it fit your rule.
 - 🎯 Plan: "Short pin: when it plays": your record here and across houses by kind of night (worked = 40%+ strikes with it).
