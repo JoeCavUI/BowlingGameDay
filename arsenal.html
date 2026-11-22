@@ -1597,7 +1597,7 @@
         const dots = L.map(b => `<button type="button" class="mx-bd cv-${cvc(b)} ${b.proposed ? 'ghost' : ''} ${b.retired ? 'retired' : ''}" style="left:${3 + b.x * 0.94}%;top:${5 + b.lane * 26}px" data-cball="${escH(b.name)}">${b.n}${tunedB(b.name) ? '<span class="ctuned">*</span>' : ''}</button>`).join('');
         const bar = (v, c) => `<i><b style="width:${Math.round(Math.max(0, Math.min(1, v || 0)) * 100)}%;background:${c}"></b></i>`;
         const rows = L.map(b => { const r0 = b.row || {}; const surf = BT.ballSurface(r0); const rg = BT.ballRG(r0), df = BT.ballDiff(r0);
-          return `<div class="mx-br" data-name="${escH(b.name)}"><span class="mx-num cv-${cvc(b)}">${b.n}${tunedB(b.name) ? '<span class="ctuned">*</span>' : ''}</span>
+          return `<div class="mx-br ${b.retired ? 'retired' : ''}" data-name="${escH(b.name)}"><span class="mx-num cv-${cvc(b)} ${b.retired ? 'retired' : ''}">${b.n}${tunedB(b.name) ? '<span class="ctuned">*</span>' : ''}</span>
           <div style="min-width:0"><div class="mx-bn">${escH(b.name)}${tunedB(b.name) ? ' <b class="ctuned-t">*</b>' : ''}${b.proposed ? ' <span class="dim">(what-if)</span>' : b.retired ? ' <span class="dim">(retired)</span>' : ''}</div>
           <div class="small dim">${[BT.getField(r0, ['Brand'], ''), b.cover, surf && (/^\d+$/.test(String(surf)) ? surf + ' grit' : surf), rg && 'RG ' + rg, df && 'Diff ' + df].filter(Boolean).map(escH).join(' · ')}</div>
           <div class="mx-mt"><span>Hook</span>${bar(b.hook, '#6b5ce7')}<span>Backend</span>${bar(b.backend, '#e7a35c')}<span>Reads</span>${bar(b.x / 100, '#63e6d2')}</div></div>

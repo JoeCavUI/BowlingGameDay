@@ -1001,3 +1001,8 @@ body.gd-seasoned .gd-help{display:none}
 .sb-ball{display:flex;align-items:center;gap:8px;margin:6px 0}.sb-ball select{flex:1;padding:6px 8px}
 .rp-view{background:#1f2937;color:#e5e7eb;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:4px 12px;font-size:14px}.rp-view.on{border-color:#5eead4;color:#5eead4}.rp-3dcap{position:absolute;left:0;right:0;bottom:4px;text-align:center;font-size:12px;color:#94a3b8}
 .rp3-pin{transition:opacity .25s}
+
+/* Retired balls: grayed out everywhere on the Barnes chart (dots, chips, box list) */
+.mx-bd.retired,.mx-num.retired,.mx-t.retired,.cdot.retired{background:#4a4d55 !important;color:#9a9ea8 !important;border-color:#5a5e68 !important;opacity:.6;filter:grayscale(1)}
+.mx-br.retired{opacity:.5;filter:grayscale(1)}
+.mx-name.retired{opacity:.5;filter:grayscale(1);text-decoration:line-through}

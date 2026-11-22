@@ -59,6 +59,7 @@ Then open http://localhost:3000
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
 ## Changes in v163-beta100 (held)
+- ⚫ Retired balls are grayed out on the Barnes chart: dots, chips and the box list (with "show retired" ticked).
 - 🎚️ Tune sliders (Strength, Length, Backend) save the moment you let go, with a "✓ Saved" tick. The ball's "Save changes" (specs) button no longer wipes slider moves you hadn't saved. Surface stays a what-if until the bottom Save.
 
 ## Changes in v162-beta99
