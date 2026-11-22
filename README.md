@@ -58,6 +58,9 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v163-beta100 (held)
+- 🎚️ Tune sliders (Strength, Length, Backend) save the moment you let go, with a "✓ Saved" tick. The ball's "Save changes" (specs) button no longer wipes slider moves you hadn't saved. Surface stays a what-if until the bottom Save.
+
 ## Changes in v162-beta99
 - 🧺 Tune → Save no longer writes a surface unless you moved the surface slider. Before, every Save stamped the slider's starting surface as an override, which could cancel your Hook / Backend slider moves in the Barnes box.
 - 🧪 Factory finishes read right: a sequence like "500/1000/1500 Siaair, Crown Factory Compound" is read at its last step plus compound (≈4500, shiny), not 500; "Reacta Gloss" and "Power Edge" count as polished.

@@ -285,7 +285,7 @@
       <div id="tuneSpecs" class="ball-specs"></div>
       <div class="hr-split"></div>
       <div style="font-weight:900;font-size:15px">Your adjustment sliders</div>
-      <div class="small dim" style="margin-top:4px">Adjust how <b>you</b> see this ball. -10 = less, +10 = more. Gentle nudges (not a full override) that affect the Matrix, Bag and Coach.</div>
+      <div class="small dim" style="margin-top:4px">Adjust how <b>you</b> see this ball. -10 = less, +10 = more. <b>Strength, Length and Backend save as you move them</b>; the Surface what-if keeps only when you tap Save at the bottom. <span id="tuneSaved" class="small" style="color:var(--accent,#5fd3b3)"></span></div>
 
       <div style="margin-top:14px;display:grid;gap:14px">
         <div>
@@ -890,6 +890,7 @@
       try { BT.wireLayoutConvert({ pin: BT.$('#beVPin'), psa: BT.$('#beVPsa'), buf: BT.$('#beVBuf'), drill: BT.$('#beDrill'), val: BT.$('#beVal'), pinPsa: BT.$('#bePinPsa'), note: BT.$('#beConv'), isSym: () => !/asym/i.test(BT.$('#beCore').value) }); } catch (_e) {}
       try { BT.$('#beName').focus(); } catch (_e) {}
       BT.$('#beSave').addEventListener('click', () => {
+        try { persistSliders(); } catch (_e) {}
         const v = (id) => BT.$('#' + id).value.trim();
         const bad = [];
         const L = { vlsPin: inch(v('beVPin')), vlsPsa: inch(v('beVPsa')), vlsBuf: inch(v('beVBuf')) };
@@ -1082,6 +1083,18 @@
       setTunePills();
       applyFilter();
     });
+    // Strength / Length / Backend save the moment you let go of a slider (the "Save changes" spec button above used to
+    // reopen the ball and drop slider moves). Surface stays a what-if until the bottom Save.
+    function persistSliders() {
+      if (!tune.currentName) return;
+      const cur = BT.ballTweaksFor(tune.currentName) || {};
+      BT.setBallTweaks(tune.currentName, { hook: Number(tune.hook.value), length: Number(tune.len.value), backend: Number(tune.back.value), surfaceOverride: cur.surfaceOverride || '' });
+      autoTuneCache.delete(`${tune.currentName}__${tune.role ? tune.role.value : ''}`);
+      plannerTuneSignature = ''; plannerTunePending = new Set();
+      applyFilter();
+      const sv = BT.$('#tuneSaved'); if (sv) { sv.textContent = ' ✓ Saved'; clearTimeout(persistSliders._t); persistSliders._t = setTimeout(() => { sv.textContent = ''; }, 1500); }
+    }
+    [tune.hook, tune.len, tune.back].forEach(inp => inp && inp.addEventListener('change', persistSliders));
     tune.save.addEventListener('click', () => {
       if (!tune.currentName) return;
       const bowlerRC = BT.lsGet(BT.KEYS.BOWLER, {}) || {};
