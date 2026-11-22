@@ -58,7 +58,7 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
-## Changes in v163-beta100 (held)
+## Changes in v163-beta100
 - ⚫ Retired balls are grayed out on the Barnes chart: dots, chips and the box list (with "show retired" ticked).
 - 🎚️ Tune sliders (Strength, Length, Backend) save the moment you let go, with a "✓ Saved" tick. The ball's "Save changes" (specs) button no longer wipes slider moves you hadn't saved. Surface stays a what-if until the bottom Save.
 
