@@ -58,6 +58,11 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v162-beta99 (held)
+- 🧺 Tune → Save no longer writes a surface unless you moved the surface slider. Before, every Save stamped the slider's starting surface as an override, which could cancel your Hook / Backend slider moves in the Barnes box.
+- 🧪 Factory finishes read right: a sequence like "500/1000/1500 Siaair, Crown Factory Compound" is read at its last step plus compound (≈4500, shiny), not 500; "Reacta Gloss" and "Power Edge" count as polished.
+- 🧹 One-time cleanup: surface overrides that were only that misread (and not a logged resurface to that grit) are cleared, so those balls go back to their real finish.
+
 ## Changes in v161-beta98
 - 🎯 Lane motion read (Game Day, early in the night): from your opening ball's first 3–6 good shots. Strong / turning hard / high without an early read = "Downlane motion: a short-pin look" (names the short pin in tonight's bag); early read / hooked early / gave up / slow burn = "Fronts reading early: not a short-pin night." Adds your record here on nights like this.
 - 🏆 Plan "Short pin: when it plays" adds your PinPal history split league vs tournament (from the league name): "Tournaments here: short pin 61% vs 45% → short pin wins · League here: 42% vs 42% → even." Game Day's lane-motion note adds your tournament or league record at that house.

@@ -747,7 +747,7 @@
       const row = rowByName(nm);
       const tw = BT.ballTweaksFor(nm);
       const preset = nearestSurfacePreset(tw.surfaceOverride || (row ? BT.ballSurface(row) : '4000'));
-      tune.surface.value = String(preset.idx);
+      tune.surface.value = String(preset.idx); tune.openSurfaceIdx = String(preset.idx);
       tune.hook.value = tw.hook;
       tune.len.value = tw.length;
       tune.back.value = tw.backend;
@@ -1074,7 +1074,7 @@
       plannerTunePending = new Set();
       const row = rowByName(tune.currentName);
       const preset = nearestSurfacePreset(row ? BT.ballSurface(row) : '4000');
-      tune.surface.value = String(preset.idx);
+      tune.surface.value = String(preset.idx); tune.openSurfaceIdx = String(preset.idx);
       tune.hook.value = 0;
       tune.len.value = 0;
       tune.back.value = 0;
@@ -1099,13 +1099,14 @@
           }
         } catch (_e) {}
       }, 80);
-      { const prevSurf = BT.ballTweaksFor(tune.currentName).surfaceOverride || '', newSurf = surfacePresetByIndex(tune.surface.value).surface;
+      { const prevSurf = BT.ballTweaksFor(tune.currentName).surfaceOverride || '', newSurf = String(tune.surface.value) !== String(tune.openSurfaceIdx) ? surfacePresetByIndex(tune.surface.value).surface : '';
         if (newSurf && newSurf !== prevSurf && confirm(`Surface changed to ${newSurf}. Log this as a resurface today?`)) BT.logResurface(tune.currentName, { at: Date.now(), surface: newSurf }); }
       BT.setBallTweaks(tune.currentName, {
         hook: Number(tune.hook.value),
         length: Number(tune.len.value),
         backend: Number(tune.back.value),
-        surfaceOverride: surfacePresetByIndex(tune.surface.value).surface,
+        // Only save a surface if you moved the surface slider: otherwise keep what the ball had (its own surface or an earlier override).
+        surfaceOverride: String(tune.surface.value) !== String(tune.openSurfaceIdx) ? surfacePresetByIndex(tune.surface.value).surface : (BT.ballTweaksFor(tune.currentName).surfaceOverride || ''),
       });
       autoTuneCache.delete(`${tune.currentName}__${tune.role ? tune.role.value : ''}`);
       plannerTuneSignature = '';

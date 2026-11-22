@@ -565,13 +565,17 @@
 
   // Surface field can be: "4000", "1500 Polish", "Polish", "Compound", "5000".
   // Returns representative grit number.
+  // Factory polishes named without the word "polish" (Reacta Gloss, Power Edge, high gloss, shine) are polished.
+  const POLISH_WORDS = /polish|gloss|shine|power ?edge|reacta/;
   function surfaceToGrit(surfaceStr) {
     const s = String(surfaceStr || '').toLowerCase();
-    const m = s.match(/(\d{3,4})/);
+    // A sequence like "500/1000/1500 Siaair" ends at the LAST (finest) step: that's the surface the ball has.
+    const all = s.match(/\d{3,4}/g); const last = all ? Number(all[all.length - 1]) : NaN;
     // "1500 Polish" = sanded to 1500 then polished: it rolls like a polished ball, not a 1500 sanded one.
-    if (s.includes('polish')) return m ? Math.max(5000, Number(m[1]) + 3500) : 5500;
-    if (m) return Number(m[1]);
-    if (s.includes('compound')) return 4500;
+    if (POLISH_WORDS.test(s)) return Number.isFinite(last) ? Math.max(5000, last + 3500) : 5500;
+    // Compound over a sanded finish ("1500 + Crown Factory Compound") is shinier than the grit alone.
+    if (s.includes('compound')) return Number.isFinite(last) ? Math.max(4500, last + 3000) : 4500;
+    if (Number.isFinite(last)) return last;
     return 4000;
   }
 
@@ -1446,13 +1450,14 @@
     const psa = ballPSA(row);
     const cover = ballCover(row).toLowerCase();
     const core = ballCore(row).toLowerCase();
-    const surfRaw = ballSurface(row).toLowerCase();
+    const surfRaw0 = ballSurface(row).toLowerCase();
+    const surfRaw = POLISH_WORDS.test(surfRaw0) && !surfRaw0.includes('polish') ? surfRaw0 + ' polish' : surfRaw0; // Reacta Gloss / Power Edge = polished
 
     const grit = (function () {
       if (surfRaw.includes('polish')) return NaN; // polished: handled as polish below, whatever grit it was sanded to first
-      const m = surfRaw.match(/(\d{3,4})/);
-      if (!m) return NaN;
-      return Number(m[1]);
+      const all = surfRaw.match(/\d{3,4}/g); // a sequence ends at its last (finest) step
+      if (!all) return NaN;
+      return Number(all[all.length - 1]);
     })();
 
     // cover weight
@@ -2058,6 +2063,26 @@
   }
 
   // --- Public API ---
+  // One-time fix: Tune → Save used to write the surface slider's starting value as a surface override even when you didn't
+  // touch it, and factory finishes like "500/1000/1500 … Compound", "Reacta Gloss" or "Power Edge" were misread as 500 / 4000.
+  // Clear overrides that are just that misread (no resurface logged), so the ball goes back to its real finish.
+  try {
+    if (!localStorage.getItem('bt_mig_surface_v1')) {
+      const tw = lsGet(KEYS.BALL_TWEAKS, {}) || {}; let changed = 0;
+      const c = lsGet(KEYS.CSV_CACHE, null); const rows = withCustomBalls((c && c.rows) || []);
+      const presets = [500, 1000, 1500, 2000, 3000, 4000];
+      const oldGrit = (s) => { s = String(s || '').toLowerCase(); const m = s.match(/(\d{3,4})/); if (s.includes('polish')) return 5500; if (m) return Number(m[1]); if (s.includes('compound')) return 4500; return 4000; };
+      const nearest = (g) => g >= 5000 ? 'Polish' : String(presets.reduce((b, p) => Math.abs(p - g) < Math.abs(b - g) ? p : b, presets[0]));
+      rows.forEach(r => { const nm = ballName(r); const t = tw[nm]; if (!t || !t.surfaceOverride) return;
+        const raw = String(getField(r, ['Surface', 'Finish'], '')).trim(); if (!raw) return;
+        const misread = /gloss|shine|power ?edge|reacta|compound|\d{3,4}\s*\/\s*\d{3,4}/i.test(raw);
+        const logged = (() => { try { const L = resurfaceLog(nm); const last = L[L.length - 1]; return !!(last && String(last.surface || '') === String(t.surfaceOverride) && !/^(500|1000|1500|4000)$/.test(String(t.surfaceOverride)) ); } catch (_e) { return false; } })();
+        if (misread && !logged && String(t.surfaceOverride) === nearest(oldGrit(raw))) { t.surfaceOverride = ''; changed++; } });
+      if (changed) lsSet(KEYS.BALL_TWEAKS, tw);
+      localStorage.setItem('bt_mig_surface_v1', String(changed));
+    }
+  } catch (_e) {}
+
   window.BT = {
     APP_VERSION,
     KEYS,
