@@ -43,7 +43,7 @@
   function riskText(m, gn) {
     if (!m || !m.risk) return '';
     const r = m.risk.find(x => !gn || x.gn === gn); if (!r) return '';
-    return `${m.ball} has averaged ${r.avg} in ${GL[r.gn]}s here (${r.n} games)${r.allBelow ? ', every one well under' : ', vs'} ${m.g[m.best].avg} in ${GL[m.best]}s. ${gn ? 'Have your next ball ready this game and switch at the first sign it fades.' : `Plan the switch before ${GL[r.gn]}.`}`;
+    return `${m.ball} has averaged ${r.avg} in ${GL[r.gn]}s here (${r.n} games)${r.allBelow ? ', every one well under' : ', vs'} ${m.g[m.best].avg} in ${GL[m.best]}s. ${gn ? 'Have your next ball ready this game and switch at the first sign it fades.' : r.gn === 1 ? 'Not an opener here: weaker in game 1.' : `Have a backup ready in ${GL[r.gn]}s: switch at the first sign it fades, not by the game number.`}`;
   }
 
   // ---------- 2. Your PinPal notes: "14 over 5" = slide board 14, breakpoint 5 ----------

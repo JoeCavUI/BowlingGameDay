@@ -197,6 +197,8 @@
       const lgO = $('#pLeague').value ? BT.getLeagueById($('#pLeague').value) : null;
       const opts = { house: $('#pHouse').value.trim(), lanes: BT.formatLanes($('#pLanes').value), event: $('#pEvent').value, leagueId: lgO ? lgO.id : '', league: lgO ? lgO.name : '', wear: BT.houseRead($('#pHouse').value, lgO ? lgO.id : '') || '', setName: $('#pSet').value, patternName: $('#pPat').value, r31: $('#pR31').checked, count: Number($('#pCount').value) };
       if (!opts.house) { $('#pStatus').textContent = 'Type or pick where you\'re bowling.'; $('#pHouse').focus(); return; }
+      // Your recent Game Day opener here leads the Ball section and the bag (one answer with the forecast).
+      try { if (window.BTHouseCard) { const bw = BT.lsGet(BT.KEYS.BOWLER, {}) || {}; const C = BTHouseCard.build(opts.house, opts.lanes, BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || [], /^l/i.test(String(bw.handedness || ''))); if (C && C.fc && C.fc.ball) opts.recentOpener = { ball: C.fc.ball, nights: C.fc.openN || 0, x: C.fc.x1, shots: C.fc.n1 }; } } catch (_e) {}
       try { plan = BTPlan.build(opts); } catch (e) { console.error(e); $('#pStatus').textContent = 'Could not build the plan: ' + (e && e.message ? e.message : e); return; }
       BT.lsSet(LAST, opts);
       $('#pStatus').textContent = '';

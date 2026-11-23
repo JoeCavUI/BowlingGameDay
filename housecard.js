@@ -47,7 +47,12 @@
     // 🔮 forecast (theory): best G1 ball and its usual start, first move timing, a shrunk G1 range
     let fc = null;
     { const g1 = grid.map(o => ({ o, c: o.g[1] })).filter(x => x.c.n >= 4).sort((a, b) => (b.c.x + 0.5) / (b.c.n + 1) - (a.c.x + 0.5) / (a.c.n + 1))[0];
-      const ball = g1 ? g1.o.ball : (grid[0] && grid[0].ball);
+      // The ball you've actually been opening with here (most of your last 4 nights; a tie goes to the latest) leads;
+      // otherwise the best game 1 strike rate. The Plan's Ball section uses the same ball.
+      const opens = use.slice().sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0)).slice(0, 4).map(s => { const f = shotsOf(s).slice().sort((a, b) => (a.at || 0) - (b.at || 0))[0]; return f && f.ball; }).filter(Boolean);
+      const oc = {}; opens.forEach(b => { oc[b] = (oc[b] || 0) + 1; });
+      const topOpen = Object.keys(oc).sort((a, b) => oc[b] - oc[a] || opens.indexOf(a) - opens.indexOf(b))[0];
+      const ball = topOpen && oc[topOpen] >= 2 ? topOpen : g1 ? g1.o.ball : (grid[0] && grid[0].ball);
       const st = ball ? sh.filter(z => z.ball === ball && gOf(z) === 1) : [];
       const line = st.length ? `${md(st.map(z => Number(z.feet)))}/${md(st.map(z => Number(z.arrows)))}` : null;
       const mv = hb && hb.moves && hb.moves.length ? hb.moves : [];
@@ -56,7 +61,9 @@
       const boards = mv.length ? Math.max(1, r0(avg(mv.map(r => r.mv.boards || 1)))) : null;
       const m = avg(G[1]), s = sd(G[1]), n = G[1].length, base = overall;
       const est = m != null && base != null ? (n * m + 3 * base) / (n + 3) : null, w = Math.min(20, Math.max(10, s || 0));
-      fc = { ball, line, mG, mF, dir, boards, lo: est != null ? r0(est - w) : null, hi: est != null ? r0(est + w) : null, n: use.length };
+      // Nights you opened with it here (the first shot of the night), and its game 1 strikes.
+      const openN = ball ? use.filter(s => { const f = shotsOf(s).slice().sort((a, b) => (a.at || 0) - (b.at || 0))[0]; return f && f.ball === ball; }).length : 0;
+      fc = { ball, openN, x1: st.filter(X).length, n1: st.length, line, mG, mF, dir, boards, lo: est != null ? r0(est - w) : null, hi: est != null ? r0(est + w) : null, n: use.length };
     }
     return { house, lanes, scope, nights: use.length, overall, byGame, grid, allX, feet, f0, chips, fc };
   }

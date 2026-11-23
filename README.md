@@ -58,6 +58,13 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v164-beta101 (held)
+- 🎳 One opener: the ball you've opened with on most of your last 4 Game Day nights at the house (tie → the latest) is the forecast's ball and the Plan's First ball; the history pick becomes "test in practice." The history "best game 1s" pick now needs 8+ game 1s and use in the last 12 months.
+- 🎒 A ball you've been throwing at the house (10+ shots on 2+ of your last 4 nights) stays in the bag as "Your recent ball here (backup)" instead of being cut for overlap.
+- 🎯 Plan's goal banner drops the stale "you saw X% tonight."
+- 🧽 Dark-horse surface tip only when the gap is real: 5+ pins over the ball's current surface band with 20+ games on each side.
+- ✏️ "Plan the switch before game 1" → "Not an opener here: weaker in game 1"; bag labels: one "Strongest" / "Cleanest" at the end, "Stronger / Cleaner still" between.
+
 ## Changes in v163-beta100
 - ⚫ Retired balls are grayed out on the Barnes chart: dots, chips and the box list (with "show retired" ticked).
 - 🎚️ Tune sliders (Strength, Length, Backend) save the moment you let go, with a "✓ Saved" tick. The ball's "Save changes" (specs) button no longer wipes slider moves you hadn't saved. Surface stays a what-if until the bottom Save.

@@ -296,7 +296,7 @@
   function goalFor(house) { const G = goalsAll().filter(g => !g.result); const k = hk(house); return G.filter(g => hk(g.house) === k).sort((a, b) => b.at - a.at)[0] || G.sort((a, b) => b.at - a.at)[0] || null; }
   function setGoal(g) { const G = goalsAll().filter(x => x.from !== g.from); G.push(g); lsSet(GOALS_KEY, G.slice(-40)); }
   function gradeGoal(id, result) { const G = goalsAll(); const g = G.find(x => x.id === id); if (g) { Object.assign(g, result); lsSet(GOALS_KEY, G); } }
-  function goalBanner(house) { const g = goalFor(house); if (!g) return ''; const esc2 = (t) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); return `<div class="goal-banner">🎯 <b>Goal from last time:</b> ${esc2(g.text)}</div>`; }
+  function goalBanner(house) { const g = goalFor(house); if (!g) return ''; const esc2 = (t) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); return `<div class="goal-banner">🎯 <b>Goal from last time:</b> ${esc2(String(g.text || '').replace(/\s*\(you saw [^)]*\)/, ''))}</div>`; }
 
   // 📐 Storm VLS ⇄ Dual Angle. Same three points on the ball, two notations (spherical trig on a 27" ball).
   //   VLS: pin-to-PAP × PSA-to-PAP × pin buffer (pin to VAL).  Dual angle: drill angle (at the pin, PAP line → PSA line) × pin-to-PAP × VAL angle (at the PAP).
