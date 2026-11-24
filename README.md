@@ -70,6 +70,8 @@ Then open http://localhost:3000
 - 📐 Angle drill for high misses doesn't send you deeper when Energy vs angle says deeper cost carry that night: later / cleaner ball from the better spot, then loft.
 - 📝 Ball notes say "poor shots" (not "missed shots") and need 2+ shots before "logs agree"; "1 strike or flush" grammar.
 
+- 👀 Off the deck on Game Day: tap a pocket hit (Flush / Light / High) and the Off the deck row lights up and asks "where did it go?"; it hides for Left / Right of pocket and Brooklyn. Grading unchanged: every pocket hit, strikes included.
+
 ## Changes in v163-beta100
 - ⚫ Retired balls are grayed out on the Barnes chart: dots, chips and the box list (with "show retired" ticked).
 - 🎚️ Tune sliders (Strength, Length, Backend) save the moment you let go, with a "✓ Saved" tick. The ball's "Save changes" (specs) button no longer wipes slider moves you hadn't saved. Surface stays a what-if until the bottom Save.

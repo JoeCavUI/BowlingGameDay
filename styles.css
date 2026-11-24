@@ -1006,3 +1006,6 @@ body.gd-seasoned .gd-help{display:none}
 .mx-bd.retired,.mx-num.retired,.mx-t.retired,.cdot.retired{background:#4a4d55 !important;color:#9a9ea8 !important;border-color:#5a5e68 !important;opacity:.6;filter:grayscale(1)}
 .mx-br.retired{opacity:.5;filter:grayscale(1)}
 .mx-name.retired{opacity:.5;filter:grayscale(1);text-decoration:line-through}
+
+/* Off the deck: a pocket hit asks for the exit */
+#exitWrap.gd-ask{border:1px solid var(--accent,#5fd3b3);border-radius:12px;padding:2px 8px 8px;margin-top:8px;box-shadow:0 0 0 3px rgba(95,211,179,.12)}

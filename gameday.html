@@ -193,8 +193,8 @@
           <div class="gd-q" style="margin-top:14px"><span class="gd-qnum">2</span><b>Pocket</b></div>
           <div id="readsPocket" style="margin-top:6px"></div>
 
-          <div class="gd-q" style="margin-top:14px"><span class="gd-qnum">3</span><b>Off the deck</b> <span class="small" id="exitHint"></span></div>
-          <div id="readsExit" class="gd-r1" style="margin-top:6px"></div>
+          <div id="exitWrap"><div class="gd-q" style="margin-top:14px"><span class="gd-qnum">3</span><b>Off the deck</b> <span class="small" id="exitHint"></span></div>
+          <div id="readsExit" class="gd-r1" style="margin-top:6px"></div></div>
 
           <div class="gd-q" style="margin-top:14px"><span class="gd-qnum">4</span><b>Pins left</b> <span class="small">(tap nothing for a strike)</span></div>
           <div id="quickResults" class="qr-row" style="margin-top:8px"></div>
@@ -757,6 +757,7 @@ function selectedPills(container) {
       try { const li = BT.$('#laneInfo'); if (li) li.checked = false; } catch (_e) {}
       try { paintLaneRead(); } catch (_e) {}
       try { changedSel.clear(); paintChanged(); whySel = ''; setTimeout(paintWhy, 0); } catch (_e) {}
+      try { setTimeout(() => { const w = BT.$('#exitWrap'); if (w) { w.style.display = ''; w.classList.remove('gd-ask'); } }, 0); } catch (_e) {}
       try { faultMore = false; renderFaultPills(''); } catch (_e) {}
 	      [el.readsQuality, el.readsMiss, el.readsBallObs, el.readsPocket, el.readsExit, el.readsSpeed, el.readsFault].forEach(c => {
 	        if (!c) return;
@@ -2710,6 +2711,18 @@ function sessionSummary(shots) {
       wirePills(el.readsBallObs);
       wireQualityPills(el.readsPocket);
       wireQualityPills(el.readsExit);
+      // 👀 Off the deck shows for pocket hits (strike or not) and hides for misses / Brooklyn: one less thing to skip.
+      function paintExitRow() {
+        const w = BT.$('#exitWrap'); if (!w) return; const pk = selectedPills(el.readsPocket)[0] || '';
+        const pocket = /^Pocket/.test(pk), miss = /^(Missed|Brooklyn)/.test(pk);
+        w.style.display = miss ? 'none' : '';
+        if (miss) el.readsExit.querySelectorAll('button.active').forEach(b => b.classList.remove('active'));
+        w.classList.toggle('gd-ask', pocket && !selectedPills(el.readsExit).length);
+        const h = BT.$('#exitHint'); if (h) h.textContent = pocket ? (isLeftyBowler() ? '👀 where did it go? (right = still turning · left = rolled out)' : '👀 where did it go? (left = still turning · right = rolled out)') : (isLeftyBowler() ? '(right = still turning · left = rolled out)' : '(left = still turning · right = rolled out)');
+      }
+      el.readsPocket.addEventListener('click', () => setTimeout(paintExitRow, 0));
+      el.readsExit.addEventListener('click', () => setTimeout(paintExitRow, 0));
+      setTimeout(paintExitRow, 0);
       wireQualityPills(el.readsSpeed);
       renderFaultPills();
       // + Add your own reason: saved on this phone and kept on the list
