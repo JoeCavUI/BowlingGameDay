@@ -527,6 +527,8 @@
               .map(n => ({ n, v: BT().motionVector(byN[n], b) })).filter(o => o.v.length >= ov.length + 0.08 && o.v.backend >= ov.backend - 0.05).sort((a, z) => (z.v.length + z.v.backend * 0.5) - (a.v.length + a.v.backend * 0.5))[0];
               if (cand) bring = cand.n; } } } catch (_e) { cleaner = cleaner0; }
         if (bring) items.push(`<b>Bring ${esc(bring)}</b>: nothing in this bag goes longer than ${esc(out.firstBall)}, and slow burn needs a ball that does.`);
+        if (!cleaner.length && !bring) { const L = (b && b.laser) || {}; const order = ['Loft', 'Speed', 'Release'].map(k => ({ k, r: Number(L[k] ?? 3) + (k === 'Loft' ? 2 : 0) })).filter(o => Number(L[o.k] ?? 3) > 1).sort((a, z) => z.r - a.r).map(o => o.k);
+          items.push(`<b>No ball in your arsenal goes longer than ${esc(out.firstBall)}</b>: use LASER instead, in this order for you: ${order.map(k => k === 'Loft' ? 'more loft (past the dry front)' : k === 'Speed' ? 'a touch more speed' : 'a bit more hand').join(', then ')}. Not deeper: that adds dry boards.`); }
         if (cleaner.length) items.push(`<b>${esc(cleaner[0])}</b>: the bag's cleaner ball (saves energy for the pins)${cleaner[1] ? `; then ${esc(cleaner[1])}` : ''}`);
         Object.entries(ruled).forEach(([bn, why]) => items.push(`<span class="dim">Not ${esc(bn)} here for this: ${esc(why)}.</span>`));
         Object.entries(Hh).filter(([k, q]) => LBL[k] && q.n >= 2 && q.ok * 2 < q.n).forEach(([k, q]) => items.push(`<span class="dim">Not ${LBL[k].toLowerCase()} here: it fixed it only ${q.ok} of ${q.n}.</span>`));

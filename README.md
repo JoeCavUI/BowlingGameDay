@@ -60,6 +60,8 @@ Then open http://localhost:3000
 
 ## Changes in v165-beta102 (held)
 - 🕯️ Slow-burn order: a slow-burn ball has to go longer than your opener. Game Day names an arsenal ball for next time when nothing in tonight's bag is cleaner; the Plan says "Bring X" when the bag has nothing longer than your opener.
+- 🧭 No cleaner ball for slow burn? Coach falls back to LASER, ranked by your Bowler-page ratings and Why? record: Loft first (past the dry front), then Speed or Release. Aim (deeper) stays out unless your record says it fixed burn. Plan says the same when your whole arsenal has nothing longer than your opener.
+- 🐛 Loft advice direction fixed: for a ball using its energy too early (carry weak / slow burn) Coach now says add loft, not "lay it down sooner."
 - ↔️ Lanes: "Before game 3, lane 22 was converting 9 of 12 and lane 21 4 of 11 … adjust lane by lane: don't move on the lane that's still working."
 - 📝 Ball notes: a flat 10 is a "weak leave that fits your slow-burn read," not proof of slow burn.
 - ⚠️ 3-balls-in-a-game warning only when two balls got 2 shots or fewer; otherwise it notes ball and line changed together (not a clean comparison).

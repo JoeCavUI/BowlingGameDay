@@ -414,7 +414,8 @@
       return 'Keep your speed steady and repeatable while the lane settles.';
     }
     if (kind === 'Loft') {
-      if (sit === 'early' || sit === 'carryStrong') return 'Add a little loft (set it down a few inches further) to get past the dry front.';
+      // More loft = less time in the dry front: saves energy (early read, slow burn). Less loft = an earlier read (going long, arriving too strong).
+      if (sit === 'early' || sit === 'carryWeak' || sit === 'slowBurn') return 'Add a little loft (set it down a few inches further) to get past the dry front and save energy for the pins.';
       return 'Lay it down a little sooner (less loft) so the ball sees the lane earlier.';
     }
     if (kind === 'Release') {
@@ -2063,7 +2064,13 @@
         const cand = [...R.entries()].filter(([n, r]) => n !== ctx.currentBall && !ruled[n] && !BT.isRetired(n) && !(BT.isSpareBall && BT.isSpareBall(r)))
           .map(([n, r]) => ({ n, v: BT.motionVector(r, ctx.bowler) })).filter(o => o.v && o.v.length >= cv.length + 0.08 && o.v.backend >= cv.backend - 0.05)
           .sort((a, z) => (z.v.length + z.v.backend * 0.5) - (a.v.length + a.v.backend * 0.5))[0];
-        if (cand) steps.push(`next time, bring a ball that goes longer than ${ctx.currentBall}: ${cand.n} (nothing in tonight's bag is cleaner)`); } } catch (_e) {} }
+        if (cand) steps.push(`next time, bring a ball that goes longer than ${ctx.currentBall}: ${cand.n} (nothing in tonight's bag is cleaner)`); } } catch (_e) {}
+      // No cleaner ball tonight: fall back to LASER (Loft first: it carries the ball past the dry fronts; then Speed, Release), ranked by your own ratings on the Bowler page
+      // and your Why? record. Kinds that failed here stay out; Equipment is out (nothing to change to); Aim is out (moving deeper adds dry boards to a burning ball) unless your record says it fixed burn.
+      try { const KM = { feet: 'Aim', speed: 'Speed', loft: 'Loft', hand: 'Release' }, have = new Set(steps.map(t => (t.match(/^(Loft|Aim|Speed|Release)/) || [])[1]).filter(Boolean));
+        const bad = new Set(Object.entries(here).filter(([k, q]) => q.n >= 1 && q.ok * 2 < q.n).map(([k]) => KM[k]).filter(Boolean));
+        rankMoves('carryWeak', prof, null, false, bad, null, '').map(m => Object.assign({}, m, { score: m.score + (m.kind === 'Loft' ? 4 : 0) })).sort((a, z) => z.score - a.score).filter(m => m.kind !== 'Equipment' && m.kind !== 'Angle' && m.kind !== 'Aim' && !have.has(m.kind) && !bad.has(m.kind)).slice(0, 2)
+          .forEach(m => { let t = ''; try { t = moveText(m.kind, 'carryWeak', prof, null, '', 1); } catch (_e) {} steps.push(`${m.kind} (LASER, your rating ${m.rating}/5)${t ? `: ${String(t).replace(/<[^>]+>/g, '')}` : ''}`); }); } catch (_e) {} }
     const ruledOut = Object.entries(ruled).filter(([bn]) => bn !== ctx.currentBall && (ctx.setBalls || []).some(b => b && b.name === bn)).map(([bn, why]) => `${bn}: not here, ${why}`);
     const avoid = ruledOut.concat(Object.entries(here).filter(([k, q]) => CHG_LABEL[k] && q.n >= 2 && q.ok * 2 < q.n).map(([k, q]) => `${CHG_LABEL[k].toLowerCase()} fixed it only ${q.ok} of ${q.n} here`));
     if (!steps.length) steps.push('Loft it a touch past the dry fronts, or a cleaner ball');
