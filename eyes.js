@@ -50,7 +50,10 @@
     const sides = [['channel', o.channel], ['inside', o.inside], ['thin', o.thin]].sort((a, b) => b[1] - a[1]);
     o.pattern = sides[0][1] >= 2 && sides[0][1] > sides[1][1] ? sides[0][0] : '';
     o.tip = o.pattern === 'channel' ? `Missing the ${C} to the channel points to alignment: check your feet and target on the ${C} (you may be lined up too thin or drifting).`
-      : o.pattern === 'inside' ? `Missing the ${C} inside means the ball is hooking: flatten your release or use your spare ball, and if it keeps happening move your feet.`
+      : o.pattern === 'inside' ? (() => { const spare = Object.keys(o.missBalls).filter(b => { try { return BT().isSpareBall(b); } catch (_e) { return false; } }).reduce((s, b) => s + o.missBalls[b], 0);
+          // Already on the spare ball: it isn't the ball hooking, it's the line. Same target, feet left (righty) sends it farther right.
+          return spare >= Math.ceil(o.inside / 2) ? `Missing the ${C} inside with your spare ball means the line, not the ball: keep your target and move your feet ${lefty ? 'right' : 'left'} 1–2 boards, and check you're not pulling it at the line.`
+            : `Missing the ${C} inside means the ball is hooking: flatten your release or use your spare ball, and if it keeps happening move your feet.`; })()
       : o.pattern === 'thin' ? `Chopping the ${C}: you're close. Aim a half board more toward the middle of the pin.` : '';
     return o;
   }

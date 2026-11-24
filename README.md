@@ -65,6 +65,11 @@ Then open http://localhost:3000
 - 🧽 Dark-horse surface tip only when the gap is real: 5+ pins over the ball's current surface band with 20+ games on each side.
 - ✏️ "Plan the switch before game 1" → "Not an opener here: weaker in game 1"; bag labels: one "Strongest" / "Cleanest" at the end, "Stronger / Cleaner still" between.
 
+- 🎯 10-pin tip: missing the 10 inside *with your spare ball* now says it's the line, not the ball (same target, feet 1–2 boards left; check you're not pulling), instead of "use your spare ball."
+- 📐 Geometry (5 Elements) isn't graded when the oil pattern is unknown / estimated: the Baker Box is a guess there, so it can't be your "weakest part."
+- 📐 Angle drill for high misses doesn't send you deeper when Energy vs angle says deeper cost carry that night: later / cleaner ball from the better spot, then loft.
+- 📝 Ball notes say "poor shots" (not "missed shots") and need 2+ shots before "logs agree"; "1 strike or flush" grammar.
+
 ## Changes in v163-beta100
 - ⚫ Retired balls are grayed out on the Barnes chart: dots, chips and the box list (with "show retired" ticked).
 - 🎚️ Tune sliders (Strength, Length, Backend) save the moment you let go, with a "✓ Saved" tick. The ball's "Save changes" (specs) button no longer wipes slider moves you hadn't saved. Surface stays a what-if until the bottom Save.

@@ -772,8 +772,9 @@
     const dSubs = [];
     { // Geometry: did your opening line (game 1) pass the Rule of 31 / Baker Box?
       const g1 = C.filter(c => c.gameNo === 1 && c.feet != null && num(c.shot.arrows) != null);
-      const checks = g1.map(c => lineMath(c.feet, c.shot.arrows, pat, prof, 'start', null, null, num(c.shot.targetFt) || 15)).filter(r => r && r.status);
-      if (checks.length) {
+      const checks = (pat && pat.est) ? [] : g1.map(c => lineMath(c.feet, c.shot.arrows, pat, prof, 'start', null, null, num(c.shot.targetFt) || 15)).filter(r => r && r.status);
+      if (pat && pat.est && g1.length) dSubs.push(sub('Geometry', null, 'Not graded: the oil pattern is unknown or estimated, so the Baker Box / Rule of 31 is a guess here.'));
+      else if (checks.length) {
         const on = checks.filter(r => r.status === 'on').length;
         const basis = checks[0].basis === 'box' ? 'your Baker Box' : 'the Rule of 31';
         dSubs.push(sub('Geometry', pct(on, checks.length), `Your game 1 line went through ${basis} on ${of(on, checks.length)} shots.`));
@@ -868,7 +869,11 @@
       Roll: 'Finish drill: 10 pocket shots. Call the exit (left / straight / right) and the 6-pin out loud before the pins settle.',
     };
     const angEl = out.find(x => x.key === 'Angle'), outW = prof.lefty ? 'right' : 'left';
-    if (angEl && angEl.dir === 'high') DRILL.Angle = `Angle drill (your misses were high): keep your target and move your feet 1 and 2 boards ${outW}, 3 shots each, or try a later ball from the same spot. Watch whether the 4-pin and 9-pin stop staying.`;
+    // If going deeper tonight cost carry (Energy vs angle), the drill doesn't send you deeper: later ball from the same spot first.
+    let deepHurt = false; try { const ea = energyAngle(C.map(x => x.shot).filter(Boolean), prof.lefty); deepHurt = !!(ea && /^Deeper/.test(ea.text || '')); } catch (_e) {}
+    if (angEl && angEl.dir === 'high') DRILL.Angle = deepHurt
+      ? `Angle drill (your misses were high, and going deeper cost carry tonight): from your better spot, same target, try a later / cleaner ball, 3 shots; then the same ball with a little loft. Watch whether the 4-pin and 9-pin stop staying.`
+      : `Angle drill (your misses were high): keep your target and move your feet 1 and 2 boards ${outW}, 3 shots each, or try a later ball from the same spot. Watch whether the 4-pin and 9-pin stop staying.`;
     else if (angEl && angEl.dir === 'light') DRILL.Angle = `Angle drill (your misses were light): keep your target and move your feet 1 and 2 boards ${prof.lefty ? 'left' : 'right'}, 3 shots each, or try an earlier ball from the same spot. Watch the 6-pin and 10-pin.`;
     else if (angEl && angEl.dir === 'mixed') DRILL.Angle = 'Angle drill: high and light from the same line means the shape isn\'t repeating. Same line, 9 shots, same speed: log the pocket each time before you move.';
     return { model: 'kegel5', elements: out, weakest: weakest ? weakest.key : '', drill: weakest ? DRILL[weakest.key] : '' };
@@ -2004,13 +2009,13 @@
     const early = good.filter(c => c.early).length, late = good.filter(c => c.long).length;
     const hiH = good.filter(c => !c.strike && c.lean > 0).length, ltH = good.filter(c => !c.strike && c.lean < 0).length;
     const weak = good.filter(c => !c.strike && (c.finish === 'weak' || c.shot.leaveTag === 'Flat 10')).length, strong = good.filter(c => !c.strike && (c.finish === 'strong' || c.shot.leaveTag === 'Ringing 10')).length;
-    if (note.read === 'fronts' || note.read === 'mid') out.push(early > late ? `logs agree it read early (${early} early vs ${late} long)` : late > early ? `logs say it went long more (${late} long vs ${early} early)` : ltH && (note.finish === 'flat' || weak > strong) ? `${ltH} light / weak hits fit an early read that rolled out` : hiH > ltH ? `${hiH} high hits fit an early read` : '');
-    if (note.read === 'long' || note.read === 'back') out.push(late > early ? `logs agree (${late} long vs ${early} early)` : early > late ? `logs say it read earlier (${early} early vs ${late} long)` : note.read === 'long' && ltH > hiH ? `${ltH} light hits fit it going long` : '');
-    if (note.finish === 'burn') { const bs = good.map(burnSign).filter(Boolean); out.push(bs.length ? `${bs.length} slow-burn leave${bs.length === 1 ? '' : 's'} (${[...new Set(bs)].join(', ')})` : strong > weak ? `logs show it finishing strong (${strong} vs ${weak} weak)` : ''); }
-    if (note.finish === 'flat') out.push(weak > strong ? `logs agree it finished weak (${weak} vs ${strong} strong)` : strong > weak ? `logs show it finishing strong (${strong} vs ${weak} weak)` : '');
-    if (note.finish === 'strong' || note.finish === 'sharp') out.push(strong > weak ? `logs agree it finished strong (${strong} vs ${weak} weak)` : weak > strong ? `logs show it finishing weak (${weak} vs ${strong} strong)` : '');
+    if (note.read === 'fronts' || note.read === 'mid') out.push(early > late && early >= 2 ? `logs agree it read early (${early} early vs ${late} long)` : late > early && late >= 2 ? `logs say it went long more (${late} long vs ${early} early)` : ltH && (note.finish === 'flat' || weak > strong) ? `${ltH} light / weak hits fit an early read that rolled out` : hiH > ltH ? `${hiH} high hits fit an early read` : '');
+    if (note.read === 'long' || note.read === 'back') out.push(late > early && late >= 2 ? `logs agree (${late} long vs ${early} early)` : early > late && early >= 2 ? `logs say it read earlier (${early} early vs ${late} long)` : note.read === 'long' && ltH > hiH ? `${ltH} light hits fit it going long` : '');
+    if (note.finish === 'burn') { const bs = good.map(burnSign).filter(Boolean); out.push(bs.length ? `${bs.length} slow-burn leave${bs.length === 1 ? '' : 's'} (${[...new Set(bs)].join(', ')})` : strong > weak && strong >= 2 ? `logs show it finishing strong (${strong} vs ${weak} weak)` : ''); }
+    if (note.finish === 'flat') out.push(weak > strong && weak >= 2 ? `logs agree it finished weak (${weak} vs ${strong} strong)` : strong > weak ? `logs show it finishing strong (${strong} vs ${weak} weak)` : '');
+    if (note.finish === 'strong' || note.finish === 'sharp') out.push(strong > weak && strong >= 2 ? `logs agree it finished strong (${strong} vs ${weak} weak)` : weak > strong && weak >= 2 ? `logs show it finishing weak (${weak} vs ${strong} strong)` : '');
     const poor = C.filter(c => c.execution === 'poor'), saved = poor.filter(c => c.pocketHit || c.strike).length;
-    if (note.room && poor.length) out.push(`${saved} of ${poor.length} missed shots still found the pocket`);
+    if (note.room && poor.length) out.push(`${saved} of ${poor.length} poor shots still found the pocket`);
     const t = out.filter(Boolean);
     return { n, text: t.length ? `${n} shots: ${t.join('; ')}.` : `${n} shots: nothing in the logs to check it against.` };
   }
