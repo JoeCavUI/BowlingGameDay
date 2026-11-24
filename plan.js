@@ -518,7 +518,15 @@
           .forEach(([k, q]) => items.push(`<b>${LBL[k]}</b>: fixed "gave up / slow burn" (${q.ok} of ${q.n})`));
         // Balls you ruled out here in your ball notes (read early / rolled flat / slow burn) are skipped and named.
         const ruled = {}; sess.forEach(S => Object.entries(S.ballNotes || {}).forEach(([bn, nt]) => { if (nt && (nt.read === 'fronts' || nt.read === 'mid' || nt.finish === 'burn' || nt.finish === 'flat')) { const d = S.savedAt ? new Date(S.savedAt) : null; ruled[bn] = `you saw it ${nt.finish === 'burn' ? 'slow burn' : nt.finish === 'flat' && !nt.read ? 'roll flat' : 'read early'}${d ? ` (${d.getMonth() + 1}/${d.getDate()})` : ''}`; } }));
-        const cleaner = out.recRoles ? Object.entries(out.recRoles).filter(([n, r]) => /reads early|carry drops|Cleaner still/i.test(r) && !ruled[n]).map(([n]) => n) : [];
+        const cleaner0 = out.recRoles ? Object.entries(out.recRoles).filter(([n, r]) => /reads early|carry drops|Cleaner/i.test(r) && !ruled[n]).map(([n]) => n) : [];
+        // A slow-burn ball has to go longer than your opener: keep only bag balls that do, and name one from the arsenal if none.
+        let cleaner = cleaner0, bring = '';
+        try { const byN = {}; arsenalRows().forEach(r => { byN[BT().ballName(r)] = r; }); const op = byN[out.firstBall];
+          if (op) { const ov = BT().motionVector(op, b); cleaner = cleaner0.filter(n => byN[n] && BT().motionVector(byN[n], b).length >= ov.length + 0.05);
+            if (!cleaner.length) { const cand = Object.keys(byN).filter(n => n !== out.firstBall && !ruled[n] && !BT().isRetired(n) && !(BT().isSpareBall && BT().isSpareBall(byN[n])))
+              .map(n => ({ n, v: BT().motionVector(byN[n], b) })).filter(o => o.v.length >= ov.length + 0.08 && o.v.backend >= ov.backend - 0.05).sort((a, z) => (z.v.length + z.v.backend * 0.5) - (a.v.length + a.v.backend * 0.5))[0];
+              if (cand) bring = cand.n; } } } catch (_e) { cleaner = cleaner0; }
+        if (bring) items.push(`<b>Bring ${esc(bring)}</b>: nothing in this bag goes longer than ${esc(out.firstBall)}, and slow burn needs a ball that does.`);
         if (cleaner.length) items.push(`<b>${esc(cleaner[0])}</b>: the bag's cleaner ball (saves energy for the pins)${cleaner[1] ? `; then ${esc(cleaner[1])}` : ''}`);
         Object.entries(ruled).forEach(([bn, why]) => items.push(`<span class="dim">Not ${esc(bn)} here for this: ${esc(why)}.</span>`));
         Object.entries(Hh).filter(([k, q]) => LBL[k] && q.n >= 2 && q.ok * 2 < q.n).forEach(([k, q]) => items.push(`<span class="dim">Not ${LBL[k].toLowerCase()} here: it fixed it only ${q.ok} of ${q.n}.</span>`));

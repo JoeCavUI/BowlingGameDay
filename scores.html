@@ -612,6 +612,12 @@
           const fa = md(lanesM[a.lane]), fb = md(lanesM[b.lane]);
           laneNote = fa != null && fb != null && Math.abs(fa - fb) >= 1 ? `You played lane ${a.lane} from about ${fa} and lane ${b.lane} from about ${fb}: with separate lines, both lanes played about the same, so the split worked.` : 'Both lanes played about the same.'; }
       }
+      // Lane by lane before the last game: one lane can still be working while the other slips. Plan the next move lane by lane.
+      if (lanes.length === 2) { const lastG = Math.max(...real.map(x => Number(x.gameNo) || 1)); if (lastG >= 2) {
+        const pre = lanes.map(l => { const xs = lanesM[l.lane].filter(x => (Number(x.gameNo) || 1) < lastG); return { l: l.lane, n: xs.length, x: xs.filter(isX).length, p: xs.filter(isP).length }; });
+        const lst = lanes.map(l => { const xs = lanesM[l.lane].filter(x => (Number(x.gameNo) || 1) === lastG); return { l: l.lane, n: xs.length, x: xs.filter(isX).length }; });
+        if (pre.every(z => z.n >= 8)) { const [u, v] = pre, ru = u.x / u.n, rv = v.x / v.n; if (Math.abs(ru - rv) >= 0.25) { const w = ru > rv ? u : v, sl = w === u ? v : u, wl = lst.find(z => z.l === w.l), sll = lst.find(z => z.l === sl.l);
+          laneNote += ` Before game ${lastG}, lane ${w.l} was converting ${w.x} of ${w.n} and lane ${sl.l} ${sl.x} of ${sl.n} (pocket ${sl.p} of ${sl.n}): lane ${sl.l} was slipping first.${wl && sll ? ` Game ${lastG}: ${w.l} ${wl.x} of ${wl.n}, ${sl.l} ${sll.x} of ${sll.n}.` : ''} Next time, adjust lane by lane: don't move on the lane that's still working.`; } } } }
       let five = null, moves = null, rep = null, repG = {};
       try { if (window.BTCoach && BTCoach.repeatability) { rep = BTCoach.repeatability(chron, bowler); repG = BTCoach.repeatByGame(chron, bowler); } } catch (_e) {}
       try { five = (window.BTCoach ? BTCoach.elementsReport(chron, bowler, (BT.lsGet(BT.KEYS.OIL_PATTERNS, []) || []).find(q => q.name === s.pattern) || null) : null) || (s.summary && s.summary.elements) || null; } catch (_e) {}
@@ -699,7 +705,7 @@
         const first = gs[0], last = gs[gs.length - 1];
         if (first && last && lineKey(first) !== lineKey(last)) notes.push(`line ${lineKey(first)} → ${lineKey(last)}`);
         const bs = [...new Set(gs.map(x => x.ball).filter(Boolean))]; if (bs.length) notes.push(bs.length === 1 ? bs[0] : `balls: ${bs.join(', ')}`);
-        if (bs.length >= 3) { const per = bs.map(n => gs.filter(x => x.ball === n).length); notes.push(`⚠️ ${bs.length} balls in one game (${per.join('/')} shots): too few on any one to read it. Give a ball 3–4 frames before switching.`); }
+        if (bs.length >= 3) { const per = bs.map(n => gs.filter(x => x.ball === n).length); const thin = per.filter(n => n <= 2).length; if (thin >= 2) notes.push(`⚠️ ${bs.length} balls in one game (${per.join('/')} shots): two got 2 shots or fewer, too few to read. Unless a good shot clearly showed the wrong motion, give a ball a few frames before switching.`); else notes.push(`${bs.length} balls in one game (${per.join('/')} shots): ball and line changed together, so it isn't a clean ball comparison.`); }
         const twoL = new Set(gs.map(x => x.lane).filter(Boolean)).size === 2;
         const mv = gs.filter((x, i) => { if (!i) return false; let p = gs[i - 1]; if (twoL && x.lane) { p = null; for (let j = i - 1; j >= 0; j--) if (gs[j].lane === x.lane) { p = gs[j]; break; } } return p && (x.feet !== p.feet || x.arrows !== p.arrows); }).length; if (mv) notes.push(`${mv} move${mv === 1 ? '' : 's'}`);
         if (twoL) { const lk = (ln) => { const a = gs.filter(x => x.lane === ln); return a.length ? lineKey(a[a.length - 1]) : ''; }; const L = [...new Set(gs.map(x => x.lane).filter(Boolean))].sort(); const k1 = lk(L[0]), k2 = lk(L[1]); if (k1 && k2 && k1 !== k2) notes.push(`lane ${L[0]} ${k1} · lane ${L[1]} ${k2}`); }

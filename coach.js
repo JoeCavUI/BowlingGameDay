@@ -786,7 +786,7 @@
     dSubs.push(sub('Targeting', tgt, tgt == null ? 'Tap Your mark to grade targeting.' : `On your mark (or saved by the lane) on ${of(onMark, trackedMark.length)} shots.`));
     { const F = C.filter(c => c.shot.fault && c.shot.fault !== 'unsure' && c.shot.fault !== 'well');
       const bal = F.filter(c => c.shot.fault === 'balance').length;
-      dSubs.push(sub('Posture', F.length ? pct(C.length - bal, C.length) : null, F.length ? (bal ? `Fell off the shot ${bal}× (${of(bal, F.length)} poor shots with a reason).` : `No balance faults among ${F.length} poor shot${F.length === 1 ? '' : 's'} with a reason.`) : 'Pick a reason on poor shots (like Fell off the shot) to grade posture.'));
+      dSubs.push(sub('Posture', F.length && bal ? pct(C.length - bal, C.length) : null, F.length ? (bal ? `Fell off the shot ${bal}× (${of(bal, F.length)} poor shots with a reason).` : `None recorded among ${F.length} poor shot${F.length === 1 ? '' : 's'} with a reason (not graded: nothing measured).`) : 'Pick a reason on poor shots (like Fell off the shot) to grade posture.'));
     }
     const dScored = dSubs.filter(x => x.score != null);
     const dScore = tgt != null ? tgt : dScored.length ? Math.round(dScored.reduce((a, x) => a + x.score, 0) / dScored.length) : null;
@@ -853,11 +853,13 @@
     out.push({ key: 'Revs', icon: '🔄', score: rScore, subs: rSubs, text: (prof.rpm ? `Profile: ${prof.rpm} rpm (your Bowler page, not measured tonight). ` : '') + (rd.length ? `The right amount of hook on ${of(right, rd.length)} shots.` : rSubs[0].text) });
 
     // 5. ROLL: how the ball finished: exit off the deck and the key pin
-    const ph = C.filter(c => c.pocketHit && (c.finish || c.strike));
-    const fin = ph.filter(c => c.strike || c.finish === 'good').length;
+    // Graded only on pocket hits you watched off the deck (strikes included); each shot lands in exactly one bucket.
+    const ph = C.filter(c => c.pocketHit && c.finish);
     const weak = ph.filter(c => c.finish === 'weak').length, strong = ph.filter(c => c.finish === 'strong').length;
-    const roScore = pct(fin, ph.length);
-    out.push({ key: 'Roll', icon: '🌀', score: roScore, subs: [], text: ph.length ? `Finished right on ${of(fin, ph.length)} pocket hits.${weak ? ` Rolled out (weak exit) ${weak}×.` : ''}${strong ? ` Still turning too hard ${strong}×.` : ''}` : 'Tap the exit off the deck to grade roll.' });
+    const fin = ph.length - weak - strong;
+    const unwatched = C.filter(c => c.pocketHit && !c.finish).length;
+    const roScore = ph.length >= 3 ? pct(fin, ph.length) : null;
+    out.push({ key: 'Roll', icon: '🌀', score: roScore, subs: [], text: ph.length ? `Of ${ph.length} pocket hits you watched off the deck: finished right ${fin}${weak ? `, rolled out (weak exit) ${weak}` : ''}${strong ? `, still turning too hard ${strong}` : ''}.${unwatched ? ` ${unwatched} not watched, not graded.` : ''}${ph.length < 3 ? ' Needs 3 to grade.' : ''}` : 'Tap the exit off the deck to grade roll.' });
 
     const scored = out.filter(x => x.score != null);
     const weakest = scored.length ? scored.slice().sort((a, b) => a.score - b.score)[0] : null;
@@ -1197,7 +1199,7 @@
     if (res.made) bits.push(`${res.good} good call${res.good === 1 ? '' : 's'}`);
     if (res.worked) bits.push(`${res.worked} worked`);
     if (res.didnt) bits.push(`${res.didnt} didn't help`);
-    if (res.afterPoor) bits.push(`${res.afterPoor} right after a poor shot`);
+    if (res.afterPoor) bits.push(`${res.afterPoor} right after a poor shot${res.afterPoorBad && res.afterPoorBad < res.afterPoor ? ` (${res.afterPoorBad} of them didn't help)` : ''}`);
     if (res.tooSoon) bits.push(`${res.tooSoon} before 2 good shots`);
     if (res.whileStriking) bits.push(`${res.whileStriking} while striking`);
     if (res.wrongDir) bits.push(`${res.wrongDir} the wrong way`);
@@ -2011,7 +2013,7 @@
     const weak = good.filter(c => !c.strike && (c.finish === 'weak' || c.shot.leaveTag === 'Flat 10')).length, strong = good.filter(c => !c.strike && (c.finish === 'strong' || c.shot.leaveTag === 'Ringing 10')).length;
     if (note.read === 'fronts' || note.read === 'mid') out.push(early > late && early >= 2 ? `logs agree it read early (${early} early vs ${late} long)` : late > early && late >= 2 ? `logs say it went long more (${late} long vs ${early} early)` : ltH && (note.finish === 'flat' || weak > strong) ? `${ltH} light / weak hits fit an early read that rolled out` : hiH > ltH ? `${hiH} high hits fit an early read` : '');
     if (note.read === 'long' || note.read === 'back') out.push(late > early && late >= 2 ? `logs agree (${late} long vs ${early} early)` : early > late && early >= 2 ? `logs say it read earlier (${early} early vs ${late} long)` : note.read === 'long' && ltH > hiH ? `${ltH} light hits fit it going long` : '');
-    if (note.finish === 'burn') { const bs = good.map(burnSign).filter(Boolean); out.push(bs.length ? `${bs.length} slow-burn leave${bs.length === 1 ? '' : 's'} (${[...new Set(bs)].join(', ')})` : strong > weak && strong >= 2 ? `logs show it finishing strong (${strong} vs ${weak} weak)` : ''); }
+    if (note.finish === 'burn') { const bs = good.map(burnSign).filter(Boolean); out.push(bs.length ? `${bs.length} weak leave${bs.length === 1 ? '' : 's'} (${[...new Set(bs)].join(', ')}) that fit your slow-burn read` : strong > weak && strong >= 2 ? `logs show it finishing strong (${strong} vs ${weak} weak)` : ''); }
     if (note.finish === 'flat') out.push(weak > strong && weak >= 2 ? `logs agree it finished weak (${weak} vs ${strong} strong)` : strong > weak ? `logs show it finishing strong (${strong} vs ${weak} weak)` : '');
     if (note.finish === 'strong' || note.finish === 'sharp') out.push(strong > weak && strong >= 2 ? `logs agree it finished strong (${strong} vs ${weak} weak)` : weak > strong && weak >= 2 ? `logs show it finishing weak (${weak} vs ${strong} strong)` : '');
     const poor = C.filter(c => c.execution === 'poor'), saved = poor.filter(c => c.pocketHit || c.strike).length;
@@ -2055,6 +2057,13 @@
         ruled[bn] = `you saw it ${nt.finish === 'burn' ? 'slow burn' : nt.finish === 'flat' && !nt.read ? 'roll flat' : 'read early'}${d ? ` (${d.getMonth() + 1}/${d.getDate()})` : ''}`; } }));
     let ball = ''; try { const cx = Object.assign({}, ctx, { setBalls: (ctx.setBalls || []).filter(b => !(b && ruled[b.name])) }); ball = suggestBall('carryWeak', cx, prof); } catch (_e) {}
     if (ball) steps.push(`${ball} (cleaner through the front, saves energy)`);
+    // Nothing in tonight's bag goes longer than the ball that's burning: name the arsenal ball that would, for next time.
+    else { try { const R = ballRowMap(), cur = R.get(ctx.currentBall);
+      if (cur && typeof BT !== 'undefined' && BT.motionVector) { const cv = BT.motionVector(cur, ctx.bowler);
+        const cand = [...R.entries()].filter(([n, r]) => n !== ctx.currentBall && !ruled[n] && !BT.isRetired(n) && !(BT.isSpareBall && BT.isSpareBall(r)))
+          .map(([n, r]) => ({ n, v: BT.motionVector(r, ctx.bowler) })).filter(o => o.v && o.v.length >= cv.length + 0.08 && o.v.backend >= cv.backend - 0.05)
+          .sort((a, z) => (z.v.length + z.v.backend * 0.5) - (a.v.length + a.v.backend * 0.5))[0];
+        if (cand) steps.push(`next time, bring a ball that goes longer than ${ctx.currentBall}: ${cand.n} (nothing in tonight's bag is cleaner)`); } } catch (_e) {} }
     const ruledOut = Object.entries(ruled).filter(([bn]) => bn !== ctx.currentBall && (ctx.setBalls || []).some(b => b && b.name === bn)).map(([bn, why]) => `${bn}: not here, ${why}`);
     const avoid = ruledOut.concat(Object.entries(here).filter(([k, q]) => CHG_LABEL[k] && q.n >= 2 && q.ok * 2 < q.n).map(([k, q]) => `${CHG_LABEL[k].toLowerCase()} fixed it only ${q.ok} of ${q.n} here`));
     if (!steps.length) steps.push('Loft it a touch past the dry fronts, or a cleaner ball');

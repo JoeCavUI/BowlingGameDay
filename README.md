@@ -58,6 +58,14 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v165-beta102 (held)
+- 🕯️ Slow-burn order: a slow-burn ball has to go longer than your opener. Game Day names an arsenal ball for next time when nothing in tonight's bag is cleaner; the Plan says "Bring X" when the bag has nothing longer than your opener.
+- ↔️ Lanes: "Before game 3, lane 22 was converting 9 of 12 and lane 21 4 of 11 … adjust lane by lane: don't move on the lane that's still working."
+- 📝 Ball notes: a flat 10 is a "weak leave that fits your slow-burn read," not proof of slow burn.
+- ⚠️ 3-balls-in-a-game warning only when two balls got 2 shots or fewer; otherwise it notes ball and line changed together (not a clean comparison).
+- 🔢 Moves: "4 right after a poor shot (3 of them didn't help)" so the two counts match.
+- 📊 Honest grades: Roll grades only pocket hits you watched off the deck (each shot in one bucket; unwatched listed, 3+ to grade). Posture with no balance faults says "none recorded" and isn't graded 100%.
+
 ## Changes in v164-beta101
 - 🎳 One opener: the ball you've opened with on most of your last 4 Game Day nights at the house (tie → the latest) is the forecast's ball and the Plan's First ball; the history pick becomes "test in practice." The history "best game 1s" pick now needs 8+ game 1s and use in the last 12 months.
 - 🎒 A ball you've been throwing at the house (10+ shots on 2+ of your last 4 nights) stays in the bag as "Your recent ball here (backup)" instead of being cut for overlap.
