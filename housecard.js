@@ -52,7 +52,11 @@
       const opens = use.slice().sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0)).slice(0, 4).map(s => { const f = shotsOf(s).slice().sort((a, b) => (a.at || 0) - (b.at || 0))[0]; return f && f.ball; }).filter(Boolean);
       const oc = {}; opens.forEach(b => { oc[b] = (oc[b] || 0) + 1; });
       const topOpen = Object.keys(oc).sort((a, b) => oc[b] - oc[a] || opens.indexOf(a) - opens.indexOf(b))[0];
-      const ball = topOpen && oc[topOpen] >= 2 ? topOpen : g1 ? g1.o.ball : (grid[0] && grid[0].ball);
+      // Opener = the best game 1 results here (8+ game 1 shots), with a small edge for the ball you opened with last time.
+      // Counting openings alone picked a ball that faded (Ion Max at Imperial).
+      const lastOpen = opens[0];
+      const g1b = grid.map(o => ({ o, c: o.g[1] })).filter(x => x.c.n >= 8).map(x => ({ x, s: (x.c.x + 0.5) / (x.c.n + 1) + (x.o.ball === lastOpen ? 0.05 : 0) })).sort((a, b) => b.s - a.s)[0];
+      const ball = g1b ? g1b.x.o.ball : topOpen && oc[topOpen] >= 2 ? topOpen : g1 ? g1.o.ball : (grid[0] && grid[0].ball);
       const st = ball ? sh.filter(z => z.ball === ball && gOf(z) === 1) : [];
       const line = st.length ? `${md(st.map(z => Number(z.feet)))}/${md(st.map(z => Number(z.arrows)))}` : null;
       const mv = hb && hb.moves && hb.moves.length ? hb.moves : [];

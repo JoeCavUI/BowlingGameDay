@@ -58,6 +58,11 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v166-beta103 (held)
+- 🎳 Opener = best game 1 results on Game Day at the house (8+ game 1 shots, small edge for last time's opener), not the ball you opened with most often. Forecast and the Plan's First ball use it.
+- 🧭 Your reads beat leave counts: when Game Day reads clearly lean long / light, "What the lanes are telling you" says the ball has been holding (carrydown fits), not burning early; it gives "If it holds / goes long … If it reads early and dies …"; the slow-burn section is marked "less common here."
+- "No games on lanes 21-22 yet." instead of "Only 0 games."
+
 ## Changes in v165-beta102
 - 🕯️ Slow-burn order: a slow-burn ball has to go longer than your opener. Game Day names an arsenal ball for next time when nothing in tonight's bag is cleaner; the Plan says "Bring X" when the bag has nothing longer than your opener.
 - 🧭 No cleaner ball for slow burn? Coach falls back to LASER, ranked by your Bowler-page ratings and Why? record: Loft first (past the dry front), then Speed or Release. Aim (deeper) stays out unless your record says it fixed burn. Plan says the same when your whole arsenal has nothing longer than your opener.
