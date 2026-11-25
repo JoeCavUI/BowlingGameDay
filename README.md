@@ -59,6 +59,14 @@ Then open http://localhost:3000
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
 ## Changes in v167-beta104 (held)
+- 🎳 Open frames split two ways: "5 open frames: 3 splits (8-10, …; 3 off pocket hits) and 2 makeable spares missed" instead of "5 missed spares."
+- 📋 Plan vs tonight (night review): the Plan's start ball and change-ups (from your saved bag's roles) against what you threw: opener, balls not in the plan's bag, change-ups not tried.
+- 🔗 Two changes at once (e.g. loft and a ball switch together): the Why? verdict says it can't be credited to either, and it's left out of your "what fixed it" record.
+- 🔎 Ball notes put your note next to the logs when they disagree: "your note says backend; your logs say 2 early, 0 long."
+- 👁️ Eyeball line labelled "how often you logged it" so mark / pocket % aren't mistaken for accuracy.
+- 🔢 Moves: "11 changes (N line moves, M ball-only changes; a line move counts per lane)" so it matches the game lines.
+- 🧭 Game Day, start of game 3: "Game 3 plan (you decided this before you bowled): if it reads early / carry drops → X; if it goes long / light → Y. One change, then 2 good shots. Not deeper." From your saved bag's roles.
+- ✋ Move brake: 2+ line or ball changes in your last few frames → "Stop here: pick one and give it 2 good shots."
 - 🗣️ Why you changed: for "Slow burn" / "Gave up," fixed now also needs half strikes or flush (carry is the point), not just pocket hits.
 - ↔️ "Lane X was tougher" only cites pocket when it was actually lower there; otherwise "(pocket similar: it was carry)."
 - 🧐 What cost pins: light hits that mostly rolled out off the deck say "ran out of energy: more loft or a cleaner ball," not "more angle / feet left."

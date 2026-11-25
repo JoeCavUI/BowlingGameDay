@@ -1114,7 +1114,7 @@
       const dA = (prev.arrows != null && cur.arrows != null) ? own(cur.arrows) - own(prev.arrows) : 0;
       const dir = Math.sign(dF || dA); // +1 deeper, -1 outside
       const want = read === 'early' ? 1 : read === 'late' ? -1 : 0;
-      const r = {
+      const r = { lineMoved: ch.lineMoved, ballChanged: ch.ballChanged,
         i, from: lineKey(prev), to: lineKey(cur), fromBall: prev.ball, toBall: cur.ball,
         lineMoved: ch.lineMoved, ballChanged: ch.ballChanged, dF, dA, dir, read,
         afterPoor: prev.execution === 'poor',
@@ -1196,7 +1196,8 @@
     const R = moveReviews(C, prof);
     const cnt = (f) => R.filter(f).length;
     const res = { made: R.length, good: cnt(r => r.goodCall || r.result === 'worked'), afterPoorBad: cnt(r => r.afterPoor && r.result !== 'worked'), afterPoor: cnt(r => r.afterPoor), tooSoon: cnt(r => r.tooSoon), whileStriking: cnt(r => r.whileStriking), wrongDir: cnt(r => r.wrongDir), worked: cnt(r => r.result === 'worked'), didnt: cnt(r => r.result === 'didnt') };
-    const bits = [`${res.made} made`];
+    const nLine = cnt(r => r.lineMoved), nBall = cnt(r => r.ballChanged && !r.lineMoved), nBoth = cnt(r => r.ballChanged && r.lineMoved);
+    const bits = [`${res.made} changes (${nLine} line move${nLine === 1 ? '' : 's'}${nBall ? `, ${nBall} ball-only change${nBall === 1 ? '' : 's'}` : ''}${nBoth ? `; ${nBoth} changed ball and line together` : ''}; a line move counts per lane)`];
     if (res.made) bits.push(`${res.good} good call${res.good === 1 ? '' : 's'}`);
     if (res.worked) bits.push(`${res.worked} worked`);
     if (res.didnt) bits.push(`${res.didnt} didn't help`);
@@ -1260,6 +1261,10 @@
       try { whyNotes(out, C); } catch (_e) {}
       try { burnNote(out, C, ctx, prof); } catch (_e) {}
       try { motionNote(out, C, ctx); } catch (_e) {}
+      // ✋ Move brake: 2+ line or ball changes in your last 4 frames of this game = stop and let one change settle.
+      try { const g = Number((C[C.length - 1] || {}).gameNo) || 1, G = C.filter(c => (Number(c.gameNo) || 1) === g);
+        let ch = 0; const recent = G.slice(-5); for (let q = 1; q < recent.length; q++) { const a = recent[q - 1].shot, b = recent[q].shot; if (!a || !b) continue; const same = !a.lane || !b.lane || a.lane === b.lane; if ((same && ((a.feet != null && b.feet != null && a.feet !== b.feet) || (a.arrows != null && b.arrows != null && a.arrows !== b.arrows))) || (a.ball && b.ball && a.ball !== b.ball)) ch++; }
+        if (ch >= 2) (out.notes = out.notes || []).unshift(`✋ ${ch} changes in your last few frames. Stop here: pick one and give it 2 good shots before anything else. After a missed mark, just repeat it.`); } catch (_e) {}
       laneNotes(out, C, prof);
       // 🛢️ Carrydown building (game 2+): the ball holds later than game 1 and right moves are working. Stronger with plastic / urethane on the pair.
       try { const E = root.BTEyes, T = ctx && ctx.traffic, c = E && E.carrySign ? E.carrySign(all, prof.lefty) : null;
@@ -1952,7 +1957,11 @@
       const agree = B.filter(c => whySays(why, c) === 1).length, against = B.filter(c => whySays(why, c) === -1).length;
       const end = k + 1 < idx.length ? idx[k + 1] : C.length;
       const A = C.slice(i, end).filter(usable).slice(0, 4);
-      out.push({ i, why, key, label: whyLabel(key), custom: !WHY[key], kinds, afterPoor, prevMiss: prev ? prev.missSide || '' : '', prevLean: prev ? prev.lean : 0, agree, against, nb: B.length, fix: whyFixed(why, A), gameNo: C[i].gameNo, frame: s.frame });
+      // Two changes at once (another kind or a ball switch within the next 3 shots): the result can't be credited to either.
+      const kindsSet = new Set(kinds); let confounded = false;
+      for (let q = i + 1; q < Math.min(end, i + 4); q++) { const z = C[q] && C[q].shot; if (!z) continue; const zk = (Array.isArray(z.changed) ? z.changed : []).filter(x => CHG_LABEL[x] && !kindsSet.has(x)); const prevB = C[q - 1] && C[q - 1].shot && C[q - 1].shot.ball; if (zk.length || (z.ball && prevB && z.ball !== prevB && !kindsSet.has('ball'))) { confounded = true; break; } }
+      if (!kindsSet.has('ball') && s.ball && C[i - 1] && C[i - 1].shot && C[i - 1].shot.ball && C[i - 1].shot.ball !== s.ball) confounded = true;
+      out.push({ i, why, key, label: whyLabel(key), custom: !WHY[key], kinds, confounded, afterPoor, prevMiss: prev ? prev.missSide || '' : '', prevLean: prev ? prev.lean : 0, agree, against, nb: B.length, fix: whyFixed(why, A), gameNo: C[i].gameNo, frame: s.frame });
     });
     return out;
   }
@@ -1964,7 +1973,7 @@
     (sessions || []).forEach(S => {
       const C = ((S && S.shots) || []).filter(x => x && x.type !== 'gameStart').slice().sort((a, b) => (a.at || 0) - (b.at || 0)).map(s => classify(s, prof.lefty));
       whyReview(C).forEach(r => { const o = L[r.key] = L[r.key] || { n: 0, agree: 0, against: 0, kinds: {} }; o.n++; if (r.agree && !r.against) o.agree++; if (r.against >= 2 && !r.agree) o.against++;
-        if (r.fix) (r.kinds.length ? r.kinds : ['other']).forEach(k => { const q = o.kinds[k] = o.kinds[k] || { ok: 0, n: 0 }; q.n++; if (r.fix.ok) q.ok++; }); });
+        if (r.fix && !r.confounded) (r.kinds.length ? r.kinds : ['other']).forEach(k => { const q = o.kinds[k] = o.kinds[k] || { ok: 0, n: 0 }; q.n++; if (r.fix.ok) q.ok++; }); });
     });
     return L;
   }
@@ -1981,6 +1990,7 @@
     if (r.fix) {
       if (r.fix.ok) notes.unshift(`✅ Your change fixed what you saw ("${r.label}"): ${r.why === 'missPocket' || r.why === 'feel' ? `${r.fix.pk} of ${r.fix.n} good shots in the pocket` : `${r.fix.bad} of ${r.fix.n} good shots still ${r.why === 'gaveUp' || r.why === 'skid' || r.why === 'slowBurn' ? 'light / weak' : 'high / strong'}`}, ${r.fix.clean} strikes or flush. Keep it.`);
       else notes.unshift(`↩️ Still "${r.label}" after ${what}: ${r.why === 'missPocket' || r.why === 'feel' ? `${r.fix.pk} of ${r.fix.n} good shots in the pocket` : `${r.fix.bad} of ${r.fix.n} good shots still look that way`}. Try a different kind of change than ${what}.`);
+      if (r.confounded) notes[0] += ' (Another change came at the same time, so Coach won\'t credit either one in your record.)';
       out.whyVerdict = true; return;
     }
     if (r.afterPoor) notes.unshift(`🗣️ You saw "${r.label}" on a shot that missed your mark, and changed ${what}. Coach counts that as a lane read${r.prevMiss ? ` (missed ${r.prevMiss}${r.prevLean > 0 ? ' and it still hooked' : r.prevLean < 0 ? ' and it held' : ''})` : ''}, not a reaction read. Your next good shots will tell.`);
@@ -2014,8 +2024,10 @@
     const early = good.filter(c => c.early).length, late = good.filter(c => c.long).length;
     const hiH = good.filter(c => !c.strike && c.lean > 0).length, ltH = good.filter(c => !c.strike && c.lean < 0).length;
     const weak = good.filter(c => !c.strike && (c.finish === 'weak' || c.shot.leaveTag === 'Flat 10')).length, strong = good.filter(c => !c.strike && (c.finish === 'strong' || c.shot.leaveTag === 'Ringing 10')).length;
-    if (note.read === 'fronts' || note.read === 'mid') out.push(early > late && early >= 2 ? `logs agree it read early (${early} early vs ${late} long)` : late > early && late >= 2 ? `logs say it went long more (${late} long vs ${early} early)` : ltH && (note.finish === 'flat' || weak > strong) ? `${ltH} light / weak hits fit an early read that rolled out` : hiH > ltH ? `${hiH} high hits fit an early read` : '');
-    if (note.read === 'long' || note.read === 'back') out.push(late > early && late >= 2 ? `logs agree (${late} long vs ${early} early)` : early > late && early >= 2 ? `logs say it read earlier (${early} early vs ${late} long)` : note.read === 'long' && ltH > hiH ? `${ltH} light hits fit it going long` : '');
+    const RD = { fronts: 'fronts', mid: 'midlane', back: 'backend', long: 'went long' };
+    if (note.read && (early + late) >= 2 && ((/^(fronts|mid)$/.test(note.read) && late > early) || (/^(back|long)$/.test(note.read) && early > late))) out.push(`your note says ${RD[note.read]}; your logs say ${early} early, ${late} long (worth a second look next time)`);
+    else if (note.read === 'fronts' || note.read === 'mid') out.push(early > late && early >= 2 ? `logs agree it read early (${early} early vs ${late} long)` : late > early && late >= 2 ? `logs say it went long more (${late} long vs ${early} early)` : ltH && (note.finish === 'flat' || weak > strong) ? `${ltH} light / weak hits fit an early read that rolled out` : hiH > ltH ? `${hiH} high hits fit an early read` : '');
+    if ((note.read === 'long' || note.read === 'back') && !((early + late) >= 2 && early > late)) out.push(late > early && late >= 2 ? `logs agree (${late} long vs ${early} early)` : early > late && early >= 2 ? `logs say it read earlier (${early} early vs ${late} long)` : note.read === 'long' && ltH > hiH ? `${ltH} light hits fit it going long` : '');
     if (note.finish === 'burn') { const bs = good.map(burnSign).filter(Boolean); out.push(bs.length ? `${bs.length} weak leave${bs.length === 1 ? '' : 's'} (${[...new Set(bs)].join(', ')}) that fit your slow-burn read` : strong > weak && strong >= 2 ? `logs show it finishing strong (${strong} vs ${weak} weak)` : ''); }
     if (note.finish === 'flat') out.push(weak > strong && weak >= 2 ? `logs agree it finished weak (${weak} vs ${strong} strong)` : strong > weak ? `logs show it finishing strong (${strong} vs ${weak} weak)` : '');
     if (note.finish === 'strong' || note.finish === 'sharp') out.push(strong > weak && strong >= 2 ? `logs agree it finished strong (${strong} vs ${weak} weak)` : weak > strong && weak >= 2 ? `logs show it finishing weak (${weak} vs ${strong} strong)` : '');

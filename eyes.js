@@ -272,6 +272,16 @@
         out.push({ id: `g1carry:${ctx.ball}:${P.length}`, text: `🐢 Game 1: ${ctx.ball} is in the pocket (${P.length}×) but ${X.length ? 'only 1 strike' : 'not carrying'}. Change balls now, don't wait for game 2.${alt ? ` Best here: ${alt.ball} ${alt.feet}/${alt.arrows} (${alt.x} strikes in ${alt.n}).` : ''}`, why: 'Pocket hits that leave pins mean the ball isn\'t matching the pattern. A ball change fixes carry faster than a line move.' });
       }
     }
+    // 🧭 Game 3 plan: the decision you made in the Plan, shown before the late-night spiral can start.
+    // Your bag's roles (If it reads early / carry drops → X; If it goes long / light → Y), one change at a time, not deeper.
+    if (game >= 3 && ctx.setRoles) {
+      const inGame = real.filter(s => (Number(s.gameNo) || 1) === game).length;
+      if (inGame <= 1) {
+        const R = ctx.setRoles, early = Object.keys(R).find(n => /reads early|carry drops/i.test(R[n])), long = Object.keys(R).find(n => /goes long|light/i.test(R[n]));
+        const parts = []; if (early && early !== ctx.ball) parts.push(`reads early / carry drops → ${early}`); if (long && long !== ctx.ball) parts.push(`goes long / light → ${long}`);
+        if (parts.length) out.push({ id: `g3plan:${game}`, text: `🧭 Game ${game} plan (you decided this before you bowled): if it ${parts.join('; if it ')}. One change, then give it 2 good shots. Not deeper.`, why: 'From the roles in tonight\'s bag (built in the Plan). Late games are where the extra moves and ball hopping have cost you most.' });
+      }
+    }
     // 🔀 Over/under: good shots with this ball going high, then light, then high. The reaction isn't repeating,
     // so a line move won't fix it; change balls (not a surface change: that's for the Plan and the review).
     if (ctx.ball) {
