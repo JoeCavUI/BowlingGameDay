@@ -808,7 +808,7 @@
     if (planned.length) {
       const worked = planned.filter(c => c.strike || c.pocketHit).length;
       sSubs.push(sub('Versatility', pct(worked, planned.length), `You changed speed on purpose ${planned.length}× (${planned.filter(c => c.speed === 'faster').length} faster, ${planned.filter(c => c.speed === 'slower').length} slower); ${of(worked, planned.length)} found the pocket.`));
-    } else sSubs.push(sub('Versatility', null, 'To grade a planned speed change: tap Speed under Changed since last shot, then Faster or Slower.'));
+    } else sSubs.push(sub('Versatility', null, 'To grade a planned speed change: tap Speed in the LASER row, then Faster or Slower.'));
     { const few = unplanned.length < 5 && !planned.length; out.push({ key: 'Speed', icon: '⚡', score: few ? null : sScore, subs: few ? [] : sSubs, quiet: few, text: few ? (unplanned.length ? `Speed logged on ${unplanned.length} shot${unplanned.length === 1 ? '' : 's'}: needs 5 to grade.` : 'Not graded: no speed reads logged.') : `Your normal speed on ${of(same, unplanned.length)} shots.` }); }
 
     // 3. ANGLE: breakpoint → pocket, and where the ball turns (the mud)
@@ -1936,7 +1936,9 @@
     const clean = A.filter(c => (c.strike && c.hit !== 'brooklyn') || c.hit === 'flush').length;
     const pk = A.filter(c => c.pocketHit || (c.strike && c.hit !== 'brooklyn')).length;
     const bad = reason === 'feel' ? n - clean : A.filter(c => whySays(reason, c) === 1).length;
-    return { ok: reason === 'feel' ? pk * 3 >= n * 2 && clean * 2 >= n : bad <= 1 && pk * 3 >= n * 2, bad, clean, pk, n };
+    // Burn / gave up is an energy problem: fixed means it carries again (half strikes or flush), not just finds the pocket.
+    const energy = reason === 'gaveUp' || reason === 'slowBurn';
+    return { ok: reason === 'feel' ? pk * 3 >= n * 2 && clean * 2 >= n : bad <= 1 && pk * 3 >= n * 2 && (!energy || clean * 2 >= n), bad, clean, pk, n };
   }
   const whyLabel = (w) => WHY[w] || (/^c:/.test(String(w || '')) ? String(w).slice(2) : '');
   const whyType = (w) => WHY[w] ? w : 'feel'; // your own reasons: no log check, judged on pocket + carry
@@ -2182,5 +2184,5 @@
     if (lm.kind === 'down') notes.push(curSP ? `🎯 Downlane motion (${lm.down} of ${lm.n} good shots strong / turning hard with ${lm.ball}): a short-pin look, and you're on one. It should keep you in play.${rec}` : sps.length ? `🎯 Downlane motion (${lm.down} of ${lm.n} good shots strong / turning hard with ${lm.ball}): a short-pin look. ${sps[0]} fits: low flare tames the backend.${rec}` : `🎯 Downlane motion with ${lm.ball}: a short-pin look, but there's no short pin in tonight's bag.${rec}`);
     else if (lm.kind === 'early') notes.push(`🎯 Fronts reading early (${lm.early} of ${lm.n} good shots with ${lm.ball}): not a short-pin night. A short pin reads early and has nothing to come back with; go cleaner with more flare instead.${rec}`);
   }
-  root.BTCoach = { isTourn, shortPinHistory, shortPinHistoryLines, laneMotion: (shots, bowler) => laneMotion((shots || []).filter(x => x && x.type !== 'gameStart').map(s => classify(s, bowlerProfile(bowler).lefty))), isShortPinBall, shortPinNight, shortPinRecord, shortPinRecordText, MOTION_TXT, burnSign, burnLadder, BALL_NOTE, ballNoteText, ballNoteCheck, WHY, whyLabel, whyReview: (shots, bowler) => whyReview((shots || []).filter(x => x && x.type !== 'gameStart').map(s => classify(s, bowlerProfile(bowler).lefty))), whyLearn, whyLearnText, setFaultLabel, hiddenFaults, hideFault, unhideFault, energyAngle, noteTags, noteMix, repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
+  root.BTCoach = { classifyShot: (s, bowler) => classify(s, bowlerProfile(bowler || (typeof BT !== 'undefined' ? BT.lsGet(BT.KEYS.BOWLER, {}) : {})).lefty), isTourn, shortPinHistory, shortPinHistoryLines, laneMotion: (shots, bowler) => laneMotion((shots || []).filter(x => x && x.type !== 'gameStart').map(s => classify(s, bowlerProfile(bowler).lefty))), isShortPinBall, shortPinNight, shortPinRecord, shortPinRecordText, MOTION_TXT, burnSign, burnLadder, BALL_NOTE, ballNoteText, ballNoteCheck, WHY, whyLabel, whyReview: (shots, bowler) => whyReview((shots || []).filter(x => x && x.type !== 'gameStart').map(s => classify(s, bowlerProfile(bowler).lefty))), whyLearn, whyLearnText, setFaultLabel, hiddenFaults, hideFault, unhideFault, energyAngle, noteTags, noteMix, repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
 })(typeof window !== 'undefined' ? window : globalThis);
