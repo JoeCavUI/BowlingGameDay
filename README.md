@@ -58,7 +58,7 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
-## Changes in v167-beta104 (held)
+## Changes in v167-beta104
 - 🎳 Open frames split two ways: "5 open frames: 3 splits (8-10, …; 3 off pocket hits) and 2 makeable spares missed" instead of "5 missed spares."
 - 📋 Plan vs tonight (night review): the Plan's start ball and change-ups (from your saved bag's roles) against what you threw: opener, balls not in the plan's bag, change-ups not tried.
 - 🔗 Two changes at once (e.g. loft and a ball switch together): the Why? verdict says it can't be credited to either, and it's left out of your "what fixed it" record.
