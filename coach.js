@@ -1197,7 +1197,9 @@
     const cnt = (f) => R.filter(f).length;
     const res = { made: R.length, good: cnt(r => r.goodCall || r.result === 'worked'), afterPoorBad: cnt(r => r.afterPoor && r.result !== 'worked'), afterPoor: cnt(r => r.afterPoor), tooSoon: cnt(r => r.tooSoon), whileStriking: cnt(r => r.whileStriking), wrongDir: cnt(r => r.wrongDir), worked: cnt(r => r.result === 'worked'), didnt: cnt(r => r.result === 'didnt') };
     const nLine = cnt(r => r.lineMoved), nBall = cnt(r => r.ballChanged && !r.lineMoved), nBoth = cnt(r => r.ballChanged && r.lineMoved);
-    const bits = [`${res.made} changes (${nLine} line move${nLine === 1 ? '' : 's'}${nBall ? `, ${nBall} ball-only change${nBall === 1 ? '' : 's'}` : ''}${nBoth ? `; ${nBoth} changed ball and line together` : ''}; a line move counts per lane)`];
+    const lx = (k) => C.filter(c => Array.isArray(c.shot.changed) && c.shot.changed.includes(k)).length, nLoft = lx('loft'), nSpd = lx('speed'), nRel = lx('hand');
+    const lsr = [nLoft && `${nLoft} loft`, nSpd && `${nSpd} speed`, nRel && `${nRel} release`].filter(Boolean).join(', ');
+    const bits = [`${res.made} changes (${nLine} line move${nLine === 1 ? '' : 's'}${nBall ? `, ${nBall} ball-only change${nBall === 1 ? '' : 's'}` : ''}${nBoth ? `; ${nBoth} changed ball and line together` : ''}; a line move counts per lane)${lsr ? ` + ${lsr} change${/,/.test(lsr) || /^[2-9]|^\d\d/.test(lsr) ? 's' : ''} (not in the count)` : ''}`];
     if (res.made) bits.push(`${res.good} good call${res.good === 1 ? '' : 's'}`);
     if (res.worked) bits.push(`${res.worked} worked`);
     if (res.didnt) bits.push(`${res.didnt} didn't help`);
@@ -2028,7 +2030,9 @@
     if (note.read && (early + late) >= 2 && ((/^(fronts|mid)$/.test(note.read) && late > early) || (/^(back|long)$/.test(note.read) && early > late))) out.push(`your note says ${RD[note.read]}; your logs say ${early} early, ${late} long (worth a second look next time)`);
     else if (note.read === 'fronts' || note.read === 'mid') out.push(early > late && early >= 2 ? `logs agree it read early (${early} early vs ${late} long)` : late > early && late >= 2 ? `logs say it went long more (${late} long vs ${early} early)` : ltH && (note.finish === 'flat' || weak > strong) ? `${ltH} light / weak hits fit an early read that rolled out` : hiH > ltH ? `${hiH} high hits fit an early read` : '');
     if ((note.read === 'long' || note.read === 'back') && !((early + late) >= 2 && early > late)) out.push(late > early && late >= 2 ? `logs agree (${late} long vs ${early} early)` : early > late && early >= 2 ? `logs say it read earlier (${early} early vs ${late} long)` : note.read === 'long' && ltH > hiH ? `${ltH} light hits fit it going long` : '');
-    if (note.finish === 'burn') { const bs = good.map(burnSign).filter(Boolean); out.push(bs.length ? `${bs.length} weak leave${bs.length === 1 ? '' : 's'} (${[...new Set(bs)].join(', ')}) that fit your slow-burn read` : strong > weak && strong >= 2 ? `logs show it finishing strong (${strong} vs ${weak} weak)` : ''); }
+    if (note.finish === 'burn') { const bs = good.map(burnSign).filter(Boolean), hi = good.filter(c => !c.strike && c.hit === 'high').length;
+      out.push(bs.length ? `${bs.length} weak leave${bs.length === 1 ? '' : 's'} (${[...new Set(bs)].join(', ')}) that fit your slow-burn read` : strong > weak && strong >= 2 ? `logs show it finishing strong (${strong} vs ${weak} weak)` : '');
+      if (hi >= 2 && hi > bs.length) out.push(`${bs.length ? 'but ' : ''}${hi} high hits say it also read early or hooked too much. Two different problems: high hits → a smoother / later ball or move left; weak, flat leaves → more loft or a cleaner ball`); }
     if (note.finish === 'flat') out.push(weak > strong && weak >= 2 ? `logs agree it finished weak (${weak} vs ${strong} strong)` : strong > weak ? `logs show it finishing strong (${strong} vs ${weak} weak)` : '');
     if (note.finish === 'strong' || note.finish === 'sharp') out.push(strong > weak && strong >= 2 ? `logs agree it finished strong (${strong} vs ${weak} weak)` : weak > strong && weak >= 2 ? `logs show it finishing weak (${weak} vs ${strong} strong)` : '');
     const poor = C.filter(c => c.execution === 'poor'), saved = poor.filter(c => c.pocketHit || c.strike).length;
@@ -2146,7 +2150,33 @@
     const agg = (A) => { const n = A.length, x = A.filter(c => c.strike).length, pk = A.filter(c => c.pocketHit || c.strike).length; return { n, x, pk, rate: n ? x / n : 0 }; };
     const sp = C.filter(c => c.shot && isShortPinBall(c.shot.ball, R.get(c.shot.ball))), ot = C.filter(c => c.shot && c.shot.ball && !isShortPinBall(c.shot.ball, R.get(c.shot.ball)));
     const a = agg(sp), b = agg(ot);
-    return { motion: lm ? lm.kind : '', lm, sp: a, other: b, spBalls: [...new Set(sp.map(c => c.shot.ball))], worked: a.n >= 4 ? a.rate >= 0.4 : null };
+    return { motion: lm ? lm.kind : '', lm, sp: a, other: b, spBalls: [...new Set(sp.map(c => c.shot.ball))], worked: a.n >= 4 ? (b.n >= 4 ? a.rate > b.rate : a.rate >= 0.4) : (a.n >= 1 && b.n >= 4 && sp.length && C.indexOf(sp[sp.length - 1]) < C.length - 1 ? false : null), dropped: a.n >= 1 && a.n <= 3 && b.n >= 4 };
+    // worked = beat your other balls that night (40%+ only when nothing else was thrown); dropped after 1–3 shots = didn't.
+  }
+  // 🔁 Your ball switches, all houses: from X to Y, did the next shots beat the last ones? Dropping Y after 1–2 shots counts as didn't.
+  function switchRecord(sessions, bowler) {
+    const prof = bowlerProfile(bowler), rec = {};
+    (sessions || []).forEach(S => {
+      const C = ((S && S.shots) || []).filter(x => x && x.type !== 'gameStart' && x.ball && !(Number(x.shotNo) >= 2)).slice().sort((a, b) => (a.at || 0) - (b.at || 0)).map(s => classify(s, prof.lefty));
+      const house = String((S && S.house) || '?').replace(/\s+lanes?$/i, '');
+      for (let i = 1; i < C.length; i++) {
+        const A = C[i - 1].shot.ball, B = C[i].shot.ball; if (A === B) continue;
+        let j = i; while (j < C.length && C[j].shot.ball === B) j++;
+        const before = C.slice(Math.max(0, i - 5), i).filter(c => c.shot.ball === A), after = C.slice(i, Math.min(j, i + 5));
+        if (before.length < 2) continue;
+        const rate = (a) => a.length ? a.filter(c => c.strike).length / a.length : 0, pk = (a) => a.length ? a.filter(c => c.strike || c.pocketHit).length / a.length : 0;
+        const dropped = after.length <= 2 && j < C.length;
+        if (after.length < 3 && !dropped) continue;
+        const ok = !dropped && (rate(after) > rate(before) || (rate(after) === rate(before) && pk(after) > pk(before)));
+        const k = `${A}→${B}`, o = rec[k] = rec[k] || { from: A, to: B, n: 0, ok: 0, houses: {} };
+        o.n++; if (ok) o.ok++; const h = o.houses[house] = o.houses[house] || { n: 0, ok: 0 }; h.n++; if (ok) h.ok++;
+      }
+    });
+    return Object.values(rec).sort((a, z) => z.n - a.n || z.ok - a.ok);
+  }
+  function switchLine(o) {
+    const H = Object.entries(o.houses), good = H.filter(([, h]) => h.ok * 2 >= h.n && h.ok).map(([k]) => k), bad = H.filter(([, h]) => !h.ok).map(([k]) => k);
+    return `${o.from} → ${o.to}: helped ${o.ok} of ${o.n}${good.length ? ` (${good.join(', ')}${bad.length ? `; not ${bad.join(', ')}` : ''})` : bad.length ? ` (not ${bad.join(', ')})` : ''}`;
   }
   function shortPinRecord(sessions, bowler) {
     const R = ballRowMap(), out = { down: { ok: 0, n: 0 }, early: { ok: 0, n: 0 }, long: { ok: 0, n: 0 }, '': { ok: 0, n: 0 } };
@@ -2159,7 +2189,7 @@
     if (rec.early.n) p.push(`when the fronts read early: ${rec.early.ok} of ${rec.early.n}`);
     if (rec.long.n) p.push(`when the ball went long: ${rec.long.ok} of ${rec.long.n}`);
     if (rec[''].n) p.push(`motion not clear yet: ${rec[''].ok} of ${rec[''].n}`);
-    return p.length ? `${p.join('; ')} (worked = 40%+ strikes with it).`.replace(/^w/, 'W') : '';
+    return p.length ? `${p.join('; ')} (worked = more strikes than your other balls that night; dropped after 1–3 shots counts as didn't).`.replace(/^w/, 'W') : '';
   }
 
   // 🏆 League vs tournament (from the league name): fresh tournament shots are where your short pins have won.
@@ -2196,5 +2226,5 @@
     if (lm.kind === 'down') notes.push(curSP ? `🎯 Downlane motion (${lm.down} of ${lm.n} good shots strong / turning hard with ${lm.ball}): a short-pin look, and you're on one. It should keep you in play.${rec}` : sps.length ? `🎯 Downlane motion (${lm.down} of ${lm.n} good shots strong / turning hard with ${lm.ball}): a short-pin look. ${sps[0]} fits: low flare tames the backend.${rec}` : `🎯 Downlane motion with ${lm.ball}: a short-pin look, but there's no short pin in tonight's bag.${rec}`);
     else if (lm.kind === 'early') notes.push(`🎯 Fronts reading early (${lm.early} of ${lm.n} good shots with ${lm.ball}): not a short-pin night. A short pin reads early and has nothing to come back with; go cleaner with more flare instead.${rec}`);
   }
-  root.BTCoach = { classifyShot: (s, bowler) => classify(s, bowlerProfile(bowler || (typeof BT !== 'undefined' ? BT.lsGet(BT.KEYS.BOWLER, {}) : {})).lefty), isTourn, shortPinHistory, shortPinHistoryLines, laneMotion: (shots, bowler) => laneMotion((shots || []).filter(x => x && x.type !== 'gameStart').map(s => classify(s, bowlerProfile(bowler).lefty))), isShortPinBall, shortPinNight, shortPinRecord, shortPinRecordText, MOTION_TXT, burnSign, burnLadder, BALL_NOTE, ballNoteText, ballNoteCheck, WHY, whyLabel, whyReview: (shots, bowler) => whyReview((shots || []).filter(x => x && x.type !== 'gameStart').map(s => classify(s, bowlerProfile(bowler).lefty))), whyLearn, whyLearnText, setFaultLabel, hiddenFaults, hideFault, unhideFault, energyAngle, noteTags, noteMix, repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
+  root.BTCoach = { classifyShot: (s, bowler) => classify(s, bowlerProfile(bowler || (typeof BT !== 'undefined' ? BT.lsGet(BT.KEYS.BOWLER, {}) : {})).lefty), isTourn, shortPinHistory, shortPinHistoryLines, laneMotion: (shots, bowler) => laneMotion((shots || []).filter(x => x && x.type !== 'gameStart').map(s => classify(s, bowlerProfile(bowler).lefty))), isShortPinBall, shortPinNight, shortPinRecord, switchRecord, switchLine, shortPinRecordText, MOTION_TXT, burnSign, burnLadder, BALL_NOTE, ballNoteText, ballNoteCheck, WHY, whyLabel, whyReview: (shots, bowler) => whyReview((shots || []).filter(x => x && x.type !== 'gameStart').map(s => classify(s, bowlerProfile(bowler).lefty))), whyLearn, whyLearnText, setFaultLabel, hiddenFaults, hideFault, unhideFault, energyAngle, noteTags, noteMix, repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -58,6 +58,13 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v169-beta106
+- 🎒 Plan: when your Game Day history at a house is thin (under 2 nights) or old (60+ days), your recent workhorse balls from any house stay in the bag, labelled "Your recent workhorse (other houses; untested here)".
+- 🔁 Your ball switches (all houses): X → Y, helped N of M (houses where it helped; not where it didn't). Next 5 shots vs the last 5; dropping the new ball after 1–2 shots counts as didn't help. In the Plan, and on Game Day when your ball has 0–1 strikes in its last 3.
+- 🎯 Short pin "worked" now means more strikes than your other balls that night (40%+ only when nothing else was thrown); dropped after 1–3 shots counts as didn't.
+- 🕯️ Slow-burn note check also counts high hits: "N high hits say it also read early or hooked too much. Two different problems…"
+- 🔢 Moves line adds LASER changes outside the count: "+ 2 loft changes (not in the count)".
+
 ## Changes in v168-beta105
 - 🎳 Night review, Balls: listed in the order you threw them, with when you used each (G1 F1 → G2 F4), how it started (first 5) and ended (last 5): pocket, strikes, early/long reads. Each switch says where, your Why? (or "no reason logged" plus the 3 shots before), and what Coach had said. Night totals below; the 📝 note buttons fold under "What you saw".
 

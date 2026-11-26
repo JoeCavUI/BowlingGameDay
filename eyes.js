@@ -272,6 +272,15 @@
         out.push({ id: `g1carry:${ctx.ball}:${P.length}`, text: `🐢 Game 1: ${ctx.ball} is in the pocket (${P.length}×) but ${X.length ? 'only 1 strike' : 'not carrying'}. Change balls now, don't wait for game 2.${alt ? ` Best here: ${alt.ball} ${alt.feet}/${alt.arrows} (${alt.x} strikes in ${alt.n}).` : ''}`, why: 'Pocket hits that leave pins mean the ball isn\'t matching the pattern. A ball change fixes carry faster than a line move.' });
       }
     }
+    // 🔁 Your past switches from this ball (all houses), shown when it's gone quiet: 1 or 0 strikes in its last 3.
+    try { if (ctx.ball && window.BTCoach && BTCoach.switchRecord) {
+      const mine = real.filter(s => s.ball === ctx.ball && !(Number(s.shotNo) >= 2)).slice(-3);
+      const isX = (s) => !BT().standingPins(s).length;
+      if (mine.length === 3 && mine.filter(isX).length <= 1) {
+        const R = BTCoach.switchRecord(ctx.sessions || [], { handedness: lefty ? 'L' : 'R' }).filter(o => o.from === ctx.ball && o.n >= 2 && o.ok);
+        if (R.length) out.push({ id: `swrec:${ctx.ball}:${game}`, text: `🔁 When you've switched off ${ctx.ball} before: ${R.slice(0, 2).map(o => BTCoach.switchLine(o).replace(`${ctx.ball} → `, '→ ')).join(' · ')}.`, why: 'Your Game Day logs, all houses: next 5 shots vs the last 5 with the old ball. Your record, not a rule.' });
+      }
+    } } catch (_e) {}
     // 🧭 Game 3 plan: the decision you made in the Plan, shown before the late-night spiral can start.
     // Your bag's roles (If it reads early / carry drops → X; If it goes long / light → Y), one change at a time, not deeper.
     if (game >= 3 && ctx.setRoles) {

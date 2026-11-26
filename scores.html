@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Scores</title>
-  <link rel="stylesheet" href="styles.css?v=168" />
+  <link rel="stylesheet" href="styles.css?v=169" />
 </head>
 <body data-page="scores">
   <div class="navlinks"></div>
@@ -140,16 +140,16 @@
     </div>
   </div>
 
-  <script src="app.js?v=168"></script>
-  <script src="coach.js?v=168"></script>
-  <script src="eyes.js?v=168"></script>
-  <script src="pinpal.js?v=168"></script>
-  <script src="history.js?v=168"></script>
-  <script src="stats.js?v=168"></script>
-  <script src="replay.js?v=168"></script>
-  <script src="trends.js?v=168"></script>
-  <script src="season.js?v=168"></script>
-  <script src="sensor.js?v=168"></script>
+  <script src="app.js?v=169"></script>
+  <script src="coach.js?v=169"></script>
+  <script src="eyes.js?v=169"></script>
+  <script src="pinpal.js?v=169"></script>
+  <script src="history.js?v=169"></script>
+  <script src="stats.js?v=169"></script>
+  <script src="replay.js?v=169"></script>
+  <script src="trends.js?v=169"></script>
+  <script src="season.js?v=169"></script>
+  <script src="sensor.js?v=169"></script>
   <script>
     BT.renderNav('scores');
     // 🗂️ Scores: menu first, then History (search your PinPal games) or Game Day nights (review each night).
@@ -665,7 +665,7 @@
         const sp = BTCoach.shortPinNight({ shots: real }, bowler);
         if (sp.motion || sp.sp.n) { const pct = (a) => a.n ? Math.round(a.x / a.n * 100) + '%' : '–';
           const mt = sp.motion ? `${BTCoach.MOTION_TXT[sp.motion]} (opening ball ${esc(sp.lm.ball)}: ${sp.motion === 'down' ? sp.lm.down : sp.motion === 'early' ? sp.lm.early : sp.lm.long} of ${sp.lm.n} good shots)` : 'not clear from the opening shots';
-          T.push({ k: '🎯 Lane motion & short pin', t: `Lane motion: ${mt}.${sp.sp.n ? ` Short pin (${sp.spBalls.map(esc).join(', ')}): ${sp.sp.x} strikes on ${sp.sp.n} (${pct(sp.sp)}) vs ${pct(sp.other)} with the rest${sp.worked == null ? '' : sp.worked ? ': it worked' : ': it didn\'t'}.` : ' No short pin thrown.'}${sp.motion === 'down' && !sp.sp.n ? ' A short-pin look you didn\'t use.' : ''}${sp.motion === 'early' && sp.worked === false ? ' Fits your rule: no short pin when the fronts read early.' : ''}` }); } } catch (_e) {}
+          T.push({ k: '🎯 Lane motion & short pin', t: `Lane motion: ${mt}.${sp.sp.n ? ` Short pin (${sp.spBalls.map(esc).join(', ')}): ${sp.sp.x} strikes on ${sp.sp.n} (${pct(sp.sp)}) vs ${pct(sp.other)} with the rest${sp.worked == null ? '' : sp.worked ? ': it beat your other balls' : sp.dropped ? ': dropped after a few shots, counts as didn\'t' : ': it didn\'t beat your other balls'}.` : ' No short pin thrown.'}${sp.motion === 'down' && !sp.sp.n ? ' A short-pin look you didn\'t use.' : ''}${sp.motion === 'early' && sp.worked === false ? ' Fits your rule: no short pin when the fronts read early.' : ''}` }); } } catch (_e) {}
       // 📋 Plan vs tonight: the bag you built in the Plan (its roles) against what you actually threw.
       try { const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
         const sets = BT.lsGet(BT.KEYS.ARSENAL_SETS, []) || []; const st = s.setName ? sets.find(x => x && x.name === s.setName) : null;

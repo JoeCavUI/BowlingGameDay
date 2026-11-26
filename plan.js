@@ -144,7 +144,7 @@
     const motion = (p) => (p.t.x ?? 50) < x0 ? 'earlier / more ball' : 'later / cleaner';
     const role = (p) => { const j = job.get(p);
       if (j === 'fresh') return 'Start with';
-      if (j === 'recent') return 'Your recent ball here (backup)';
+      if (j === 'recent') return ctx.keepAway ? 'Your recent workhorse (other houses; untested here)' : 'Your recent ball here (backup)';
       // Change-ups are named for what they fix, not a game number: change for a reason, not a frame count.
       const early = (p.t.x ?? 50) < x0, side = picked.filter(q => q !== picked[0] && ((q.t.x ?? 50) < x0) === early).sort((a, z) => Math.abs((a.t.x ?? 50) - x0) - Math.abs((z.t.x ?? 50) - x0)), k = side.indexOf(p);
       if (k > 0) { const last = k === side.length - 1 && k >= 2; return early ? (last ? 'Strongest' : 'Stronger still') : (last ? 'Cleanest' : 'Cleaner still'); }
@@ -480,11 +480,14 @@
     if (opts.count && G.length >= MIN_HOUSE && hist) {
       try {
         // Balls you've actually been throwing here (Game Day: 10+ shots over your last 4 nights, on 2+ nights) stay in the bag.
-        let keepBalls = [];
-        try { const k = (x) => String(x || '').toLowerCase().replace(/\s+lanes?$/, '').trim(); const GS = (BT().lsGet(BT().KEYS.GAME_SESSIONS, []) || []).filter(s => s && k(s.house) && (k(s.house) === k(opts.house) || k(s.house).startsWith(k(opts.house)) || k(opts.house).startsWith(k(s.house)))).sort((a, z) => (z.savedAt || 0) - (a.savedAt || 0)).slice(0, 4);
+        let keepBalls = [], keepAway = false;
+        try { const k = (x) => String(x || '').toLowerCase().replace(/\s+lanes?$/, '').trim(); const ALL = (BT().lsGet(BT().KEYS.GAME_SESSIONS, []) || []).filter(s => s && Array.isArray(s.shots)).sort((a, z) => (z.savedAt || 0) - (a.savedAt || 0));
+          let GS = ALL.filter(s => k(s.house) && (k(s.house) === k(opts.house) || k(s.house).startsWith(k(opts.house)) || k(opts.house).startsWith(k(s.house)))).slice(0, 4);
+          // Thin or old Game Day history here (fewer than 2 nights, or last one 60+ days ago): your workhorses from any house ride along.
+          if (GS.length < 2 || (Date.now() - (GS[0].savedAt || 0)) > 60 * 864e5) { GS = ALL.slice(0, 4); keepAway = true; }
           const per = {}; GS.forEach(s => { const seen = new Set(); (s.shots || []).forEach(z => { if (!z || z.type === 'gameStart' || !z.ball) return; const o = per[z.ball] = per[z.ball] || { n: 0, nights: 0 }; o.n++; if (!seen.has(z.ball)) { seen.add(z.ball); o.nights++; } }); });
           keepBalls = Object.entries(per).filter(([n, o]) => o.n >= 10 && o.nights >= 2 && !BT().isRetired(n)).map(([n]) => n); } catch (_e) {}
-        const rb = recommendBag({ hist, G, lanes, S, b, count: Math.max(1, Math.min(6, Number(opts.count) || 3)), lean, today, firstBall: out.firstBall, keepBalls });
+        const rb = recommendBag({ hist, G, lanes, S, b, count: Math.max(1, Math.min(6, Number(opts.count) || 3)), lean, today, firstBall: out.firstBall, keepBalls, keepAway });
         if (rb) { out.darkHorse = rb.dark; out.recWhy = rb.why; out.recTraits = rb.traits; out.recRoles = rb.roles; out.recFirst = rb.first; out.recBest = rb.best; out.recBestPair = rb.bestPair; out.recPairBase = rb.pairBase; out.recShort = rb.short; sec('🎒', `Your ${Math.max(1, Math.min(6, Number(opts.count) || 3))}-ball bag for ${lanes ? 'lanes ' + lanes : 'this house'}`, rb.items); out.recBag = rb.picked; }
       } catch (e) { console.error(e); }
     }
@@ -496,6 +499,15 @@
         const bc = hist.byCondition({ house: houseLabel, rows: arsenalRows(), bowler: b, sessions: sessAll });
         const L = hist.conditionLines(bc);
         if (L.length) sec('🌡️', 'By lane condition', L);
+      } catch (e) { console.error(e); }
+    }
+
+    // ---- 🔁 Your ball switches, all houses (what helped, where, and where it didn't)
+    if (root.BTCoach && root.BTCoach.switchRecord) {
+      try {
+        const all = BT().lsGet(BT().KEYS.GAME_SESSIONS, []) || [], R = root.BTCoach.switchRecord(all, b), bag = new Set(out.recBag ? out.recBag.map(x => x.n || x.name || x) : []);
+        const top = R.filter(o => o.n >= 2).sort((a, z) => ((bag.has(z.from) || bag.has(z.to)) - (bag.has(a.from) || bag.has(a.to))) || z.n - a.n).slice(0, 4);
+        if (top.length) sec('🔁', 'Your ball switches (all houses)', ['<span class="dim">Next 5 shots vs the last 5 with the old ball. Dropping the new ball after 1–2 shots counts as didn\'t help.</span>', ...top.map(o => esc(root.BTCoach.switchLine(o)))]);
       } catch (e) { console.error(e); }
     }
 
