@@ -58,7 +58,7 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
-## Changes in v168-beta105 (held)
+## Changes in v168-beta105
 - 🎳 Night review, Balls: listed in the order you threw them, with when you used each (G1 F1 → G2 F4), how it started (first 5) and ended (last 5): pocket, strikes, early/long reads. Each switch says where, your Why? (or "no reason logged" plus the 3 shots before), and what Coach had said. Night totals below; the 📝 note buttons fold under "What you saw".
 
 ## Changes in v167-beta104
