@@ -21,7 +21,7 @@
     const byWk = {}; G.forEach(g => { (byWk[g.wk] = byWk[g.wk] || []).push(g); });
     const rows = Object.values(byWk).map(gs => {
       const sm = S.summarize(gs), f = gs[0];
-      const sc = gs.map(g => g.s); return { g3: sc.length >= 3 ? sc[2] - (sc[0] + sc[1]) / 2 : null, d: f.d, h: f.h, lanes: f.lanes, lg: f.lg, games: gs.length, avg: sm.avg, high: sm.high, series: gs.length >= 3 ? gs.slice(0, 3).reduce((a, g) => a + g.s, 0) : null, strike: sm.strike, spare: sm.spare, src: f.src };
+      const sc = gs.map(g => g.s); return { g3: sc.length === 3 ? sc[2] - (sc[0] + sc[1]) / 2 : null, d: f.d, h: f.h, lanes: f.lanes, lg: f.lg, games: gs.length, avg: sm.avg, high: sm.high, series: gs.length >= 3 ? gs.slice(0, 3).reduce((a, g) => a + g.s, 0) : null, strike: sm.strike, spare: sm.spare, src: f.src };
     });
     // Game Day nights: your reads (pocket, carry, repeatability, eyeball, 5 elements), matched to the same night.
     let sess = []; try { sess = BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || []; } catch (_e) {}
@@ -135,7 +135,7 @@
   const SUGGEST = {
     carry: 'Carry is the one not improving. Next goal: watch the key pin on light hits, and log "didn\'t see" when you didn\'t.',
     pocket: 'Pocket is slipping: repeat the shot after a missed mark, and move only when 2 good shots say the same thing.',
-    g3: 'Game 3 is the one not improving: use the game 3 plan card. One change, then 2 good shots.',
+    g3: 'Game 3 is where the pins are going: use the game 3 plan card. One change, then 2 good shots. Not deeper.',
     ten: '10-pin is the one not improving: spare ball, and log the miss side every time.',
     eye: 'Eyeball is slipping: mark → breakpoint → pocket → off the deck, every shot. "Didn\'t see" beats a guess.',
     spare: 'Spares are slipping: spare ball on every single-pin spare, and log the miss side.',
@@ -152,14 +152,14 @@
       if (A.length < 3) return;
       const a = mean(A), b = mean(B), d = b - a, se = Math.sqrt(vr(A) / A.length + vr(B) / B.length);
       if (Math.abs(d) < c.min) { lines.push({ c, a, b, d, flat: true, nA: A.length }); return; }
-      lines.push({ c, a, b, d, clear: Math.abs(d) >= 2 * se, nA: A.length });
+      lines.push({ c, a, b, d, clear: Math.abs(d) >= 2 * se, nA: A.length, B });
     });
     const fmt = (c, v) => c.f ? c.f(v) : Math.round(v) + (c.pct ? '%' : '');
     const shown = lines.filter(l => !l.flat).sort((x, z) => (z.clear - x.clear) || Math.abs(z.d) - Math.abs(x.d));
-    const items = shown.map(l => `${l.c.t}: ${fmt(l.c, l.a)} → ${fmt(l.c, l.b)} ${l.clear ? (l.d > 0 ? '<b>↑</b>' : '<b>↓</b>') : '<span class="dim">(not clear yet)</span>'}`);
+    const items = shown.map(l => `${l.c.t}: ${fmt(l.c, l.a)} → ${fmt(l.c, l.b)} ${l.clear ? (l.d > 0 ? '<b>↑</b>' : '<b>↓</b>') : '<span class="dim">(not clear yet)</span>'}${l.c.k === 'g3' && l.B ? ` <span class="dim">· last 5 nights: ${l.B.map(v => fmt(l.c, v)).join(', ')}</span>` : ''}`);
     const level = lines.filter(l => l.flat).map(l => l.c.t);
     // One suggestion: a clear drop first; otherwise the first key part that isn't going up.
-    const down = shown.find(l => l.clear && l.d < 0), PRI = ['carry', 'pocket', 'g3', 'ten', 'eye'];
+    const down = shown.find(l => l.clear && l.d < 0) || shown.filter(l => l.d < 0 && Math.abs(l.d) >= 2 * l.c.min && SUGGEST[l.c.k]).sort((x, z) => Math.abs(z.d) / z.c.min - Math.abs(x.d) / x.c.min)[0], PRI = ['carry', 'pocket', 'g3', 'ten', 'eye'];
     const notUp = PRI.map(k => lines.find(l => l.c.k === k)).find(l => l && !(l.clear && l.d > 0));
     const tip = down ? SUGGEST[down.c.k] : notUp ? SUGGEST[notUp.c.k] : lines.length ? 'Everything measured is level or up: keep your current goal.' : '';
     // Goal record: graded goals, newest first, by kind.

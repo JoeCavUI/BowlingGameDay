@@ -15,7 +15,7 @@
     const X = (x) => !BT().standingPins(x).length, P = (x) => BT().isPocketHit(x);
     const C = root.BTCoach, E = root.BTEyes;
     const all = [], byBall = {}, games = { 1: [], 2: [], 3: [] }, spares = {}, faults = {};
-    const ten = { att: 0, made: 0, channel: 0, inside: 0, thin: 0, unknown: 0, pin: lefty ? 7 : 10 };
+    const ten = { att: 0, made: 0, channel: 0, inside: 0, thin: 0, unknown: 0, pin: lefty ? 7 : 10, balls: {} }, eyeN = [];
     const seven = { att: 0, made: 0 }; const other = lefty ? 10 : 7;
     const mv = { made: 0, afterPoor: 0, afterPoorBad: 0, worked: 0 };
     const leaves = { light: 0, high: 0, flush: 0 }, eye = { seen: 0, ph: 0 }, opens = {};
@@ -23,16 +23,16 @@
       const ch = s.shots.filter(x => x && x.type !== 'gameStart').sort((a, b) => (a.at || 0) - (b.at || 0)), fr = ch.filter(x => !x.isFill);
       all.push(...ch);
       const sc = (Array.isArray(s.scores) && s.scores.length) ? s.scores : ((s.pinpal && s.pinpal.scores) || []);
-      if (sc.length >= 3) [1, 2, 3].forEach(g => games[g].push(sc[g - 1]));
+      if (sc.length === 3) [1, 2, 3].forEach(g => games[g].push(sc[g - 1])); // 3-game nights only (tournament blocks of 4+ aren't a game 3 story)
       ch.forEach(z => { const b = z.ball || '?', o = byBall[b] = byBall[b] || { ball: b, n: 0, x: 0, p: 0, c: 0, houses: {} }; o.n++; if (X(z)) o.x++; if (P(z)) o.p++; if (P(z) && X(z)) o.c++;
         const h = o.houses[s.house || '?'] = o.houses[s.house || '?'] || { n: 0, x: 0 }; h.n++; if (X(z)) h.x++;
         if (P(z) && !X(z)) { const k = String(z.pocket || ''); if (/light/i.test(k)) leaves.light++; else if (/high/i.test(k)) leaves.high++; else leaves.flush++; } });
       fr.forEach(z => { if (z.fault) faults[z.fault] = (faults[z.fault] || 0) + 1;
         if (X(z) || !z.second || !Array.isArray(z.second.left)) return; const lv = BT().standingPins(z).join('-'); const o = spares[lv] = spares[lv] || { a: 0, m: 0 }; o.a++; if (!z.second.left.length) o.m++;
         if (lv === String(other)) { seven.att++; if (!z.second.left.length) seven.made++; } });
-      try { const cs = E.cornerSpares(ch, lefty); ['att', 'made', 'channel', 'inside', 'thin', 'unknown'].forEach(k => ten[k] += cs[k] || 0); } catch (_e) {}
+      try { const cs = E.cornerSpares(ch, lefty); ['att', 'made', 'channel', 'inside', 'thin', 'unknown'].forEach(k => ten[k] += cs[k] || 0); Object.entries(cs.missBalls || {}).forEach(([b, v]) => { ten.balls[b] = (ten.balls[b] || 0) + v; }); } catch (_e) {}
       try { const m = C.moveSummary(ch, bowler); Object.keys(mv).forEach(k => mv[k] += m[k] || 0); } catch (_e) {}
-      try { const e = C.eyeballScore(ch, bowler); eye.seen += e.exitSeen || 0; eye.ph += e.pocketHits || 0; } catch (_e) {}
+      try { const e = C.eyeballScore(ch, bowler); eye.seen += e.exitSeen || 0; eye.ph += e.pocketHits || 0; if (e.pocketHits) eyeN.push({ seen: e.exitSeen || 0, ph: e.pocketHits }); } catch (_e) {}
       const g1 = fr.filter(z => (Number(z.gameNo) || 1) === 1);
       if (g1.length && s.house) { const k = `${s.house}|${g1[0].ball}`; const o = opens[k] = opens[k] || { house: s.house, ball: g1[0].ball, nights: 0, x: 0, n: 0, g1: [] }; o.nights++; o.n += g1.length; o.x += g1.filter(X).length; if (sc.length) o.g1.push(sc[0]); }
     });
@@ -42,9 +42,9 @@
     const gA = [1, 2, 3].map(g => avg(games[g])), three = games[1].length;
     if (three >= 3) {
       const lo = gA.indexOf(Math.min(...gA)) + 1, others = gA.filter((_, i) => i !== lo - 1), gap = r0(avg(others) - gA[lo - 1]);
-      if (gap >= 8) { const why = lo === 1 ? 'a slow start: settle your ball and line in practice' : lo === 2 ? 'transition: plan your first move or ball change for the start of game 2' : 'late transition: move a frame early, not late';
+      if (gap >= 8) { const why = lo === 1 ? 'a slow start: settle your ball and line in practice' : lo === 2 ? 'transition: plan your first move or ball change for the start of game 2' : 'too many changes late: one change, then 2 good shots. Not deeper';
         wrong.push(`<b>Game ${lo} is your low game:</b> ${gA.map((v, i) => `G${i + 1} ${r0(v)}`).join(' · ')} over ${three} three-game nights (about ${gap} pins). Usually ${why}.`);
-        work.push({ pins: gap, t: `Game ${lo}: ${lo === 2 ? 'have your first move or ball change ready for frame 1 of game 2' : lo === 1 ? 'decide your ball by the end of practice' : 'move a frame early in game 3'}.`, cost: `~${gap} pins a night` }); }
+        work.push({ pins: gap, t: `Game ${lo}: ${lo === 2 ? 'have your first move or ball change ready for frame 1 of game 2' : lo === 1 ? 'decide your ball by the end of practice' : 'one change, then 2 good shots. Not deeper (your game 3 plan card)'}.`, cost: `~${gap} pins a night` }); }
       else right.push(`<b>Even games:</b> ${gA.map((v, i) => `G${i + 1} ${r0(v)}`).join(' · ')}. No game is costing you.`);
     }
     // pocket vs carry
@@ -72,7 +72,7 @@
     Object.values(opens).filter(o => o.nights >= 2 && o.n >= 8 && o.x / o.n < 0.3).forEach(o => { const alt = bestAt.find(b => b.h === o.house); if (alt && alt.best.ball !== o.ball) { wrong.push(`<b>Opening with ${esc(o.ball)} at ${esc(o.house)}:</b> ${o.nights} nights, ${o.x} strikes in ${o.n} game-1 shots${o.g1.length ? ` (game 1: ${o.g1.join(', ')})` : ''}. ${esc(alt.best.ball)} has the better record there.`); const g1all = avg(games[1]), g1o = avg(o.g1), sh = g1all != null && g1o != null ? r0(g1all - g1o) : 0; work.push({ pins: Math.max(sh, 1), t: `Open with ${alt.best.ball} at ${o.house}.`, cost: sh > 0 ? `game 1 ran ~${sh} under your usual` : '' }); } });
     // spares
     if (ten.att >= 5) { const r = pc(ten.made, ten.att), side = [[lefty ? 'left (channel)' : 'right (channel)', ten.channel], [lefty ? 'right' : 'left', ten.inside]].filter(([, v]) => v).map(([k, v]) => `${v} ${k}`).join(', ');
-      if (r < 80) { wrong.push(`<b>${ten.pin}-pin:</b> ${ten.made} of ${ten.att} (${r}%).${side ? ` Misses: ${side}${ten.unknown ? `, ${ten.unknown} not noted` : ''}.` : ''}${ten.channel > ten.inside + 1 ? ' Mostly into the channel: alignment.' : ten.inside > ten.channel + 1 ? ' Mostly crossing over: the ball is hooking; use your spare ball.' : ''}`);
+      if (r < 80) { wrong.push(`<b>${ten.pin}-pin:</b> ${ten.made} of ${ten.att} (${r}%).${side ? ` Misses: ${side}${ten.unknown ? `, ${ten.unknown} not noted` : ''}.` : ''}${ten.channel >= ten.inside + 3 && ten.channel >= ten.inside * 1.5 && ten.unknown < ten.channel + ten.inside ? ' Mostly into the channel: alignment.' : ten.inside >= ten.channel + 3 && ten.inside >= ten.channel * 1.5 && ten.unknown < ten.channel + ten.inside ? ((() => { let sp = 0; try { Object.entries(ten.balls).forEach(([b, v]) => { if (BT().isSpareBall && BT().isSpareBall(b)) sp += v; }); } catch (_e) {} return sp; })() >= Math.ceil(ten.inside / 2) ? ` Mostly left, with your spare ball: that's the line, not hook. Keep your target and move your feet ${lefty ? 'right' : 'left'} 1–2 boards.` : ' Mostly crossing over: the ball is hooking; use your spare ball.') : ten.channel + ten.inside ? ' No clear side yet: log the miss side every time.' : ''}`);
         const per = r0((ten.att * 0.8 - ten.made) * 10 / S.length); work.push({ pins: per, t: `${ten.pin}-pin: spare ball, and log the miss side every time.`, cost: `~${per} pins a night to reach 80%` }); }
       else right.push(`<b>${ten.pin}-pin:</b> ${ten.made} of ${ten.att} (${r}%).`); }
     if (seven.att >= 5 && pc(seven.made, seven.att) < 75) wrong.push(`<b>${other}-pin:</b> ${seven.made} of ${seven.att} (${pc(seven.made, seven.att)}%).`);
@@ -83,8 +83,10 @@
       if (mv.afterPoorBad >= 5) { wrong.push(`<b>Moving after bad shots:</b> ${mv.afterPoorBad} moves right after a poor shot didn't help.`); work.push({ pins: 6, t: 'Repeat the shot after a miss; move when two good shots agree.', cost: `${mv.afterPoorBad} moves that didn't help` }); } }
     const ft = Object.entries(faults).sort((a, b) => b[1] - a[1]).slice(0, 3);
     if (ft.length && C && C.faultLabel) habits.push(`<b>Poor-shot reasons:</b> ${ft.map(([k, v]) => `${esc(C.faultLabel(k))} ×${v}`).join(' · ')}.`);
-    if (eye.ph >= 20) { const r = pc(eye.seen, eye.ph); habits.push(`<b>Off the deck:</b> watched ${eye.seen} of ${eye.ph} pocket hits (${r}%).`); if (r < 60) { wrong.push(`<b>Your eye:</b> off the deck on only ${r}% of pocket hits.`); work.push({ pins: 4, t: 'Watch every pocket hit off the deck (goal 80%).', cost: `now ${r}%` }); } }
-    let goals = null; try { const G = (BT().goalsAll ? BT().goalsAll() : []).filter(g => g.result); if (G.length) goals = `${G.filter(g => g.result === 'done').length} of ${G.length} goals met`; } catch (_e) {}
+    const eyeR = (() => { const L = eyeN.slice(-3), a = L.reduce((x, o) => x + o.seen, 0), b = L.reduce((x, o) => x + o.ph, 0); return L.length === 3 && b >= 10 ? pc(a, b) : null; })();
+    if (eye.ph >= 20) { const r = pc(eye.seen, eye.ph), fixed = eyeR != null && eyeR >= 80 && r < 80;
+      habits.push(`<b>Off the deck:</b> watched ${eye.seen} of ${eye.ph} pocket hits (${r}%)${fixed ? `; your last 3 nights ${eyeR}%: <b>fixed</b> ✅` : eyeR != null ? `; last 3 nights ${eyeR}%` : ''}.`); if (r < 60 && !fixed) { wrong.push(`<b>Your eye:</b> off the deck on only ${r}% of pocket hits.`); work.push({ pins: 4, t: 'Watch every pocket hit off the deck (goal 80%).', cost: `now ${r}%` }); } }
+    let goals = null; try { const G = (BT().goalsAll ? BT().goalsAll() : []).filter(g => g.result); if (G.length) { const L = G.slice().sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 5); goals = `${G.filter(g => g.result === 'done').length} of ${G.length} goals met · newest first: ${L.map(g => g.result === 'done' ? '✅' : '❌').join(' ')}`; } } catch (_e) {}
     if (goals) habits.push(`<b>Goals:</b> ${goals}.`);
     work.sort((a, b) => b.pins - a.pins);
     return { enough: true, nights: S.length, games: three, first: S[0].savedAt, last: S[S.length - 1].savedAt, n, strike: pc(xN, n), pocket: pkP, carry: cy, gA, right, wrong, habits, work: work.slice(0, 3) };

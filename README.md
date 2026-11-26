@@ -58,6 +58,12 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v172-beta109
+- 🧭 Season review: off the deck shows your last 3 nights next to the season total, and says "fixed ✅" (no longer in Going wrong / Top 3) when the last 3 nights are 80%+. Goals list newest first (✅ ❌).
+- 🎳 Game 3 advice now matches Game Day: "one change, then 2 good shots. Not deeper" (was "move a frame early"). Low-game math uses 3-game nights only.
+- 📈 What's changing: the game 3 line lists each of the last 5 nights; "Next" goes to a big drop even before it's clear (2× its minimum), then the first key part not going up. Game 3 uses 3-game nights only.
+- 🎯 10-pin season read: a side is called only with a clear margin (3+ more, 1.5×) and fewer unlogged misses than logged; mostly left with your spare ball = "the line, not hook". Otherwise "No clear side yet".
+
 ## Changes in v171-beta108
 - 📈 What's changing (Season review and Trends): your last 5 nights vs the 5 before for average, pocket, carry, strikes, spares, 10-pin, eyeball and game 3 vs games 1–2. ↑ ↓ only when the change is bigger than your normal night-to-night swing; otherwise "not clear yet". Plus your goal record (met N of the last N, by goal) and one next step tied to what isn't improving. Trends follows its house / lanes / league / period filters.
 - 🧭 Season review: 💾 Save to Files (an HTML file through the share sheet: Files, Mail, Messages) and 📄 Save as PDF (print screen → share → Save to Files). Buttons and the goal button are left out of the saved copy.
