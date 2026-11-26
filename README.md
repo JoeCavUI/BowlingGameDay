@@ -58,7 +58,8 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
-## Changes in v171-beta108 (held)
+## Changes in v171-beta108
+- 📈 What's changing (Season review and Trends): your last 5 nights vs the 5 before for average, pocket, carry, strikes, spares, 10-pin, eyeball and game 3 vs games 1–2. ↑ ↓ only when the change is bigger than your normal night-to-night swing; otherwise "not clear yet". Plus your goal record (met N of the last N, by goal) and one next step tied to what isn't improving. Trends follows its house / lanes / league / period filters.
 - 🧭 Season review: 💾 Save to Files (an HTML file through the share sheet: Files, Mail, Messages) and 📄 Save as PDF (print screen → share → Save to Files). Buttons and the goal button are left out of the saved copy.
 
 ## Changes in v170-beta107

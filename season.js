@@ -102,6 +102,7 @@
       <div class="small dim">What you logged, not a prediction. Patterns need 3+ nights.</div>
       <div class="nr-tools no-print" style="margin-top:10px"><button type="button" class="btn" id="srFile">💾 Save to Files</button><button type="button" class="btn secondary" id="srPdf">📄 Save as PDF</button></div>
       <div class="small dim no-print">On iPhone, Save as PDF opens the print screen: tap the share icon, then Save to Files.</div></div>
+      ${(() => { try { return root.BTTrends ? root.BTTrends.changesHtml(root.BTTrends.nights()) : ''; } catch (e) { console.error(e); return ''; } })()}
       ${R.work.length ? `<div class="panel"><b>🎯 Top ${R.work.length} to work on</b> <span class="small dim">(biggest cost first)</span><ol class="sr-l">${R.work.map(w => `<li>${esc(w.t)}${w.cost ? ` <span class="small dim">(${esc(w.cost)})</span>` : ''}</li>`).join('')}</ol><button type="button" class="btn secondary no-print" id="srGoal">Make #1 my next goal</button></div>` : ''}
       <div class="panel"><b>✅ Going right</b>${ul(R.right)}</div>
       <div class="panel"><b>❌ Going wrong (repeats)</b>${ul(R.wrong)}</div>

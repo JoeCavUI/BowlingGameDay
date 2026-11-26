@@ -21,7 +21,7 @@
     const byWk = {}; G.forEach(g => { (byWk[g.wk] = byWk[g.wk] || []).push(g); });
     const rows = Object.values(byWk).map(gs => {
       const sm = S.summarize(gs), f = gs[0];
-      return { d: f.d, h: f.h, lanes: f.lanes, lg: f.lg, games: gs.length, avg: sm.avg, high: sm.high, series: gs.length >= 3 ? gs.slice(0, 3).reduce((a, g) => a + g.s, 0) : null, strike: sm.strike, spare: sm.spare, src: f.src };
+      const sc = gs.map(g => g.s); return { g3: sc.length >= 3 ? sc[2] - (sc[0] + sc[1]) / 2 : null, d: f.d, h: f.h, lanes: f.lanes, lg: f.lg, games: gs.length, avg: sm.avg, high: sm.high, series: gs.length >= 3 ? gs.slice(0, 3).reduce((a, g) => a + g.s, 0) : null, strike: sm.strike, spare: sm.spare, src: f.src };
     });
     // Game Day nights: your reads (pocket, carry, repeatability, eyeball, 5 elements), matched to the same night.
     let sess = []; try { sess = BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || []; } catch (_e) {}
@@ -33,6 +33,7 @@
       const d = dOf(x); let row = rows.find(r => r.d === d && (norm(r.h) === norm(x.house) || norm(r.h).includes(norm(x.house)) || norm(x.house).includes(norm(r.h))));
       if (!row) { row = { d, h: x.house || '', lanes: x.lanes || '', lg: x.leagueName || '', games: 0, avg: null, high: null, series: null, strike: null, spare: null, src: 'gd' }; rows.push(row); }
       row.sid = x.id;
+      row.nShots = real.length;
       const ph = real.filter(s => BT.isPocketHit(s)), px = ph.filter(s => !BT.standingPins(s).length);
       row.pocket = Math.round(ph.length / real.length * 100); row.carry = ph.length ? Math.round(px.length / ph.length * 100) : null;
       if (row.strike == null) row.strike = Math.round(real.filter(s => !BT.standingPins(s).length).length / real.length * 1000) / 10;
@@ -118,6 +119,64 @@
   ];
   const ELS = [['Direction', '🎯'], ['Speed', '⚡'], ['Angle', '📐'], ['Revs', '🔄'], ['Roll', '🌀']].map(([k, i]) => ({ k: 'el_' + k, t: `${i} ${k}`, pct: 1, none: 'Comes from nights you log in Game Day.' }));
 
+
+  // ---------- 📈 What's changing: your last 5 nights vs the 5 before ----------
+  // Describes the past only. "Clear" = the gap is bigger than twice its night-to-night wobble (and big enough to matter).
+  const CH = [
+    { k: 'avg', t: 'Average', min: 4, f: (v) => Math.round(v) },
+    { k: 'pocket', t: 'Pocket', min: 5, pct: 1 },
+    { k: 'carry', t: 'Carry', min: 5, pct: 1 },
+    { k: 'strike', t: 'Strikes', min: 5, pct: 1 },
+    { k: 'spare', t: 'Spares', min: 5, pct: 1 },
+    { k: 'ten', t: '10-pin', min: 10, pct: 1 },
+    { k: 'eye', t: 'Eyeball', min: 8 },
+    { k: 'g3', t: 'Game 3 vs games 1–2', min: 6, f: (v) => (v >= 0 ? '+' : '') + Math.round(v) },
+  ];
+  const SUGGEST = {
+    carry: 'Carry is the one not improving. Next goal: watch the key pin on light hits, and log "didn\'t see" when you didn\'t.',
+    pocket: 'Pocket is slipping: repeat the shot after a missed mark, and move only when 2 good shots say the same thing.',
+    g3: 'Game 3 is the one not improving: use the game 3 plan card. One change, then 2 good shots.',
+    ten: '10-pin is the one not improving: spare ball, and log the miss side every time.',
+    eye: 'Eyeball is slipping: mark → breakpoint → pocket → off the deck, every shot. "Didn\'t see" beats a guess.',
+    spare: 'Spares are slipping: spare ball on every single-pin spare, and log the miss side.',
+    strike: 'Strikes are slipping: check pocket and carry above to see which one is costing you.',
+    avg: 'Average is slipping: check the lines above for which part moved.',
+  };
+  const GOALK = { offDeck: 'Off the deck', startFast: 'Start fast (game 1)', tenPin: '10-pin', repeatFirst: 'Repeat before you move', practice: 'Practice' };
+  function changes(rows) {
+    const mean = (a) => a.reduce((s, x) => s + x, 0) / a.length, vr = (a) => { const m = mean(a); return a.length > 1 ? a.reduce((s, x) => s + (x - m) ** 2, 0) / (a.length - 1) : 0; };
+    const lines = [];
+    CH.forEach(c => {
+      const R = (rows || []).filter(r => r[c.k] != null && Number.isFinite(Number(r[c.k])));
+      if (R.length < 6) return; const B = R.slice(-5).map(r => Number(r[c.k])), A = R.slice(-10, -5).map(r => Number(r[c.k]));
+      if (A.length < 3) return;
+      const a = mean(A), b = mean(B), d = b - a, se = Math.sqrt(vr(A) / A.length + vr(B) / B.length);
+      if (Math.abs(d) < c.min) { lines.push({ c, a, b, d, flat: true, nA: A.length }); return; }
+      lines.push({ c, a, b, d, clear: Math.abs(d) >= 2 * se, nA: A.length });
+    });
+    const fmt = (c, v) => c.f ? c.f(v) : Math.round(v) + (c.pct ? '%' : '');
+    const shown = lines.filter(l => !l.flat).sort((x, z) => (z.clear - x.clear) || Math.abs(z.d) - Math.abs(x.d));
+    const items = shown.map(l => `${l.c.t}: ${fmt(l.c, l.a)} → ${fmt(l.c, l.b)} ${l.clear ? (l.d > 0 ? '<b>↑</b>' : '<b>↓</b>') : '<span class="dim">(not clear yet)</span>'}`);
+    const level = lines.filter(l => l.flat).map(l => l.c.t);
+    // One suggestion: a clear drop first; otherwise the first key part that isn't going up.
+    const down = shown.find(l => l.clear && l.d < 0), PRI = ['carry', 'pocket', 'g3', 'ten', 'eye'];
+    const notUp = PRI.map(k => lines.find(l => l.c.k === k)).find(l => l && !(l.clear && l.d > 0));
+    const tip = down ? SUGGEST[down.c.k] : notUp ? SUGGEST[notUp.c.k] : lines.length ? 'Everything measured is level or up: keep your current goal.' : '';
+    // Goal record: graded goals, newest first, by kind.
+    let goals = []; try { const G = (root.BT.goalsAll() || []).filter(g => g && (g.result === 'done' || g.result === 'missed')).sort((x, z) => (z.at || 0) - (x.at || 0)); const by = {};
+      G.forEach(g => { const k = g.kind || 'other'; const o = by[k] = by[k] || { met: 0, n: 0 }; if (o.n >= 5) return; o.n++; if (g.result === 'done') o.met++; });
+      goals = Object.entries(by).map(([k, o]) => `${GOALK[k] || 'Goal'}: met ${o.met} of the last ${o.n}`); } catch (_e) {}
+    return { items, level, tip, goals, enough: lines.length > 0 };
+  }
+  function changesHtml(rows) {
+    const C = changes(rows); if (!C.enough && !C.goals.length) return `<div class="panel"><b>📈 What's changing</b><div class="small dim" style="margin-top:4px">Needs 6+ nights with the same numbers to compare your last 5 with the 5 before.</div></div>`;
+    return `<div class="panel"><b>📈 What's changing</b> <span class="small dim">· your last 5 nights vs the 5 before</span>
+      ${C.items.length ? `<ul class="sr-l small">${C.items.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}
+      ${C.level.length ? `<div class="small dim" style="margin-top:4px">About the same: ${esc(C.level.join(', '))}.</div>` : ''}
+      ${C.goals.length ? `<div class="small" style="margin-top:6px">🎯 Goals: ${esc(C.goals.join(' · '))}.</div>` : ''}
+      ${C.tip ? `<div class="small" style="margin-top:6px;color:var(--accent);opacity:1"><b>Next:</b> ${esc(C.tip)}</div>` : ''}
+      <div class="small dim" style="margin-top:4px">What already happened, not a prediction. ↑ ↓ = bigger than your normal night-to-night swing; "not clear yet" = could still be noise.</div></div>`;
+  }
   function render(box, opts) {
     opts = opts || {};
     const P = prefs(), all = nights();
@@ -142,6 +201,7 @@
         <div class="tr-key small"><span><i class="k-line"></i>each night</span><span><i class="k-avg"></i>running average</span><span><i class="k-trend"></i>trend line</span></div>
       </div>
       ${N ? DEFS.map(d => chart(d, R, P, N)).join('') + `<div class="tr-sub"><b>🎳 5 Scoring Elements</b> <span class="small dim">(Game Day nights)</span></div><div class="tr-grid2">${ELS.map(d => chart(d, R, P, N)).join('')}</div>` : '<div class="panel small">No nights match these filters.</div>'}`;
+    try { if (box.firstElementChild) box.firstElementChild.insertAdjacentHTML('afterend', changesHtml(R)); } catch (e) { console.error(e); }
     const set = (k, v) => { const p = prefs(); p[k] = v; if (k === 'house') p.lanes = ''; savePrefs(p); render(box, opts); };
     box.querySelector('#trPeriod').onchange = (e) => set('period', e.target.value);
     box.querySelector('#trHouse').onchange = (e) => set('house', e.target.value);
@@ -166,5 +226,5 @@
       svg.addEventListener('mouseleave', () => { svg.querySelector('.tr-x').style.display = 'none'; svg.querySelector('.tr-sel').style.display = 'none'; tip.innerHTML = base; });
     });
   }
-  root.BTTrends = { render, nights };
+  root.BTTrends = { render, nights, changes, changesHtml };
 })(typeof window !== 'undefined' ? window : globalThis);
