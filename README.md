@@ -58,6 +58,9 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v171-beta108 (held)
+- 🧭 Season review: 💾 Save to Files (an HTML file through the share sheet: Files, Mail, Messages) and 📄 Save as PDF (print screen → share → Save to Files). Buttons and the goal button are left out of the saved copy.
+
 ## Changes in v170-beta107
 - 🎯 Execution score: one formula everywhere (Good 5 · OK 3 · Poor 1, +1 for hitting your mark, max 5). Only shots you rated count; untapped shots no longer count as OK. Game Day shows "(28 of 33 rated)"; "—" when none rated.
 - 👀 Off the deck: new "Didn't see" tap. An honest didn't-see gets partial credit on the eyeball score (0.6 vs 1 for watched, 0 for blank) and is never used in roll, slow-burn or over/under reads. Hint: "didn't see beats a guess".

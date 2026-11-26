@@ -99,11 +99,24 @@
     const ul = (a) => a.length ? `<ul class="sr-l">${a.map(x => `<li>${x}</li>`).join('')}</ul>` : '<p class="small dim">Nothing yet.</p>';
     box.innerHTML = `<div class="panel"><b>📊 Season review</b> <span class="small dim">${R.nights} nights · ${d(R.first)} – ${d(R.last)}</span>
       <div class="small" style="margin-top:4px">${R.n} shots · strikes ${R.strike}% · pocket ${R.pocket}% · carry ${R.carry}%${R.gA[0] != null ? ` · G1 ${r0(R.gA[0])} · G2 ${r0(R.gA[1])} · G3 ${r0(R.gA[2])}` : ''}</div>
-      <div class="small dim">What you logged, not a prediction. Patterns need 3+ nights.</div></div>
-      ${R.work.length ? `<div class="panel"><b>🎯 Top ${R.work.length} to work on</b> <span class="small dim">(biggest cost first)</span><ol class="sr-l">${R.work.map(w => `<li>${esc(w.t)}${w.cost ? ` <span class="small dim">(${esc(w.cost)})</span>` : ''}</li>`).join('')}</ol><button type="button" class="btn secondary" id="srGoal">Make #1 my next goal</button></div>` : ''}
+      <div class="small dim">What you logged, not a prediction. Patterns need 3+ nights.</div>
+      <div class="nr-tools no-print" style="margin-top:10px"><button type="button" class="btn" id="srFile">💾 Save to Files</button><button type="button" class="btn secondary" id="srPdf">📄 Save as PDF</button></div>
+      <div class="small dim no-print">On iPhone, Save as PDF opens the print screen: tap the share icon, then Save to Files.</div></div>
+      ${R.work.length ? `<div class="panel"><b>🎯 Top ${R.work.length} to work on</b> <span class="small dim">(biggest cost first)</span><ol class="sr-l">${R.work.map(w => `<li>${esc(w.t)}${w.cost ? ` <span class="small dim">(${esc(w.cost)})</span>` : ''}</li>`).join('')}</ol><button type="button" class="btn secondary no-print" id="srGoal">Make #1 my next goal</button></div>` : ''}
       <div class="panel"><b>✅ Going right</b>${ul(R.right)}</div>
       <div class="panel"><b>❌ Going wrong (repeats)</b>${ul(R.wrong)}</div>
       <div class="panel"><b>🔁 Habits</b>${ul(R.habits)}</div>`;
+    // 💾 Save the review as a file (share sheet → Save to Files / Mail), or 📄 print to PDF.
+    const stamp = (() => { const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`; })();
+    const fb = box.querySelector('#srFile'); if (fb) fb.addEventListener('click', () => {
+      const c = box.cloneNode(true); c.querySelectorAll('button, .no-print, script').forEach(n => n.remove());
+      const name = `Bowling season review ${stamp}.html`;
+      const css = 'body{font:15px/1.4 -apple-system,system-ui,sans-serif;background:#fff;color:#111;padding:16px;max-width:760px;margin:auto}.panel{border:1px solid #ccc;border-radius:12px;padding:12px;margin:10px 0;break-inside:avoid}.small{font-size:13px}.dim{color:#555}.sr-l{margin:6px 0 0;padding-left:20px}.sr-l li{margin:5px 0}';
+      const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(name.replace(/\.html$/, ''))}</title><style>${css}</style></head><body>${c.innerHTML}</body></html>`;
+      const file = new File([html], name, { type: 'text/html' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) { navigator.share({ files: [file], title: name }).catch(() => {}); return; }
+      const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); });
+    const pb = box.querySelector('#srPdf'); if (pb) pb.addEventListener('click', () => { const t0 = document.title; document.title = `Bowling season review ${stamp}`; document.body.classList.add('print-season'); try { window.print(); } catch (_e) { alert('Printing isn\'t available here. Use Save to Files.'); } setTimeout(() => { document.body.classList.remove('print-season'); document.title = t0; }, 800); });
     const g = box.querySelector('#srGoal');
     if (g) g.addEventListener('click', () => { const S = BT().lsGet(BT().KEYS.GAME_SESSIONS, []) || []; const last = S.slice().sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0))[0] || {};
       BT().setGoal({ id: 'goal_season_' + Date.now(), from: 'season_' + Date.now(), house: last.house || '', at: Date.now(), kind: /game [123]|^open with/i.test(R.work[0].t) ? 'startFast' : /pin/.test(R.work[0].t) ? 'tenPin' : /deck/.test(R.work[0].t) ? 'offDeck' : 'repeatFirst', text: R.work[0].t });

@@ -784,6 +784,9 @@ select.input:has(option[value=""]:checked){ color:#a7adb8; font-style:italic; }
   body.print-review .panel{background:#fff !important;color:#000 !important;border:1px solid #ccc !important;box-shadow:none !important;break-inside:avoid}
   body.print-review .small, body.print-review .dim{color:#333 !important;opacity:1 !important}
   body.print-review .nr-note, body.print-review .nr-mv{color:#0b6b5f !important}
+  body.print-season .header, body.print-season #scHub, body.print-season #scNav, body.print-season #histPanel, body.print-season .no-print{display:none !important}
+  body.print-season .panel{background:#fff !important;color:#000 !important;border:1px solid #ccc !important;box-shadow:none !important;break-inside:avoid}
+  body.print-season .small, body.print-season .dim{color:#333 !important;opacity:1 !important}
 }
 .ang-foot{display:block;margin-top:2px;opacity:.75;font-size:12px}.ang-foot a{color:var(--accent)}
 .gd-laypt{margin-top:8px;font-size:15px}.gd-layfoot{opacity:.75;font-size:12px;margin-top:2px}.gd-layfoot a{color:var(--accent)}
