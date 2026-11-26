@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Bowler</title>
-  <link rel="stylesheet" href="styles.css?v=169" />
+  <link rel="stylesheet" href="styles.css?v=170" />
 </head>
 <body data-page="bowler">
   <div class="navlinks"></div>
@@ -181,9 +181,9 @@
     </div>
   </div>
 
-  <script src="app.js?v=169"></script>
-  <script src="coach.js?v=169"></script>
-  <script src="chart.js?v=169"></script>
+  <script src="app.js?v=170"></script>
+  <script src="coach.js?v=170"></script>
+  <script src="chart.js?v=170"></script>
   <script>
     BT.renderNav('bowler');
     // 🤔 Poor-shot reasons across every saved night plus tonight
@@ -352,6 +352,7 @@
       const cutoff = days === 'all' ? 0 : now - (Number(days) * 86400000);
       return (Array.isArray(sessions) ? sessions : [])
         .filter(s => s && s.savedAt && (!cutoff || s.savedAt >= cutoff))
+        .filter(s => metric !== 'executionScore' || (s.summary && s.summary[metric] != null))
         .slice()
         .sort((a,b)=>(a.savedAt||0)-(b.savedAt||0))
         .map(s => ({ x: s.savedAt, y: Number((s.summary && s.summary[metric]) || 0), label: new Date(s.savedAt).toLocaleDateString() }));

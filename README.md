@@ -58,7 +58,8 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
-## Changes in v170-beta107 (held)
+## Changes in v170-beta107
+- 🎯 Execution score: one formula everywhere (Good 5 · OK 3 · Poor 1, +1 for hitting your mark, max 5). Only shots you rated count; untapped shots no longer count as OK. Game Day shows "(28 of 33 rated)"; "—" when none rated.
 - 👀 Off the deck: new "Didn't see" tap. An honest didn't-see gets partial credit on the eyeball score (0.6 vs 1 for watched, 0 for blank) and is never used in roll, slow-burn or over/under reads. Hint: "didn't see beats a guess".
 - 🔀 Over/under on Game Day: also fires when the same ball both rings and finishes flat / weak on good shots; says "That's over/under, not slow burn" and names the smoother ball from tonight's bag (Barnes chart).
 - 🏆 Tournament, moving pairs: "Next game starts on" → "Tournament: new pair each game" (turns on by itself for tournament league names). Each new game asks "Game N: new pair?" (Set / Same pair); lanes follow the new pair. Game Day: "New pair: start from your last line, let your first 2 good shots tell you", plus how each ball moved on the pairs so far. Night review notes the pair on each game.

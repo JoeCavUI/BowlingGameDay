@@ -6,7 +6,7 @@
 
 (function () {
   // Bump this string each build so pages can display it and cache-bust resources.
-  const APP_VERSION = 'v169-beta106';
+  const APP_VERSION = 'v170-beta107';
   const KEYS = {
     CSV_CACHE: 'bt_csv_cache_v1',          // stringified { savedAt, name, rows }
     BOWLER: 'bt_bowler_v1',               // stringified object
@@ -1880,6 +1880,12 @@
     const M = { nomiss: 'noMiss', hit: 'noMiss', hitmymark: 'noMiss', hitmark: 'noMiss', rightrecovered: 'rightRecovered', leftheld: 'leftHeld', rightmiss: 'rightMiss', leftmiss: 'leftMiss', missedright: 'rightMiss', missedleft: 'leftMiss', didnttrack: 'didntTrack', didntsee: 'didntTrack', na: 'didntTrack', '': 'didntTrack' };
     return M[k] || t; }
   // Pocket hit: a pocket read, or a strike with no read (a strike comes from the pocket unless you logged Brooklyn).
+  // Execution score: only shots you rated. Good 5 · OK 3 · Poor 1, +1 for hitting your mark (max 5); average ÷ 5.
+  // Untapped shots are left out (older shots: only Good / Poor count as rated). Returns { score|null, rated, n }.
+  function execRated(x) { const e = Number(x && x.executionQuality); return !!x && (x.execTapped === true || (x.execTapped !== false && (e === 1 || e === 5))); }
+  function execScore(shots) { const R = (shots || []).filter(x => x && x.type !== 'gameStart' && !x.isFill), D = R.filter(execRated);
+    const v = (x) => Math.max(1, Math.min(5, (Number(x.executionQuality) || 3) + (x.miss === 'noMiss' ? 1 : 0)));
+    return { score: D.length ? Math.round(D.reduce((s, x) => s + v(x), 0) / (D.length * 5) * 100) : null, rated: D.length, n: R.length }; }
   function isPocketHit(x) { const pk = String((x && x.pocket) || ''); if (pk.startsWith('Pocket')) return true; const L = (x && x.leaves) || [];
     return isStrikeShotX(x) && !/^(Brooklyn|Missed)/.test(pk) && !L.includes('Brooklyn') && x.leaveTag !== 'Brooklyn'; }
   // Lanes for shots saved without one (a game added later, an old night): you alternate lanes every frame, and
@@ -2145,7 +2151,7 @@
     renderNav,
     speak, stopSpeaking, isSpeaking, wireReadAloud, speechText,
     isTestMode, hasTestData, enterTestMode, exitTestMode, resetTestData, checkForUpdate,
-    exportBackup, buildBackup, appDataKeys, scoreGame, standingPins, isSplit, normPocket, normExit, normMiss, normalizeShot, isPocketHit, inferLanes, splitPair,
+    exportBackup, buildBackup, appDataKeys, scoreGame, standingPins, isSplit, normPocket, normExit, normMiss, normalizeShot, isPocketHit, execScore, execRated, inferLanes, splitPair,
     importBackupFile,
     lastBackupAt,
     setupStatus,

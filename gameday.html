@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=169" />
+  <link rel="stylesheet" href="styles.css?v=170" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -330,16 +330,16 @@
     </div>
   </div>
 
-  <script src="app.js?v=169"></script>
-  <script src="coach.js?v=169"></script>
-  <script src="pinpal.js?v=169"></script>
-  <script src="history.js?v=169"></script>
-  <script src="chart.js?v=169"></script>
-  <script src="plan.js?v=169"></script>
-  <script src="insight.js?v=169"></script>
-  <script src="eyes.js?v=169"></script>
-  <script src="cloud.js?v=169"></script>
-  <script src="sensor.js?v=169"></script>
+  <script src="app.js?v=170"></script>
+  <script src="coach.js?v=170"></script>
+  <script src="pinpal.js?v=170"></script>
+  <script src="history.js?v=170"></script>
+  <script src="chart.js?v=170"></script>
+  <script src="plan.js?v=170"></script>
+  <script src="insight.js?v=170"></script>
+  <script src="eyes.js?v=170"></script>
+  <script src="cloud.js?v=170"></script>
+  <script src="sensor.js?v=170"></script>
   <script>
     BT.renderNav('gameday');
     BT.wireReadAloud(document.getElementById('coachSpeak'), () => { const q = document.querySelector('#coachText .gd-q1'), full = document.querySelector('#coachFull'); if (q && full && full.hidden) return q.innerText; return ((document.getElementById('coachText') || {}).innerText || '').split('\n').filter(l => !/^(Why & what's next|What Coach is using|Why ›|Less ‹)/i.test(l.trim())).join('\n'); });
@@ -847,7 +847,7 @@ function selectedPills(container) {
         const pocketHits = arr.filter(s=>BT.isPocketHit(s)).length;
         const isX = (q)=>(q.leaves||[]).some(x=>x==='Strike' || x==='Brooklyn');
         const carry = pocketHits ? (arr.filter(q=>BT.isPocketHit(q) && isX(q)).length / pocketHits) : 0;
-        const execScore = arr.length ? Math.round(arr.reduce((a,s)=>a + effectiveExecutionValue(s), 0) / (arr.length*5) * 100) : 0;
+        const execScore = BT.execScore(arr).score;
         return { shots: arr.length, strikes, pocketHits, pocketPct: arr.length? pocketHits/arr.length : 0, carryPct: carry, execScore };
       }
       return { left:{...by.left, ...stat(by.left.shots)}, right:{...by.right, ...stat(by.right.shots)} };
@@ -1207,8 +1207,8 @@ function isStrike(shot) {
         const pocketPct = totalW ? Math.round((pocketW / totalW) * 100) : 0;
         const flushPct = totalW ? Math.round((flushW / totalW) * 100) : 0;
         const qualityPct = totalW ? Math.round((qualityW / totalW) * 100) : 0;
-        const execScore = shots.length ? Math.round(shots.reduce((a,s)=>a + effectiveExecutionValue(s), 0) / (shots.length*5) * 100) : 0;
-        return { total: shots.length, strikePct, pocketPct, carry, flushPct, qualityPct, execScore, strikes: shots.filter(isStrike).length };
+        const ex = BT.execScore(shots), execScore = ex.score, execRatedN = ex.rated;
+        return { execRatedN, total: shots.length, strikePct, pocketPct, carry, flushPct, qualityPct, execScore, strikes: shots.filter(isStrike).length };
       }
 
       const sL = laneStats(String(L));
@@ -1226,14 +1226,14 @@ function isStrike(shot) {
             <div>Shots: <b>${sL.total}</b> • Strikes: <b>${sL.strikes}</b></div>
             <div>Strike %: <b>${sL.strikePct}%</b></div>
             <div>Pocket hit %: <b>${sL.pocketPct}%</b> • Flush %: <b>${sL.flushPct}%</b></div>
-            <div>Carry on pocket hits: <b>${sL.carry}%</b> • Good or OK shots: <b>${sL.qualityPct}%</b> • Execution: <b>${sL.execScore}%</b></div>
+            <div>Carry on pocket hits: <b>${sL.carry}%</b> • Good or OK shots: <b>${sL.qualityPct}%</b> • Execution: <b>${sL.execScore == null ? '—' : sL.execScore + '%'}</b>${sL.execScore != null && sL.execRatedN < sL.total ? ` <span class="small">(${sL.execRatedN} of ${sL.total} rated)</span>` : ''}</div>
           </div>
           <div class="panel" style="padding:10px;margin:0">
             <div><b>RIGHT (${R})</b></div>
             <div>Shots: <b>${sR.total}</b> • Strikes: <b>${sR.strikes}</b></div>
             <div>Strike %: <b>${sR.strikePct}%</b></div>
             <div>Pocket hit %: <b>${sR.pocketPct}%</b> • Flush %: <b>${sR.flushPct}%</b></div>
-            <div>Carry on pocket hits: <b>${sR.carry}%</b> • Good or OK shots: <b>${sR.qualityPct}%</b> • Execution: <b>${sR.execScore}%</b></div>
+            <div>Carry on pocket hits: <b>${sR.carry}%</b> • Good or OK shots: <b>${sR.qualityPct}%</b> • Execution: <b>${sR.execScore == null ? '—' : sR.execScore + '%'}</b>${sR.execScore != null && sR.execRatedN < sR.total ? ` <span class="small">(${sR.execRatedN} of ${sR.total} rated)</span>` : ''}</div>
           </div>
         </div>
       `;
@@ -2612,7 +2612,7 @@ function sessionSummary(shots) {
         pocketPct: weighted.total ? Math.round((weighted.pocket/weighted.total)*100) : 0,
         carryPct: weighted.pocket ? Math.round((weighted.carry/weighted.pocket)*100) : 0,
         qualityPct: weighted.total ? Math.round((weighted.quality/weighted.total)*100) : 0,
-        executionScore: real.length ? Math.round(real.reduce((a,s)=>a + effectiveExecutionValue(s), 0) / (real.length*5) * 100) : 0,
+        executionScore: BT.execScore(real).score,
         observationRating: observationRating(real),
       };
     }
