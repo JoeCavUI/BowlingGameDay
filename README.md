@@ -58,6 +58,11 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v170-beta107 (held)
+- 👀 Off the deck: new "Didn't see" tap. An honest didn't-see gets partial credit on the eyeball score (0.6 vs 1 for watched, 0 for blank) and is never used in roll, slow-burn or over/under reads. Hint: "didn't see beats a guess".
+- 🔀 Over/under on Game Day: also fires when the same ball both rings and finishes flat / weak on good shots; says "That's over/under, not slow burn" and names the smoother ball from tonight's bag (Barnes chart).
+- 🏆 Tournament, moving pairs: "Next game starts on" → "Tournament: new pair each game" (turns on by itself for tournament league names). Each new game asks "Game N: new pair?" (Set / Same pair); lanes follow the new pair. Game Day: "New pair: start from your last line, let your first 2 good shots tell you", plus how each ball moved on the pairs so far. Night review notes the pair on each game.
+
 ## Changes in v169-beta106
 - 🎒 Plan: when your Game Day history at a house is thin (under 2 nights) or old (60+ days), your recent workhorse balls from any house stay in the bag, labelled "Your recent workhorse (other houses; untested here)".
 - 🔁 Your ball switches (all houses): X → Y, helped N of M (houses where it helped; not where it didn't). Next 5 shots vs the last 5; dropping the new ball after 1–2 shots counts as didn't help. In the Plan, and on Game Day when your ball has 0–1 strikes in its last 3.

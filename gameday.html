@@ -61,6 +61,7 @@
               <select id="gameLane" class="input" style="margin-top:6px" aria-label="Next game starts on">
                 <option value="other">Each new game starts on the other lane</option>
                 <option value="same">Each new game starts on the same lane</option>
+                <option value="move">🏆 Tournament: new pair each game</option>
               </select>
               <select id="scoreMode" class="input" style="margin-top:6px" aria-label="Keep score">
                 <option value="on">Keep score here (2nd ball after each frame)</option>
@@ -180,7 +181,7 @@
         <!-- The shot, in the order you see it -->
         <div class="panel" id="shotPanel">
           <div class="gd-frameline" id="frameLine">Game 1 · Frame 1</div>
-          <div id="pairNudge" class="small" style="display:none;margin:6px 0;padding:8px;border:1px dashed var(--line,#444);border-radius:10px">↔️ <b>Which pair?</b> (for the lane report)
+          <div id="pairNudge" class="small" style="display:none;margin:6px 0;padding:8px;border:1px dashed var(--line,#444);border-radius:10px"><span id="pnTitle">↔️ <b>Which pair?</b> (for the lane report)</span>
             <span style="display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px"><input id="pnPair" class="input" placeholder="e.g. 910 = 9-10" inputmode="numeric" style="width:120px">
             <select id="pnStart" class="input" style="width:auto"><option value="left">Started on the left lane</option><option value="right">Started on the right lane</option></select>
             <button type="button" class="btn" id="pnSave">Set</button><button type="button" class="btn ghost" id="pnSkip">Skip</button></span></div>
@@ -372,6 +373,7 @@
       { val: 'Exit left', label: 'Left' },
       { val: 'Exit straight', label: 'Straight' },
       { val: 'Exit right', label: 'Right' },
+      { val: 'Not seen', label: "Didn't see" },
     ];
     const speedObs = [
       { val: 'slower', label: 'Slower' },
@@ -424,6 +426,10 @@
     let sessionShots = [];
     // Per-game fixes from tapping the lane / frame beside the pin deck: { [gameNo]: { off: frames skipped (+) or extra (−), flip: start on the other lane } }
     let frameAdj = {};
+    // 🏆 Moving pairs (tournament): the pair and starting lane for each game. { [gameNo]: { lanes: '23-24', start: 'left' } }
+    let gamePairs = {};
+    function tourneyOn() { return !!(el.gameLane && el.gameLane.value === 'move'); }
+    function pairFor(g) { const p = gamePairs[g]; return (p && p.lanes) || (el.lanes ? String(el.lanes.value || '').trim() : ''); }
 
     let selectedPins = new Set(); // pins left standing
     let resultTag = ''; // Strike / Brooklyn / Flat 10 / Ringing 10 (optional)
@@ -467,6 +473,7 @@
       updateFrameUI();
       markCoachDirty();
       el.coachText.innerHTML = bulletListHtml('Coach review', `Game ${next} started.`, ['Continue logging shots so Coach can map the transition.']);
+      try { paintPairNudge(); if (pairPending()) document.getElementById('pairNudge').scrollIntoView({ block: 'center' }); } catch (_e) {}
     }
 
     function saveLastLineDraft() {
@@ -965,7 +972,8 @@ function selectedPills(container) {
     // because frame 10 ends on the other lane. A fix from the lane / frame editor flips that game.
     function gameStartsLeft(g) {
       let left = (el.startLane.value || 'left') === 'left';
-      if ((el.gameLane ? el.gameLane.value : 'other') !== 'same' && g % 2 === 0) left = !left;
+      if (tourneyOn()) { const gp = gamePairs[g]; left = ((gp && gp.start) || el.startLane.value || 'left') === 'left'; }
+      else if ((el.gameLane ? el.gameLane.value : 'other') !== 'same' && g % 2 === 0) left = !left;
       if ((frameAdj[g] || {}).flip) left = !left;
       return left;
     }
@@ -1392,6 +1400,8 @@ function saveCurrentSessionDraft() {
       BT.lsSet(SESSION_KEY, {
         shots: sessionShots,
         adj: frameAdj,
+        pairs: gamePairs,
+        tourney: tourneyOn(),
         meta: collectMeta(),
         savedAt: Date.now(),
       });
@@ -1401,6 +1411,7 @@ function saveCurrentSessionDraft() {
       const d = BT.lsGet(SESSION_KEY, null);
       if (d && Array.isArray(d.shots)) sessionShots = d.shots;
       frameAdj = (d && d.adj && typeof d.adj === 'object') ? d.adj : {};
+      gamePairs = (d && d.pairs && typeof d.pairs === 'object') ? d.pairs : {};
     }
 
     function collectMeta() {
@@ -2131,11 +2142,20 @@ function saveCurrentSessionDraft() {
     ['feet', 'arrows', 'ball'].forEach(k => { const n = el[k]; if (n) { n.addEventListener('change', paintWhy); n.addEventListener('input', paintWhy); } });
     setTimeout(paintWhy, 300);
     // ↔️ No pair entered: one quick prompt on the shot card (skippable for the night). Setting it fills in the Setup fields.
+    function pairPending() { if (!tourneyOn()) return 0; const g = currentGameNumber(); if (g < 2 || gamePairs[g]) return 0; const inG = sessionShots.filter(s => s && s.type !== 'gameStart' && (Number(s.gameNo) || 1) === g).length; return inG ? 0 : g; }
     function paintPairNudge() { const b = document.getElementById('pairNudge'); if (!b) return; let skip = false; try { skip = sessionStorage.getItem('bt_pair_nudge_skip') === '1'; } catch (_e) {}
-      b.style.display = (!String(el.lanes.value || '').trim() && !skip) ? '' : 'none'; }
+      const pend = pairPending(), t = document.getElementById('pnTitle'), sk = document.getElementById('pnSkip');
+      if (t) t.innerHTML = pend ? `🏆 <b>Game ${pend}: new pair?</b> (last: ${escapeHtml(pairFor(pend - 1) || '—')})` : '↔️ <b>Which pair?</b> (for the lane report)';
+      if (sk) sk.textContent = pend ? 'Same pair' : 'Skip';
+      b.style.display = pend || (!String(el.lanes.value || '').trim() && !skip) ? '' : 'none'; }
     document.getElementById('pnSave').addEventListener('click', () => { const sp = BT.splitPair(document.getElementById('pnPair').value); if (sp.length !== 2) { document.getElementById('pnPair').focus(); return; }
-      el.lanes.value = sp.join('-'); el.startLane.value = document.getElementById('pnStart').value; ['input', 'change'].forEach(t => { el.lanes.dispatchEvent(new Event(t)); el.startLane.dispatchEvent(new Event(t)); }); paintPairNudge(); });
-    document.getElementById('pnSkip').addEventListener('click', () => { try { sessionStorage.setItem('bt_pair_nudge_skip', '1'); } catch (_e) {} paintPairNudge(); });
+      const pend = pairPending(), st = document.getElementById('pnStart').value;
+      if (tourneyOn()) { if (!gamePairs[1]) gamePairs[1] = { lanes: pend ? (String(el.lanes.value || '').trim() || sp.join('-')) : sp.join('-'), start: pend ? (el.startLane.value || 'left') : st }; gamePairs[pend || currentGameNumber()] = { lanes: sp.join('-'), start: st }; }
+      el.lanes.value = sp.join('-'); if (!pend) el.startLane.value = st; ['input', 'change'].forEach(t => { el.lanes.dispatchEvent(new Event(t)); el.startLane.dispatchEvent(new Event(t)); });
+      document.getElementById('pnPair').value = ''; saveCurrentSessionDraft(); syncNextLane(); markCoachDirty(); paintPairNudge(); });
+    document.getElementById('pnSkip').addEventListener('click', () => { const pend = pairPending();
+      if (pend) { if (!gamePairs[1]) gamePairs[1] = { lanes: String(el.lanes.value || '').trim(), start: el.startLane.value || 'left' }; gamePairs[pend] = { lanes: pairFor(pend - 1), start: (gamePairs[pend - 1] || {}).start || el.startLane.value || 'left', same: true }; saveCurrentSessionDraft(); syncNextLane(); markCoachDirty(); }
+      else { try { sessionStorage.setItem('bt_pair_nudge_skip', '1'); } catch (_e) {} } paintPairNudge(); });
     el.lanes.addEventListener('input', paintPairNudge); setTimeout(paintPairNudge, 400);
 
     function coachContext() {
@@ -2240,7 +2260,7 @@ function saveCurrentSessionDraft() {
         }
       } catch (e) { console.error(e); }
       // 👀 Second set of eyes: history at this house and pair, and tonight lane against lane.
-      let eyes = []; try { if (window.BTEyes) { const bw = BT.lsGet(BT.KEYS.BOWLER, {}) || {}; eyes = BTEyes.signals({ shots: sessionShots.slice().reverse(), lanes: BT.formatLanes ? BT.formatLanes(el.lanes.value) : el.lanes.value.trim(), house: el.house.value, gameNow: currentGameNumber(), ball: el.ball.value, sessions: BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || [], lefty: /^l/i.test(String(bw.handedness || bw.hand || '')), userRead: laneReadFor(currentGameNumber()), setRoles: (() => { try { const st = (BT.lsGet(BT.KEYS.ARSENAL_SETS, []) || []).find(x => x && x.name === el.set.value); return st && st.roles ? st.roles : null; } catch (_e) { return null; } })() }); } } catch (e) { console.error(e); }
+      let eyes = []; try { if (window.BTEyes) { const bw = BT.lsGet(BT.KEYS.BOWLER, {}) || {}; eyes = BTEyes.signals({ shots: sessionShots.slice().reverse(), lanes: BT.formatLanes ? BT.formatLanes(el.lanes.value) : el.lanes.value.trim(), house: el.house.value, gameNow: currentGameNumber(), ball: el.ball.value, sessions: BT.lsGet(BT.KEYS.GAME_SESSIONS, []) || [], lefty: /^l/i.test(String(bw.handedness || bw.hand || '')), userRead: laneReadFor(currentGameNumber()), setRoles: (() => { try { const st = (BT.lsGet(BT.KEYS.ARSENAL_SETS, []) || []).find(x => x && x.name === el.set.value); return st && st.roles ? st.roles : null; } catch (_e) { return null; } })(), setBalls: (() => { try { const st = (BT.lsGet(BT.KEYS.ARSENAL_SETS, []) || []).find(x => x && x.name === el.set.value); return st ? setBallNames(st) : []; } catch (_e) { return []; } })(), bowler: bw, tourney: tourneyOn(), pairNow: pairFor(currentGameNumber()) }); } } catch (e) { console.error(e); }
       const angleHref = (a) => `angle.html?from=gameday&slide=${encodeURIComponent(a.slide)}&target=${encodeURIComponent(a.target)}${a.bp != null ? '&bp=' + encodeURIComponent(a.bp) : ''}${el.pattern.value ? '&pattern=' + encodeURIComponent(el.pattern.value) : ''}`;
       const eyesHtml = eyes.length ? `<div class="gd-eyes"><div class="small" style="opacity:1"><b>👀 Second set of eyes</b></div>${eyes.map(x => `<div class="small" style="margin-top:4px;opacity:1">${escapeHtml(x.text)}<div class="dim">${escapeHtml(x.why)}</div>${x.angle ? `<a class="small" style="color:var(--accent)" href="${angleHref(x.angle)}">📐 Check this line on Angles →</a>` : ''}</div>`).join('')}</div>` : '';
       el.coachText.innerHTML = headsHtml + meterHtml + eyesHtml + `
@@ -2637,6 +2657,7 @@ function sessionSummary(shots) {
         games: currentGameNumber(),
         scores, scoredInApp: !!scoredInApp,
         shots: [...sessionShots],
+        pairs: tourneyOn() ? Object.assign({}, gamePairs) : undefined,
         sensor: sensorCtx(),
       };
       let sessions = BT.lsGet(BT.KEYS.GAME_SESSIONS, []);
@@ -2669,7 +2690,7 @@ function sessionSummary(shots) {
 
     function resetSession() {
       if (!confirm('Clear the current session log?')) return;
-      sessionShots = []; frameAdj = {};
+      sessionShots = []; frameAdj = {}; gamePairs = {};
       lastCoachRead = null; lastCoachBall = '';
       localStorage.removeItem(SESSION_KEY);
       renderLog();
@@ -2718,7 +2739,7 @@ function sessionSummary(shots) {
         w.style.display = miss ? 'none' : '';
         if (miss) el.readsExit.querySelectorAll('button.active').forEach(b => b.classList.remove('active'));
         w.classList.toggle('gd-ask', pocket && !selectedPills(el.readsExit).length);
-        const h = BT.$('#exitHint'); if (h) h.textContent = pocket ? (isLeftyBowler() ? '👀 where did it go? (right = still turning · left = rolled out)' : '👀 where did it go? (left = still turning · right = rolled out)') : (isLeftyBowler() ? '(right = still turning · left = rolled out)' : '(left = still turning · right = rolled out)');
+        const h = BT.$('#exitHint'); if (h) h.textContent = pocket ? (isLeftyBowler() ? '👀 where did it go? (right = still turning · left = rolled out)' : '👀 where did it go? (left = still turning · right = rolled out)') + " · didn't see beats a guess" : (isLeftyBowler() ? '(right = still turning · left = rolled out)' : '(left = still turning · right = rolled out)');
       }
       el.readsPocket.addEventListener('click', () => setTimeout(paintExitRow, 0));
       el.readsExit.addEventListener('click', () => setTimeout(paintExitRow, 0));
@@ -2754,7 +2775,11 @@ function sessionSummary(shots) {
       const GL_KEY = 'bt_gameday_game_lane_v1';
       if (el.gameLane) {
         el.gameLane.value = BT.lsGet(GL_KEY, 'other') === 'same' ? 'same' : 'other';
-        el.gameLane.addEventListener('change', () => { BT.lsSet(GL_KEY, el.gameLane.value); syncNextLane(); markCoachDirty(); });
+        try { const d0 = BT.lsGet(SESSION_KEY, null); if (d0 && d0.tourney) el.gameLane.value = 'move'; } catch (_e) {}
+        // A tournament league name (Open, Classic, Scratch, Singles…) turns on moving pairs; you can switch it back.
+        const autoT = () => { try { if (el.gameLane.value === 'other' && window.BTCoach && BTCoach.isTourn(leagueNameById(el.league.value || '')) && !sessionShots.some(s => s && s.type !== 'gameStart')) { el.gameLane.value = 'move'; saveCurrentSessionDraft(); paintPairNudge(); } } catch (_e) {} };
+        if (el.league) el.league.addEventListener('change', autoT); setTimeout(autoT, 500);
+        el.gameLane.addEventListener('change', () => { if (el.gameLane.value !== 'move') BT.lsSet(GL_KEY, el.gameLane.value); saveCurrentSessionDraft(); syncNextLane(); markCoachDirty(); try { paintPairNudge(); } catch (_e) {} });
       }
       // 🎳 Keep score here, or first ball only (scoring in PinPal)
       const SM_KEY = 'bt_gameday_score_mode_v1';

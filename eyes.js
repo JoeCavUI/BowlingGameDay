@@ -281,6 +281,12 @@
         if (R.length) out.push({ id: `swrec:${ctx.ball}:${game}`, text: `🔁 When you've switched off ${ctx.ball} before: ${R.slice(0, 2).map(o => BTCoach.switchLine(o).replace(`${ctx.ball} → `, '→ ')).join(' · ')}.`, why: 'Your Game Day logs, all houses: next 5 shots vs the last 5 with the old ball. Your record, not a rule.' });
       }
     } } catch (_e) {}
+    // 🏆 Moving pairs: a new pair is a fresh read. Start from your last line; what carries over is how each ball moved.
+    if (ctx.tourney && game >= 2) {
+      const inGame = real.filter(s => (Number(s.gameNo) || 1) === game).length;
+      if (inGame <= 1) { let pm = []; try { pm = window.BTCoach && BTCoach.pairMotions ? BTCoach.pairMotions(real.filter(s => (Number(s.gameNo) || 1) < game), ctx.bowler || {}) : []; } catch (_e) {}
+        out.push({ id: `tpair:${game}`, text: `🏆 New pair${ctx.pairNow ? ` (${ctx.pairNow})` : ''}: start from your last line, then let your first 2 good shots on this pair tell you. Nothing from the last pair counts against this one.${pm.length ? ` So far: ${pm.slice(0, 3).map(o => o.text).join(' · ')}.` : ''}`, why: 'Tournament, moving pairs: each pair has its own breakdown. The ball\'s motion carries over from pair to pair; your line and move count don\'t.' }); }
+    }
     // 🧭 Game 3 plan: the decision you made in the Plan, shown before the late-night spiral can start.
     // Your bag's roles (If it reads early / carry drops → X; If it goes long / light → Y), one change at a time, not deeper.
     if (game >= 3 && ctx.setRoles) {
@@ -298,7 +304,17 @@
       const seq = real.filter(s => s.ball === ctx.ball && !(Number(s.shotNo) >= 2) && good(s) && BT().standingPins(s).length).slice(-6)
         .map(s => /high|brooklyn/i.test(String(s.pocket || '')) ? 'H' : /light/i.test(String(s.pocket || '')) ? 'L' : '').filter(Boolean);
       const h = seq.filter(x => x === 'H').length, l = seq.length - h; let flips = 0; for (let i = 1; i < seq.length; i++) if (seq[i] !== seq[i - 1]) flips++;
-      if (h >= 2 && l >= 2 && flips >= 2) out.push({ id: `ou:${ctx.ball}:${seq.length}`, text: `🔀 ${ctx.ball}: good shots are going high, then light (${seq.join(' ')}). The reaction isn't repeating, so a move won't fix it. Change balls to a smoother, more predictable one.`, why: `Last ${seq.length} good shots with ${ctx.ball} that left pins: ${h} high, ${l} light, ${flips} switches. Pulls and misses are left out.` });
+      // Second sign: the same ball both ringing and finishing flat / weak on good shots (strong vs weak at the pins).
+      const G6 = real.filter(s => s.ball === ctx.ball && !(Number(s.shotNo) >= 2) && good(s) && BT().standingPins(s).length).slice(-6);
+      const strongF = G6.filter(s => s.leaveTag === 'Ringing 10' || s.keyPin === 'wrap' || s.keyPin === 'kickback' || s.exit === (lefty ? 'Exit right' : 'Exit left')).length;
+      const weakF = G6.filter(s => /flat/i.test(String(s.leaveTag || '')) || s.keyPin === 'weak' || s.exit === (lefty ? 'Exit left' : 'Exit right')).length;
+      const ouA = h >= 2 && l >= 2 && flips >= 2, ouB = strongF >= 2 && weakF >= 2;
+      if (ouA || ouB) {
+        let pick = null; try { const names = ctx.setRoles ? Object.keys(ctx.setRoles) : (ctx.setBalls || []).map(x => x.name || x); pick = window.BTCoach && BTCoach.smootherPick ? BTCoach.smootherPick(ctx.ball, names, ctx.bowler) : null; } catch (_e) {}
+        const go = pick ? `Try ${pick.n} (${pick.label}): smoother and more predictable.` : 'Change balls to a smoother, more predictable one.';
+        const what = ouA ? `good shots are going high, then light (${seq.join(' ')})` : `good shots are both ringing (${strongF}) and finishing flat / weak (${weakF})`;
+        out.push({ id: `ou:${ctx.ball}:${ouA ? seq.length : 'f' + G6.length}`, text: `🔀 ${ctx.ball}: ${what}. That's over/under, not slow burn: the reaction isn't repeating, so a move won't fix it. ${go}`, why: ouA ? `Last ${seq.length} good shots with ${ctx.ball} that left pins: ${h} high, ${l} light, ${flips} switches. Pulls and misses are left out.` : `Last ${G6.length} good shots with ${ctx.ball} that left pins: ${strongF} strong finishes, ${weakF} weak. Slow burn would be weak every time.` });
+      }
     }
     // 📉 Your low game: past 3-game nights show this game runs 8+ pins under the others; heads-up for its first 2 frames
     if (game >= 2) {

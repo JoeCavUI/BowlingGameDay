@@ -339,7 +339,7 @@
     const ED = {
       miss: [['noMiss', 'Hit my mark'], ['rightRecovered', 'Right of mark, recovered'], ['leftHeld', 'Left of mark, held'], ['rightMiss', 'Right of mark'], ['leftMiss', 'Left of mark'], ['didntTrack', "Didn't see"]],
       pocket: [['Pocket flush', 'Flush'], ['Pocket light', 'Light'], ['Pocket high', 'High'], ['Brooklyn', 'Brooklyn'], ['Missed left', 'Missed left'], ['Missed right', 'Missed right'], ['Unknown', "Didn't see"]],
-      exit: [["Didn't notice", "Didn't notice"], ['Exit left', 'Left'], ['Exit straight', 'Straight'], ['Exit right', 'Right']],
+      exit: [["Didn't notice", "Didn't notice"], ['Exit left', 'Left'], ['Exit straight', 'Straight'], ['Exit right', 'Right'], ['Not seen', "Didn't see"]],
       obs: [['Too early', 'Early'], ['Too long', 'Long'], ['Over/under', 'Over/under'], ['Carrydown', 'Carrydown']],
     };
     const edEsc = (t) => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -728,6 +728,7 @@
         const twoL = new Set(gs.map(x => x.lane).filter(Boolean)).size === 2;
         const mv = gs.filter((x, i) => { if (!i) return false; let p = gs[i - 1]; if (twoL && x.lane) { p = null; for (let j = i - 1; j >= 0; j--) if (gs[j].lane === x.lane) { p = gs[j]; break; } } return p && (x.feet !== p.feet || x.arrows !== p.arrows); }).length; if (mv) notes.push(`${mv} move${mv === 1 ? '' : 's'}`);
         if (twoL) { const lk = (ln) => { const a = gs.filter(x => x.lane === ln); return a.length ? lineKey(a[a.length - 1]) : ''; }; const L = [...new Set(gs.map(x => x.lane).filter(Boolean))].sort(); const k1 = lk(L[0]), k2 = lk(L[1]); if (k1 && k2 && k1 !== k2) notes.push(`lane ${L[0]} ${k1} · lane ${L[1]} ${k2}`); }
+        { const prs = [...new Set(gs.map(x => x.lanes).filter(Boolean))], allP = new Set(real.map(x => x.lanes).filter(Boolean)); if (allP.size > 1 && prs.length) notes.unshift(`pair ${prs.join(' / ')}`); }
         { const rd = (gs.find(x => x.laneRead) || {}).laneRead; if (rd) notes.push(`your read: ${rd === 'more' ? 'hooking more' : rd === 'less' ? 'hooking less' : 'same'}`); }
         let card = null; try { const all = chron.filter(x => x.type !== 'gameStart' && (Number(x.gameNo) || 1) === g); const c = BT.scoreGame(all); if (c.frames.some(f => f.shot && (f.shot.second || f.shot.noSecond)) || c.complete) card = c; } catch (_e) {}
         return { no: g, score: scoreFor(g) ?? (card && card.complete ? card.total : null), m, notes, card };
@@ -931,7 +932,7 @@
           <div class="nr-tally"><b>${R.tally.total}</b> balls thrown${R.tally.noSecondData ? ' logged' : ''} · <b>${R.all.strikes}</b> strike${R.all.strikes === 1 ? '' : 's'} on ${R.all.n} strike shots${R.tally.fills ? ` (incl. ${R.tally.fills} fill ball${R.tally.fills === 1 ? '' : 's'})` : ''}${R.tally.second ? ` · spares ${R.tally.spares} of ${R.tally.second}` : ''}</div>
           ${R.goalPrev ? `<div class="goal-banner ${R.goalPrev.r.ok ? 'ok' : 'miss'}">${R.goalPrev.r.ok ? '✅' : '❌'} <b>Last time's goal:</b> ${esc(String(R.goalPrev.g.text || '').replace(/\s*\(you saw [^)]*\)/, ''))} <span class="small">(${esc(R.goalPrev.r.why)})</span></div>` : ''}
           ${R.goalNext ? `<div class="goal-banner">🎯 <b>Goal for next time:</b> ${esc(R.goalNext.text)}</div>` : ''}
-          ${R.eye ? `<div class="nr-eye"><b>👁️ Eyeball ${R.eye.score}</b> (${esc(R.eye.label)}) · <span class="dim">how often you logged it:</span> mark ${R.eye.parts.mark ?? '—'}% · pocket ${R.eye.parts.pocket ?? '—'}% · <b>off the deck ${R.eye.parts.exit ?? '—'}%</b>${R.eye.parts.routine != null ? ` · full routine ${R.eye.parts.routine}%` : ''}${R.eye.tip ? `<div class="small" style="opacity:1">${esc(R.eye.tip)}</div>` : ''}</div>` : ''}
+          ${R.eye ? `<div class="nr-eye"><b>👁️ Eyeball ${R.eye.score}</b> (${esc(R.eye.label)}) · <span class="dim">how often you logged it:</span> mark ${R.eye.parts.mark ?? '—'}% · pocket ${R.eye.parts.pocket ?? '—'}% · <b>off the deck ${R.eye.parts.exit ?? '—'}%</b>${R.eye.exitNotSeen ? ` <span class="dim">(${R.eye.exitNotSeen} honest "didn't see": partial credit, not used in reads)</span>` : ''}${R.eye.parts.routine != null ? ` · full routine ${R.eye.parts.routine}%` : ''}${R.eye.tip ? `<div class="small" style="opacity:1">${esc(R.eye.tip)}</div>` : ''}</div>` : ''}
           ${(() => { let t = null; try { t = window.BTEyes && BTEyes.trafficOf ? BTEyes.trafficOf(s) : null; } catch (_e) {} const opt = (v) => [0, 1, 2, 3, 4, 5].map(n => `<option value="${n}"${n === (v || 0) ? ' selected' : ''}>${n}</option>`).join('');
             return `<div class="nr-pair no-print">🛢️ On the pair: plastic <select id="nrPl" class="input nr-pairsel">${opt(t && t.plastic)}</select> urethane <select id="nrUr" class="input nr-pairsel">${opt(t && t.ure)}</select> <span class="small dim" id="nrPairNote">${!t ? 'not set' : t.est ? 'from your league roster: fix it if it\'s wrong' : 'saved'}</span></div>`; })()}
           <div class="small dim" style="margin-top:6px">${statLine(R.all)} · good or OK shots ${R.okPct}%<span class="no-print"> · double tap for the shot log</span></div>

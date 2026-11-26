@@ -686,7 +686,7 @@
 
     const last = C[C.length - 1];
     const pocketShots = C.filter(c => c.pocketHit);
-    const exitSeen = pocketShots.filter(c => c.exitRaw !== "Didn't notice").length;
+    const exitSeen = pocketShots.filter(c => c.exitRaw !== "Didn't notice").length; // an honest "Didn't see" counts as answered
     if (last && last.pocketHit && last.exitRaw === "Didn't notice" && pocketShots.length >= 2 && exitSeen / pocketShots.length < 0.8) {
       res.notes.unshift(`👀 Off the deck: ${exitSeen} of ${pocketShots.length} pocket hits watched tonight. Full routine every shot: mark → breakpoint → pocket → watch it leave the deck and what the ${kp} does.`);
     }
@@ -702,12 +702,14 @@
     const mark = pct(C.filter(c => String(c.shot.miss || 'didntTrack') !== 'didntTrack').length, C.length);
     const pocket = pct(C.filter(c => String(c.shot.pocket || 'Unknown') !== 'Unknown' || c.strike).length, C.length);
     const ph = C.filter(c => (root.BT && root.BT.isPocketHit) ? root.BT.isPocketHit(c.shot) : c.pocketHit); // same pocket count as the rest of the report
-    const exit = pct(ph.filter(c => c.exitRaw !== "Didn't notice").length, ph.length);
+    // Off the deck: watched = full credit; an honest "Didn't see" = 0.6 (better than a guess); blank = 0.
+    const seenX = (c) => /^Exit /.test(c.exitRaw), notSeen = ph.filter(c => c.exitRaw === 'Not seen').length;
+    const exit = ph.length ? (ph.filter(seenX).length + 0.6 * notSeen) / ph.length : null;
     const corner = prof.lefty ? '7' : '10';
     const cornerLeaves = C.filter(c => c.pocketHit && (pinsText(c.shot) === corner || ['Flat 10', 'Ringing 10'].includes(c.shot.leaveTag)));
     const key = pct(cornerLeaves.filter(c => c.keyPin && c.keyPin !== 'unknown').length, cornerLeaves.length);
     // Full routine: mark, pocket and off-the-deck all watched on the same shot (pocket hits and strikes).
-    const routine = pct(ph.filter(c => String(c.shot.miss || 'didntTrack') !== 'didntTrack' && String(c.shot.pocket || 'Unknown') !== 'Unknown' && c.exitRaw !== "Didn't notice").length, ph.length);
+    const routine = pct(ph.filter(c => String(c.shot.miss || 'didntTrack') !== 'didntTrack' && String(c.shot.pocket || 'Unknown') !== 'Unknown' && seenX(c)).length, ph.length);
     const parts = [[mark, 25], [pocket, 15], [exit, 35], [routine, 15], [key, 10]].filter(([v]) => v !== null);
     const wsum = parts.reduce((a, [, w]) => a + w, 0);
     const score = Math.round(parts.reduce((a, [v, w]) => a + v * w, 0) / (wsum || 1) * 100);
@@ -716,8 +718,8 @@
     const P = { mark: r(mark), pocket: r(pocket), exit: r(exit), routine: r(routine), keyPin: r(key) };
     const NAMES = { mark: 'your mark', pocket: 'the pocket', exit: 'off the deck', routine: 'the full routine', keyPin: 'the key pin' };
     const weakest = Object.entries(P).filter(([, v]) => v != null).sort((a, b) => a[1] - b[1])[0];
-    const exitSeenN = ph.filter(c => c.exitRaw !== "Didn't notice").length;
-    return { score, label, n: C.length, parts: P, pocketHits: ph.length, exitSeen: exitSeenN, cornerLeaves: cornerLeaves.length,
+    const exitSeenN = ph.filter(seenX).length;
+    return { score, label, n: C.length, parts: P, pocketHits: ph.length, exitSeen: exitSeenN, exitNotSeen: notSeen, cornerLeaves: cornerLeaves.length,
       weakest: weakest && weakest[1] < 70 ? { key: weakest[0], name: NAMES[weakest[0]], pct: weakest[1] } : null,
       tip: weakest && weakest[1] < 70 ? (weakest[0] === 'exit' || weakest[0] === 'routine' ? `Watch it off the deck: ${exitSeenN} of ${ph.length} pocket hits tonight. Mark → breakpoint → pocket → off the deck, every shot.` : `Weakest: ${NAMES[weakest[0]]} (${weakest[1]}%).`) : '' };
   }
@@ -2140,6 +2142,16 @@
     const kind = down >= 2 && down > early + long ? 'down' : early >= 2 && early > down ? 'early' : long >= 2 && long > down ? 'long' : '';
     return { kind, down, early, long, n: G.length, ball };
   }
+  // 🏆 Moving pairs: how each ball moved on each pair (game) so far. What carries from pair to pair is the ball's motion, not your line.
+  function pairMotions(shots, bowler) {
+    const prof = bowlerProfile(bowler), C = (shots || []).filter(x => x && x.type !== 'gameStart' && !(Number(x.shotNo) >= 2)).slice().sort((a, b) => (a.at || 0) - (b.at || 0)).map(s => classify(s, prof.lefty));
+    const byBall = {};
+    [...new Set(C.map(c => Number(c.shot.gameNo) || 1))].forEach(g => { const G = C.filter(c => (Number(c.shot.gameNo) || 1) === g);
+      [...new Set(G.map(c => c.shot.ball).filter(Boolean))].forEach(b => { const m = laneMotion(G.filter(c => c.shot.ball === b)); if (!m || !m.kind) return;
+        (byBall[b] = byBall[b] || []).push({ g, pair: G[0].shot.lanes || '', kind: m.kind }); }); });
+    return Object.entries(byBall).map(([ball, L]) => { const k = {}; L.forEach(o => { k[o.kind] = (k[o.kind] || 0) + 1; }); const top = Object.entries(k).sort((a, z) => z[1] - a[1])[0];
+      return { ball, n: L.length, kind: top[0], count: top[1], text: `${ball}: ${MOTION_TXT[top[0]]} on ${top[1]} of ${L.length} pair${L.length === 1 ? '' : 's'}` }; }).sort((a, z) => z.n - a.n);
+  }
   const MOTION_TXT = { down: 'downlane motion', early: 'fronts reading early', long: 'ball going long' };
   // One night: lane motion + how short-pin balls did vs the rest (first balls only).
   function shortPinNight(S, bowler, rows) {
@@ -2152,6 +2164,17 @@
     const a = agg(sp), b = agg(ot);
     return { motion: lm ? lm.kind : '', lm, sp: a, other: b, spBalls: [...new Set(sp.map(c => c.shot.ball))], worked: a.n >= 4 ? (b.n >= 4 ? a.rate > b.rate : a.rate >= 0.4) : (a.n >= 1 && b.n >= 4 && sp.length && C.indexOf(sp[sp.length - 1]) < C.length - 1 ? false : null), dropped: a.n >= 1 && a.n <= 3 && b.n >= 4 };
     // worked = beat your other balls that night (40%+ only when nothing else was thrown); dropped after 1–3 shots = didn't.
+  }
+  // 🔀 Over/under → the smoother, more predictable ball in tonight's bag (Barnes chart: smooth over sharp, then closest in strength).
+  function smootherPick(current, names, bowler) {
+    try { if (!root.BTChart || !root.BTChart.place) return null; const R = ballRowMap(), b = bowlerProfile(bowler || {});
+      const pl = (n) => { const r = R.get(n); if (!r) return null; try { const p = root.BTChart.place([r], bowler || {})[0]; return p ? { n, key: String(p.rowKey || ''), x: Number(p.x), label: root.BTChart.label(p.rowKey) } : null; } catch (_e) { return null; } };
+      const cur = pl(current), cand = (names || []).filter(n => n && n !== current && !(BT.isRetired && BT.isRetired(n))).map(pl).filter(Boolean);
+      if (!cand.length) return null;
+      const sm = (o) => /SMOOTH|URETHANE/.test(o.key) ? 1 : 0;
+      cand.sort((a, z) => (sm(z) - sm(a)) || (cur && Number.isFinite(cur.x) ? Math.abs(a.x - cur.x) - Math.abs(z.x - cur.x) : 0));
+      const best = cand[0]; if (!sm(best) && cur && sm(cur)) return null; return best;
+    } catch (_e) { return null; }
   }
   // 🔁 Your ball switches, all houses: from X to Y, did the next shots beat the last ones? Dropping Y after 1–2 shots counts as didn't.
   function switchRecord(sessions, bowler) {
@@ -2226,5 +2249,5 @@
     if (lm.kind === 'down') notes.push(curSP ? `🎯 Downlane motion (${lm.down} of ${lm.n} good shots strong / turning hard with ${lm.ball}): a short-pin look, and you're on one. It should keep you in play.${rec}` : sps.length ? `🎯 Downlane motion (${lm.down} of ${lm.n} good shots strong / turning hard with ${lm.ball}): a short-pin look. ${sps[0]} fits: low flare tames the backend.${rec}` : `🎯 Downlane motion with ${lm.ball}: a short-pin look, but there's no short pin in tonight's bag.${rec}`);
     else if (lm.kind === 'early') notes.push(`🎯 Fronts reading early (${lm.early} of ${lm.n} good shots with ${lm.ball}): not a short-pin night. A short pin reads early and has nothing to come back with; go cleaner with more flare instead.${rec}`);
   }
-  root.BTCoach = { classifyShot: (s, bowler) => classify(s, bowlerProfile(bowler || (typeof BT !== 'undefined' ? BT.lsGet(BT.KEYS.BOWLER, {}) : {})).lefty), isTourn, shortPinHistory, shortPinHistoryLines, laneMotion: (shots, bowler) => laneMotion((shots || []).filter(x => x && x.type !== 'gameStart').map(s => classify(s, bowlerProfile(bowler).lefty))), isShortPinBall, shortPinNight, shortPinRecord, switchRecord, switchLine, shortPinRecordText, MOTION_TXT, burnSign, burnLadder, BALL_NOTE, ballNoteText, ballNoteCheck, WHY, whyLabel, whyReview: (shots, bowler) => whyReview((shots || []).filter(x => x && x.type !== 'gameStart').map(s => classify(s, bowlerProfile(bowler).lefty))), whyLearn, whyLearnText, setFaultLabel, hiddenFaults, hideFault, unhideFault, energyAngle, noteTags, noteMix, repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
+  root.BTCoach = { classifyShot: (s, bowler) => classify(s, bowlerProfile(bowler || (typeof BT !== 'undefined' ? BT.lsGet(BT.KEYS.BOWLER, {}) : {})).lefty), isTourn, shortPinHistory, shortPinHistoryLines, laneMotion: (shots, bowler) => laneMotion((shots || []).filter(x => x && x.type !== 'gameStart').map(s => classify(s, bowlerProfile(bowler).lefty))), isShortPinBall, shortPinNight, shortPinRecord, switchRecord, switchLine, smootherPick, pairMotions, shortPinRecordText, MOTION_TXT, burnSign, burnLadder, BALL_NOTE, ballNoteText, ballNoteCheck, WHY, whyLabel, whyReview: (shots, bowler) => whyReview((shots || []).filter(x => x && x.type !== 'gameStart').map(s => classify(s, bowlerProfile(bowler).lefty))), whyLearn, whyLearnText, setFaultLabel, hiddenFaults, hideFault, unhideFault, energyAngle, noteTags, noteMix, repeatability, repeatByGame, FAULTS, allFaults, myFaults, setMyFaults, faultLabel, faultRead, faultSummary, faultLines, moveSummary, lineCheck: (o) => lineMath(o.feet, o.arrows, patternProfile(o.pattern), bowlerProfile(o.bowler), o.phase, o.bp, o.bp0, o.targetFt), lineText, evaluate, eyeballScore, elementsProfile, elementsReport, arsenalCheck, ballGames, _internals: { timingNeed, bagTiming, classify, leaveMeaning, bowlerProfile, patternProfile, rankMoves, parseRatio } };
 })(typeof window !== 'undefined' ? window : globalThis);
