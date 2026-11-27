@@ -58,6 +58,14 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v174-beta111
+- 🧭 Season review: ball-at-house wins show their night count; 1–2 night records move to "Too early to call". Opening-ball item compares game 1 with that ball vs your other openers at the same house, and is marked "already replaced ✅" when you've changed openers.
+- 🧪 Game 3 vs games 1–2 after one ball carried you through games 1–2 vs after a switch (2+ nights each): when staying put costs 15+, it says have your switch trigger ready by game 3.
+- 🎯 Spares: multi-pin vs corner pin called out as the corner-pin shot, not spare shooting in general. Poor-shot reasons: chicken wing + pulled both go left and are execution, so repeat, don't move.
+- 📈 Next goal for carry aims at whichever leads on good shots (high → smoother / later ball or move left; light → key pin, loft, cleaner ball).
+- 🧰 Each Game Day shot now records the ball's surface at the time, so a resurfaced ball (e.g. RIP at 4000) gets its own record next to the earlier setup.
+- 🏠 House card: the carrydown chip says "your nights: no clear effect yet" when your own carrydown test hasn't shown one.
+
 ## Changes in v173-beta110
 - 🧭 Season review, carry: high / flush / light now from good shots only, with totals ("High 40 of 132 struck (30%) · Flush … · Light …"); the early-vs-weak read needs a 25% margin.
 - 🎳 Ball by stage: best ball in game 1 / 2 / 3 at each house (8+ shots).

@@ -143,7 +143,7 @@
     avg: 'Average is slipping: check the lines above for which part moved.',
   };
   const GOALK = { offDeck: 'Off the deck', startFast: 'Start fast (game 1)', tenPin: '10-pin', repeatFirst: 'Repeat before you move', practice: 'Practice' };
-  function changes(rows) {
+  function changes(rows, opts) {
     const mean = (a) => a.reduce((s, x) => s + x, 0) / a.length, vr = (a) => { const m = mean(a); return a.length > 1 ? a.reduce((s, x) => s + (x - m) ** 2, 0) / (a.length - 1) : 0; };
     const lines = [];
     CH.forEach(c => {
@@ -161,15 +161,16 @@
     // One suggestion: a clear drop first; otherwise the first key part that isn't going up.
     const down = shown.find(l => l.clear && l.d < 0) || shown.filter(l => l.d < 0 && Math.abs(l.d) >= 2 * l.c.min && SUGGEST[l.c.k]).sort((x, z) => Math.abs(z.d) / z.c.min - Math.abs(x.d) / x.c.min)[0], PRI = ['carry', 'pocket', 'g3', 'ten', 'eye'];
     const notUp = PRI.map(k => lines.find(l => l.c.k === k)).find(l => l && !(l.clear && l.d > 0));
-    const tip = down ? SUGGEST[down.c.k] : notUp ? SUGGEST[notUp.c.k] : lines.length ? 'Everything measured is level or up: keep your current goal.' : '';
+    const cl = opts && opts.carryLead, sug = (k) => k === 'carry' && cl ? (cl === 'high' ? 'Carry is the one not improving, and high hits lead on good shots. Next goal: when it goes high, switch to the smoother / later ball or move left (Game Day names it).' : 'Carry is the one not improving, and light hits lead on good shots. Next goal: watch the key pin on light hits; more loft or a cleaner ball when it\'s weak.') : SUGGEST[k];
+    const tip = down ? sug(down.c.k) : notUp ? sug(notUp.c.k) : lines.length ? 'Everything measured is level or up: keep your current goal.' : '';
     // Goal record: graded goals, newest first, by kind.
     let goals = []; try { const G = (root.BT.goalsAll() || []).filter(g => g && (g.result === 'done' || g.result === 'missed')).sort((x, z) => (z.at || 0) - (x.at || 0)); const by = {};
       G.forEach(g => { const k = g.kind || 'other'; const o = by[k] = by[k] || { met: 0, n: 0 }; if (o.n >= 5) return; o.n++; if (g.result === 'done') o.met++; });
       goals = Object.entries(by).map(([k, o]) => `${GOALK[k] || 'Goal'}: met ${o.met} of the last ${o.n}`); } catch (_e) {}
     return { items, level, tip, goals, enough: lines.length > 0 };
   }
-  function changesHtml(rows) {
-    const C = changes(rows); if (!C.enough && !C.goals.length) return `<div class="panel"><b>📈 What's changing</b><div class="small dim" style="margin-top:4px">Needs 6+ nights with the same numbers to compare your last 5 with the 5 before.</div></div>`;
+  function changesHtml(rows, opts) {
+    const C = changes(rows, opts); if (!C.enough && !C.goals.length) return `<div class="panel"><b>📈 What's changing</b><div class="small dim" style="margin-top:4px">Needs 6+ nights with the same numbers to compare your last 5 with the 5 before.</div></div>`;
     return `<div class="panel"><b>📈 What's changing</b> <span class="small dim">· your last 5 nights vs the 5 before</span>
       ${C.items.length ? `<ul class="sr-l small">${C.items.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}
       ${C.level.length ? `<div class="small dim" style="margin-top:4px">About the same: ${esc(C.level.join(', '))}.</div>` : ''}

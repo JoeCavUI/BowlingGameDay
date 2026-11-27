@@ -41,7 +41,8 @@
     try { const hr = BT().houseRead ? BT().houseRead(house, '') : ''; const O = BT().houseReadOptions ? BT().houseReadOptions(lefty) : []; const t = (O.find(o => o[0] === hr) || [])[1]; if (hr && t) chips.push({ t: t.replace(/\s*\(.*\)/, '') + ' (your read)', k: '' }); } catch (_e) {}
     try { const pn = (use.slice().sort((a, b) => b.savedAt - a.savedAt).find(s => s.pattern) || {}).pattern; const P = BT().lsGet('bt_oil_patterns_v1', []) || []; const p = P.find(x => x.name === pn && x.length); if (p) chips.push({ t: `${p.length} ft (you entered) · exit ~${Math.max(3, Math.round(p.length - 31))} (estimate)`, k: '' }); } catch (_e) {}
     if (hb && hb.mix) chips.push({ t: 'Possible carry over/under', k: 'warn' });
-    if (hb && hb.cd && hb.cd.signs) chips.push({ t: `Possible carrydown (${hb.cd.plastic ? 'plastic' : 'urethane'} on pair)`, k: 'warn' });
+    if (hb && hb.cd && hb.cd.signs) { let tested = ''; try { const cc = E().carryCompare(all, lefty); if (cc && cc.with && cc.without && cc.with.n >= 3 && cc.without.n >= 3 && !(cc.with.drift != null && cc.without.drift != null && cc.with.drift < cc.without.drift - 1)) tested = '; your nights: no clear effect yet'; } catch (_e) {}
+      chips.push({ t: `Possible carrydown (${hb.cd.plastic ? 'plastic' : 'urethane'} on pair${tested})`, k: tested ? '' : 'warn' }); }
     if (hb && hb.tough && hb.tough.tough) chips.push({ t: `${hb.tough.tough.l} tougher`, k: '' });
     const ph = sh.filter(z => BT().isPocketHit(z)); if (sh.length >= 20) chips.push({ t: `Pocket ${r0(ph.length / sh.length * 100)}% · carry ${ph.length ? r0(ph.filter(X).length / ph.length * 100) : 0}%`, k: '' });
     // 🔮 forecast (theory): best G1 ball and its usual start, first move timing, a shrunk G1 range
