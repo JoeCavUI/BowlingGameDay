@@ -58,6 +58,14 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v175-beta112
+- 🎒 Plan: a ball you've thrown here on Game Day shows its Game Day record ("Game Day here: 7 strikes in 10") instead of "untested here; picked for its specs".
+- 🔁 Plan: the ball your switch record says to go to from the start ball (helped 60%+ of 3+ switches) joins the bag: "Your switch from Zero Mercy Hybrid (helped 3 of 4: …)".
+- 📊 Plan, by game: uses this season when there are 9+ games here, and game 3 drops say "decide your game 3 change before you bowl. One change, then 2 good shots. Not deeper."
+- 🏅 History lists renamed "Your history on lanes … / at the house" (the bag itself is below), numbered, retired balls left out.
+- ↔️ IF / THEN: "Already 2 deeper than your start? Change balls instead of moving in again."
+- 🐛 House book: "(line not logged)" instead of "null/null".
+
 ## Changes in v174-beta111
 - 🧭 Season review: ball-at-house wins show their night count; 1–2 night records move to "Too early to call". Opening-ball item compares game 1 with that ball vs your other openers at the same house, and is marked "already replaced ✅" when you've changed openers.
 - 🧪 Game 3 vs games 1–2 after one ball carried you through games 1–2 vs after a switch (2+ nights each): when staying put costs 15+, it says have your switch trigger ready by game 3.

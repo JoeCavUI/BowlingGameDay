@@ -151,7 +151,7 @@
       for (let i = 1; i < fr.length; i++) { const a = fr[i - 1], b = fr[i];
         if (!mv && a.feet != null && b.feet != null && (a.feet !== b.feet || a.arrows !== b.arrows)) { const nx = fr.slice(i, i + 3); mv = { g: Number(b.gameNo) || 1, f: b.frame, d: (b.feet - a.feet) || (b.arrows - a.arrows), boards: Math.abs(b.feet - a.feet), eyes: Math.abs(b.arrows - a.arrows), to: `${b.feet}/${b.arrows}`, ok: nx.filter(isP).length >= 2 && nx.filter(isX).length >= 1 }; }
         if (!sw && a.ball && b.ball && a.ball !== b.ball) { const nx = fr.slice(i, i + 4); sw = { g: Number(b.gameNo) || 1, f: b.frame, from: a.ball, to: b.ball, x: nx.filter(isX).length, n: nx.length }; } }
-      return { s, date: new Date(s.savedAt), scores: s.scores || [], open: { ball: first.ball, line: `${first.feet}/${first.arrows}${first.bp != null ? '/' + first.bp : ''}`, x: g1.filter(isX).length, n: g1.length }, mv, sw };
+      return { s, date: new Date(s.savedAt), scores: s.scores || [], open: { ball: first.ball, line: first.feet != null && first.arrows != null ? `${first.feet}/${first.arrows}${first.bp != null ? '/' + first.bp : ''}` : '(line not logged)', x: g1.filter(isX).length, n: g1.length }, mv, sw };
     }).filter(Boolean);
     let lm = null; try { lm = laneMap(house, lanes, sessions); } catch (_e) {}
     let cs = null; try { cs = cornerSpares(use.flatMap(s => s.shots || []), lefty); } catch (_e) {}

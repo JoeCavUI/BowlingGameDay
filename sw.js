@@ -1,10 +1,10 @@
 /* Bowling Tool service worker: lets the app open and run with no signal.
    Strategy: try the network first (so testers get updates), but fall back to
    the cached copy after 3 seconds or when offline. Bump CACHE on each release. */
-const CACHE = 'bowling-tool-v174-beta111';
+const CACHE = 'bowling-tool-v175-beta112';
 const SHELL = [
   './', 'index.html', 'bowler.html', 'arsenal.html', 'analyze.html', 'lane.html',
-  'oil.html', 'gameday.html', 'plan.html', 'angle.html', 'scores.html', 'guide.html', 'styles.css?v=174', 'app.js?v=174', 'coach.js?v=174', 'chart.js?v=174', 'pinpal.js?v=174', 'history.js?v=174', 'plan.js?v=174', 'insight.js?v=174', 'cloud.js?v=174', 'stats.js?v=174', 'replay.js?v=174', 'trends.js?v=174', 'season.js?v=174', 'housecard.js?v=174', 'gaplab.js?v=174', 'eyes.js?v=174', 'sensor.js?v=174',
+  'oil.html', 'gameday.html', 'plan.html', 'angle.html', 'scores.html', 'guide.html', 'styles.css?v=175', 'app.js?v=175', 'coach.js?v=175', 'chart.js?v=175', 'pinpal.js?v=175', 'history.js?v=175', 'plan.js?v=175', 'insight.js?v=175', 'cloud.js?v=175', 'stats.js?v=175', 'replay.js?v=175', 'trends.js?v=175', 'season.js?v=175', 'housecard.js?v=175', 'gaplab.js?v=175', 'eyes.js?v=175', 'sensor.js?v=175',
   'databalls.csv', 'manifest.webmanifest',
   'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png'
 ];
