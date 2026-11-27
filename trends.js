@@ -175,7 +175,7 @@
       ${C.level.length ? `<div class="small dim" style="margin-top:4px">About the same: ${esc(C.level.join(', '))}.</div>` : ''}
       ${C.goals.length ? `<div class="small" style="margin-top:6px">🎯 Goals: ${esc(C.goals.join(' · '))}.</div>` : ''}
       ${C.tip ? `<div class="small" style="margin-top:6px;color:var(--accent);opacity:1"><b>Next:</b> ${esc(C.tip)}</div>` : ''}
-      <div class="small dim" style="margin-top:4px">What already happened, not a prediction. ↑ ↓ = bigger than your normal night-to-night swing; "not clear yet" = could still be noise.</div></div>`;
+      <div class="small dim" style="margin-top:4px">What already happened, not a prediction. ↑ ↓ = bigger than your normal night-to-night swing; "not clear yet" = could still be noise. Eyeball = how fully you watched and logged each shot (mark, breakpoint, pocket, off the deck), out of 100.</div></div>`;
   }
   function render(box, opts) {
     opts = opts || {};

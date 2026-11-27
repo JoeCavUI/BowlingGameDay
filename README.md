@@ -58,6 +58,12 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v173-beta110
+- 🧭 Season review, carry: high / flush / light now from good shots only, with totals ("High 40 of 132 struck (30%) · Flush … · Light …"); the early-vs-weak read needs a 25% margin.
+- 🎳 Ball by stage: best ball in game 1 / 2 / 3 at each house (8+ shots).
+- ⚙️ Execution by game: poor-shot rate G1 / G2 / G3 on rated shots, top game-3 fault, and whether game 3 is you (more poor shots) or the lanes (same shots, fewer pins).
+- 🔢 Moves: worked · didn't · not clear. 10-pin cost shows its math. Carrydown counts nights with no lane notes. Eyeball is defined under What's changing.
+
 ## Changes in v172-beta109
 - 🧭 Season review: off the deck shows your last 3 nights next to the season total, and says "fixed ✅" (no longer in Going wrong / Top 3) when the last 3 nights are 80%+. Goals list newest first (✅ ❌).
 - 🎳 Game 3 advice now matches Game Day: "one change, then 2 good shots. Not deeper" (was "move a frame early"). Low-game math uses 3-game nights only.
