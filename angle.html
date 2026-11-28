@@ -68,6 +68,12 @@
         <div><label for="aBp">Breakpoint board <span class="small">(optional)</span></label><input id="aBp" class="input" type="number" step="0.5" inputmode="decimal" /></div>
         <div><label for="aMore">Also show at <span class="small">(ft)</span></label><input id="aMore" class="input" placeholder="e.g. 32, 43" inputmode="text" /></div>
       </div>
+      <label>📍 On the ball path <span class="small">(type either one)</span></label>
+      <div class="pl-row">
+        <div><label for="aFB" class="small">Board</label><input id="aFB" class="input" type="number" step="0.5" inputmode="decimal" placeholder="e.g. 10" /></div>
+        <div><label for="aFF" class="small">Distance <span class="small">(ft from foul line)</span></label><input id="aFF" class="input" type="number" step="0.5" inputmode="decimal" placeholder="e.g. 40" /></div>
+      </div>
+      <div class="small" id="aFindTxt" style="margin-top:4px"></div>
       <label class="ang-chk" id="aPocketLbl"><input type="checkbox" id="aPocket" /> <span id="aPocketTxt">🎳 Pocket: show the hook from your breakpoint into the 1-3</span></label>
       <label class="ang-chk"><input type="checkbox" id="aBox" /> 📦 Baker Box: where the ball splits the 8-9 (house shots, sport shots 38–43 ft)</label>
       <div class="ang-boxrow" id="aBoxRow">
@@ -168,6 +174,7 @@
     }
 
     // ---------- math ----------
+    let findBy = '';
     function compute() {
       const slide = Number($('#aSlide').value), off = Number($('#aOff').value) || 0;
       if (!isFinite(slide)) return null;
@@ -321,6 +328,18 @@
         c.rec = { from: c.hook.tb, ft: c.hook.tf, what: c.hook.bp != null ? `your breakpoint (board ${fmt(c.hook.bp)} at ${r1(c.hook.tf)} ft)` : c.hook.est ? `where it turns (about board ${fmt(c.hook.tb)} at ${r1(c.hook.tf)} ft)` : `the end of the oil (board ${fmt(c.hook.tb)} at ${r1(c.hook.tf)} ft)` };
       } else c.pos = c.at;
       extra.forEach(ft => add(ft, 'Your pick'));
+      // 📍 On the ball path: board ⇄ distance. A board can be crossed twice on the hook (out, then back), so list every crossing.
+      { const fb = $('#aFB'), ff = $('#aFF'), out = $('#aFindTxt'), P = c.pos || c.at;
+        if (findBy === 'ft' && ff.value !== '') { const ft = Number(ff.value);
+          if (isFinite(ft) && ft >= 0 && ft <= 62.6) { const b = P(ft), off = b < 0.5 || b > 39.5; fb.value = off ? '' : r1(b); out.innerHTML = off ? `At ${r1(ft)} ft the path is in the channel.` : `At <b>${r1(ft)} ft</b> the path is on <b>board ${fmt(b)}</b>.`; add(ft, `📍 ${off ? 'channel' : 'board ' + fmt(b)}`); }
+          else out.textContent = 'Distance runs 0 to 62.6 ft (the 7-10 row).'; }
+        else if (findBy === 'board' && fb.value !== '') { const B = Number(fb.value), hits = [];
+          if (isFinite(B)) { let prev = P(0) - B; if (Math.abs(prev) < 1e-9) hits.push(0);
+            for (let ft = 0.05; ft <= 62.6 + 1e-9; ft += 0.05) { const d = P(ft) - B; if (Math.abs(d) < 1e-9 || (prev !== 0 && Math.sign(d) !== Math.sign(prev))) { const f0 = ft - 0.05, d0 = prev; hits.push(Math.abs(d - d0) > 1e-12 ? f0 + 0.05 * (-d0 / (d - d0)) : ft); } prev = d; }
+            const H = hits.map(r1).filter((v, i, A) => A.findIndex(w => Math.abs(w - v) < 0.3) === i);
+            if (H.length) { ff.value = H[0]; H.forEach(ft => add(ft, `📍 board ${fmt(B)}`)); out.innerHTML = `The path is on <b>board ${fmt(B)}</b> at <b>${H.map(f => f + ' ft').join('</b> and again at <b>')}</b>${H.length > 1 ? ' (out on the way down, back in on the hook)' : ''}.`; }
+            else { ff.value = ''; const lo = Math.min(P(0), P(62.6)), hi = Math.max(P(0), P(62.6)); out.innerHTML = `This path never crosses board ${fmt(B)} (it runs from board ${fmt(P(0))} at the foul line to ${fmt(P(62.6))} at the 7-10 row${c.hook ? '; check the table for its farthest-out point' : ''}).`; } } }
+        else out.textContent = ''; }
       if (mode !== 'target') add(c.aimFt, 'Aim point');
       const rows = [...set.values()].sort((a, b) => a.ft - b.ft);
       const dir = c.slope < 0 ? `out toward the ${OUT} channel` : c.slope > 0 ? `in toward the ${IN}` : 'straight up the board';
@@ -525,6 +544,8 @@
     let r31Sync = () => {};
     $('#aPat').addEventListener('change', () => { r31Sync(); render(); });
     ['#aSlide', '#aOff', '#aTarget', '#aTargetFt', '#aCBoard', '#aCFt', '#aLen', '#aBp', '#aMore'].forEach(id => $(id).addEventListener('input', render));
+    $('#aFB').addEventListener('input', () => { findBy = 'board'; render(); });
+    $('#aFF').addEventListener('input', () => { findBy = 'ft'; render(); });
     // 📦 Target box (shared with Game Day's Coach)
     function boxInit() { const b = BT.targetBox(); $('#aBox').checked = b.on; $('#aBoxB1').value = b.b1; $('#aBoxB2').value = b.b2; $('#aBoxF1').value = b.f1; $('#aBoxF2').value = b.f2; $('#aBoxRow').style.display = b.on ? '' : 'none'; }
     ['#aBox', '#aBoxB1', '#aBoxB2', '#aBoxF1', '#aBoxF2'].forEach(id => $(id).addEventListener('change', () => { BT.setTargetBox({ on: $('#aBox').checked, b1: Number($('#aBoxB1').value), b2: Number($('#aBoxB2').value), f1: Number($('#aBoxF1').value), f2: Number($('#aBoxF2').value) }); boxInit(); render(); }));

@@ -58,6 +58,8 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v177-beta114
+- 📐 Angles: "📍 On the ball path": type a board to get the distance(s) where the path is on it (both crossings on a hook), or a distance to get the board. The point is added to the table and the drawing.
 ## Changes in v176-beta113
 - Game Plan: Game Day nights newer than your PinPal history now count in the house average, game-by-game and "last time here", with a note saying which nights aren't in PinPal yet.
 - One strike definition everywhere (first ball of frames 1–10, fills not counted, same as PinPal): night recap, Scores page and season review.
