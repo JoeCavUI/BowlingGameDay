@@ -58,7 +58,7 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
-## Changes in v178-beta115 (held)
+## Changes in v178-beta115
 - 🎳 Arsenal ball list: retired balls are grayed out with a "Retired" tag; Tune, Compare and Remove still work.
 
 ## Changes in v177-beta114
