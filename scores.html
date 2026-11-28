@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Scores</title>
-  <link rel="stylesheet" href="styles.css?v=175" />
+  <link rel="stylesheet" href="styles.css?v=176" />
 </head>
 <body data-page="scores">
   <div class="navlinks"></div>
@@ -140,16 +140,16 @@
     </div>
   </div>
 
-  <script src="app.js?v=175"></script>
-  <script src="coach.js?v=175"></script>
-  <script src="eyes.js?v=175"></script>
-  <script src="pinpal.js?v=175"></script>
-  <script src="history.js?v=175"></script>
-  <script src="stats.js?v=175"></script>
-  <script src="replay.js?v=175"></script>
-  <script src="trends.js?v=175"></script>
-  <script src="season.js?v=175"></script>
-  <script src="sensor.js?v=175"></script>
+  <script src="app.js?v=176"></script>
+  <script src="coach.js?v=176"></script>
+  <script src="eyes.js?v=176"></script>
+  <script src="pinpal.js?v=176"></script>
+  <script src="history.js?v=176"></script>
+  <script src="stats.js?v=176"></script>
+  <script src="replay.js?v=176"></script>
+  <script src="trends.js?v=176"></script>
+  <script src="season.js?v=176"></script>
+  <script src="sensor.js?v=176"></script>
   <script>
     BT.renderNav('scores');
     // 🗂️ Scores: menu first, then History (search your PinPal games) or Game Day nights (review each night).
@@ -275,7 +275,7 @@
     }
 
     function recomputeSessionSummary(s) {
-      const shots = (s.shots || []).filter(x => x && x.type !== 'gameStart');
+      const shots = (s.shots || []).filter(x => BT.isStrikeChance(x)); // first balls of frames 1–10, like PinPal
       const isStrike = (sh) => (sh.leaves||[]).includes('Strike') || (sh.leaves||[]).includes('Brooklyn');
       const isPocket = (sh) => BT.isPocketHit(sh);
       const weighted = shots.reduce((acc,sh)=>{ const w = 1; acc.total += w; if (isStrike(sh)) acc.strike += w; if (isPocket(sh)) acc.pocket += w; if (isPocket(sh)&&isStrike(sh)) acc.carry += w; if (String(sh.pocket||'')==='Pocket flush') acc.flush += w; if ((Number(sh.executionQuality||3)||3) >= 3) acc.quality += w; return acc; }, {total:0,strike:0,pocket:0,carry:0,flush:0,quality:0});

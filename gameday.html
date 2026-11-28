@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <title>Game Day</title>
-  <link rel="stylesheet" href="styles.css?v=175" />
+  <link rel="stylesheet" href="styles.css?v=176" />
 </head>
 <body data-page="gameday">
   <div class="navlinks"></div>
@@ -330,16 +330,16 @@
     </div>
   </div>
 
-  <script src="app.js?v=175"></script>
-  <script src="coach.js?v=175"></script>
-  <script src="pinpal.js?v=175"></script>
-  <script src="history.js?v=175"></script>
-  <script src="chart.js?v=175"></script>
-  <script src="plan.js?v=175"></script>
-  <script src="insight.js?v=175"></script>
-  <script src="eyes.js?v=175"></script>
-  <script src="cloud.js?v=175"></script>
-  <script src="sensor.js?v=175"></script>
+  <script src="app.js?v=176"></script>
+  <script src="coach.js?v=176"></script>
+  <script src="pinpal.js?v=176"></script>
+  <script src="history.js?v=176"></script>
+  <script src="chart.js?v=176"></script>
+  <script src="plan.js?v=176"></script>
+  <script src="insight.js?v=176"></script>
+  <script src="eyes.js?v=176"></script>
+  <script src="cloud.js?v=176"></script>
+  <script src="sensor.js?v=176"></script>
   <script>
     BT.renderNav('gameday');
     BT.wireReadAloud(document.getElementById('coachSpeak'), () => { const q = document.querySelector('#coachText .gd-q1'), full = document.querySelector('#coachFull'); if (q && full && full.hidden) return q.innerText; return ((document.getElementById('coachText') || {}).innerText || '').split('\n').filter(l => !/^(Why & what's next|What Coach is using|Why ›|Less ‹)/i.test(l.trim())).join('\n'); });
@@ -2596,18 +2596,19 @@ function sessionSummary(shots) {
       const real = shots.filter(s => s && s.type !== 'gameStart');
       const leaves = real.flatMap(s => s.leaves || []);
       const obs = real.flatMap(s => s.obs || []);
-      const strikes = real.filter(s => isStrike(s)).length;
-      const pocketFlush = real.filter(s => s.pocket === 'Pocket flush').length;
-      const pocketLight = real.filter(s => s.pocket === 'Pocket light').length;
-      const pocketHigh = real.filter(s => s.pocket === 'Pocket high').length;
-      const pocketHits = real.filter(s => isPocket(s)).length;
+      const ch = real.filter(BT.isStrikeChance); // first balls of frames 1–10, like PinPal
+      const strikes = ch.filter(s => isStrike(s)).length;
+      const pocketFlush = ch.filter(s => s.pocket === 'Pocket flush').length;
+      const pocketLight = ch.filter(s => s.pocket === 'Pocket light').length;
+      const pocketHigh = ch.filter(s => s.pocket === 'Pocket high').length;
+      const pocketHits = ch.filter(s => isPocket(s)).length;
       const tooEarly = obs.filter(x => x === 'Too early').length;
       const tooLong = obs.filter(x => x === 'Too long').length;
-      const weighted = real.reduce((acc,s)=>{
+      const weighted = ch.reduce((acc,s)=>{
         const w = shotWeight(s); acc.total += w; if (isStrike(s)) acc.strike += w; if (isPocket(s)) acc.pocket += w; if (isPocket(s) && isStrike(s)) acc.carry += w; if (effectiveExecutionValue(s) >= 3) acc.quality += w; return acc;
       }, {total:0,strike:0,pocket:0,carry:0,quality:0});
       return {
-        strikes, pocketFlush, pocketLight, pocketHigh, pocketHits, tooEarly, tooLong, total: real.length,
+        strikes, pocketFlush, pocketLight, pocketHigh, pocketHits, tooEarly, tooLong, total: ch.length, shotsLogged: real.length,
         strikeRate: weighted.total ? Math.round((weighted.strike/weighted.total)*100) : 0,
         strikePct: weighted.total ? Math.round((weighted.strike/weighted.total)*100) : 0,
         pocketPct: weighted.total ? Math.round((weighted.pocket/weighted.total)*100) : 0,

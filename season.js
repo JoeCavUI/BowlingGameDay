@@ -30,7 +30,7 @@
       all.push(...ch);
       const sc = (Array.isArray(s.scores) && s.scores.length) ? s.scores : ((s.pinpal && s.pinpal.scores) || []);
       if (sc.length === 3) [1, 2, 3].forEach(g => games[g].push(sc[g - 1])); // 3-game nights only (tournament blocks of 4+ aren't a game 3 story)
-      ch.forEach(z => { const b = (z.ball || '?') + (surfSplit[z.ball] ? ` (${z.surf ? z.surf : 'earlier setup'})` : ''), o = byBall[b] = byBall[b] || { ball: b, n: 0, x: 0, p: 0, c: 0, houses: {} }; o.n++; if (X(z)) o.x++; if (P(z)) o.p++; if (P(z) && X(z)) o.c++;
+      ch.filter(z => BT().isStrikeChance(z)).forEach(z => { const b = (z.ball || '?') + (surfSplit[z.ball] ? ` (${z.surf ? z.surf : 'earlier setup'})` : ''), o = byBall[b] = byBall[b] || { ball: b, n: 0, x: 0, p: 0, c: 0, houses: {} }; o.n++; if (X(z)) o.x++; if (P(z)) o.p++; if (P(z) && X(z)) o.c++;
         const h = o.houses[s.house || '?'] = o.houses[s.house || '?'] || { n: 0, x: 0, nights: new Set() }; h.n++; if (X(z)) h.x++; h.nights.add(s.id || s.savedAt);
         // High / flush / light: good shots only, so a pulled shot that went high doesn't count as "the ball read early".
         if (P(z) && goodS(z)) { const t = pkT(z); byType[t].n++; if (X(z)) byType[t].x++; else leaves[t]++; }

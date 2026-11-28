@@ -6,7 +6,7 @@
 
 (function () {
   // Bump this string each build so pages can display it and cache-bust resources.
-  const APP_VERSION = 'v175-beta112';
+  const APP_VERSION = 'v176-beta113';
   const KEYS = {
     CSV_CACHE: 'bt_csv_cache_v1',          // stringified { savedAt, name, rows }
     BOWLER: 'bt_bowler_v1',               // stringified object
@@ -1915,6 +1915,8 @@
   }
   function normalizeShot(x) { if (!x || x.type === 'gameStart') return false; const a = [x.pocket, x.exit, x.miss].join('|');
     x.pocket = normPocket(x.pocket); x.exit = normExit(x.exit); x.miss = normMiss(x.miss); return a !== [x.pocket, x.exit, x.miss].join('|'); }
+  // One strike-chance definition everywhere, the same as PinPal's: the first ball of frames 1–10. 10th-frame fill balls don't count.
+  function isStrikeChance(x) { return !!x && x.type !== 'gameStart' && !x.isFill && !(Number(x.shotNo) >= 2); }
   function standingPins(x) { if (!x || isStrikeShotX(x)) return []; if (Array.isArray(x.leavePins) && x.leavePins.length) return x.leavePins.slice(); const t = String(x.leaveTag || ((x.leaves || [])[0]) || ''); const m = t.match(/\d+/g); return m ? [...new Set(m.map(Number).filter(n => n >= 1 && n <= 10))] : []; }
   // USBC: a split = headpin down and at least one pin down between (or ahead of and between) the pins left standing.
   // Same-row pins never touch, so standing pins must connect through the diagonal neighbors to not be a split.
@@ -2093,7 +2095,7 @@
     APP_VERSION,
     KEYS,
     $, $all,
-    lsGet, lsSet, localDate, targetBox, setTargetBox, boxFor, rule31Pref, setRule31Pref, isSportRatio, wireRule31,
+    lsGet, lsSet, localDate, isStrikeChance, targetBox, setTargetBox, boxFor, rule31Pref, setRule31Pref, isSportRatio, wireRule31,
     getLeagues, addLeague, getLeagueById, setLeague, leagueByName, houseReadOptions, houseRead, setHouseRead,
     parseCSV,
     ensureCSVLoaded, loadSampleArsenal, isRetired, activeOnly, arsenalTemplateCSV,

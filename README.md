@@ -58,6 +58,13 @@ Then open http://localhost:3000
 - Spare shots + full game score for Game Day (history already covers past games).
 - Open question from live test 1: "missed left with good execution" (A: good execution overrides the miss, or B: merge Execution into step 1).
 
+## Changes in v176-beta113
+- Game Plan: Game Day nights newer than your PinPal history now count in the house average, game-by-game and "last time here", with a note saying which nights aren't in PinPal yet.
+- One strike definition everywhere (first ball of frames 1–10, fills not counted, same as PinPal): night recap, Scores page and season review.
+- Bag: never more balls than you asked for; a cross-house switch ball isn't added when this house's record says it trails; switch houses list only where it helped.
+- Backup and slow-burn balls are tied to tonight's bag, or labeled "not in tonight's bag".
+- League named for another weekday is flagged; surface advice no longer contradicts itself.
+
 ## Changes in v175-beta112
 - 🎒 Plan: a ball you've thrown here on Game Day shows its Game Day record ("Game Day here: 7 strikes in 10") instead of "untested here; picked for its specs".
 - 🔁 Plan: the ball your switch record says to go to from the start ball (helped 60%+ of 3+ switches) joins the bag: "Your switch from Zero Mercy Hybrid (helped 3 of 4: …)".
